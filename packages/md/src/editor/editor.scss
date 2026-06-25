@@ -1,0 +1,370 @@
+@use '../styles/variables' as *;
+@use '../styles/markdown' as markdown;
+
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.prosemirror-editor-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: $background-primary;
+  border: 1px solid $border-color;
+  border-radius: $border-radius-md;
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.prosemirror-editor-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: $text-secondary;
+  font-size: 0.875rem;
+}
+
+.prosemirror-editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs;
+  background-color: $background-secondary;
+  border-bottom: 1px solid $border-light;
+  // No wrapping — when content doesn't fit, JS collapses tools into the overflow
+  // menu (see prosemirror-toolbar setupOverflow).
+  flex-wrap: nowrap;
+  min-height: 30px;
+  height: 30px;
+  // Establish a stacking context above the editor content so dropdown popovers
+  // paint over it (content is a later sibling within an overflow:hidden container).
+  position: relative;
+  z-index: 2;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center; // Ensure items are vertically centered
+  gap: $spacing-xs;
+  height: 100%; // Take full height of toolbar
+
+  &:not(:last-child)::after {
+    content: '';
+    display: block;
+    width: 1px;
+    height: 20px;
+    background-color: $border-color;
+    margin: 0 $spacing-xs;
+    align-self: center; // Center the separator
+  }
+}
+
+.toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 24px;
+  height: 24px;
+  padding: 2px $spacing-xs;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $border-radius-sm;
+  cursor: pointer;
+  color: $text-color;
+  font-size: 0.875rem;
+  line-height: 1;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: $background-primary;
+    border-color: $border-light;
+  }
+
+  &.is-active {
+    background-color: $primary-blue;
+    color: #ffffff;
+
+    &:hover {
+      background-color: $primary-blue-hover;
+    }
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Dropdown trigger (heading style) — label + chevron, auto width.
+.toolbar-dropdown {
+  gap: $spacing-xs;
+  min-width: 0;
+  padding: 2px $spacing-sm;
+
+  .dropdown-label {
+    font-size: 0.8125rem;
+    white-space: nowrap;
+  }
+}
+
+// Wrapper anchoring a popover to its trigger.
+.toolbar-menu {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+// Overflow menu: hidden until the toolbar runs out of room (compact mode), at
+// which point the lower-priority tools collapse into it.
+.toolbar-overflow {
+  display: none;
+}
+
+.prosemirror-editor-toolbar.is-compact {
+  // Tighten spacing in compact mode to reclaim room so the right-aligned Raw
+  // toggle stays visible at the smallest sizes.
+  gap: 2px;
+
+  .toolbar-overflow {
+    display: flex;
+  }
+
+  [data-collapsible] {
+    display: none;
+  }
+
+  .toolbar-group:not(:last-child)::after {
+    margin: 0 2px;
+  }
+
+  .toggle-label {
+    margin-right: 2px;
+  }
+}
+
+.toolbar-popover {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  z-index: 20;
+  display: none;
+  flex-direction: column;
+  min-width: 180px;
+  padding: 2px 0;
+  background: $background-primary;
+  border: 1px solid $border-dark;
+  border-radius: $border-radius-md;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  animation: toolbar-popover-in 0.15s ease;
+
+  &.is-open {
+    display: flex;
+  }
+
+  // Full-width row items inside a popover.
+  .menu-item {
+    justify-content: flex-start;
+    gap: $spacing-sm;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    padding: 3px $spacing-sm;
+    border-radius: 0;
+    border-color: transparent;
+    white-space: nowrap;
+
+    &:hover {
+      background-color: $background-hover;
+      border-color: transparent;
+    }
+
+    .menu-item-label {
+      font-size: 0.875rem;
+    }
+
+    .heading-opt {
+      font-weight: 600;
+      &.h1 {
+        font-size: 1.25rem;
+      }
+      &.h2 {
+        font-size: 1.15rem;
+      }
+      &.h3 {
+        font-size: 1.05rem;
+      }
+    }
+  }
+
+  .menu-divider {
+    height: 1px;
+    margin: 2px 0;
+    background-color: $border-light;
+  }
+}
+
+@keyframes toolbar-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Table size grid picker.
+.toolbar-popover-grid {
+  min-width: 0;
+  padding: $spacing-xs;
+  align-items: center;
+
+  .table-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 16px);
+    grid-auto-rows: 16px;
+    gap: 2px;
+  }
+
+  .grid-cell {
+    width: 16px;
+    height: 16px;
+    border: 1px solid $border-dark;
+    border-radius: 2px;
+    background: $background-primary;
+    cursor: pointer;
+
+    &.highlighted {
+      background: $primary-blue;
+      border-color: $primary-blue;
+    }
+  }
+
+  .table-grid-label {
+    margin-top: $spacing-xs;
+    font-size: 0.8125rem;
+    color: $text-secondary;
+  }
+}
+
+// Link entry popover.
+.toolbar-popover-link {
+  flex-direction: row;
+  align-items: center;
+  gap: $spacing-xs;
+  min-width: 0;
+  padding: $spacing-xs;
+
+  .link-input {
+    width: 220px;
+    padding: $spacing-xs $spacing-sm;
+    border: 1px solid $border-dark;
+    border-radius: $border-radius-sm;
+    font-size: 0.875rem;
+
+    &:focus {
+      outline: none;
+      border-color: $primary-blue;
+    }
+  }
+
+  .link-submit {
+    padding: $spacing-xs $spacing-sm;
+    background: $primary-blue;
+    color: #ffffff;
+    border: none;
+    border-radius: $border-radius-sm;
+    cursor: pointer;
+    font-size: 0.875rem;
+
+    &:hover {
+      background: $primary-blue-hover;
+    }
+  }
+}
+
+.prosemirror-editor-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: $spacing-md;
+  position: relative;
+  box-sizing: border-box;
+
+  .ProseMirror {
+    min-height: calc(100% - #{$spacing-md * 2});
+    outline: none;
+    position: relative;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+
+    // Shared markdown element styling (single source of truth).
+    @include markdown.markdown-styles;
+
+    // ProseMirror specific styles
+    .ProseMirror-selectednode {
+      outline: 2px solid $primary-blue;
+    }
+
+    // Placeholder support
+    &.ProseMirror-empty::before {
+      content: attr(data-placeholder);
+      color: $text-secondary;
+      position: absolute;
+      pointer-events: none;
+    }
+
+    // Focus styles
+    &:focus {
+      outline: none;
+    }
+  }
+}
+
+// Raw markdown textarea
+.prosemirror-editor-raw {
+  width: 100%;
+  min-height: 400px;
+  padding: $spacing-md;
+  border: none;
+  font-family: monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  resize: vertical;
+  background: $background-primary;
+  color: $text-secondary;
+  flex: 1;
+  overflow-y: auto;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+// Toolbar spacer for right-aligned items
+.toolbar-spacer {
+  flex: 1;
+}
+
+// Toggle label styling
+.toggle-label {
+  font-size: 0.875rem;
+  color: $text-secondary;
+  margin-right: $spacing-xs;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+}
+
+// Raw mode toolbar
+.prosemirror-editor-toolbar.raw-mode {
+  justify-content: flex-end;
+  align-items: center;
+}

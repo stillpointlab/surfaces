@@ -1,0 +1,67 @@
+{
+  "name": "@stillpointlab/md-editor",
+  "version": "0.1.0",
+  "description": "A ProseMirror-based markdown editor web component (<md-editor>) with isomorphic markdown rendering.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": true,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./markdown": {
+      "types": "./dist/markdown.d.ts",
+      "import": "./dist/markdown.js",
+      "require": "./dist/markdown.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "markdown.d.ts"
+  ],
+  "scripts": {
+    "gen:styles": "node scripts/gen-styles.mjs",
+    "prepare": "npm run build",
+    "build": "npm run gen:styles && tsup",
+    "dev": "npm run gen:styles && vite",
+    "typecheck": "npm run gen:styles && tsc --noEmit",
+    "test": "npm run gen:styles && vitest run",
+    "lint": "eslint .",
+    "format": "prettier --check \"**/*.{ts,mjs,json,md,scss,css,html}\"",
+    "format:fix": "prettier --write \"**/*.{ts,mjs,json,md,scss,css,html}\""
+  },
+  "dependencies": {
+    "markdown-it": "^14.1.0",
+    "prosemirror-commands": "^1.7.1",
+    "prosemirror-history": "^1.4.1",
+    "prosemirror-inputrules": "^1.5.0",
+    "prosemirror-markdown": "^1.13.2",
+    "prosemirror-model": "^1.25.3",
+    "prosemirror-schema-list": "^1.5.1",
+    "prosemirror-state": "^1.4.3",
+    "prosemirror-tables": "^1.7.1",
+    "prosemirror-view": "^1.40.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.25.1",
+    "@types/markdown-it": "^14.1.2",
+    "@typescript-eslint/eslint-plugin": "^8.31.1",
+    "@typescript-eslint/parser": "^8.31.1",
+    "eslint": "^9.25.1",
+    "eslint-config-prettier": "^10.1.2",
+    "eslint-plugin-import": "^2.31.0",
+    "globals": "^16.0.0",
+    "jsdom": "^26.1.0",
+    "prettier": "^3.5.3",
+    "sass": "^1.86.3",
+    "tsup": "^8.3.5",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.2",
+    "vitest": "^3.1.3"
+  }
+}
