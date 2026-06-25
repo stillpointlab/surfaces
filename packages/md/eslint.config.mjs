@@ -2,7 +2,7 @@ import eslint from '@eslint/js';
 import tseslint from '@typescript-eslint/eslint-plugin';
 import tsparser from '@typescript-eslint/parser';
 import prettier from 'eslint-config-prettier';
-import importPlugin from 'eslint-plugin-import';
+import importPlugin from 'eslint-plugin-import-x';
 import globals from 'globals';
 
 export default [
@@ -24,7 +24,7 @@ export default [
     },
     plugins: {
       '@typescript-eslint': tseslint,
-      import: importPlugin,
+      'import-x': importPlugin,
     },
     rules: {
       // TypeScript itself catches undefined identifiers; the core rule produces
@@ -40,7 +40,7 @@ export default [
           caughtErrorsIgnorePattern: '^_',
         },
       ],
-      'import/order': [
+      'import-x/order': [
         'error',
         {
           groups: [

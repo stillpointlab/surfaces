@@ -43,12 +43,8 @@ export function cycleHeading(direction: 'up' | 'down', schema: Schema, setBlockT
     }
 
     // Calculate new level
-    let newLevel = currentLevel!;
-    if (direction === 'up') {
-      newLevel = Math.max(1, currentLevel! - 1);
-    } else {
-      newLevel = Math.min(6, currentLevel! + 1);
-    }
+    const newLevel =
+      direction === 'up' ? Math.max(1, currentLevel! - 1) : Math.min(6, currentLevel! + 1);
 
     // If at boundary and would go beyond, convert to paragraph
     if (
