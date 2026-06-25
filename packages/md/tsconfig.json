@@ -3,6 +3,9 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
+    // tsup's .d.ts build injects a deprecated `baseUrl`; silence the TS6 removal
+    // error (TS5101) until tsup stops emitting it.
+    "ignoreDeprecations": "6.0",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": [],
     "strict": true,
