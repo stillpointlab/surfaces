@@ -1,0 +1,17 @@
+@use '../styles/markdown' as markdown;
+
+// Content-sized by default so the consumer owns layout (height, scrolling,
+// padding). The dev playground / a standalone host can add `overflow: auto` and a
+// fixed height to make the preview its own scroll pane.
+:host {
+  display: block;
+  box-sizing: border-box;
+}
+
+.md-preview-body {
+  line-height: 1.6;
+  word-break: break-word;
+
+  // Shared markdown element styling (single source of truth, same as the editor).
+  @include markdown.markdown-styles;
+}

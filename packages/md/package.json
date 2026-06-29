@@ -4,7 +4,12 @@
   "description": "A ProseMirror-based markdown editor web component (<md-editor>) with isomorphic markdown rendering.",
   "license": "MIT",
   "type": "module",
-  "sideEffects": true,
+  "sideEffects": [
+    "./dist/index.js",
+    "./dist/index.cjs",
+    "./dist/preview.js",
+    "./dist/preview.cjs"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -15,6 +20,11 @@
       "types": "./dist/markdown.d.ts",
       "import": "./dist/markdown.js",
       "require": "./dist/markdown.cjs"
+    },
+    "./preview": {
+      "types": "./dist/preview.d.ts",
+      "import": "./dist/preview.js",
+      "require": "./dist/preview.cjs"
     }
   },
   "main": "./dist/index.cjs",
@@ -22,7 +32,8 @@
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
-    "markdown.d.ts"
+    "markdown.d.ts",
+    "preview.d.ts"
   ],
   "scripts": {
     "gen:styles": "node scripts/gen-styles.mjs",

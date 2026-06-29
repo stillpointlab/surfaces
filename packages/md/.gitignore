@@ -1,4 +1,5 @@
 dist
 node_modules
-# generated from editor.scss by scripts/gen-styles.mjs
+# generated from *.scss by scripts/gen-styles.mjs
 src/editor/editor.styles.ts
+src/preview/preview.styles.ts

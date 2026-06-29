@@ -16,18 +16,33 @@
       }
       md-editor {
         display: block;
-        height: 70vh;
+        height: 45vh;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+      }
+      md-preview {
+        display: block;
+        height: 30vh;
+        overflow: auto;
+        margin-top: 1rem;
+        padding: 0.75rem;
         border: 1px solid #ddd;
         border-radius: 6px;
       }
       h1 {
         font-size: 1.25rem;
       }
+      h2 {
+        font-size: 1rem;
+        color: #555;
+      }
     </style>
   </head>
   <body>
     <h1>md-editor playground</h1>
     <md-editor id="editor"></md-editor>
+    <h2>md-preview (read-only, updates live)</h2>
+    <md-preview id="preview"></md-preview>
     <script type="module" src="./main.ts"></script>
   </body>
 </html>
