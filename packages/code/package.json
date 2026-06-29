@@ -4,19 +4,30 @@
   "description": "A CodeMirror-based code editor web component (<code-editor>) with syntax highlighting and line numbers.",
   "license": "MIT",
   "type": "module",
-  "sideEffects": true,
+  "sideEffects": [
+    "./dist/index.js",
+    "./dist/index.cjs",
+    "./dist/preview.js",
+    "./dist/preview.cjs"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./preview": {
+      "types": "./dist/preview.d.ts",
+      "import": "./dist/preview.js",
+      "require": "./dist/preview.cjs"
     }
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "preview.d.ts"
   ],
   "scripts": {
     "gen:styles": "node scripts/gen-styles.mjs",
