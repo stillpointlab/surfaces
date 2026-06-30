@@ -21,6 +21,11 @@ const targets = [
     out: '../src/preview/preview.styles.ts',
     name: 'previewStyles',
   },
+  {
+    scss: '../src/diff/diff.scss',
+    out: '../src/diff/diff.styles.ts',
+    name: 'diffStyles',
+  },
 ];
 
 for (const target of targets) {

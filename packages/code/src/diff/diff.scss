@@ -1,0 +1,69 @@
+// Self-contained styles for the <code-diff> shadow root. CodeMirror's merge addon
+// injects its own theme (change/delete/insert highlights, collapsed-line markers)
+// into the shadow root at runtime; these rules only handle the host container,
+// the side-by-side layout, the center divider, and the loading placeholder.
+// Mirrors preview.scss without any editor chrome.
+
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.code-diff-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #ffffff;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  overflow: hidden;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.code-diff-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #57606a;
+  font-size: 0.875rem;
+}
+
+.code-diff-content {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+// The merge view fills the content area; its two editors share the width evenly.
+.cm-mergeView,
+.cm-mergeViewEditors {
+  height: 100%;
+}
+
+.cm-mergeViewEditor {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+// Divider between the two panes, echoing the app's `.resize-handle` look.
+.cm-mergeViewEditor + .cm-mergeViewEditor {
+  border-left: 1px solid #d0d7de;
+}
+
+.cm-editor {
+  height: 100%;
+}
+
+.cm-editor.cm-focused {
+  outline: none;
+}
+
+.cm-scroller {
+  font-family:
+    ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
