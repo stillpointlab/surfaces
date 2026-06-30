@@ -142,6 +142,11 @@ export class CodeDiff extends HTMLElement {
       a: { doc: this._left, extensions: sideExtensions(this.languageCompartmentA) },
       b: { doc: this._right, extensions: sideExtensions(this.languageCompartmentB) },
       parent: mount,
+      // We mount inside the shadow root; unlike EditorView, MergeView does not
+      // auto-detect it, so without this its CodeMirror styles inject into the global
+      // document and shadow-DOM encapsulation hides them (editor renders blank). See
+      // MergeView's `root` option ("only necessary if mounted in a shadow root").
+      root: this._shadowRoot,
       orientation: 'a-b',
       highlightChanges: true,
       gutter: true,
