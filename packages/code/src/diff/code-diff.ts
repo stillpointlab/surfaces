@@ -3,20 +3,24 @@ import { loadLanguage } from '../editor/language';
 import { reportError } from '../editor/log';
 
 import { diffStyles } from './diff.styles';
+import { stripInlineWhitespace } from './whitespace';
 
 import type { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
 import type { MergeView } from '@codemirror/merge';
 import type { Compartment, EditorState } from '@codemirror/state';
-import type { EditorView, lineNumbers } from '@codemirror/view';
+import type { EditorView, lineNumbers, highlightWhitespace } from '@codemirror/view';
 
 // The CodeMirror modules are dynamically imported on connect (see loadView), so
 // this bag holds the constructors/values once they're available.
 interface DiffModules {
   MergeView: typeof MergeView;
+  diff: typeof import('@codemirror/merge').diff;
+  Change: typeof import('@codemirror/merge').Change;
   EditorView: typeof EditorView;
   EditorState: typeof EditorState;
   Compartment: typeof Compartment;
   lineNumbers: typeof lineNumbers;
+  highlightWhitespace: typeof highlightWhitespace;
   syntaxHighlighting: typeof syntaxHighlighting;
   defaultHighlightStyle: typeof defaultHighlightStyle;
 }
@@ -49,9 +53,27 @@ export class CodeDiff extends HTMLElement {
   private modules: DiffModules | null = null;
   private languageCompartmentA: Compartment | null = null;
   private languageCompartmentB: Compartment | null = null;
+  private wrapCompartmentA: Compartment | null = null;
+  private wrapCompartmentB: Compartment | null = null;
+  private wsCompartmentA: Compartment | null = null;
+  private wsCompartmentB: Compartment | null = null;
 
   static get observedAttributes() {
-    return ['language'];
+    // `language` (highlighting); `wrap` (soft-wrap, default on) and `show-whitespace`
+    // (render whitespace markers, default off) are live compartment swaps;
+    // `ignore-whitespace` (default off) and `collapse-unchanged` (default on) change a
+    // diff/MergeView constructor option, so they rebuild the view.
+    return ['language', 'wrap', 'show-whitespace', 'ignore-whitespace', 'collapse-unchanged'];
+  }
+
+  /** A boolean attribute is "on" when present and not explicitly `"false"` (default off). */
+  private boolAttr(name: string): boolean {
+    return this.hasAttribute(name) && this.getAttribute(name) !== 'false';
+  }
+
+  /** Default-on boolean attribute: only an explicit `"false"` turns it off. */
+  private boolAttrDefaultOn(name: string): boolean {
+    return this.getAttribute(name) !== 'false';
   }
 
   constructor() {
@@ -73,6 +95,11 @@ export class CodeDiff extends HTMLElement {
   attributeChangedCallback(name: string, _oldValue: string | null, newValue: string | null) {
     if (!this.view) return;
     if (name === 'language') void this.updateLanguage(newValue);
+    // Wrap + show-whitespace are live compartment swaps; ignore-whitespace and
+    // collapse-unchanged change a constructor option, so they rebuild the view.
+    else if (name === 'wrap') this.updateWrap();
+    else if (name === 'show-whitespace') this.updateShowWhitespace();
+    else if (name === 'ignore-whitespace' || name === 'collapse-unchanged') this.rebuildView();
   }
 
   private async loadView() {
@@ -86,8 +113,11 @@ export class CodeDiff extends HTMLElement {
 
       this.modules = {
         MergeView: mergeModule.MergeView,
+        diff: mergeModule.diff,
+        Change: mergeModule.Change,
         EditorView: viewModule.EditorView,
         lineNumbers: viewModule.lineNumbers,
+        highlightWhitespace: viewModule.highlightWhitespace,
         EditorState: stateModule.EditorState,
         Compartment: stateModule.Compartment,
         syntaxHighlighting: languageModule.syntaxHighlighting,
@@ -117,30 +147,79 @@ export class CodeDiff extends HTMLElement {
 
     const {
       MergeView,
+      diff,
+      Change,
       EditorView,
       EditorState,
       Compartment,
       lineNumbers,
+      highlightWhitespace,
       syntaxHighlighting,
       defaultHighlightStyle,
     } = this.modules;
 
     this.languageCompartmentA = new Compartment();
     this.languageCompartmentB = new Compartment();
+    this.wrapCompartmentA = new Compartment();
+    this.wrapCompartmentB = new Compartment();
+    this.wsCompartmentA = new Compartment();
+    this.wsCompartmentB = new Compartment();
 
-    // Shared read-only extension set for each pane; only the language compartment differs.
-    const sideExtensions = (languageCompartment: Compartment) => [
+    // Soft-wrap is on by default (best for a side-by-side diff — no horizontal scroll,
+    // nothing hidden off-screen); opt out with `wrap="false"`. Held in a compartment so
+    // the attribute can toggle it live.
+    const wrapExtension = () => (this.boolAttrDefaultOn('wrap') ? EditorView.lineWrapping : []);
+    // Render whitespace as markers when `show-whitespace` is on (default off); live.
+    const wsExtension = () => (this.boolAttr('show-whitespace') ? highlightWhitespace() : []);
+
+    // Shared read-only extensions per pane; the language/wrap/whitespace compartments differ.
+    const sideExtensions = (
+      languageCompartment: Compartment,
+      wrapCompartment: Compartment,
+      wsCompartment: Compartment
+    ) => [
       lineNumbers(),
       syntaxHighlighting(defaultHighlightStyle),
       languageCompartment.of([]),
+      wrapCompartment.of(wrapExtension()),
+      wsCompartment.of(wsExtension()),
       // Permanently read-only — the diff has no editing surface.
       EditorState.readOnly.of(true),
       EditorView.editable.of(false),
     ];
 
+    // "Ignore whitespace": diff a whitespace-stripped copy of each side, then map the
+    // offsets back onto the original text (MergeView has no native option for this, so
+    // we go through its `diffConfig.override` hook). See whitespace.ts.
+    const diffConfig = this.boolAttr('ignore-whitespace')
+      ? {
+          override: (a: string, b: string) => {
+            const sa = stripInlineWhitespace(a);
+            const sb = stripInlineWhitespace(b);
+            return diff(sa.norm, sb.norm).map(
+              (c) => new Change(sa.map[c.fromA], sa.map[c.toA], sb.map[c.fromB], sb.map[c.toB])
+            );
+          },
+        }
+      : undefined;
+
     this.view = new MergeView({
-      a: { doc: this._left, extensions: sideExtensions(this.languageCompartmentA) },
-      b: { doc: this._right, extensions: sideExtensions(this.languageCompartmentB) },
+      a: {
+        doc: this._left,
+        extensions: sideExtensions(
+          this.languageCompartmentA,
+          this.wrapCompartmentA,
+          this.wsCompartmentA
+        ),
+      },
+      b: {
+        doc: this._right,
+        extensions: sideExtensions(
+          this.languageCompartmentB,
+          this.wrapCompartmentB,
+          this.wsCompartmentB
+        ),
+      },
       parent: mount,
       // We mount inside the shadow root; unlike EditorView, MergeView does not
       // auto-detect it, so without this its CodeMirror styles inject into the global
@@ -150,7 +229,12 @@ export class CodeDiff extends HTMLElement {
       orientation: 'a-b',
       highlightChanges: true,
       gutter: true,
-      collapseUnchanged: { margin: 3, minSize: 4 },
+      // Collapse long unchanged regions by default; `collapse-unchanged="false"` shows
+      // the full file. (A constructor option — toggling it rebuilds the view.)
+      collapseUnchanged: this.boolAttrDefaultOn('collapse-unchanged')
+        ? { margin: 3, minSize: 4 }
+        : undefined,
+      diffConfig,
     });
 
     // Resolve the initial language (if any) once the view exists.
@@ -165,6 +249,34 @@ export class CodeDiff extends HTMLElement {
     if (!this.view || !this.languageCompartmentA || !this.languageCompartmentB) return;
     this.view.a.dispatch({ effects: this.languageCompartmentA.reconfigure(extension) });
     this.view.b.dispatch({ effects: this.languageCompartmentB.reconfigure(extension) });
+  }
+
+  /** Toggle soft-wrapping on both panes (live, via the wrap compartments). */
+  private updateWrap() {
+    if (!this.view || !this.wrapCompartmentA || !this.wrapCompartmentB || !this.modules) return;
+    const extension = this.boolAttrDefaultOn('wrap') ? this.modules.EditorView.lineWrapping : [];
+    this.view.a.dispatch({ effects: this.wrapCompartmentA.reconfigure(extension) });
+    this.view.b.dispatch({ effects: this.wrapCompartmentB.reconfigure(extension) });
+  }
+
+  /** Toggle whitespace markers on both panes (live, via the whitespace compartments). */
+  private updateShowWhitespace() {
+    if (!this.view || !this.wsCompartmentA || !this.wsCompartmentB || !this.modules) return;
+    const extension = this.boolAttr('show-whitespace') ? this.modules.highlightWhitespace() : [];
+    this.view.a.dispatch({ effects: this.wsCompartmentA.reconfigure(extension) });
+    this.view.b.dispatch({ effects: this.wsCompartmentB.reconfigure(extension) });
+  }
+
+  /**
+   * Tear down and rebuild the MergeView from the current content + attributes. Used
+   * when a setting that is a constructor option (not a reconfigurable compartment) —
+   * e.g. `ignore-whitespace` — changes.
+   */
+  private rebuildView() {
+    if (!this.view) return;
+    this.view.destroy();
+    this.view = null;
+    this.initializeView();
   }
 
   /**

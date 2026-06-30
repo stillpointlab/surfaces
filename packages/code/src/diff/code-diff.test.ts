@@ -30,7 +30,13 @@ describe('CodeDiff content buffering (pre-view)', () => {
     expect(el.getContents()).toEqual({ left: 'c', right: 'd' });
   });
 
-  it('observes only language (no readonly attribute — it is always read-only)', () => {
-    expect(CodeDiff.observedAttributes).toEqual(['language']);
+  it('observes language + the wrap / whitespace / collapse toggles (no readonly — always read-only)', () => {
+    expect(CodeDiff.observedAttributes).toEqual([
+      'language',
+      'wrap',
+      'show-whitespace',
+      'ignore-whitespace',
+      'collapse-unchanged',
+    ]);
   });
 });

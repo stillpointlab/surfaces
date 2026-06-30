@@ -37,9 +37,13 @@
   overflow: hidden;
 }
 
-// The merge view fills the content area; its two editors share the width evenly.
-.cm-mergeView,
-.cm-mergeViewEditors {
+// The merge view fills the content area and is the scroller: it has a bounded
+// height (100% of the content box) and `overflow-y: auto` (from MergeView's own
+// theme), while the two editors grow to full content height inside it and scroll
+// together. Do NOT force a height on `.cm-mergeViewEditors`/`.cm-editor` — that would
+// clamp the editors and let `.cm-mergeViewEditor { overflow: hidden }` clip the
+// overflow instead of scrolling.
+.cm-mergeView {
   height: 100%;
 }
 
@@ -51,10 +55,6 @@
 // Divider between the two panes, echoing the app's `.resize-handle` look.
 .cm-mergeViewEditor + .cm-mergeViewEditor {
   border-left: 1px solid #d0d7de;
-}
-
-.cm-editor {
-  height: 100%;
 }
 
 .cm-editor.cm-focused {
