@@ -5,6 +5,12 @@
   "license": "MIT",
   "type": "module",
   "sideEffects": [
+    "./src/index.ts",
+    "./src/editor/prosemirror-editor.ts",
+    "./src/editor/md-icon.ts",
+    "./src/editor/md-toggle.ts",
+    "./src/preview/index.ts",
+    "./src/preview/md-preview.ts",
     "./dist/index.js",
     "./dist/index.cjs",
     "./dist/preview.js",
