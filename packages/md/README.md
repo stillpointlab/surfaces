@@ -139,8 +139,9 @@ From `@stillpointlab/md-editor`:
 
 From `@stillpointlab/md-editor/markdown`:
 
-- `createMarkdownIt`, `getMarkdownIt`, `renderMarkdown`
-- types: `MarkdownIt`, `MarkdownItPlugin`, `CreateMarkdownItOptions`
+- `createMarkdownIt`, `getMarkdownIt`, `renderMarkdown`, `selectedMarkdownSource`
+- types: `MarkdownIt`, `MarkdownItPlugin`, `CreateMarkdownItOptions`,
+  `MarkdownSourceSelectionOptions`
 
 ## Development
 
