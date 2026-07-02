@@ -1,9 +1,9 @@
 import { defineConfig } from 'tsup';
 
 // Three entry points:
-//  - index: the browser editor (registers <code-editor>) — ESM + CJS + d.ts
-//  - preview: the read-only <code-preview> element (no basicSetup) — ESM + CJS + d.ts
-//  - diff: the read-only side-by-side <code-diff> element (@codemirror/merge) — ESM + CJS + d.ts
+//  - index: the browser editor (registers <code-editor>) - ESM-primary + CJS fallback + d.ts
+//  - preview: the read-only <code-preview> element (no basicSetup) - ESM-primary + CJS fallback + d.ts
+//  - diff: the read-only side-by-side <code-diff> element (@codemirror/merge) - ESM-primary + CJS fallback + d.ts
 // codemirror and @codemirror/* are dependencies (external), resolved by the consumer.
 export default defineConfig({
   entry: {
