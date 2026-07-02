@@ -5,6 +5,12 @@
   "license": "MIT",
   "type": "module",
   "sideEffects": [
+    "./src/index.ts",
+    "./src/editor/code-editor.ts",
+    "./src/preview/index.ts",
+    "./src/preview/code-preview.ts",
+    "./src/diff/index.ts",
+    "./src/diff/code-diff.ts",
     "./dist/index.js",
     "./dist/index.cjs",
     "./dist/preview.js",
