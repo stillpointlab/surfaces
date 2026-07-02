@@ -58,3 +58,69 @@ describe('Table parsing', () => {
     expect(serialized).toContain('Cell 4');
   });
 });
+
+describe('Code block round trips', () => {
+  it('preserves fenced code blocks with leading spaces before the fence', () => {
+    const markdown = `   \`\`\`ts
+const value = true;
+   \`\`\``;
+
+    const doc = markdownParser.parse(markdown);
+    const serialized = markdownSerializer.serialize(doc);
+    const reparsed = markdownParser.parse(serialized);
+    const reserialized = markdownSerializer.serialize(reparsed);
+
+    expect(serialized).toBe('```ts\nconst value = true;\n```');
+    expect(reserialized).toBe(serialized);
+  });
+
+  it('uses a longer fence when code content contains triple backticks', () => {
+    const markdown = `    \`\`\`
+    const value = true;
+    \`\`\``;
+
+    const doc = markdownParser.parse(markdown);
+    const serialized = markdownSerializer.serialize(doc);
+    const reparsed = markdownParser.parse(serialized);
+    const reserialized = markdownSerializer.serialize(reparsed);
+
+    expect(serialized).toBe('````\n```\nconst value = true;\n```\n````');
+    expect(reserialized).toBe(serialized);
+  });
+
+  it('preserves fenced code blocks nested under bullet list items', () => {
+    const markdown = `- Example
+  \`\`\`ts
+  const value = true;
+  \`\`\``;
+
+    const doc = markdownParser.parse(markdown);
+    const json = doc.toJSON();
+    const serialized = markdownSerializer.serialize(doc);
+    const reparsed = markdownParser.parse(serialized);
+    const reserialized = markdownSerializer.serialize(reparsed);
+
+    expect(json.content?.[0]?.type).toBe('bullet_list');
+    expect(json.content?.[0]?.content?.[0]?.content?.[1]?.type).toBe('code_block');
+    expect(serialized).toBe('* Example\n\n  ```ts\n  const value = true;\n  ```');
+    expect(reserialized).toBe(serialized);
+  });
+
+  it('preserves four-space indented fenced code blocks under bullet list items', () => {
+    const markdown = `- Example
+    \`\`\`ts
+    const value = true;
+    \`\`\``;
+
+    const doc = markdownParser.parse(markdown);
+    const json = doc.toJSON();
+    const serialized = markdownSerializer.serialize(doc);
+    const reparsed = markdownParser.parse(serialized);
+    const reserialized = markdownSerializer.serialize(reparsed);
+
+    expect(json.content?.[0]?.type).toBe('bullet_list');
+    expect(json.content?.[0]?.content?.[0]?.content?.[1]?.type).toBe('code_block');
+    expect(serialized).toBe('* Example\n\n  ```ts\n  const value = true;\n  ```');
+    expect(reserialized).toBe(serialized);
+  });
+});

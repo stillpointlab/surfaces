@@ -256,6 +256,14 @@ function buildTableFromTokens(tokens: Token[]): Node | null {
 }
 
 // ProseMirror node → markdown serializer specs (base + plugin-contributed).
+function codeBlockFenceFor(text: string): string {
+  const longestBacktickRun = Math.max(
+    0,
+    ...Array.from(text.matchAll(/`+/g), (match) => match[0].length)
+  );
+  return '`'.repeat(Math.max(3, longestBacktickRun + 1));
+}
+
 function buildSerializerNodes(): Record<
   string,
   (state: MarkdownSerializerState, node: Node) => void
@@ -270,9 +278,12 @@ function buildSerializerNodes(): Record<
 
     code_block(state: MarkdownSerializerState, node: Node) {
       const language = node.attrs.language || '';
-      state.write('```' + language + '\n');
-      state.text(node.textContent, false);
-      state.write('\n```');
+      const text = node.textContent;
+      const fence = codeBlockFenceFor(text);
+      state.write(fence + language + '\n');
+      state.text(text, false);
+      state.write('\n');
+      state.write(fence);
       state.closeBlock(node);
     },
 
