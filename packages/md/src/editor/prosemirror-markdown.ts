@@ -71,6 +71,11 @@ function buildTokenSpecs(): Record<string, ParseSpec> {
     s: { mark: 'strike' },
     del: { mark: 'strike' },
 
+    ordered_list: {
+      block: 'ordered_list',
+      getAttrs: (tok: Token) => ({ start: Number(tok.attrGet('start') ?? 1) }),
+    },
+
     ...pluginTokens,
   };
 }
@@ -342,6 +347,20 @@ function buildSerializerNodes(): Record<
 
     table_header: () => {
       // Handled by table
+    },
+
+    bullet_list(state: MarkdownSerializerState, node: Node) {
+      state.renderList(node, '  ', () => '- ');
+    },
+
+    ordered_list(state: MarkdownSerializerState, node: Node) {
+      const start = node.attrs.start || 1;
+      const maxWidth = String(start + node.childCount - 1).length;
+      const space = state.repeat(' ', maxWidth + 2);
+      state.renderList(node, space, (index: number) => {
+        const value = String(start + index);
+        return state.repeat(' ', maxWidth - value.length) + value + '. ';
+      });
     },
 
     paragraph(state: MarkdownSerializerState, node: Node) {

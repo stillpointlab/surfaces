@@ -102,7 +102,7 @@ const value = true;
 
     expect(json.content?.[0]?.type).toBe('bullet_list');
     expect(json.content?.[0]?.content?.[0]?.content?.[1]?.type).toBe('code_block');
-    expect(serialized).toBe('* Example\n\n  ```ts\n  const value = true;\n  ```');
+    expect(serialized).toBe('- Example\n\n  ```ts\n  const value = true;\n  ```');
     expect(reserialized).toBe(serialized);
   });
 
@@ -120,7 +120,21 @@ const value = true;
 
     expect(json.content?.[0]?.type).toBe('bullet_list');
     expect(json.content?.[0]?.content?.[0]?.content?.[1]?.type).toBe('code_block');
-    expect(serialized).toBe('* Example\n\n  ```ts\n  const value = true;\n  ```');
+    expect(serialized).toBe('- Example\n\n  ```ts\n  const value = true;\n  ```');
     expect(reserialized).toBe(serialized);
+  });
+});
+
+describe('List marker round trips', () => {
+  it('serializes unordered lists with dash markers', () => {
+    const doc = markdownParser.parse(`* First\n* Second`);
+
+    expect(markdownSerializer.serialize(doc)).toBe('- First\n- Second');
+  });
+
+  it('preserves ordered list start values', () => {
+    const doc = markdownParser.parse(`3. Third\n4. Fourth`);
+
+    expect(markdownSerializer.serialize(doc)).toBe('3. Third\n4. Fourth');
   });
 });
