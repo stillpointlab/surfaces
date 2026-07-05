@@ -4,11 +4,12 @@ import './md-preview';
 import { MdPreview } from './md-preview';
 import { setPreviewRenderer } from './render';
 
-// Restore the default renderer after each test so cases don't leak into each other.
+// Restore the default renderer after each test so cases don't leak into each
+// other (mirrors render.ts's default, including the frontmatter mode pass-through).
 afterEach(() => {
-  setPreviewRenderer(async (content) => {
+  setPreviewRenderer(async (content, options) => {
     const { renderMarkdown } = await import('../markdown');
-    return renderMarkdown(content);
+    return renderMarkdown(content, { frontmatter: options?.frontmatter });
   });
   document.body.innerHTML = '';
 });
@@ -74,6 +75,48 @@ describe('md-preview', () => {
     await waitFor(() => bodyHtml(el) === '<p>second</p>');
     await new Promise((r) => setTimeout(r, 60));
     expect(bodyHtml(el)).toBe('<p>second</p>');
+  });
+
+  it('renders a frontmatter panel via the default renderer when frontmatter="panel"', async () => {
+    const el = document.createElement('md-preview') as MdPreview;
+    el.setAttribute('frontmatter', 'panel');
+    el.setContent('---\ncolumn: briefed\n---\n\n# Hello');
+    document.body.appendChild(el);
+
+    await waitFor(() => bodyHtml(el).includes('<h1>Hello</h1>'));
+    expect(bodyHtml(el)).toContain('md-frontmatter-panel');
+    expect(bodyHtml(el)).toContain('<dt>column</dt><dd>briefed</dd>');
+  });
+
+  it('hides frontmatter by default (no attribute)', async () => {
+    const el = mount('---\ncolumn: briefed\n---\n\n# Hello');
+    await waitFor(() => bodyHtml(el).includes('<h1>Hello</h1>'));
+    expect(bodyHtml(el)).toBe('<h1>Hello</h1>\n');
+  });
+
+  it('re-renders when the frontmatter attribute changes', async () => {
+    const el = mount('---\ncolumn: briefed\n---\n\n# Hello');
+    await waitFor(() => bodyHtml(el).includes('<h1>Hello</h1>'));
+    expect(bodyHtml(el)).not.toContain('md-frontmatter-panel');
+
+    el.setAttribute('frontmatter', 'panel');
+    await waitFor(() => bodyHtml(el).includes('md-frontmatter-panel'));
+    expect(bodyHtml(el)).toContain('<dt>column</dt><dd>briefed</dd>');
+  });
+
+  it('passes the frontmatter mode to an injected renderer', async () => {
+    const seen: (string | undefined)[] = [];
+    setPreviewRenderer(async (content, options) => {
+      seen.push(options?.frontmatter);
+      return `<p>${content}</p>`;
+    });
+    const el = mount('hi');
+    await waitFor(() => bodyHtml(el) === '<p>hi</p>');
+    el.setAttribute('frontmatter', 'panel');
+    await waitFor(() => seen.length >= 2);
+
+    expect(seen[0]).toBe('hidden');
+    expect(seen[1]).toBe('panel');
   });
 
   it('does not write to the root after disconnect mid-render', async () => {

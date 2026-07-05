@@ -1,3 +1,4 @@
+@use '../styles/variables' as *;
 @use '../styles/markdown' as markdown;
 
 // Content-sized by default so the consumer owns layout (height, scrolling,
@@ -14,4 +15,56 @@
 
   // Shared markdown element styling (single source of truth, same as the editor).
   @include markdown.markdown-styles;
+}
+
+// Metadata panel for a leading frontmatter block (frontmatter="panel"; see
+// renderFrontmatterPanel). Hidden mode renders nothing at all.
+.md-frontmatter-panel {
+  margin: 0 0 $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid $border-light;
+  border-radius: $border-radius-md;
+  background: $background-muted;
+  font-size: 0.8125rem;
+  color: $text-secondary;
+
+  .md-frontmatter-panel-label {
+    display: block;
+    margin-bottom: $spacing-xs;
+    font-family: monospace;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: $text-muted;
+  }
+
+  .md-frontmatter-panel-grid {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 2px $spacing-md;
+    margin: 0;
+
+    dt {
+      font-family: monospace;
+      color: $text-muted;
+    }
+
+    dd {
+      margin: 0;
+      word-break: break-word;
+    }
+  }
+
+  .md-frontmatter-panel-raw {
+    margin: 0;
+    font-family: monospace;
+    font-size: 0.75rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  &.md-frontmatter-panel-empty .md-frontmatter-panel-label {
+    margin-bottom: 0;
+  }
 }

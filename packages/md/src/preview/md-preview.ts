@@ -15,12 +15,21 @@ import { getPreviewRenderer } from './render';
  *
  * The default renderer is UNSANITIZED (dev playground only); hosts must inject a
  * renderer that sanitizes before the HTML reaches the DOM.
+ *
+ * The `frontmatter` attribute picks how a leading `---` block renders:
+ * omitted/anything else → hidden (body only); `frontmatter="panel"` → a small
+ * metadata panel above the body. The mode is passed to the renderer; injected
+ * renderers must forward it to `renderMarkdown` for it to take effect.
  */
 export class MdPreview extends HTMLElement {
   private _content = '';
   private _shadowRoot: ShadowRoot;
   // Guards against out-of-order async renders: only the latest write wins.
   private renderToken = 0;
+
+  static get observedAttributes(): string[] {
+    return ['frontmatter'];
+  }
 
   constructor() {
     super();
@@ -30,6 +39,10 @@ export class MdPreview extends HTMLElement {
   connectedCallback(): void {
     this.renderShell();
     void this.renderContent();
+  }
+
+  attributeChangedCallback(): void {
+    if (this.isConnected) void this.renderContent();
   }
 
   disconnectedCallback(): void {
@@ -50,7 +63,8 @@ export class MdPreview extends HTMLElement {
     const body = this._shadowRoot.querySelector('.md-preview-body');
     if (!body) return;
     try {
-      const html = await getPreviewRenderer()(this._content);
+      const frontmatter = this.getAttribute('frontmatter') === 'panel' ? 'panel' : 'hidden';
+      const html = await getPreviewRenderer()(this._content, { frontmatter });
       if (token !== this.renderToken || !this.isConnected) return; // superseded
       body.innerHTML = html;
     } catch (err) {

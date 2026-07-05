@@ -5,13 +5,24 @@
 // it exists for the standalone dev playground only. Hosts MUST inject a renderer
 // that sanitizes its output before it reaches the DOM (see setPreviewRenderer).
 
-export type PreviewRenderer = (content: string) => Promise<string>;
+import type { FrontmatterRenderMode } from '../markdown/frontmatter';
+
+export interface PreviewRenderOptions {
+  /**
+   * Treatment of a leading frontmatter block ('hidden' by default; 'panel'
+   * renders a metadata panel). Forward this to `renderMarkdown` — renderers
+   * that ignore it simply keep the hidden behavior.
+   */
+  frontmatter?: FrontmatterRenderMode;
+}
+
+export type PreviewRenderer = (content: string, options?: PreviewRenderOptions) => Promise<string>;
 
 // Lazily import the markdown entry so markdown-it never lands in the preview
 // chunk when a host overrides the renderer (the common case).
-const defaultRenderer: PreviewRenderer = async (content) => {
+const defaultRenderer: PreviewRenderer = async (content, options) => {
   const { renderMarkdown } = await import('../markdown');
-  return renderMarkdown(content);
+  return renderMarkdown(content, { frontmatter: options?.frontmatter });
 };
 
 let renderer: PreviewRenderer = defaultRenderer;

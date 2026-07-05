@@ -7,5 +7,6 @@ import './md-preview';
 
 export { MdPreview } from './md-preview';
 export { setPreviewRenderer, getPreviewRenderer } from './render';
-export type { PreviewRenderer } from './render';
+export type { PreviewRenderer, PreviewRenderOptions } from './render';
+export type { FrontmatterRenderMode } from '../markdown/frontmatter';
 export { setErrorHandler, setReporter } from '../editor/log';

@@ -38,6 +38,9 @@ window.setTimeout(() => {
 
 // Mirror editor content into the read-only preview (default renderer is the
 // package's own unsanitized markdown-it — fine for the local playground).
+// Panel mode shows the frontmatter as a metadata panel; remove the attribute
+// (or set anything else) to hide the block instead.
+preview?.setAttribute('frontmatter', 'panel');
 preview?.setContent(sample);
 editor?.addEventListener('content-change', (e) => {
   preview?.setContent((e as CustomEvent<{ content: string }>).detail.content);
