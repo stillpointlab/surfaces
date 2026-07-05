@@ -12,8 +12,8 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: #ffffff;
-  border: 1px solid #d0d7de;
+  background-color: var(--spl-background-primary, #ffffff);
+  border: 1px solid var(--spl-border-color, #d0d7de);
   border-radius: 6px;
   overflow: hidden;
   box-sizing: border-box;
@@ -25,7 +25,7 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #57606a;
+  color: var(--spl-text-muted, #57606a);
   font-size: 0.875rem;
 }
 

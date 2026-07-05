@@ -1,6 +1,7 @@
 /// <reference lib="dom" />
 import { loadLanguage } from '../editor/language';
 import { reportError } from '../editor/log';
+import { codeEditorTheme } from '../editor/theme';
 
 import { previewStyles } from './preview.styles';
 
@@ -115,6 +116,7 @@ export class CodePreview extends HTMLElement {
       doc: this._content,
       extensions: [
         lineNumbers(),
+        codeEditorTheme(EditorView),
         syntaxHighlighting(defaultHighlightStyle),
         this.languageCompartment.of([]),
         // Permanently read-only — there is no editing surface to reconfigure.

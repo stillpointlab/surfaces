@@ -1,6 +1,7 @@
 /// <reference lib="dom" />
 import { loadLanguage } from '../editor/language';
 import { reportError } from '../editor/log';
+import { codeEditorTheme } from '../editor/theme';
 
 import { diffStyles } from './diff.styles';
 import { stripInlineWhitespace } from './whitespace';
@@ -179,6 +180,7 @@ export class CodeDiff extends HTMLElement {
       wsCompartment: Compartment
     ) => [
       lineNumbers(),
+      codeEditorTheme(EditorView),
       syntaxHighlighting(defaultHighlightStyle),
       languageCompartment.of([]),
       wrapCompartment.of(wrapExtension()),

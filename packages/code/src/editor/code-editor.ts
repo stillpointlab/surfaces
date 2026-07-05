@@ -2,6 +2,7 @@
 import { editorStyles } from './editor.styles';
 import { loadLanguage } from './language';
 import { reportError } from './log';
+import { codeEditorTheme } from './theme';
 
 import type { Compartment, EditorState, Extension } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
@@ -109,6 +110,7 @@ export class CodeEditor extends HTMLElement {
       doc: this._content,
       extensions: [
         basicSetup,
+        codeEditorTheme(EditorView),
         this.languageCompartment.of([]),
         this.readonlyCompartment.of(this.readonlyExtensions(readonly)),
         EditorView.updateListener.of((update) => {
