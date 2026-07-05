@@ -1,19 +1,22 @@
 // Design tokens used by the editor styles + markdown mixin.
-$border-color: #eee;
-$text-muted: #666;
-$text-primary: #000;
-$text-secondary: #333;
-$border-light: #ddd;
-$border-dark: #ccc;
-$border-strong: #b0b0b0;
-$primary-blue: #0066cc;
-$primary-blue-hover: #0052a3;
-$background-primary: #ffffff;
-$background-secondary: #f5f5f5;
-$background-hover: #e8e8e8;
-$background-muted: #f8f8f8;
-$error-color: #dc3545;
-$text-color: #444;
+$border-color: var(--spl-border-color, #eee);
+$text-muted: var(--spl-text-muted, #666);
+$text-primary: var(--spl-text-primary, #000);
+$text-secondary: var(--spl-text-secondary, #333);
+$border-light: var(--spl-border-light, #ddd);
+$border-dark: var(--spl-border-dark, #ccc);
+$border-strong: var(--spl-border-strong, #b0b0b0);
+$primary-blue: var(--spl-primary-blue, #0066cc);
+$primary-blue-hover: var(--spl-primary-blue-hover, #0052a3);
+$background-primary: var(--spl-background-primary, #ffffff);
+$background-secondary: var(--spl-background-secondary, #f5f5f5);
+$code-bg: var(--spl-code-bg, #f0f0f0);
+$background-hover: var(--spl-background-hover, #e8e8e8);
+$background-muted: var(--spl-background-muted, #f8f8f8);
+$surface-overlay: var(--spl-surface-overlay, #ffffff);
+$error-color: var(--spl-error-color, #dc3545);
+$text-color: var(--spl-text-color, #444);
+$shadow-color: var(--spl-shadow-color, rgba(0, 0, 0, 0.18));
 
 // Spacing
 $spacing-xs: 0.25rem;

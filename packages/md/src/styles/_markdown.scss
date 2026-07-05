@@ -54,8 +54,9 @@
   }
 
   code {
-    background-color: $background-secondary;
-    border: 1px solid $border-color;
+    background-color: $code-bg;
+    color: var(--spl-text-primary, $text-primary);
+    border: 1px solid var(--spl-border-color, $border-color);
     border-radius: $border-radius-sm;
     padding: 0.125em 0.25em;
     font-family: monospace;
@@ -63,15 +64,17 @@
   }
 
   pre {
-    background-color: $background-secondary;
-    border: 1px solid $border-color;
+    background-color: $code-bg;
+    color: var(--spl-text-primary, $text-primary);
+    border: 1px solid var(--spl-border-color, $border-color);
     border-radius: $border-radius-md;
     padding: $spacing-md;
     overflow-x: auto;
 
     code {
-      background: none;
+      background-color: transparent;
       border: none;
+      color: inherit;
       padding: 0;
       font-size: 0.875em;
     }

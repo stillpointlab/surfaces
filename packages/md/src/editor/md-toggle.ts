@@ -14,13 +14,13 @@ const STYLE = `
   button {
     --w: 34px; --h: 18px;
     position: relative; width: var(--w); height: var(--h);
-    border: none; border-radius: 999px; background: #ccc; cursor: pointer;
+    border: none; border-radius: 999px; background: var(--spl-border-dark, #ccc); cursor: pointer;
     padding: 0; transition: background-color 0.2s ease;
   }
-  button.on { background: #0066cc; }
+  button.on { background: var(--spl-primary-blue, #0066cc); }
   .knob {
     position: absolute; top: 2px; left: 2px; width: 14px; height: 14px;
-    border-radius: 50%; background: #fff; transition: transform 0.2s ease;
+    border-radius: 50%; background: var(--spl-background-primary, #fff); transition: transform 0.2s ease;
   }
   button.on .knob { transform: translateX(16px); }
 `;

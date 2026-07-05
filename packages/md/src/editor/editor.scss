@@ -157,10 +157,10 @@
   flex-direction: column;
   min-width: 180px;
   padding: 2px 0;
-  background: $background-primary;
+  background: $surface-overlay;
   border: 1px solid $border-dark;
   border-radius: $border-radius-md;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 2px 8px $shadow-color;
   animation: toolbar-popover-in 0.15s ease;
 
   &.is-open {
@@ -265,8 +265,10 @@
   .link-input {
     width: 220px;
     padding: $spacing-xs $spacing-sm;
+    background: $background-primary;
     border: 1px solid $border-dark;
     border-radius: $border-radius-sm;
+    color: $text-primary;
     font-size: 0.875rem;
 
     &:focus {
