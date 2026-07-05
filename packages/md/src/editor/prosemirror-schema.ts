@@ -5,9 +5,33 @@ import { getEditorPlugins } from './registry';
 // Base editor schema nodes. Host-specific inline nodes (e.g. citations) are added
 // via plugins (see createSchema / getSchema).
 const baseNodes: Record<string, NodeSpec> = {
-  // Document root
+  // Document root. A frontmatter block may only exist as the first child.
   doc: {
-    content: 'block+',
+    content: 'frontmatter? block+',
+  },
+
+  // Leading YAML frontmatter, held as an opaque raw-text region (never parsed
+  // as YAML here, so a bad block can't corrupt the document). Deliberately not
+  // in the `block` group: the doc content expression above is the only place
+  // it can appear. `raw` keeps the original block bytes (delimiters included)
+  // so an untouched block serializes byte-identically — '' means there are no
+  // original bytes to restore and serialization uses the canonical form.
+  frontmatter: {
+    attrs: { raw: { default: '' } },
+    content: 'text*',
+    marks: '',
+    code: true,
+    defining: true,
+    parseDOM: [
+      {
+        tag: 'div[data-frontmatter]',
+        preserveWhitespace: 'full',
+        contentElement: 'code',
+      },
+    ],
+    toDOM() {
+      return ['div', { 'data-frontmatter': 'true', class: 'md-frontmatter' }, ['pre', ['code', 0]]];
+    },
   },
 
   // Paragraph

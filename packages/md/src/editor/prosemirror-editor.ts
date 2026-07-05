@@ -322,7 +322,9 @@ export class ProseMirrorEditor extends HTMLElement {
         if (text && this.isMarkdown(text)) {
           event.preventDefault();
           const { markdownParser } = this.editorModules!;
-          const doc = markdownParser.parse(text);
+          // Frontmatter only exists at document position 0; a pasted fragment
+          // starting with `---` must parse with the normal markdown rules.
+          const doc = markdownParser.parse(text, { frontmatter: false });
           const { tr } = view.state;
           tr.replaceSelectionWith(doc, false);
           view.dispatch(tr);

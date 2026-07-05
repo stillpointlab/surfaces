@@ -114,6 +114,20 @@ describe('selectedMarkdownSource', () => {
     );
   });
 
+  it('maps body blocks correctly when the document has a frontmatter block', () => {
+    const source = '---\ncolumn: briefed\n---\n\n# Title\n\nParagraph text';
+    // Mirrors the editor's rendering: the frontmatter node is one top-level
+    // block, so token↔block indexing stays aligned.
+    document.body.innerHTML =
+      '<div id="root">' +
+      '<div data-frontmatter="true" class="md-frontmatter"><pre><code>column: briefed</code></pre></div>' +
+      '<h1>Title</h1><p>Paragraph text</p></div>';
+    const root = document.getElementById('root')!;
+    const selection = selectNodeContents(root.querySelector('h1')!);
+
+    expect(selectedMarkdownSource({ selection, root, source })).toBe('# Title');
+  });
+
   it('returns only the selected source range within a rendered block', () => {
     const source = 'Paragraph **bold** text';
     document.body.innerHTML = '<div id="root"><p>Paragraph <strong>bold</strong> text</p></div>';

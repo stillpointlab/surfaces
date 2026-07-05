@@ -1,5 +1,7 @@
 import MarkdownIt from 'markdown-it';
 
+import { frontMatterPlugin } from './frontmatter';
+
 export type MarkdownItPlugin = (md: MarkdownIt) => void;
 
 export interface CreateMarkdownItOptions {
@@ -22,6 +24,7 @@ export function createMarkdownIt(options: CreateMarkdownItOptions = {}): Markdow
 
   md.enable('strikethrough');
   md.enable('table');
+  md.use(frontMatterPlugin);
 
   for (const plugin of options.plugins ?? []) {
     md.use(plugin);

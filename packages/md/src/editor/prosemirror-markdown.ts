@@ -8,7 +8,7 @@ import {
 } from 'prosemirror-markdown';
 import { Fragment, Mark, Node, Schema, Slice } from 'prosemirror-model';
 
-import { createMarkdownIt } from '../markdown';
+import { FRONTMATTER_BLOCK_PATTERN, createMarkdownIt, splitFrontmatterBlock } from '../markdown';
 
 import { getSchema } from './prosemirror-schema';
 import { getEditorPlugins } from './registry';
@@ -26,6 +26,11 @@ function getEditorMarkdownIt(): MarkdownIt {
       .map((p) => p.markdownItPlugin)
       .filter((p): p is (md: MarkdownIt) => void => Boolean(p));
     cachedMarkdownIt = createMarkdownIt({ plugins });
+    // The parse wrapper splits the real frontmatter block off before this
+    // instance ever runs (byte fidelity needs the raw text), so any `---`
+    // block still in the text — pasted fragments, a stray second block —
+    // must parse as plain markdown (hr/setext), not as frontmatter.
+    cachedMarkdownIt.disable('front_matter');
   }
   return cachedMarkdownIt;
 }
@@ -76,22 +81,73 @@ function buildTokenSpecs(): Record<string, ParseSpec> {
       getAttrs: (tok: Token) => ({ start: Number(tok.attrGet('start') ?? 1) }),
     },
 
+    // Frontmatter is normally split off before markdown-it ever runs (see the
+    // parse wrapper below); this spec is a safety net in case a front_matter
+    // token reaches the base parser anyway (no `raw` attr → canonical output).
+    front_matter: { block: 'frontmatter', noCloseToken: true },
+
     ...pluginTokens,
   };
 }
 
-let cachedParser: { parse(text: string): Node; schema: Schema } | null = null;
+export interface ParseMarkdownOptions {
+  /**
+   * When false, a leading `---` block is parsed with the normal markdown
+   * rules instead of becoming a frontmatter node. Used for pasted fragments,
+   * where the schema forbids frontmatter anywhere but document position 0.
+   */
+  frontmatter?: boolean;
+}
+
+// Blank lines between the frontmatter block and the body. Captured into the
+// node's `raw` attr so they survive the round-trip (ProseMirror would drop
+// them from the body).
+const LEADING_BLANK_LINES = /^(?:[ \t]*\r?\n)+/;
+
+export interface MarkdownDocParser {
+  parse(text: string, options?: ParseMarkdownOptions): Node;
+  schema: Schema;
+}
+
+let cachedParser: MarkdownDocParser | null = null;
 
 /** Memoized markdown → ProseMirror parser (schema + plugin tokens). */
-export function getMarkdownParser(): { parse(text: string): Node; schema: Schema } {
+export function getMarkdownParser(): MarkdownDocParser {
   if (cachedParser) return cachedParser;
 
   const schema = getSchema();
   const markdownIt = getEditorMarkdownIt();
   const baseParser = new MarkdownParser(schema, markdownIt, buildTokenSpecs());
 
+  // Split a leading frontmatter block off `text` BEFORE markdown-it sees it:
+  // markdown-it normalizes line endings, so byte fidelity (CRLF, EOF without
+  // newline) is only achievable by capturing the original bytes here.
+  const frontmatterNodeFor = (text: string): { node: Node; body: string } | null => {
+    const { raw, body } = splitFrontmatterBlock(text);
+    if (!raw) return null;
+    const blanks = LEADING_BLANK_LINES.exec(body)?.[0] ?? '';
+    const inner = FRONTMATTER_BLOCK_PATTERN.exec(raw)?.[1] ?? '';
+    const innerLF = inner.replace(/\r\n/g, '\n');
+    const node = schema.nodes.frontmatter.create(
+      { raw: raw + blanks },
+      innerLF ? schema.text(innerLF) : null
+    );
+    return { node, body: body.slice(blanks.length) };
+  };
+
   cachedParser = {
-    parse(text: string): Node {
+    parse(text: string, options: ParseMarkdownOptions = {}): Node {
+      let frontmatterNode: Node | null = null;
+      if (options.frontmatter !== false) {
+        const split = frontmatterNodeFor(text);
+        if (split) {
+          frontmatterNode = split.node;
+          text = split.body;
+        }
+      }
+      const attach = (doc: Node): Node =>
+        frontmatterNode ? doc.copy(Fragment.from(frontmatterNode).append(doc.content)) : doc;
+
       // Token list from markdown-it (to detect tables).
       const tokens = markdownIt.parse(text, {});
 
@@ -122,10 +178,10 @@ export function getMarkdownParser(): { parse(text: string): Node; schema: Schema
           }
         }
 
-        return result;
+        return attach(result);
       }
 
-      return doc;
+      return attach(doc);
     },
     schema,
   };
@@ -281,6 +337,20 @@ function buildSerializerNodes(): Record<
   return {
     ...defaultMarkdownSerializer.nodes,
 
+    // Safety net only: the serialize wrapper below peels the frontmatter node
+    // off the document before the base serializer runs, emitting the original
+    // bytes when the block is untouched. This canonical form is used if a
+    // frontmatter node ever reaches the base serializer some other way.
+    frontmatter(state: MarkdownSerializerState, node: Node) {
+      state.write('---\n');
+      if (node.textContent) {
+        state.text(node.textContent, false);
+        state.write('\n');
+      }
+      state.write('---');
+      state.closeBlock(node);
+    },
+
     code_block(state: MarkdownSerializerState, node: Node) {
       const language = node.attrs.language || '';
       const text = node.textContent;
@@ -389,13 +459,39 @@ const serializerMarks = {
 
 let cachedSerializer: { serialize(content: Node): string } | null = null;
 
+/**
+ * Markdown for a frontmatter node. An untouched block re-emits its original
+ * bytes (`raw` attr) verbatim — CRLF, empty block, missing EOF newline, and
+ * trailing blank lines all survive byte-identically. Once the text has been
+ * edited (or there are no original bytes) the canonical LF form is used.
+ */
+function frontmatterBlockString(node: Node): string {
+  const raw = typeof node.attrs.raw === 'string' ? node.attrs.raw : '';
+  const text = node.textContent;
+  const match = raw ? FRONTMATTER_BLOCK_PATTERN.exec(raw) : null;
+  if (match && (match[1] ?? '').replace(/\r\n/g, '\n') === text) return raw;
+  // Edited (or no original bytes): canonical LF form, keeping whatever blank
+  // lines originally separated the block from the body.
+  const trailing = match ? raw.slice(match[0].length) : '';
+  return (text ? `---\n${text}\n---\n` : '---\n---\n') + trailing;
+}
+
 /** Memoized ProseMirror → markdown serializer (base + plugin serializers). */
 export function getMarkdownSerializer(): { serialize(content: Node): string } {
   if (cachedSerializer) return cachedSerializer;
 
   const serializer = new MarkdownSerializer(buildSerializerNodes(), serializerMarks);
   cachedSerializer = {
-    serialize: (content: Node) => serializer.serialize(content, { tightLists: true }),
+    serialize: (content: Node) => {
+      // Serialize the frontmatter block ourselves (byte control the base
+      // serializer's blank-line semantics can't offer), then the rest.
+      const first = content.firstChild;
+      if (first && first.type.name === 'frontmatter') {
+        const bodyDoc = content.copy(content.content.cut(first.nodeSize));
+        return frontmatterBlockString(first) + serializer.serialize(bodyDoc, { tightLists: true });
+      }
+      return serializer.serialize(content, { tightLists: true });
+    },
   };
 
   return cachedSerializer;
