@@ -8,6 +8,7 @@ import { MdToggleEvent } from './md-toggle';
 import { ProseMirrorToolbar } from './prosemirror-toolbar';
 import { getEditorPlugins } from './registry';
 
+import type { frontmatterViewPlugin } from './frontmatter-view';
 import type { baseKeymap, lift, setBlockType, toggleMark, wrapIn } from 'prosemirror-commands';
 import type { history, redo, undo } from 'prosemirror-history';
 import type { keymap } from 'prosemirror-keymap';
@@ -74,6 +75,7 @@ interface EditorModules {
   createExtendedKeymap: any;
   createInputRules: any;
   inputRules: any;
+  frontmatterViewPlugin: typeof frontmatterViewPlugin;
 }
 
 /**
@@ -148,6 +150,7 @@ export class ProseMirrorEditor extends HTMLElement {
         import('./prosemirror-keymap'),
         import('./prosemirror-input-rules'),
         import('prosemirror-inputrules'),
+        import('./frontmatter-view'),
       ]);
 
       this.editorModules = {
@@ -184,6 +187,7 @@ export class ProseMirrorEditor extends HTMLElement {
         createExtendedKeymap: modules[10].createExtendedKeymap,
         createInputRules: modules[11].createInputRules,
         inputRules: modules[12].inputRules,
+        frontmatterViewPlugin: modules[13].frontmatterViewPlugin,
       } as EditorModules;
 
       this._loading = false;
@@ -234,6 +238,7 @@ export class ProseMirrorEditor extends HTMLElement {
       createExtendedKeymap,
       createInputRules,
       inputRules,
+      frontmatterViewPlugin,
     } = this.editorModules;
 
     // Parse initial content
@@ -289,6 +294,9 @@ export class ProseMirrorEditor extends HTMLElement {
       doc,
       schema,
       plugins: [
+        // First so its handleKeyDown (backspace guard at the body start) wins
+        // over the keymaps' joinBackward.
+        frontmatterViewPlugin(),
         inputRules({ rules }),
         history(),
         keymap(linkKeymap),

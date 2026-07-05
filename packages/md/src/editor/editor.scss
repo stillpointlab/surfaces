@@ -368,3 +368,81 @@
   justify-content: flex-end;
   align-items: center;
 }
+
+// Frontmatter block: a collapsed chip summarizing the YAML, expanding into an
+// editable raw-YAML region (see frontmatter-view.ts).
+.md-frontmatter {
+  margin: 0 0 $spacing-md;
+
+  .md-frontmatter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: 2px $spacing-sm;
+    border: 1px solid $border-light;
+    border-radius: 999px;
+    background: $background-muted;
+    color: $text-muted;
+    font-family: monospace;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    cursor: pointer;
+    user-select: none;
+    max-width: 100%;
+
+    &:hover {
+      background: $background-hover;
+      border-color: $border-dark;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $primary-blue;
+      outline-offset: 1px;
+    }
+  }
+
+  .md-frontmatter-chip-icon {
+    font-size: 0.625rem;
+  }
+
+  .md-frontmatter-chip-label {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+  }
+
+  .md-frontmatter-chip-summary {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &.md-frontmatter-chip-warning {
+      color: $error-color;
+    }
+  }
+
+  .md-frontmatter-content {
+    margin: $spacing-xs 0 0;
+    padding: $spacing-sm $spacing-md;
+    border: 1px dashed $border-dark;
+    border-radius: $border-radius-md;
+    background: $background-muted;
+    font-family: monospace;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    color: $text-secondary;
+
+    code {
+      display: block;
+      background: none;
+      padding: 0;
+    }
+  }
+
+  // NodeSelection highlight (arrow up from the body selects the block).
+  &.ProseMirror-selectednode .md-frontmatter-chip {
+    border-color: $primary-blue;
+    background: $background-hover;
+  }
+}

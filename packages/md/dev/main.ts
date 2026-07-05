@@ -7,7 +7,12 @@ import type { MdPreview } from '../src/preview';
 const editor = document.getElementById('editor') as ProseMirrorEditor;
 const preview = document.getElementById('preview') as MdPreview;
 
-const sample = `# md-editor
+const sample = `---
+column: briefed
+title: "Playground doc"
+---
+
+# md-editor
 
 This is a standalone **markdown editor** web component.
 
