@@ -71,9 +71,7 @@ For a reusable, configured instance:
 import { createMarkdownIt } from '@stillpointlab/md-editor/markdown';
 
 const md = createMarkdownIt({
-  plugins: [
-    /* markdown-it plugins */
-  ],
+  plugins: [/* markdown-it plugins */],
 });
 const html = md.render('**hi**');
 ```
@@ -97,15 +95,9 @@ const highlightPlugin: MarkdownEditorPlugin = {
   markdownItPlugin: (md) => {
     /* register an inline rule + renderer for ==highlight== */
   },
-  schemaNodes: {
-    /* highlight: { ... NodeSpec ... } */
-  },
-  parserTokens: {
-    /* highlight: { node: 'highlight' } */
-  },
-  serializerNodes: {
-    /* highlight: (state, node) => state.write('==' + node.textContent + '==') */
-  },
+  schemaNodes: {/* highlight: { ... NodeSpec ... } */},
+  parserTokens: {/* highlight: { node: 'highlight' } */},
+  serializerNodes: {/* highlight: (state, node) => state.write('==' + node.textContent + '==') */},
   onReady: (view) => {
     /* e.g. register any custom elements the nodes render to */
   },
