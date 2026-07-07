@@ -101,7 +101,7 @@ describe('xmdl-preview', () => {
     const style = el.shadowRoot?.querySelector('style')?.textContent ?? '';
 
     expect(validation?.hidden).toBe(true);
-    expect(style).toContain('[hidden]{display:none}');
+    expect(style).toContain('.xmdl-preview__section[hidden]{display:none}');
   });
 
   it('renders warnings for ignored unknown keys', () => {
