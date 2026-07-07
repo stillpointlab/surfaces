@@ -1,5 +1,6 @@
 :host {
   display: block;
+  height: 100%;
   min-height: 100%;
   font:
     14px/1.5 system-ui,
@@ -9,8 +10,14 @@
 
 .xmdl-editor {
   display: grid;
+  grid-template-rows: auto 1fr;
   min-height: 100%;
   gap: 0.75rem;
+}
+
+.xmdl-editor--raw {
+  height: 100%;
+  align-content: start;
 }
 
 .xmdl-editor__apply {
@@ -250,11 +257,13 @@
 }
 
 .xmdl-editor__raw {
+  min-width: 0;
   min-height: 24rem;
 }
 
 .xmdl-editor__raw code-editor {
   display: block;
+  height: 100%;
   min-height: 24rem;
 }
 
