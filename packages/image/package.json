@@ -1,0 +1,59 @@
+{
+  "name": "@stillpointlab/image-editor",
+  "version": "0.1.0",
+  "description": "A preview-only image web component package for Stillpoint Lab editors.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": [
+    "./src/index.ts",
+    "./src/preview/index.ts",
+    "./src/preview/image-preview.ts",
+    "./dist/index.js",
+    "./dist/index.cjs",
+    "./dist/preview.js",
+    "./dist/preview.cjs"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./preview": {
+      "types": "./dist/preview.d.ts",
+      "import": "./dist/preview.js",
+      "require": "./dist/preview.cjs"
+    }
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "preview.d.ts"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "format": "prettier --check \"**/*.{ts,mjs,json,md,scss,css,html}\"",
+    "format:fix": "prettier --write \"**/*.{ts,mjs,json,md,scss,css,html}\""
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@typescript-eslint/eslint-plugin": "^8.62.0",
+    "@typescript-eslint/parser": "^8.62.0",
+    "eslint": "^10.5.0",
+    "eslint-config-prettier": "^10.1.2",
+    "eslint-plugin-import-x": "^4.17.0",
+    "globals": "^17.7.0",
+    "jsdom": "^29.1.1",
+    "prettier": "^3.5.3",
+    "tsup": "^8.3.5",
+    "typescript": "^6.0.3",
+    "vite": "^8.1.0",
+    "vitest": "^4.1.9"
+  }
+}
