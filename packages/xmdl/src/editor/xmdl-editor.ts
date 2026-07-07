@@ -127,11 +127,6 @@ export class XmdlEditor extends HTMLElement {
     toolbar.className = 'xmdl-editor__toolbar';
     toolbar.setAttribute('role', 'toolbar');
 
-    const editButton = button('Edit Template', () => {
-      this.mode = 'raw';
-      this.render();
-    });
-
     const previousButton = button('Previous', () => {
       if (!xmdl) return;
       this.activeIndex = wrapIndex(this.activeIndex - 1, xmdl.params.length);
@@ -169,24 +164,61 @@ export class XmdlEditor extends HTMLElement {
         : 'Apply supports Markdown and XML outputs for MVP'
       : 'Apply template';
 
-    toolbar.append(editButton, previousButton, nextButton, progress, status, applyButton);
+    toolbar.append(
+      previousButton,
+      nextButton,
+      progress,
+      status,
+      applyButton,
+      toolbarSpacer(),
+      this.renderModeToggle(),
+    );
     return toolbar;
   }
 
   private renderRawToolbar(): HTMLElement {
     const toolbar = document.createElement('div');
-    toolbar.className = 'xmdl-editor__toolbar';
+    toolbar.className = 'xmdl-editor__toolbar xmdl-editor__toolbar--raw';
     toolbar.setAttribute('role', 'toolbar');
 
-    const applyModeButton = button('Apply Mode', () => {
+    toolbar.append(toolbarSpacer(), this.renderModeToggle());
+    return toolbar;
+  }
+
+  private renderModeToggle(): HTMLElement {
+    const group = document.createElement('div');
+    group.className = 'xmdl-editor__toolbar-group xmdl-editor__mode-group';
+
+    const label = document.createElement('label');
+    label.className = 'xmdl-editor__toggle-label';
+    label.textContent = 'Apply Mode';
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'xmdl-editor__mode-toggle';
+    toggle.setAttribute('role', 'switch');
+    toggle.setAttribute('aria-checked', this.mode === 'apply' ? 'true' : 'false');
+    toggle.setAttribute('aria-label', 'Apply Mode');
+    toggle.title = this.mode === 'apply' ? 'Edit template source' : 'Return to apply mode';
+
+    const knob = document.createElement('span');
+    knob.className = 'xmdl-editor__mode-toggle-knob';
+    toggle.append(knob);
+
+    toggle.addEventListener('click', () => {
+      if (this.mode === 'apply') {
+        this.mode = 'raw';
+        this.render();
+        return;
+      }
       this.content = this.readRawEditorContent();
       this.resetApplyState();
       this.mode = 'apply';
       this.render();
     });
 
-    toolbar.append(applyModeButton);
-    return toolbar;
+    group.append(label, toggle);
+    return group;
   }
 
   private renderRawEditor(): HTMLElement {
@@ -441,6 +473,12 @@ function button(label: string, onClick: () => void): HTMLButtonElement {
   element.textContent = label;
   element.addEventListener('click', onClick);
   return element;
+}
+
+function toolbarSpacer(): HTMLDivElement {
+  const spacer = document.createElement('div');
+  spacer.className = 'xmdl-editor__toolbar-spacer';
+  return spacer;
 }
 
 function readEditorContent(editor: RawEditorElement | HTMLTextAreaElement): string {

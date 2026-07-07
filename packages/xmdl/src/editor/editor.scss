@@ -20,16 +20,37 @@
 
 .xmdl-editor__toolbar {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
+  gap: 0.25rem;
+  box-sizing: border-box;
+  min-height: 30px;
+  height: 30px;
+  padding: 0.25rem;
   border: 1px solid var(--spl-border-color, #d0d7de);
   border-radius: 6px;
   background: var(--spl-background-secondary, #f8fafc);
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
-.xmdl-editor__toolbar button,
+.xmdl-editor__toolbar > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 24px;
+  height: 24px;
+  border: 1px solid var(--spl-border-color, #d0d7de);
+  border-radius: 4px;
+  padding: 2px 0.5rem;
+  background: var(--spl-background-primary, #ffffff);
+  color: var(--spl-text-primary, #1f2933);
+  font: inherit;
+  font-size: 0.875rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
 .xmdl-editor__slot-control button {
   min-height: 2rem;
   border: 1px solid var(--spl-border-color, #d0d7de);
@@ -41,7 +62,7 @@
   cursor: pointer;
 }
 
-.xmdl-editor__toolbar button:disabled,
+.xmdl-editor__toolbar > button:disabled,
 .xmdl-editor__slot-control button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
@@ -69,6 +90,60 @@
 .xmdl-editor__status[data-complete='true'] {
   background: var(--spl-status-complete-background, #dcfce7);
   color: var(--spl-status-complete-text, #166534);
+}
+
+.xmdl-editor__toolbar-spacer {
+  flex: 1;
+}
+
+.xmdl-editor__toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 100%;
+}
+
+.xmdl-editor__toggle-label {
+  display: flex;
+  align-items: center;
+  margin-right: 0.25rem;
+  color: var(--spl-text-secondary, #475569);
+  font-size: 0.875rem;
+  line-height: 1;
+}
+
+.xmdl-editor__mode-toggle {
+  --toggle-width: 34px;
+  --toggle-height: 18px;
+
+  position: relative;
+  box-sizing: border-box;
+  width: var(--toggle-width);
+  height: var(--toggle-height);
+  border: none;
+  border-radius: 999px;
+  padding: 0;
+  background: var(--spl-border-dark, #94a3b8);
+  cursor: pointer;
+}
+
+.xmdl-editor__mode-toggle[aria-checked='true'] {
+  background: var(--spl-primary-blue, #2563eb);
+}
+
+.xmdl-editor__mode-toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--spl-background-primary, #ffffff);
+  transition: transform 0.2s ease;
+}
+
+.xmdl-editor__mode-toggle[aria-checked='true'] .xmdl-editor__mode-toggle-knob {
+  transform: translateX(16px);
 }
 
 .xmdl-editor__template-header {
