@@ -36,6 +36,17 @@
   gap: 0.5rem;
 }
 
+.xmdl-preview__section-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.xmdl-preview__section-summary h3 {
+  display: inline;
+}
+
 .xmdl-preview__section h3,
 .xmdl-preview__messages h3 {
   margin: 0;

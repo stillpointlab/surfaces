@@ -73,6 +73,20 @@ describe('xmdl-preview', () => {
     expect(params[1].textContent).toContain('Options: neutral, urgent');
   });
 
+  it('renders params in an expanded collapsible section', () => {
+    const el = mount(VALID_TEMPLATE);
+    const section = el.shadowRoot?.querySelector<HTMLDetailsElement>(
+      'details[aria-labelledby="xmdl-preview-params-title"]',
+    );
+
+    expect(section?.open).toBe(true);
+    expect(section?.querySelector('summary')?.textContent).toContain('Params');
+    expect(section?.querySelectorAll('.xmdl-preview__param')).toHaveLength(3);
+
+    section!.open = false;
+    expect(section?.open).toBe(false);
+  });
+
   it('renders warnings for ignored unknown keys', () => {
     const el = mount(VALID_TEMPLATE);
     const warnings = el.shadowRoot?.querySelector('.xmdl-preview__messages');
