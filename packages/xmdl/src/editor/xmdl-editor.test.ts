@@ -54,6 +54,14 @@ function button(el: XmdlEditor, label: string): HTMLButtonElement {
   return match as HTMLButtonElement;
 }
 
+function modeSwitch(el: XmdlEditor): HTMLButtonElement {
+  const match = el.shadowRoot?.querySelector<HTMLButtonElement>(
+    '.xmdl-editor__mode-toggle[role="switch"]',
+  );
+  if (!match) throw new Error('Mode switch not found');
+  return match;
+}
+
 function input(el: XmdlEditor): HTMLTextAreaElement | HTMLInputElement | HTMLSelectElement {
   const match = el.shadowRoot?.querySelector<
     HTMLTextAreaElement | HTMLInputElement | HTMLSelectElement
@@ -92,6 +100,7 @@ describe('xmdl-editor', () => {
     expect(text(el)).toContain('0 of 5 Applied');
     expect(text(el)).toContain('Incomplete');
     expect(button(el, 'Apply Template').disabled).toBe(true);
+    expect(modeSwitch(el).getAttribute('aria-checked')).toBe('true');
     expect(text(el)).toContain('title');
     expect(text(el)).toContain('The document title');
   });
@@ -190,7 +199,8 @@ describe('xmdl-editor', () => {
       changes += 1;
     });
 
-    button(el, 'Edit Template').click();
+    modeSwitch(el).click();
+    expect(modeSwitch(el).getAttribute('aria-checked')).toBe('false');
     const source = el.shadowRoot?.querySelector<HTMLTextAreaElement>('.xmdl-editor__source');
     if (!source) throw new Error('Raw source textarea not found');
     source.value = TEMPLATE.replace('Brief Template', 'Edited Template');
@@ -199,9 +209,10 @@ describe('xmdl-editor', () => {
     expect(changes).toBe(1);
     expect(el.getContent()).toContain('Edited Template');
 
-    button(el, 'Apply Mode').click();
+    modeSwitch(el).click();
     expect(text(el)).toContain('Edited Template');
     expect(text(el)).toContain('0 of 5 Applied');
+    expect(modeSwitch(el).getAttribute('aria-checked')).toBe('true');
   });
 
   it('renders parse errors in apply mode', () => {
@@ -240,7 +251,7 @@ params:
     }
 
     const el = mount();
-    button(el, 'Edit Template').click();
+    modeSwitch(el).click();
 
     const rawEditor = el.shadowRoot?.querySelector('code-editor') as
       (HTMLElement & { setContent(content: string): void }) | null;
