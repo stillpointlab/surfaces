@@ -1,0 +1,44 @@
+:host {
+  display: block;
+  font:
+    14px/1.5 system-ui,
+    sans-serif;
+  color: #1f2933;
+}
+
+.xmdl-preview {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.xmdl-preview__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.xmdl-preview__pill {
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 0.125rem 0.5rem;
+  color: #475569;
+}
+
+.xmdl-preview__body {
+  overflow: auto;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0.75rem;
+  background: #f8fafc;
+  font:
+    13px/1.5 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
+  white-space: pre-wrap;
+}
+
+.xmdl-preview__error {
+  color: #991b1b;
+}

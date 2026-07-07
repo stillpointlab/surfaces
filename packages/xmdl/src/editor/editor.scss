@@ -1,0 +1,29 @@
+:host {
+  display: block;
+  min-height: 100%;
+  font:
+    14px/1.5 system-ui,
+    sans-serif;
+  color: #1f2933;
+}
+
+.xmdl-editor {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.xmdl-editor__source {
+  box-sizing: border-box;
+  min-height: 18rem;
+  width: 100%;
+  resize: vertical;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0.75rem;
+  font:
+    13px/1.5 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
+}

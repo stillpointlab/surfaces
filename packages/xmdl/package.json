@@ -1,0 +1,75 @@
+{
+  "name": "@stillpointlab/xmdl-editor",
+  "version": "0.1.0",
+  "description": "An XMDL parser and web component package for previewing and applying typed templates.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": [
+    "./src/index.ts",
+    "./src/editor/xmdl-editor.ts",
+    "./src/preview/index.ts",
+    "./src/preview/xmdl-preview.ts",
+    "./dist/index.js",
+    "./dist/index.cjs",
+    "./dist/preview.js",
+    "./dist/preview.cjs",
+    "./dist/parser.js",
+    "./dist/parser.cjs"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./parser": {
+      "types": "./dist/parser.d.ts",
+      "import": "./dist/parser.js",
+      "require": "./dist/parser.cjs"
+    },
+    "./preview": {
+      "types": "./dist/preview.d.ts",
+      "import": "./dist/preview.js",
+      "require": "./dist/preview.cjs"
+    }
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "preview.d.ts",
+    "parser.d.ts"
+  ],
+  "scripts": {
+    "gen:styles": "node scripts/gen-styles.mjs",
+    "prepare": "npm run build",
+    "build": "npm run gen:styles && tsup",
+    "dev": "npm run gen:styles && vite",
+    "typecheck": "npm run gen:styles && tsc --noEmit",
+    "test": "npm run gen:styles && vitest run",
+    "lint": "eslint .",
+    "format": "prettier --check \"**/*.{ts,mjs,json,md,scss,css,html}\"",
+    "format:fix": "prettier --write \"**/*.{ts,mjs,json,md,scss,css,html}\""
+  },
+  "dependencies": {
+    "yaml": "^2.9.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@typescript-eslint/eslint-plugin": "^8.62.0",
+    "@typescript-eslint/parser": "^8.62.0",
+    "eslint": "^10.5.0",
+    "eslint-config-prettier": "^10.1.2",
+    "eslint-plugin-import-x": "^4.17.0",
+    "globals": "^17.7.0",
+    "jsdom": "^29.1.1",
+    "prettier": "^3.5.3",
+    "sass": "^1.86.3",
+    "tsup": "^8.3.5",
+    "typescript": "^6.0.3",
+    "vite": "^8.1.0",
+    "vitest": "^4.1.9"
+  }
+}
