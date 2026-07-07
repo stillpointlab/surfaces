@@ -7,10 +7,6 @@
   color: var(--spl-text-primary, #1f2933);
 }
 
-[hidden] {
-  display: none;
-}
-
 .xmdl-preview {
   display: grid;
   gap: 1rem;
@@ -38,6 +34,10 @@
 .xmdl-preview__section {
   display: grid;
   gap: 0.5rem;
+}
+
+.xmdl-preview__section[hidden] {
+  display: none;
 }
 
 .xmdl-preview__section-summary {
