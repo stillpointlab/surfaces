@@ -52,26 +52,36 @@ var previewStyles = `
   box-sizing: border-box;
   display: grid;
   place-items: center;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   width: 100%;
   height: 100%;
   min-height: 220px;
   padding: 24px;
-  overflow: auto;
+  overflow: hidden;
 }
 
 .image-preview__frame {
   position: relative;
   display: grid;
   place-items: center;
-  width: min(100%, 100vw);
+  box-sizing: border-box;
+  width: 100%;
   height: 100%;
-  min-height: 188px;
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  contain: size layout;
 }
 
 .image-preview__image {
   display: block;
+  box-sizing: border-box;
   width: auto;
   height: auto;
+  min-width: 0;
+  min-height: 0;
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
@@ -146,6 +156,7 @@ var ImagePreview = class extends HTMLElement {
     this.svgSizing = "fixed";
   }
   handleLoad = async () => {
+    if (this.state === "loaded") return;
     this.state = "loaded";
     this.svgSizing = await classifySvgSizing(this.src);
     this.render();

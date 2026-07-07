@@ -58,6 +58,7 @@ export class ImagePreview extends HTMLElement {
   }
 
   private handleLoad = async (): Promise<void> => {
+    if (this.state === 'loaded') return;
     this.state = 'loaded';
     this.svgSizing = await classifySvgSizing(this.src);
     this.render();
