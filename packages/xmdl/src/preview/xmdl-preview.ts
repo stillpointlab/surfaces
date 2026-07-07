@@ -93,19 +93,24 @@ function renderWarnings(warnings: XmdlWarning[]): HTMLElement {
 }
 
 function renderParams(params: XmdlParam[]): HTMLElement {
-  const section = document.createElement('section');
+  const section = document.createElement('details');
   section.className = 'xmdl-preview__section';
+  section.open = true;
   section.setAttribute('aria-labelledby', 'xmdl-preview-params-title');
+
+  const summary = document.createElement('summary');
+  summary.className = 'xmdl-preview__section-summary';
 
   const heading = document.createElement('h3');
   heading.id = 'xmdl-preview-params-title';
   heading.textContent = 'Params';
+  summary.append(heading);
 
   if (params.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'xmdl-preview__empty';
     empty.textContent = 'No params declared.';
-    section.append(heading, empty);
+    section.append(summary, empty);
     return section;
   }
 
@@ -145,7 +150,7 @@ function renderParams(params: XmdlParam[]): HTMLElement {
     list.append(item);
   }
 
-  section.append(heading, list);
+  section.append(summary, list);
   return section;
 }
 
