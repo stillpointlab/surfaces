@@ -72,7 +72,7 @@ export class XmdlEditor extends HTMLElement {
     style.textContent = editorStyles;
 
     const wrapper = document.createElement('section');
-    wrapper.className = 'xmdl-editor';
+    wrapper.className = `xmdl-editor xmdl-editor--${this.mode}`;
     wrapper.setAttribute('aria-label', 'XMDL editor');
 
     if (this.mode === 'raw') {
