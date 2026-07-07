@@ -4,26 +4,199 @@
   font:
     14px/1.5 system-ui,
     sans-serif;
-  color: #1f2933;
+  color: var(--spl-text-primary, #1f2933);
 }
 
 .xmdl-editor {
   display: grid;
+  min-height: 100%;
   gap: 0.75rem;
 }
 
-.xmdl-editor__source {
-  box-sizing: border-box;
-  min-height: 18rem;
-  width: 100%;
-  resize: vertical;
-  border: 1px solid #cbd5e1;
+.xmdl-editor__apply {
+  display: grid;
+  gap: 1rem;
+}
+
+.xmdl-editor__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid var(--spl-border-color, #d0d7de);
+  border-radius: 6px;
+  background: var(--spl-background-secondary, #f8fafc);
+}
+
+.xmdl-editor__toolbar button,
+.xmdl-editor__slot-control button {
+  min-height: 2rem;
+  border: 1px solid var(--spl-border-color, #d0d7de);
+  border-radius: 6px;
+  padding: 0.25rem 0.75rem;
+  background: var(--spl-background-primary, #ffffff);
+  color: var(--spl-text-primary, #1f2933);
+  font: inherit;
+  cursor: pointer;
+}
+
+.xmdl-editor__toolbar button:disabled,
+.xmdl-editor__slot-control button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.xmdl-editor__apply-button:not(:disabled) {
+  border-color: var(--spl-action-border, #2563eb);
+  background: var(--spl-action-background, #2563eb);
+  color: var(--spl-action-text, #ffffff);
+}
+
+.xmdl-editor__progress,
+.xmdl-editor__status {
+  font-size: 0.875rem;
+  color: var(--spl-text-secondary, #475569);
+}
+
+.xmdl-editor__status {
+  border-radius: 999px;
+  padding: 0.125rem 0.5rem;
+  background: var(--spl-status-incomplete-background, #fff7ed);
+  color: var(--spl-status-incomplete-text, #9a3412);
+}
+
+.xmdl-editor__status[data-complete='true'] {
+  background: var(--spl-status-complete-background, #dcfce7);
+  color: var(--spl-status-complete-text, #166534);
+}
+
+.xmdl-editor__template-header {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.xmdl-editor__template-header h1 {
+  margin: 0;
+  font-size: 1.125rem;
+  line-height: 1.25;
+}
+
+.xmdl-editor__template-header p {
+  margin: 0;
+  color: var(--spl-text-secondary, #475569);
+}
+
+.xmdl-editor__slot-panel,
+.xmdl-editor__output,
+.xmdl-editor__errors {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+  border: 1px solid var(--spl-border-color, #d0d7de);
   border-radius: 6px;
   padding: 0.75rem;
+  background: var(--spl-background-primary, #ffffff);
+}
+
+.xmdl-editor__errors {
+  border-color: var(--spl-error-border, #f2a7a7);
+  background: var(--spl-error-background, #fff1f1);
+  color: var(--spl-error-text, #991b1b);
+}
+
+.xmdl-editor__slot-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.xmdl-editor__slot-header h2,
+.xmdl-editor__output h2,
+.xmdl-editor__errors h2 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.xmdl-editor__slot-meta {
+  color: var(--spl-text-muted, #64748b);
+  font-size: 0.8125rem;
+}
+
+.xmdl-editor__description,
+.xmdl-editor__empty {
+  margin: 0;
+  color: var(--spl-text-secondary, #475569);
+}
+
+.xmdl-editor__slot-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.xmdl-editor__slot-control textarea,
+.xmdl-editor__slot-control input,
+.xmdl-editor__slot-control select,
+.xmdl-editor__source {
+  box-sizing: border-box;
+  border: 1px solid var(--spl-border-color, #d0d7de);
+  border-radius: 6px;
+  padding: 0.5rem;
+  background: var(--spl-background-primary, #ffffff);
+  color: var(--spl-text-primary, #1f2933);
+  font: inherit;
+}
+
+.xmdl-editor__slot-control textarea {
+  min-height: 10rem;
+  width: min(100%, 36rem);
+  resize: vertical;
+}
+
+.xmdl-editor__slot-control input,
+.xmdl-editor__slot-control select {
+  min-width: min(100%, 16rem);
+}
+
+.xmdl-editor__source {
+  min-height: 24rem;
+  width: 100%;
+  resize: vertical;
   font:
     13px/1.5 ui-monospace,
     SFMono-Regular,
     Menlo,
     Consolas,
     monospace;
+}
+
+.xmdl-editor__raw {
+  min-height: 24rem;
+}
+
+.xmdl-editor__raw code-editor {
+  display: block;
+  min-height: 24rem;
+}
+
+.xmdl-editor__output-body {
+  overflow: auto;
+  max-height: 24rem;
+  margin: 0;
+  border: 1px solid var(--spl-border-color, #d0d7de);
+  border-radius: 6px;
+  padding: 0.75rem;
+  background: var(--spl-background-secondary, #f8fafc);
+  font:
+    13px/1.5 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
