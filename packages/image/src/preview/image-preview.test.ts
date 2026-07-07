@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { ImagePreview } from './image-preview';
 import { setErrorHandler } from './log';
@@ -6,6 +6,11 @@ import { setErrorHandler } from './log';
 describe('image-preview', () => {
   beforeAll(() => {
     expect(customElements.get('image-preview')).toBe(ImagePreview);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    setErrorHandler(null);
   });
 
   const create = (): ImagePreview => document.createElement('image-preview') as ImagePreview;
@@ -37,6 +42,44 @@ describe('image-preview', () => {
     expect(el.shadowRoot?.querySelector('svg')).toBeNull();
   });
 
+  it('keeps fixed-size svgs at their default image size', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        text: async () => '<svg width="320" height="180" viewBox="0 0 320 180"></svg>',
+      }))
+    );
+    const el = create();
+    el.setSource('/diagram.svg', 'Diagram');
+    document.body.appendChild(el);
+
+    el.shadowRoot?.querySelector('img')?.dispatchEvent(new Event('load'));
+    await flushAsync();
+
+    expect(el.shadowRoot?.querySelector('img')?.className).toBe('image-preview__image');
+  });
+
+  it('allows svgs without fixed dimensions to scale inside the preview frame', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        text: async () => '<svg viewBox="0 0 320 180"></svg>',
+      }))
+    );
+    const el = create();
+    el.setSource('/diagram.svg', 'Diagram');
+    document.body.appendChild(el);
+
+    el.shadowRoot?.querySelector('img')?.dispatchEvent(new Event('load'));
+    await flushAsync();
+
+    expect(
+      el.shadowRoot?.querySelector('img')?.classList.contains('image-preview__image--scalable')
+    ).toBe(true);
+  });
+
   it('shows an error state and reports load failures', () => {
     const handler = vi.fn();
     setErrorHandler(handler);
@@ -48,6 +91,9 @@ describe('image-preview', () => {
 
     expect(el.shadowRoot?.textContent).toContain('Could not load this image.');
     expect(handler).toHaveBeenCalledWith('Image preview failed to load', { src: '/missing.webp' });
-    setErrorHandler(null);
   });
 });
+
+function flushAsync(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}

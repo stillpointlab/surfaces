@@ -4,10 +4,12 @@ import { reportError } from './log';
 import { previewStyles } from './preview.styles';
 
 type ImageState = 'empty' | 'loading' | 'loaded' | 'error';
+type SvgSizing = 'fixed' | 'scalable';
 
 export class ImagePreview extends HTMLElement {
   private readonly root: ShadowRoot;
   private state: ImageState = 'empty';
+  private svgSizing: SvgSizing = 'fixed';
 
   static get observedAttributes(): string[] {
     return ['src', 'alt'];
@@ -52,10 +54,12 @@ export class ImagePreview extends HTMLElement {
 
   private syncStateFromSource(): void {
     this.state = this.src ? 'loading' : 'empty';
+    this.svgSizing = 'fixed';
   }
 
-  private handleLoad = (): void => {
+  private handleLoad = async (): Promise<void> => {
     this.state = 'loaded';
+    this.svgSizing = await classifySvgSizing(this.src);
     this.render();
   };
 
@@ -79,12 +83,16 @@ export class ImagePreview extends HTMLElement {
         this.state === 'error'
           ? '<div class="image-preview__message image-preview__message--error">Could not load this image.</div>'
           : '';
+      const imageClass =
+        this.svgSizing === 'scalable'
+          ? 'image-preview__image image-preview__image--scalable'
+          : 'image-preview__image';
       body = `
         <div class="image-preview__frame">
           ${
             this.state === 'error'
               ? error
-              : `<img class="image-preview__image" src="${escapeAttribute(src)}" alt="${escapeAttribute(alt)}" />${loading}`
+              : `<img class="${imageClass}" src="${escapeAttribute(src)}" alt="${escapeAttribute(alt)}" />${loading}`
           }
         </div>`;
     }
@@ -98,6 +106,31 @@ export class ImagePreview extends HTMLElement {
     img?.addEventListener('load', this.handleLoad, { once: true });
     img?.addEventListener('error', this.handleError, { once: true });
   }
+}
+
+async function classifySvgSizing(src: string): Promise<SvgSizing> {
+  if (!/\.svg(?:$|[?#])/i.test(src)) return 'fixed';
+
+  try {
+    const response = await fetch(src);
+    if (!response.ok) return 'fixed';
+    const doc = new DOMParser().parseFromString(await response.text(), 'image/svg+xml');
+    const svg = doc.documentElement;
+    if (svg.nodeName.toLowerCase() !== 'svg') return 'fixed';
+
+    const width = svg.getAttribute('width');
+    const height = svg.getAttribute('height');
+    return hasFixedSvgLength(width) && hasFixedSvgLength(height) ? 'fixed' : 'scalable';
+  } catch {
+    return 'fixed';
+  }
+}
+
+function hasFixedSvgLength(value: string | null): boolean {
+  if (!value) return false;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.endsWith('%')) return false;
+  return /^\d*\.?\d+(?:px|pt|pc|mm|cm|in)?$/i.test(trimmed);
 }
 
 function escapeAttribute(value: string): string {

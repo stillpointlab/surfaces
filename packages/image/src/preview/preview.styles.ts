@@ -14,7 +14,7 @@ export const previewStyles = `
   width: 100%;
   height: 100%;
   min-height: 220px;
-  padding: 16px;
+  padding: 24px;
   overflow: auto;
 }
 
@@ -22,16 +22,23 @@ export const previewStyles = `
   position: relative;
   display: grid;
   place-items: center;
-  width: 100%;
+  width: min(100%, 100vw);
   height: 100%;
   min-height: 188px;
 }
 
 .image-preview__image {
   display: block;
+  width: auto;
+  height: auto;
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
+}
+
+.image-preview__image--scalable {
+  width: 100%;
+  height: 100%;
 }
 
 .image-preview__message {

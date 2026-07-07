@@ -1,6 +1,7 @@
 declare class ImagePreview extends HTMLElement {
     private readonly root;
     private state;
+    private svgSizing;
     static get observedAttributes(): string[];
     constructor();
     connectedCallback(): void;

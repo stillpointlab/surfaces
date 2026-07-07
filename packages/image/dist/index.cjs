@@ -55,7 +55,7 @@ var previewStyles = `
   width: 100%;
   height: 100%;
   min-height: 220px;
-  padding: 16px;
+  padding: 24px;
   overflow: auto;
 }
 
@@ -63,16 +63,23 @@ var previewStyles = `
   position: relative;
   display: grid;
   place-items: center;
-  width: 100%;
+  width: min(100%, 100vw);
   height: 100%;
   min-height: 188px;
 }
 
 .image-preview__image {
   display: block;
+  width: auto;
+  height: auto;
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
+}
+
+.image-preview__image--scalable {
+  width: 100%;
+  height: 100%;
 }
 
 .image-preview__message {
@@ -99,6 +106,7 @@ var previewStyles = `
 var ImagePreview = class extends HTMLElement {
   root;
   state = "empty";
+  svgSizing = "fixed";
   static get observedAttributes() {
     return ["src", "alt"];
   }
@@ -135,9 +143,11 @@ var ImagePreview = class extends HTMLElement {
   }
   syncStateFromSource() {
     this.state = this.src ? "loading" : "empty";
+    this.svgSizing = "fixed";
   }
-  handleLoad = () => {
+  handleLoad = async () => {
     this.state = "loaded";
+    this.svgSizing = await classifySvgSizing(this.src);
     this.render();
   };
   handleError = () => {
@@ -152,9 +162,10 @@ var ImagePreview = class extends HTMLElement {
     if (src) {
       const loading = this.state === "loading" ? '<div class="image-preview__loading"><span class="image-preview__message">Loading...</span></div>' : "";
       const error = this.state === "error" ? '<div class="image-preview__message image-preview__message--error">Could not load this image.</div>' : "";
+      const imageClass = this.svgSizing === "scalable" ? "image-preview__image image-preview__image--scalable" : "image-preview__image";
       body = `
         <div class="image-preview__frame">
-          ${this.state === "error" ? error : `<img class="image-preview__image" src="${escapeAttribute(src)}" alt="${escapeAttribute(alt)}" />${loading}`}
+          ${this.state === "error" ? error : `<img class="${imageClass}" src="${escapeAttribute(src)}" alt="${escapeAttribute(alt)}" />${loading}`}
         </div>`;
     }
     this.root.innerHTML = `
@@ -166,6 +177,27 @@ var ImagePreview = class extends HTMLElement {
     img?.addEventListener("error", this.handleError, { once: true });
   }
 };
+async function classifySvgSizing(src) {
+  if (!/\.svg(?:$|[?#])/i.test(src)) return "fixed";
+  try {
+    const response = await fetch(src);
+    if (!response.ok) return "fixed";
+    const doc = new DOMParser().parseFromString(await response.text(), "image/svg+xml");
+    const svg = doc.documentElement;
+    if (svg.nodeName.toLowerCase() !== "svg") return "fixed";
+    const width = svg.getAttribute("width");
+    const height = svg.getAttribute("height");
+    return hasFixedSvgLength(width) && hasFixedSvgLength(height) ? "fixed" : "scalable";
+  } catch {
+    return "fixed";
+  }
+}
+function hasFixedSvgLength(value) {
+  if (!value) return false;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.endsWith("%")) return false;
+  return /^\d*\.?\d+(?:px|pt|pc|mm|cm|in)?$/i.test(trimmed);
+}
 function escapeAttribute(value) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
