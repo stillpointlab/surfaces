@@ -30,7 +30,7 @@ const body = (el: MdPreview): HTMLElement | null =>
  * asynchronously (the default renderer even dynamically imports markdown-it), so a
  * fixed delay is flaky on a cold/loaded run — wait for the actual result instead.
  */
-async function waitFor(predicate: () => boolean, timeout = 1000): Promise<void> {
+async function waitFor(predicate: () => boolean, timeout = 3000): Promise<void> {
   const start = Date.now();
   while (!predicate()) {
     if (Date.now() - start > timeout) return;
@@ -57,6 +57,23 @@ describe('md-preview', () => {
     const el = mount('hi');
     await waitFor(() => bodyHtml(el) === '<p class="x">HI</p>');
     expect(bodyHtml(el)).toBe('<p class="x">HI</p>');
+  });
+
+  it('dispatches md-preview-rendered with the rendered body root', async () => {
+    setPreviewRenderer(async (content) => `<p>${content}</p>`);
+    const rendered = new Promise<HTMLElement>((resolve) => {
+      const el = document.createElement('md-preview') as MdPreview;
+      el.addEventListener('md-preview-rendered', (event) => {
+        resolve((event as CustomEvent<{ root: HTMLElement }>).detail.root);
+      });
+      el.setContent('ready');
+      document.body.appendChild(el);
+    });
+
+    const root = await rendered;
+
+    expect(root.className).toBe('md-preview-body');
+    expect(root.innerHTML).toBe('<p>ready</p>');
   });
 
   it('shows the latest content when setContent races (last wins)', async () => {

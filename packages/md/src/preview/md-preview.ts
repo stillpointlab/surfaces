@@ -67,6 +67,13 @@ export class MdPreview extends HTMLElement {
       const html = await getPreviewRenderer()(this._content, { frontmatter });
       if (token !== this.renderToken || !this.isConnected) return; // superseded
       body.innerHTML = html;
+      this.dispatchEvent(
+        new CustomEvent('md-preview-rendered', {
+          detail: { root: body },
+          bubbles: true,
+          composed: true,
+        })
+      );
     } catch (err) {
       if (token !== this.renderToken) return;
       reportError('Failed to render markdown preview', err);
