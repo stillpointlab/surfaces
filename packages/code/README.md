@@ -23,6 +23,8 @@ editor.addEventListener('content-change', (e) => {
 <code-editor language="python"></code-editor>
 <!-- read-only, highlighted view -->
 <code-editor language="python" readonly="true"></code-editor>
+<!-- keyboard mode selector defaults to normal -->
+<code-editor language="python" keymap-mode="normal"></code-editor>
 ```
 
 ## Contract
@@ -37,9 +39,37 @@ The element matches `<md-editor>` so it drops into the same host machinery
 - `readonly` attribute — `"true"` makes the view non-editable.
 - `language` attribute — a CodeMirror language name (e.g. `python`, `javascript`,
   `json`); unknown/absent values render as plain text (line numbers only).
+- `keymap-mode` attribute — keyboard mode selector. `normal` is supported now;
+  `vim` and `emacs` are reserved modes that return an unsupported result until
+  their optional keymap packages are wired in.
 
 CodeMirror is loaded lazily on connect, so importing the package is cheap until an
 editor is actually mounted.
+
+## Keyboard modes
+
+`<code-editor>` exposes a formal, optional keymap API for hosts that want to persist or coordinate
+keyboard preferences across editor packages:
+
+```ts
+type EditorKeymapMode = 'normal' | 'vim' | 'emacs';
+type EditorKeymapModeStatus = 'applied' | 'unsupported';
+
+interface EditorKeymapModeResult {
+  requestedMode: EditorKeymapMode;
+  activeMode: EditorKeymapMode;
+  status: EditorKeymapModeStatus;
+  reason?: string;
+}
+
+editor.getSupportedKeymapModes(); // readonly EditorKeymapMode[]
+editor.getKeymapMode(); // EditorKeymapMode
+editor.setKeymapMode('normal'); // EditorKeymapModeResult
+```
+
+Unsupported requests are non-fatal and leave the active mode unchanged. In read-only mode the
+toolbar is hidden and only `normal` is available; mode-specific Vim/Emacs command filtering is left
+to future package work.
 
 ## Scripts
 
