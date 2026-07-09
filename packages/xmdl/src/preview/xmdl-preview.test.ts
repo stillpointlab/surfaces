@@ -85,16 +85,16 @@ describe('xmdl-preview', () => {
     expect(section?.querySelectorAll('.xmdl-preview__param')).toHaveLength(3);
     expect(style).toContain('.xmdl-preview__section-summary::before');
     expect(style).toContain('border-width:.45rem 0 .45rem .675rem');
-    expect(style).toContain(
-      'details[open]>.xmdl-preview__section-summary::before',
-    );
+    expect(style).toContain('details[open]>.xmdl-preview__section-summary::before');
 
     section!.open = false;
     expect(section?.open).toBe(false);
   });
 
   it('hides empty validation sections without reserving preview grid space', () => {
-    const el = mount(VALID_TEMPLATE.replace(/validation:\n  outputSchemaRef: schemas\/market\.xsd\n/, ''));
+    const el = mount(
+      VALID_TEMPLATE.replace(/validation:\n  outputSchemaRef: schemas\/market\.xsd\n/, ''),
+    );
     const validation = el.shadowRoot?.querySelector<HTMLElement>(
       'section[aria-label="Validation"]',
     );
