@@ -5,7 +5,7 @@ import { loadLanguage } from './language';
 import { reportError } from './log';
 import { codeEditorTheme } from './theme';
 
-import type { Compartment, EditorState, Extension } from '@codemirror/state';
+import type { Compartment, EditorState, Extension, Prec } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type { basicSetup } from 'codemirror';
 
@@ -40,6 +40,7 @@ interface EditorModules {
   EditorView: typeof EditorView;
   EditorState: typeof EditorState;
   Compartment: typeof Compartment;
+  Prec: typeof Prec;
   basicSetup: typeof basicSetup;
 }
 
@@ -116,6 +117,7 @@ export class CodeEditor extends HTMLElement {
         EditorView: viewModule.EditorView,
         EditorState: stateModule.EditorState,
         Compartment: stateModule.Compartment,
+        Prec: stateModule.Prec,
         basicSetup: codemirrorModule.basicSetup,
       };
 
@@ -140,7 +142,7 @@ export class CodeEditor extends HTMLElement {
       return;
     }
 
-    const { EditorView, EditorState, Compartment, basicSetup } = this.modules;
+    const { EditorView, EditorState, Compartment, Prec, basicSetup } = this.modules;
 
     this.languageCompartment = new Compartment();
     this.readonlyCompartment = new Compartment();
@@ -158,7 +160,7 @@ export class CodeEditor extends HTMLElement {
         codeEditorTheme(EditorView),
         this.languageCompartment.of([]),
         this.readonlyCompartment.of(this.readonlyExtensions(readonly)),
-        this.keymapModeCompartment.of(this.keymapModeExtensions(this.activeKeymapMode)),
+        Prec.high(this.keymapModeCompartment.of(this.keymapModeExtensions(this.activeKeymapMode))),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) this.handleContentChange();
         }),
