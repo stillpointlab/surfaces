@@ -1,5 +1,6 @@
 /// <reference lib="dom" />
 import { editorStyles } from './editor.styles';
+import { loadVimKeymapExtension } from './keymap-loaders';
 import { loadLanguage } from './language';
 import { reportError } from './log';
 import { codeEditorTheme } from './theme';
@@ -21,7 +22,7 @@ export interface EditorKeymapModeResult {
 export interface EditorKeymapModeChangeDetail extends EditorKeymapModeResult {}
 
 const KEYMAP_MODES: readonly EditorKeymapMode[] = ['normal', 'vim', 'emacs'];
-const SUPPORTED_KEYMAP_MODES: readonly EditorKeymapMode[] = ['normal'];
+const SUPPORTED_KEYMAP_MODES: readonly EditorKeymapMode[] = ['normal', 'vim'];
 
 const keymapModeLabels: Record<EditorKeymapMode, string> = {
   normal: 'Normal',
@@ -63,6 +64,8 @@ export class CodeEditor extends HTMLElement {
   private readonlyCompartment: Compartment | null = null;
   private keymapModeCompartment: Compartment | null = null;
   private activeKeymapMode: EditorKeymapMode = 'normal';
+  private vimKeymapExtension: Extension | null = null;
+  private vimKeymapLoad: Promise<Extension> | null = null;
 
   static get observedAttributes() {
     return ['readonly', 'language', 'keymap-mode'];
@@ -74,7 +77,7 @@ export class CodeEditor extends HTMLElement {
   }
 
   connectedCallback() {
-    this.reflectKeymapMode();
+    if (!parseKeymapMode(this.getAttribute('keymap-mode'))) this.reflectKeymapMode();
     this.render();
     // Defer to the next tick so the shadow DOM is ready before we mount the view.
     setTimeout(() => this.loadEditor(), 0);
@@ -165,6 +168,7 @@ export class CodeEditor extends HTMLElement {
     // Resolve the initial language (if any) once the view exists.
     const language = this.getAttribute('language');
     if (language) void this.updateLanguage(language);
+    void this.applyKeymapModeFromAttribute(this.getAttribute('keymap-mode'));
   }
 
   private readonlyExtensions(readonly: boolean): Extension {
@@ -190,7 +194,18 @@ export class CodeEditor extends HTMLElement {
     this.syncToolbar();
   }
 
-  private keymapModeExtensions(_mode: EditorKeymapMode): Extension {
+  private keymapModeExtensions(mode: EditorKeymapMode): Extension {
+    if (mode === 'vim') return this.vimKeymapExtension ?? [];
+    return [];
+  }
+
+  private async loadKeymapModeExtension(mode: EditorKeymapMode): Promise<Extension> {
+    if (mode === 'normal') return [];
+    if (mode === 'vim') {
+      this.vimKeymapLoad ??= loadVimKeymapExtension();
+      this.vimKeymapExtension = await this.vimKeymapLoad;
+      return this.vimKeymapExtension;
+    }
     return [];
   }
 
@@ -202,7 +217,7 @@ export class CodeEditor extends HTMLElement {
     return this.activeKeymapMode;
   }
 
-  setKeymapMode(mode: EditorKeymapMode | string): EditorKeymapModeResult {
+  async setKeymapMode(mode: EditorKeymapMode | string): Promise<EditorKeymapModeResult> {
     const parsedMode = parseKeymapMode(mode);
 
     if (!parsedMode) {
@@ -240,6 +255,20 @@ export class CodeEditor extends HTMLElement {
       return result;
     }
 
+    try {
+      await this.loadKeymapModeExtension(requestedMode);
+    } catch (err) {
+      this.vimKeymapLoad = null;
+      reportError(`Failed to load ${requestedMode} keymap mode`, err);
+      this.reflectKeymapMode();
+      return {
+        requestedMode,
+        activeMode: this.activeKeymapMode,
+        status: 'unsupported',
+        reason: 'load-failed',
+      };
+    }
+
     const previousMode = this.activeKeymapMode;
     this.activeKeymapMode = requestedMode;
     this.reflectKeymapMode();
@@ -269,7 +298,7 @@ export class CodeEditor extends HTMLElement {
       this.reflectKeymapMode();
       return;
     }
-    this.setKeymapMode(parsedMode);
+    await this.setKeymapMode(parsedMode);
   }
 
   private reconfigureKeymapMode() {
@@ -321,7 +350,7 @@ export class CodeEditor extends HTMLElement {
     const button = event.target instanceof HTMLElement ? event.target.closest('button') : null;
     const mode = parseKeymapMode(button?.getAttribute('data-keymap-mode') ?? null);
     if (!mode || button?.hasAttribute('disabled')) return;
-    this.setKeymapMode(mode);
+    void this.setKeymapMode(mode);
     this.view?.focus();
   }
 

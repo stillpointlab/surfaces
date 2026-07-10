@@ -1,6 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { CodeEditor } from './code-editor';
+import * as keymapLoaders from './keymap-loaders';
 
 const waitFor = async (predicate: () => boolean) => {
   const deadline = Date.now() + 1000;
@@ -23,6 +24,7 @@ describe('CodeEditor content buffering (pre-view)', () => {
   const create = () => document.createElement('code-editor') as CodeEditor;
 
   afterEach(() => {
+    vi.restoreAllMocks();
     document.body.replaceChildren();
   });
 
@@ -50,18 +52,58 @@ describe('CodeEditor content buffering (pre-view)', () => {
   it('defaults to normal keymap mode', () => {
     const el = create();
     expect(el.getKeymapMode()).toBe('normal');
-    expect(el.getSupportedKeymapModes()).toEqual(['normal']);
+    expect(el.getSupportedKeymapModes()).toEqual(['normal', 'vim']);
   });
 
-  it('returns unsupported for reserved keymap modes until their packages are wired', () => {
+  it('enables vim keymap mode through the loader', async () => {
     const el = create();
     const listener = vi.fn();
     el.addEventListener('keymap-mode-change', listener);
 
-    const result = el.setKeymapMode('vim');
+    const result = await el.setKeymapMode('vim');
 
     expect(result).toEqual({
       requestedMode: 'vim',
+      activeMode: 'vim',
+      status: 'applied',
+    });
+    expect(el.getKeymapMode()).toBe('vim');
+    expect(el.getAttribute('keymap-mode')).toBe('vim');
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect((listener.mock.calls[0][0] as CustomEvent).detail).toEqual(result);
+  });
+
+  it('returns unsupported when the vim loader fails', async () => {
+    const el = create();
+    const listener = vi.fn();
+    el.addEventListener('keymap-mode-change', listener);
+    const load = vi
+      .spyOn(keymapLoaders, 'loadVimKeymapExtension')
+      .mockRejectedValueOnce(new Error('load failed'));
+
+    const result = await el.setKeymapMode('vim');
+
+    expect(result).toEqual({
+      requestedMode: 'vim',
+      activeMode: 'normal',
+      status: 'unsupported',
+      reason: 'load-failed',
+    });
+    expect(el.getKeymapMode()).toBe('normal');
+    expect(el.getAttribute('keymap-mode')).toBe('normal');
+    expect(listener).not.toHaveBeenCalled();
+    load.mockRestore();
+  });
+
+  it('returns unsupported for reserved emacs mode until its package is wired', async () => {
+    const el = create();
+    const listener = vi.fn();
+    el.addEventListener('keymap-mode-change', listener);
+
+    const result = await el.setKeymapMode('emacs');
+
+    expect(result).toEqual({
+      requestedMode: 'emacs',
       activeMode: 'normal',
       status: 'unsupported',
       reason: 'not-supported',
@@ -91,8 +133,21 @@ describe('CodeEditor content buffering (pre-view)', () => {
       el.shadowRoot!.querySelectorAll<HTMLButtonElement>('.code-editor-keymap-button')
     );
     expect(buttons.map((button) => button.dataset.keymapMode)).toEqual(['normal', 'vim', 'emacs']);
-    expect(buttons.map((button) => button.disabled)).toEqual([false, true, true]);
+    expect(buttons.map((button) => button.disabled)).toEqual([false, false, true]);
     expect(buttons[0].classList.contains('is-active')).toBe(true);
+  });
+
+  it('applies initial keymap-mode="vim" after the editor hydrates', async () => {
+    const el = create();
+    el.setAttribute('keymap-mode', 'vim');
+
+    document.body.append(el);
+    await waitFor(() => el.getKeymapMode() === 'vim');
+
+    const active = el.shadowRoot!.querySelector<HTMLButtonElement>(
+      '.code-editor-keymap-button.is-active'
+    );
+    expect(active?.dataset.keymapMode).toBe('vim');
   });
 
   it('hides the toolbar and rejects non-normal modes in readonly mode', async () => {
@@ -104,7 +159,7 @@ describe('CodeEditor content buffering (pre-view)', () => {
 
     expect(el.shadowRoot?.querySelector('.code-editor-toolbar')).toBeNull();
     expect(el.getSupportedKeymapModes()).toEqual(['normal']);
-    expect(el.setKeymapMode('emacs')).toEqual({
+    await expect(el.setKeymapMode('emacs')).resolves.toEqual({
       requestedMode: 'emacs',
       activeMode: 'normal',
       status: 'unsupported',
@@ -112,12 +167,12 @@ describe('CodeEditor content buffering (pre-view)', () => {
     });
   });
 
-  it('dispatches keymap-mode-change only when the active mode changes', () => {
+  it('dispatches keymap-mode-change only when the active mode changes', async () => {
     const el = create();
     const listener = vi.fn();
     el.addEventListener('keymap-mode-change', listener);
 
-    expect(el.setKeymapMode('normal')).toEqual({
+    await expect(el.setKeymapMode('normal')).resolves.toEqual({
       requestedMode: 'normal',
       activeMode: 'normal',
       status: 'applied',
