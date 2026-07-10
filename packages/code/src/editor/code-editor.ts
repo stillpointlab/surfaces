@@ -5,8 +5,9 @@ import { loadLanguage } from './language';
 import { reportError } from './log';
 import { codeEditorTheme } from './theme';
 
+import type * as commands from '@codemirror/commands';
 import type { Compartment, EditorState, Extension, Prec } from '@codemirror/state';
-import type { EditorView } from '@codemirror/view';
+import type { Command, EditorView, KeyBinding, keymap } from '@codemirror/view';
 import type { basicSetup } from 'codemirror';
 
 export type EditorKeymapMode = 'normal' | 'vim' | 'emacs';
@@ -41,6 +42,8 @@ interface EditorModules {
   EditorState: typeof EditorState;
   Compartment: typeof Compartment;
   Prec: typeof Prec;
+  keymap: typeof keymap;
+  commands: typeof commands;
   basicSetup: typeof basicSetup;
 }
 
@@ -107,9 +110,10 @@ export class CodeEditor extends HTMLElement {
 
   private async loadEditor() {
     try {
-      const [viewModule, stateModule, codemirrorModule] = await Promise.all([
+      const [viewModule, stateModule, commandsModule, codemirrorModule] = await Promise.all([
         import('@codemirror/view'),
         import('@codemirror/state'),
+        import('@codemirror/commands'),
         import('codemirror'),
       ]);
 
@@ -118,6 +122,8 @@ export class CodeEditor extends HTMLElement {
         EditorState: stateModule.EditorState,
         Compartment: stateModule.Compartment,
         Prec: stateModule.Prec,
+        keymap: viewModule.keymap,
+        commands: commandsModule,
         basicSetup: codemirrorModule.basicSetup,
       };
 
@@ -207,23 +213,127 @@ export class CodeEditor extends HTMLElement {
   }
 
   private emacsShortcutOverrides(): Extension {
-    const { EditorView } = this.modules!;
-    return EditorView.domEventHandlers({
-      keydown: (event, view) => {
-        if (
-          !event.ctrlKey ||
-          event.altKey ||
-          event.metaKey ||
-          event.shiftKey ||
-          event.key.toLowerCase() !== 'a'
-        ) {
-          return false;
-        }
-        const line = view.state.doc.lineAt(view.state.selection.main.head);
-        view.dispatch({ selection: { anchor: line.from }, scrollIntoView: true });
+    const { EditorView, keymap, commands } = this.modules!;
+    let killRing = '';
+    let ctrlXPrefix = false;
+
+    const moveLine = (direction: -1 | 1): Command => {
+      return (view) => {
+        const head = view.state.selection.main.head;
+        const line = view.state.doc.lineAt(head);
+        const targetNumber = line.number + direction;
+        if (targetNumber < 1 || targetNumber > view.state.doc.lines) return true;
+        const column = head - line.from;
+        const targetLine = view.state.doc.line(targetNumber);
+        view.dispatch({
+          selection: { anchor: Math.min(targetLine.from + column, targetLine.to) },
+          scrollIntoView: true,
+        });
         return true;
-      },
+      };
+    };
+
+    const killToLineEnd: Command = (view) => {
+      const range = view.state.selection.main;
+      const from = Math.min(range.anchor, range.head);
+      let to = Math.max(range.anchor, range.head);
+      if (from === to) {
+        const line = view.state.doc.lineAt(from);
+        to = from < line.to ? line.to : Math.min(line.to + 1, view.state.doc.length);
+      }
+      killRing = view.state.sliceDoc(from, to);
+      view.dispatch({
+        changes: { from, to },
+        selection: { anchor: from },
+        scrollIntoView: true,
+      });
+      return true;
+    };
+
+    const yank: Command = (view) => {
+      if (!killRing) return true;
+      const range = view.state.selection.main;
+      const from = Math.min(range.anchor, range.head);
+      const to = Math.max(range.anchor, range.head);
+      view.dispatch({
+        changes: { from, to, insert: killRing },
+        selection: { anchor: from + killRing.length },
+        scrollIntoView: true,
+      });
+      return true;
+    };
+
+    const saveRequest: Command = () => {
+      this.dispatchEvent(new CustomEvent('save-request', { bubbles: true, composed: true }));
+      return true;
+    };
+
+    const handled = (key: string, run: Command, shift?: Command): KeyBinding => ({
+      key,
+      run,
+      shift,
+      preventDefault: true,
+      stopPropagation: true,
     });
+
+    return [
+      EditorView.domEventHandlers({
+        keydown: (event, view) => {
+          if (!event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) {
+            ctrlXPrefix = false;
+            return false;
+          }
+          const key = event.key.toLowerCase();
+          if (key === 'x') {
+            ctrlXPrefix = true;
+            event.stopPropagation();
+            return true;
+          }
+          if (ctrlXPrefix && key === 's') {
+            ctrlXPrefix = false;
+            event.stopPropagation();
+            return saveRequest(view);
+          }
+          if (ctrlXPrefix && key === 'u') {
+            ctrlXPrefix = false;
+            event.stopPropagation();
+            commands.undo(view);
+            return true;
+          }
+          ctrlXPrefix = false;
+          return false;
+        },
+      }),
+      keymap.of([
+        handled('Ctrl-f', commands.cursorCharForward, commands.selectCharForward),
+        handled('Ctrl-b', commands.cursorCharBackward, commands.selectCharBackward),
+        handled('Ctrl-p', moveLine(-1)),
+        handled('Ctrl-n', moveLine(1)),
+        handled('Ctrl-a', commands.cursorLineStart, commands.selectLineStart),
+        handled('Ctrl-e', commands.cursorLineEnd, commands.selectLineEnd),
+        handled('Alt-f', commands.cursorGroupForward, commands.selectGroupForward),
+        handled('Alt-b', commands.cursorGroupBackward, commands.selectGroupBackward),
+        handled('Ctrl-d', commands.deleteCharForward),
+        handled('Backspace', commands.deleteCharBackward),
+        handled('Ctrl-h', commands.deleteCharBackward),
+        handled('Ctrl-k', killToLineEnd),
+        handled('Ctrl-y', yank),
+        handled('Ctrl-g', (view) => {
+          ctrlXPrefix = false;
+          return commands.simplifySelection(view) || true;
+        }),
+        handled('Ctrl-o', commands.splitLine),
+        handled('Ctrl-t', commands.transposeChars),
+        handled('Ctrl-v', commands.cursorPageDown),
+        handled('Alt-v', commands.cursorPageUp),
+        handled('Alt-d', commands.deleteGroupForward),
+        handled('Alt-Backspace', commands.deleteGroupBackward),
+        handled('Ctrl-/', commands.undo),
+        handled('Ctrl-x u', commands.undo),
+        handled('Ctrl-z', commands.undo),
+        handled('Ctrl--', commands.redo),
+      ]),
+    ];
   }
 
   private async loadKeymapModeExtension(mode: EditorKeymapMode): Promise<Extension> {

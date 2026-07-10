@@ -25,6 +25,20 @@ describe('CodeEditor content buffering (pre-view)', () => {
 
   const create = () => document.createElement('code-editor') as CodeEditor;
   const getView = (el: CodeEditor) => (el as unknown as { view: EditorView | null }).view;
+  const dispatchKey = (
+    view: EditorView,
+    key: string,
+    options: KeyboardEventInit = {}
+  ): KeyboardEvent => {
+    const event = new KeyboardEvent('keydown', {
+      key,
+      bubbles: true,
+      cancelable: true,
+      ...options,
+    });
+    view.contentDOM.dispatchEvent(event);
+    return event;
+  };
 
   afterEach(() => {
     vi.restoreAllMocks();
@@ -198,14 +212,7 @@ describe('CodeEditor content buffering (pre-view)', () => {
     const view = getView(el)!;
     view.dispatch({ selection: { anchor: 2 } });
 
-    const event = new KeyboardEvent('keydown', {
-      key: 'a',
-      code: 'KeyA',
-      ctrlKey: true,
-      bubbles: true,
-      cancelable: true,
-    });
-    view.contentDOM.dispatchEvent(event);
+    const event = dispatchKey(view, 'a', { code: 'KeyA', ctrlKey: true });
 
     expect(view.state.selection.main.from).toBe(0);
     expect(view.state.selection.main.to).toBe(0);
@@ -224,18 +231,89 @@ describe('CodeEditor content buffering (pre-view)', () => {
     const view = getView(el)!;
     view.dispatch({ selection: { anchor: 2 } });
 
-    const event = new KeyboardEvent('keydown', {
-      key: 'a',
-      code: 'KeyA',
-      ctrlKey: true,
-      bubbles: true,
-      cancelable: true,
-    });
-    view.contentDOM.dispatchEvent(event);
+    const event = dispatchKey(view, 'a', { code: 'KeyA', ctrlKey: true });
 
     expect(view.state.selection.main.from).toBe(0);
     expect(view.state.selection.main.to).toBe(0);
     expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('handles common emacs movement shortcuts and prevents default browser behavior', async () => {
+    const el = create();
+    el.setContent('one two\nthree');
+
+    document.body.append(el);
+    await waitFor(() => Boolean(getView(el)));
+    await el.setKeymapMode('emacs');
+    const view = getView(el)!;
+    const documentShortcut = vi.fn();
+    document.addEventListener('keydown', documentShortcut);
+
+    view.dispatch({ selection: { anchor: 1 } });
+    expect(dispatchKey(view, 'f', { code: 'KeyF', ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(view.state.selection.main.head).toBe(2);
+    expect(dispatchKey(view, 'b', { code: 'KeyB', ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(view.state.selection.main.head).toBe(1);
+    expect(dispatchKey(view, 'e', { code: 'KeyE', ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(view.state.selection.main.head).toBe(7);
+    expect(dispatchKey(view, 'a', { code: 'KeyA', ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(view.state.selection.main.head).toBe(0);
+    expect(dispatchKey(view, 'f', { code: 'KeyF', altKey: true }).defaultPrevented).toBe(true);
+    expect(view.state.selection.main.head).toBeGreaterThan(0);
+    expect(dispatchKey(view, 'b', { code: 'KeyB', altKey: true }).defaultPrevented).toBe(true);
+    expect(view.state.selection.main.head).toBe(0);
+
+    view.dispatch({ selection: { anchor: 11 } });
+    expect(dispatchKey(view, 'p', { code: 'KeyP', ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(view.state.selection.main.head).toBeLessThan(8);
+    expect(dispatchKey(view, 'n', { code: 'KeyN', ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(view.state.selection.main.head).toBeGreaterThanOrEqual(8);
+    expect(documentShortcut).not.toHaveBeenCalled();
+    document.removeEventListener('keydown', documentShortcut);
+  });
+
+  it('handles common emacs editing shortcuts and prevents default browser behavior', async () => {
+    const el = create();
+    el.setContent('abc\ndef');
+
+    document.body.append(el);
+    await waitFor(() => Boolean(getView(el)));
+    await el.setKeymapMode('emacs');
+    const view = getView(el)!;
+
+    view.dispatch({ selection: { anchor: 1 } });
+    expect(dispatchKey(view, 'd', { code: 'KeyD', ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(el.getContent()).toBe('ac\ndef');
+    expect(dispatchKey(view, 'Backspace', { code: 'Backspace' }).defaultPrevented).toBe(true);
+    expect(el.getContent()).toBe('c\ndef');
+    view.dispatch({ selection: { anchor: 0 } });
+    expect(dispatchKey(view, 'k', { code: 'KeyK', ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(el.getContent()).toBe('\ndef');
+    expect(dispatchKey(view, 'y', { code: 'KeyY', ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(el.getContent()).toBe('c\ndef');
+    expect(dispatchKey(view, 'g', { code: 'KeyG', ctrlKey: true }).defaultPrevented).toBe(true);
+  });
+
+  it('handles emacs save chord without letting browser save run', async () => {
+    const el = create();
+    const listener = vi.fn();
+    const documentShortcut = vi.fn();
+    el.addEventListener('save-request', listener);
+    document.addEventListener('keydown', documentShortcut);
+
+    document.body.append(el);
+    await waitFor(() => Boolean(getView(el)));
+    await el.setKeymapMode('emacs');
+    const view = getView(el)!;
+
+    const prefix = dispatchKey(view, 'x', { code: 'KeyX', ctrlKey: true });
+    const save = dispatchKey(view, 's', { code: 'KeyS', ctrlKey: true });
+
+    expect(prefix.defaultPrevented).toBe(true);
+    expect(save.defaultPrevented).toBe(true);
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(documentShortcut).not.toHaveBeenCalled();
+    document.removeEventListener('keydown', documentShortcut);
   });
 
   it('hides the toolbar and rejects non-normal modes in readonly mode', async () => {
