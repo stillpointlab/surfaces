@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 import { editorStyles } from './editor.styles';
-import { loadVimKeymapExtension } from './keymap-loaders';
+import { loadEmacsKeymapExtension, loadVimKeymapExtension } from './keymap-loaders';
 import { loadLanguage } from './language';
 import { reportError } from './log';
 import { codeEditorTheme } from './theme';
@@ -22,7 +22,7 @@ export interface EditorKeymapModeResult {
 export interface EditorKeymapModeChangeDetail extends EditorKeymapModeResult {}
 
 const KEYMAP_MODES: readonly EditorKeymapMode[] = ['normal', 'vim', 'emacs'];
-const SUPPORTED_KEYMAP_MODES: readonly EditorKeymapMode[] = ['normal', 'vim'];
+const SUPPORTED_KEYMAP_MODES: readonly EditorKeymapMode[] = ['normal', 'vim', 'emacs'];
 
 const keymapModeLabels: Record<EditorKeymapMode, string> = {
   normal: 'Normal',
@@ -66,6 +66,8 @@ export class CodeEditor extends HTMLElement {
   private activeKeymapMode: EditorKeymapMode = 'normal';
   private vimKeymapExtension: Extension | null = null;
   private vimKeymapLoad: Promise<Extension> | null = null;
+  private emacsKeymapExtension: Extension | null = null;
+  private emacsKeymapLoad: Promise<Extension> | null = null;
 
   static get observedAttributes() {
     return ['readonly', 'language', 'keymap-mode'];
@@ -196,6 +198,7 @@ export class CodeEditor extends HTMLElement {
 
   private keymapModeExtensions(mode: EditorKeymapMode): Extension {
     if (mode === 'vim') return this.vimKeymapExtension ?? [];
+    if (mode === 'emacs') return this.emacsKeymapExtension ?? [];
     return [];
   }
 
@@ -205,6 +208,11 @@ export class CodeEditor extends HTMLElement {
       this.vimKeymapLoad ??= loadVimKeymapExtension();
       this.vimKeymapExtension = await this.vimKeymapLoad;
       return this.vimKeymapExtension;
+    }
+    if (mode === 'emacs') {
+      this.emacsKeymapLoad ??= loadEmacsKeymapExtension();
+      this.emacsKeymapExtension = await this.emacsKeymapLoad;
+      return this.emacsKeymapExtension;
     }
     return [];
   }
@@ -258,7 +266,8 @@ export class CodeEditor extends HTMLElement {
     try {
       await this.loadKeymapModeExtension(requestedMode);
     } catch (err) {
-      this.vimKeymapLoad = null;
+      if (requestedMode === 'vim') this.vimKeymapLoad = null;
+      if (requestedMode === 'emacs') this.emacsKeymapLoad = null;
       reportError(`Failed to load ${requestedMode} keymap mode`, err);
       this.reflectKeymapMode();
       return {
