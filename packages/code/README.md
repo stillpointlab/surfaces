@@ -65,9 +65,10 @@ editor.getKeymapMode(); // EditorKeymapMode
 await editor.setKeymapMode('vim'); // EditorKeymapModeResult
 ```
 
-Vim and Emacs bindings are loaded dynamically the first time their modes are requested. Unsupported
-requests are non-fatal and leave the active mode unchanged. In read-only mode the toolbar is hidden
-and only `normal` is available; mode-specific command filtering is left to future package work.
+Vim bindings are loaded dynamically the first time Vim mode is requested. Emacs mode uses a
+first-party CodeMirror keymap for the supported Emacs-style shortcut subset. Unsupported requests
+are non-fatal and leave the active mode unchanged. In read-only mode the toolbar is hidden and only
+`normal` is available; mode-specific command filtering is left to future package work.
 
 ## Scripts
 
