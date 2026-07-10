@@ -29,6 +29,63 @@
   font-size: 0.875rem;
 }
 
+.code-editor-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--spl-border-color, #d0d7de);
+  background: var(--spl-background-secondary, #f6f8fa);
+  box-sizing: border-box;
+}
+
+.code-editor-keymap-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--spl-border-color, #d0d7de);
+  border-radius: 6px;
+  background: var(--spl-background-primary, #ffffff);
+}
+
+.code-editor-keymap-button {
+  appearance: none;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--spl-text-secondary, #57606a);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1;
+  min-width: 52px;
+  padding: 6px 8px;
+}
+
+.code-editor-keymap-button:hover:not(:disabled) {
+  background: var(--spl-background-hover, #eaeef2);
+  color: var(--spl-text-primary, #24292f);
+}
+
+.code-editor-keymap-button:focus-visible {
+  outline: 2px solid var(--spl-focus-ring, #0969da);
+  outline-offset: 1px;
+}
+
+.code-editor-keymap-button.is-active {
+  background: var(--spl-button-bg, #2f6b5b);
+  color: var(--spl-button-text, #ffffff);
+}
+
+.code-editor-keymap-button:disabled {
+  color: var(--spl-text-muted, #8c959f);
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 .code-editor-content {
   height: 100%;
   min-height: 0;

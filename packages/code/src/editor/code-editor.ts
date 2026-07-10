@@ -8,6 +8,31 @@ import type { Compartment, EditorState, Extension } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type { basicSetup } from 'codemirror';
 
+export type EditorKeymapMode = 'normal' | 'vim' | 'emacs';
+export type EditorKeymapModeStatus = 'applied' | 'unsupported';
+
+export interface EditorKeymapModeResult {
+  requestedMode: EditorKeymapMode;
+  activeMode: EditorKeymapMode;
+  status: EditorKeymapModeStatus;
+  reason?: string;
+}
+
+export interface EditorKeymapModeChangeDetail extends EditorKeymapModeResult {}
+
+const KEYMAP_MODES: readonly EditorKeymapMode[] = ['normal', 'vim', 'emacs'];
+const SUPPORTED_KEYMAP_MODES: readonly EditorKeymapMode[] = ['normal'];
+
+const keymapModeLabels: Record<EditorKeymapMode, string> = {
+  normal: 'Normal',
+  vim: 'Vim',
+  emacs: 'Emacs',
+};
+
+const parseKeymapMode = (value: string | null): EditorKeymapMode | null => {
+  return KEYMAP_MODES.includes(value as EditorKeymapMode) ? (value as EditorKeymapMode) : null;
+};
+
 // The heavy CodeMirror modules are dynamically imported on connect (see loadEditor),
 // so this bag holds the constructors/values once they're available.
 interface EditorModules {
@@ -23,6 +48,8 @@ interface EditorModules {
  * `setContent`/`getContent` strings, a `content-change` CustomEvent on every edit,
  * and a `readonly` attribute — plus a `language` attribute that selects syntax
  * highlighting. `basicSetup` provides line numbers and sensible editing defaults.
+ * `keymap-mode` is an extensible keyboard-mode selector; this foundation slice
+ * supports normal mode and returns explicit unsupported results for future modes.
  */
 export class CodeEditor extends HTMLElement {
   private view: EditorView | null = null;
@@ -34,9 +61,11 @@ export class CodeEditor extends HTMLElement {
   private modules: EditorModules | null = null;
   private languageCompartment: Compartment | null = null;
   private readonlyCompartment: Compartment | null = null;
+  private keymapModeCompartment: Compartment | null = null;
+  private activeKeymapMode: EditorKeymapMode = 'normal';
 
   static get observedAttributes() {
-    return ['readonly', 'language'];
+    return ['readonly', 'language', 'keymap-mode'];
   }
 
   constructor() {
@@ -45,6 +74,7 @@ export class CodeEditor extends HTMLElement {
   }
 
   connectedCallback() {
+    this.reflectKeymapMode();
     this.render();
     // Defer to the next tick so the shadow DOM is ready before we mount the view.
     setTimeout(() => this.loadEditor(), 0);
@@ -55,7 +85,12 @@ export class CodeEditor extends HTMLElement {
     this.view = null;
   }
 
-  attributeChangedCallback(name: string, _oldValue: string | null, newValue: string | null) {
+  attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
+    if (oldValue === newValue) return;
+    if (name === 'keymap-mode') {
+      void this.applyKeymapModeFromAttribute(newValue);
+      return;
+    }
     if (!this.view) return;
     if (name === 'readonly') {
       this.updateReadOnlyState(newValue === 'true');
@@ -104,7 +139,12 @@ export class CodeEditor extends HTMLElement {
 
     this.languageCompartment = new Compartment();
     this.readonlyCompartment = new Compartment();
+    this.keymapModeCompartment = new Compartment();
     const readonly = this.getAttribute('readonly') === 'true';
+    if (readonly) {
+      this.activeKeymapMode = 'normal';
+      this.reflectKeymapMode();
+    }
 
     const state = EditorState.create({
       doc: this._content,
@@ -113,6 +153,7 @@ export class CodeEditor extends HTMLElement {
         codeEditorTheme(EditorView),
         this.languageCompartment.of([]),
         this.readonlyCompartment.of(this.readonlyExtensions(readonly)),
+        this.keymapModeCompartment.of(this.keymapModeExtensions(this.activeKeymapMode)),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) this.handleContentChange();
         }),
@@ -140,9 +181,114 @@ export class CodeEditor extends HTMLElement {
 
   private updateReadOnlyState(readonly: boolean) {
     if (!this.view || !this.readonlyCompartment) return;
+    if (readonly && this.activeKeymapMode !== 'normal') {
+      void this.setKeymapMode('normal');
+    }
     this.view.dispatch({
       effects: this.readonlyCompartment.reconfigure(this.readonlyExtensions(readonly)),
     });
+    this.syncToolbar();
+  }
+
+  private keymapModeExtensions(_mode: EditorKeymapMode): Extension {
+    return [];
+  }
+
+  getSupportedKeymapModes(): readonly EditorKeymapMode[] {
+    return this.isReadOnly() ? ['normal'] : SUPPORTED_KEYMAP_MODES;
+  }
+
+  getKeymapMode(): EditorKeymapMode {
+    return this.activeKeymapMode;
+  }
+
+  setKeymapMode(mode: EditorKeymapMode | string): EditorKeymapModeResult {
+    const parsedMode = parseKeymapMode(mode);
+
+    if (!parsedMode) {
+      const result: EditorKeymapModeResult = {
+        requestedMode: this.activeKeymapMode,
+        activeMode: this.activeKeymapMode,
+        status: 'unsupported',
+        reason: 'invalid-mode',
+      };
+      this.reflectKeymapMode();
+      return result;
+    }
+
+    const requestedMode = parsedMode;
+
+    if (this.isReadOnly() && requestedMode !== 'normal') {
+      const result: EditorKeymapModeResult = {
+        requestedMode,
+        activeMode: this.activeKeymapMode,
+        status: 'unsupported',
+        reason: 'readonly',
+      };
+      this.reflectKeymapMode();
+      return result;
+    }
+
+    if (!SUPPORTED_KEYMAP_MODES.includes(requestedMode)) {
+      const result: EditorKeymapModeResult = {
+        requestedMode,
+        activeMode: this.activeKeymapMode,
+        status: 'unsupported',
+        reason: 'not-supported',
+      };
+      this.reflectKeymapMode();
+      return result;
+    }
+
+    const previousMode = this.activeKeymapMode;
+    this.activeKeymapMode = requestedMode;
+    this.reflectKeymapMode();
+    this.reconfigureKeymapMode();
+    this.syncToolbar();
+
+    const result: EditorKeymapModeResult = {
+      requestedMode,
+      activeMode: this.activeKeymapMode,
+      status: 'applied',
+    };
+
+    if (previousMode !== this.activeKeymapMode) {
+      this.dispatchEvent(
+        new CustomEvent<EditorKeymapModeChangeDetail>('keymap-mode-change', {
+          detail: result,
+        })
+      );
+    }
+
+    return result;
+  }
+
+  private async applyKeymapModeFromAttribute(value: string | null) {
+    const parsedMode = parseKeymapMode(value);
+    if (!parsedMode) {
+      this.reflectKeymapMode();
+      return;
+    }
+    this.setKeymapMode(parsedMode);
+  }
+
+  private reconfigureKeymapMode() {
+    if (!this.view || !this.keymapModeCompartment) return;
+    this.view.dispatch({
+      effects: this.keymapModeCompartment.reconfigure(
+        this.keymapModeExtensions(this.activeKeymapMode)
+      ),
+    });
+  }
+
+  private reflectKeymapMode() {
+    if (this.getAttribute('keymap-mode') !== this.activeKeymapMode) {
+      this.setAttribute('keymap-mode', this.activeKeymapMode);
+    }
+  }
+
+  private isReadOnly(): boolean {
+    return this.getAttribute('readonly') === 'true';
   }
 
   private async updateLanguage(name: string | null) {
@@ -171,14 +317,65 @@ export class CodeEditor extends HTMLElement {
     this.view?.focus();
   }
 
+  private handleToolbarClick(event: Event) {
+    const button = event.target instanceof HTMLElement ? event.target.closest('button') : null;
+    const mode = parseKeymapMode(button?.getAttribute('data-keymap-mode') ?? null);
+    if (!mode || button?.hasAttribute('disabled')) return;
+    this.setKeymapMode(mode);
+    this.view?.focus();
+  }
+
+  private renderToolbar(): string {
+    if (this._loading || this.isReadOnly()) return '';
+    const supportedModes = new Set(this.getSupportedKeymapModes());
+
+    return `
+      <div class="code-editor-toolbar" aria-label="Editor keyboard mode">
+        <div class="code-editor-keymap-toggle" role="group" aria-label="Keyboard mode">
+          ${KEYMAP_MODES.map((mode) => {
+            const selected = this.activeKeymapMode === mode;
+            const supported = supportedModes.has(mode);
+            return `<button
+              type="button"
+              class="code-editor-keymap-button${selected ? ' is-active' : ''}"
+              data-keymap-mode="${mode}"
+              aria-pressed="${selected ? 'true' : 'false'}"
+              title="${supported ? `${keymapModeLabels[mode]} keyboard mode` : `${keymapModeLabels[mode]} keyboard mode is not supported yet`}"
+              ${supported ? '' : 'disabled'}
+            >${keymapModeLabels[mode]}</button>`;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  private syncToolbar() {
+    const existingToolbar = this._shadowRoot.querySelector('.code-editor-toolbar');
+    existingToolbar?.remove();
+
+    const toolbar = this.renderToolbar();
+    if (!toolbar) return;
+
+    const content = this._shadowRoot.querySelector('.code-editor-content, .code-editor-loading');
+    content?.insertAdjacentHTML('beforebegin', toolbar);
+    this.bindToolbarEvents();
+  }
+
+  private bindToolbarEvents() {
+    this._shadowRoot
+      .querySelector('.code-editor-toolbar')
+      ?.addEventListener('click', (event) => this.handleToolbarClick(event));
+  }
+
   private render() {
     const body = this._loading
       ? '<div class="code-editor-loading">Loading editor…</div>'
       : '<div class="code-editor-content"></div>';
     this._shadowRoot.innerHTML = `
       <style>${editorStyles}</style>
-      <div class="code-editor-container">${body}</div>
+      <div class="code-editor-container">${this.renderToolbar()}${body}</div>
     `;
+    this.bindToolbarEvents();
   }
 }
 
