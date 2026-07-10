@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 import { editorStyles } from './editor.styles';
-import { loadEmacsKeymapExtension, loadVimKeymapExtension } from './keymap-loaders';
+import { loadVimKeymapExtension } from './keymap-loaders';
 import { loadLanguage } from './language';
 import { reportError } from './log';
 import { codeEditorTheme } from './theme';
@@ -70,8 +70,6 @@ export class CodeEditor extends HTMLElement {
   private activeKeymapMode: EditorKeymapMode = 'normal';
   private vimKeymapExtension: Extension | null = null;
   private vimKeymapLoad: Promise<Extension> | null = null;
-  private emacsKeymapExtension: Extension | null = null;
-  private emacsKeymapLoad: Promise<Extension> | null = null;
 
   static get observedAttributes() {
     return ['readonly', 'language', 'keymap-mode'];
@@ -208,7 +206,7 @@ export class CodeEditor extends HTMLElement {
 
   private keymapModeExtensions(mode: EditorKeymapMode): Extension {
     if (mode === 'vim') return this.vimKeymapExtension ?? [];
-    if (mode === 'emacs') return [this.emacsShortcutOverrides(), this.emacsKeymapExtension ?? []];
+    if (mode === 'emacs') return this.modules ? this.emacsShortcutOverrides() : [];
     return [];
   }
 
@@ -343,11 +341,7 @@ export class CodeEditor extends HTMLElement {
       this.vimKeymapExtension = await this.vimKeymapLoad;
       return this.vimKeymapExtension;
     }
-    if (mode === 'emacs') {
-      this.emacsKeymapLoad ??= loadEmacsKeymapExtension();
-      this.emacsKeymapExtension = await this.emacsKeymapLoad;
-      return this.emacsKeymapExtension;
-    }
+    if (mode === 'emacs') return this.modules ? this.emacsShortcutOverrides() : [];
     return [];
   }
 
@@ -401,7 +395,6 @@ export class CodeEditor extends HTMLElement {
       await this.loadKeymapModeExtension(requestedMode);
     } catch (err) {
       if (requestedMode === 'vim') this.vimKeymapLoad = null;
-      if (requestedMode === 'emacs') this.emacsKeymapLoad = null;
       reportError(`Failed to load ${requestedMode} keymap mode`, err);
       this.reflectKeymapMode();
       return {

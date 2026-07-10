@@ -112,7 +112,7 @@ describe('CodeEditor content buffering (pre-view)', () => {
     load.mockRestore();
   });
 
-  it('enables emacs keymap mode through the loader', async () => {
+  it('enables emacs keymap mode through first-party shortcuts', async () => {
     const el = create();
     const listener = vi.fn();
     el.addEventListener('keymap-mode-change', listener);
@@ -128,28 +128,6 @@ describe('CodeEditor content buffering (pre-view)', () => {
     expect(el.getAttribute('keymap-mode')).toBe('emacs');
     expect(listener).toHaveBeenCalledTimes(1);
     expect((listener.mock.calls[0][0] as CustomEvent).detail).toEqual(result);
-  });
-
-  it('returns unsupported when the emacs loader fails', async () => {
-    const el = create();
-    const listener = vi.fn();
-    el.addEventListener('keymap-mode-change', listener);
-    const load = vi
-      .spyOn(keymapLoaders, 'loadEmacsKeymapExtension')
-      .mockRejectedValueOnce(new Error('load failed'));
-
-    const result = await el.setKeymapMode('emacs');
-
-    expect(result).toEqual({
-      requestedMode: 'emacs',
-      activeMode: 'normal',
-      status: 'unsupported',
-      reason: 'load-failed',
-    });
-    expect(el.getKeymapMode()).toBe('normal');
-    expect(el.getAttribute('keymap-mode')).toBe('normal');
-    expect(listener).not.toHaveBeenCalled();
-    load.mockRestore();
   });
 
   it('normalizes invalid keymap-mode attributes back to the active mode on connect', async () => {
