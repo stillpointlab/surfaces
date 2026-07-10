@@ -3,6 +3,8 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { CodeEditor } from './code-editor';
 import * as keymapLoaders from './keymap-loaders';
 
+import type { EditorView } from '@codemirror/view';
+
 const waitFor = async (predicate: () => boolean) => {
   const deadline = Date.now() + 1000;
   while (Date.now() < deadline) {
@@ -22,6 +24,7 @@ describe('CodeEditor content buffering (pre-view)', () => {
   });
 
   const create = () => document.createElement('code-editor') as CodeEditor;
+  const getView = (el: CodeEditor) => (el as unknown as { view: EditorView | null }).view;
 
   afterEach(() => {
     vi.restoreAllMocks();
@@ -183,6 +186,30 @@ describe('CodeEditor content buffering (pre-view)', () => {
       '.code-editor-keymap-button.is-active'
     );
     expect(active?.dataset.keymapMode).toBe('emacs');
+  });
+
+  it('gives emacs keybindings precedence over default keymaps', async () => {
+    const el = create();
+    el.setContent('abc\ndef');
+    el.setAttribute('keymap-mode', 'emacs');
+
+    document.body.append(el);
+    await waitFor(() => el.getKeymapMode() === 'emacs' && Boolean(getView(el)));
+    const view = getView(el)!;
+    view.dispatch({ selection: { anchor: 2 } });
+
+    view.contentDOM.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'a',
+        code: 'KeyA',
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+
+    expect(view.state.selection.main.from).toBe(0);
+    expect(view.state.selection.main.to).toBe(0);
   });
 
   it('hides the toolbar and rejects non-normal modes in readonly mode', async () => {
