@@ -160,7 +160,9 @@ export class CodeEditor extends HTMLElement {
         codeEditorTheme(EditorView),
         this.languageCompartment.of([]),
         this.readonlyCompartment.of(this.readonlyExtensions(readonly)),
-        Prec.high(this.keymapModeCompartment.of(this.keymapModeExtensions(this.activeKeymapMode))),
+        Prec.highest(
+          this.keymapModeCompartment.of(this.keymapModeExtensions(this.activeKeymapMode))
+        ),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) this.handleContentChange();
         }),
@@ -200,8 +202,28 @@ export class CodeEditor extends HTMLElement {
 
   private keymapModeExtensions(mode: EditorKeymapMode): Extension {
     if (mode === 'vim') return this.vimKeymapExtension ?? [];
-    if (mode === 'emacs') return this.emacsKeymapExtension ?? [];
+    if (mode === 'emacs') return [this.emacsShortcutOverrides(), this.emacsKeymapExtension ?? []];
     return [];
+  }
+
+  private emacsShortcutOverrides(): Extension {
+    const { EditorView } = this.modules!;
+    return EditorView.domEventHandlers({
+      keydown: (event, view) => {
+        if (
+          !event.ctrlKey ||
+          event.altKey ||
+          event.metaKey ||
+          event.shiftKey ||
+          event.key.toLowerCase() !== 'a'
+        ) {
+          return false;
+        }
+        const line = view.state.doc.lineAt(view.state.selection.main.head);
+        view.dispatch({ selection: { anchor: line.from }, scrollIntoView: true });
+        return true;
+      },
+    });
   }
 
   private async loadKeymapModeExtension(mode: EditorKeymapMode): Promise<Extension> {

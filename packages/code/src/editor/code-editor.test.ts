@@ -188,7 +188,7 @@ describe('CodeEditor content buffering (pre-view)', () => {
     expect(active?.dataset.keymapMode).toBe('emacs');
   });
 
-  it('gives emacs keybindings precedence over default keymaps', async () => {
+  it('gives initial emacs keybindings precedence over default keymaps', async () => {
     const el = create();
     el.setContent('abc\ndef');
     el.setAttribute('keymap-mode', 'emacs');
@@ -198,18 +198,44 @@ describe('CodeEditor content buffering (pre-view)', () => {
     const view = getView(el)!;
     view.dispatch({ selection: { anchor: 2 } });
 
-    view.contentDOM.dispatchEvent(
-      new KeyboardEvent('keydown', {
-        key: 'a',
-        code: 'KeyA',
-        ctrlKey: true,
-        bubbles: true,
-        cancelable: true,
-      })
-    );
+    const event = new KeyboardEvent('keydown', {
+      key: 'a',
+      code: 'KeyA',
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    view.contentDOM.dispatchEvent(event);
 
     expect(view.state.selection.main.from).toBe(0);
     expect(view.state.selection.main.to).toBe(0);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('gives dynamically applied emacs keybindings precedence over default keymaps', async () => {
+    const el = create();
+    el.setContent('abc\ndef');
+
+    document.body.append(el);
+    await waitFor(() => Boolean(getView(el)));
+    await el.setKeymapMode('emacs');
+    await waitFor(() => el.getKeymapMode() === 'emacs');
+
+    const view = getView(el)!;
+    view.dispatch({ selection: { anchor: 2 } });
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'a',
+      code: 'KeyA',
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    view.contentDOM.dispatchEvent(event);
+
+    expect(view.state.selection.main.from).toBe(0);
+    expect(view.state.selection.main.to).toBe(0);
+    expect(event.defaultPrevented).toBe(true);
   });
 
   it('hides the toolbar and rejects non-normal modes in readonly mode', async () => {
