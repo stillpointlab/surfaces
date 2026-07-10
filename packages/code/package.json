@@ -55,6 +55,7 @@
     "format:fix": "prettier --write \"**/*.{ts,mjs,json,md,scss,css,html}\""
   },
   "dependencies": {
+    "@codemirror/commands": "^6.10.4",
     "@codemirror/language": "^6.10.8",
     "@codemirror/language-data": "^6.5.1",
     "@codemirror/merge": "^6.12.2",
