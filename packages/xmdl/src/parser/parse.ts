@@ -132,8 +132,8 @@ export function parseXmdl(source: string): XmdlParseResult {
   }
 
   const params = normalizeParams(frontmatter.params, errors, warnings);
-  const paramNames = new Set(params.map((param) => param.name));
-  const bodyRefs = parseBodyReferences(parts.body, paramNames);
+  const paramsByName = new Map(params.map((param) => [param.name, param]));
+  const bodyRefs = parseBodyReferences(parts.body, paramsByName);
   errors.push(...bodyRefs.errors);
 
   if (errors.length > 0) return { ok: false, errors, warnings };

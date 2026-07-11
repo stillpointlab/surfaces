@@ -172,6 +172,32 @@ describe('xmdl-editor', () => {
     );
   });
 
+  it('treats both required boolean choices as completed applied decisions', () => {
+    const requiredBool = `---
+title: Required Bool
+version: 0.1.0
+outputFileType: markdown
+params:
+  - name: show
+    type: bool
+    required: true
+---
+A{{#if show}}B{{/if}}C`;
+    const included = mount(requiredBool);
+    button(included, 'Include').click();
+    expect(text(included)).toContain('1 of 1 Applied');
+    expect(button(included, 'Apply Template').disabled).toBe(false);
+    expect(included.shadowRoot?.querySelector('.xmdl-editor__output-body')?.textContent).toBe(
+      'ABC',
+    );
+
+    const excluded = mount(requiredBool);
+    button(excluded, 'Exclude').click();
+    expect(text(excluded)).toContain('1 of 1 Applied');
+    expect(button(excluded, 'Apply Template').disabled).toBe(false);
+    expect(excluded.shadowRoot?.querySelector('.xmdl-editor__output-body')?.textContent).toBe('AC');
+  });
+
   it('emits an apply event with rendered output metadata', () => {
     const el = mount();
     let detail: XmdlApplyEventDetail | undefined;

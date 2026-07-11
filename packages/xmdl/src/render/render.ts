@@ -16,6 +16,10 @@ function renderSection(body: string, document: ParsedXmdlDocument, bindings: Xmd
     const start = match.index ?? 0;
     const end = start + token.length;
 
+    // A recursive conditional render advances past its closing token. matchAll still
+    // yields the tokens inside that consumed range, so ignore them in this frame.
+    if (start < cursor) continue;
+
     if (expression.startsWith('#if ')) {
       const name = expression.slice(4).trim();
       const close = findMatchingClose(body, end);

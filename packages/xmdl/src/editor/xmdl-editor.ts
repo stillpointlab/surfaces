@@ -304,7 +304,9 @@ export class XmdlEditor extends HTMLElement {
     if (param.type === 'bool') {
       return [
         button('Include', () => this.applyDecision(param, true)),
-        button('Skip', () => this.skipDecision(param, false)),
+        param.required
+          ? button('Exclude', () => this.applyDecision(param, false))
+          : button('Skip', () => this.skipDecision(param, false)),
       ];
     }
 

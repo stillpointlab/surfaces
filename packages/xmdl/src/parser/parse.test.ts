@@ -190,4 +190,29 @@ params:
 
     expect(result.errors.map((error) => error.code)).toContain('xmdl.body.unsupportedSyntax');
   });
+
+  it.each(['string', 'enum', 'number', 'date'] as const)(
+    'fails when a conditional targets a %s param',
+    (type) => {
+      const enumValues = type === 'enum' ? '    values: [one, two]\n' : '';
+      const result = parseXmdl(`---
+title: Typed Conditional
+version: 0.1.0
+outputFileType: markdown
+params:
+  - name: value
+    type: ${type}
+${enumValues}---
+{{#if value}}shown{{/if}}
+`);
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+
+      expect(result.errors).toContainEqual({
+        code: 'xmdl.body.conditionalBooleanRequired',
+        message: 'Conditional reference "value" must name a bool param.',
+        path: 'body@0',
+      });
+    },
+  );
 });
