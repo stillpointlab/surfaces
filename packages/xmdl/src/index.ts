@@ -1,7 +1,7 @@
 import './editor/xmdl-editor';
 
 export { XmdlEditor } from './editor/xmdl-editor';
-export { parseXmdl, renderXmdl, splitFrontmatterBlock } from './parser';
+export { createXmdlStarter, parseXmdl, renderXmdl, splitFrontmatterBlock } from './parser';
 export { setErrorHandler, setReporter } from './editor/log';
 export type {
   ParsedXmdlDocument,
