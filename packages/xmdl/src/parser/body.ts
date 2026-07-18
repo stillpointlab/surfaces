@@ -1,4 +1,9 @@
-import type { XmdlConditionalReference, XmdlParseError, XmdlPlaceholderReference } from './types';
+import type {
+  XmdlConditionalReference,
+  XmdlParam,
+  XmdlParseError,
+  XmdlPlaceholderReference,
+} from './types';
 
 const TEMPLATE_TOKEN_PATTERN = /{{\s*([^{}]+?)\s*}}/g;
 const IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -19,7 +24,10 @@ export function isValidIdentifier(value: string): boolean {
   return IDENTIFIER_PATTERN.test(value);
 }
 
-export function parseBodyReferences(body: string, paramNames: Set<string>): ParsedBodyReferences {
+export function parseBodyReferences(
+  body: string,
+  paramsByName: ReadonlyMap<string, XmdlParam>,
+): ParsedBodyReferences {
   const placeholders: XmdlPlaceholderReference[] = [];
   const conditionals: XmdlConditionalReference[] = [];
   const errors: XmdlParseError[] = [];
@@ -33,7 +41,16 @@ export function parseBodyReferences(body: string, paramNames: Set<string>): Pars
 
     if (expression.startsWith('#if ')) {
       const name = expression.slice(4).trim();
-      validateBodyReference(name, paramNames, errors, start, 'conditional');
+      if (validateBodyReference(name, paramsByName, errors, start, 'conditional')) {
+        const param = paramsByName.get(name);
+        if (param?.type !== 'bool') {
+          errors.push({
+            code: 'xmdl.body.conditionalBooleanRequired',
+            message: `Conditional reference "${name}" must name a bool param.`,
+            path: `body@${start}`,
+          });
+        }
+      }
       stack.push({ name, start, bodyStart: end });
       continue;
     }
@@ -67,7 +84,7 @@ export function parseBodyReferences(body: string, paramNames: Set<string>): Pars
       continue;
     }
 
-    if (!validateBodyReference(expression, paramNames, errors, start, 'placeholder')) {
+    if (!validateBodyReference(expression, paramsByName, errors, start, 'placeholder')) {
       continue;
     }
 
@@ -87,7 +104,7 @@ export function parseBodyReferences(body: string, paramNames: Set<string>): Pars
 
 function validateBodyReference(
   name: string,
-  paramNames: Set<string>,
+  paramsByName: ReadonlyMap<string, XmdlParam>,
   errors: XmdlParseError[],
   start: number,
   kind: 'placeholder' | 'conditional',
@@ -101,7 +118,7 @@ function validateBodyReference(
     return false;
   }
 
-  if (!paramNames.has(name)) {
+  if (!paramsByName.has(name)) {
     errors.push({
       code: 'xmdl.body.undeclaredReference',
       message: `Template body references undeclared param "${name}".`,

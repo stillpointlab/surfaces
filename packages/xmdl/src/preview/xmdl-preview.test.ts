@@ -93,7 +93,7 @@ describe('xmdl-preview', () => {
 
   it('hides empty validation sections without reserving preview grid space', () => {
     const el = mount(
-      VALID_TEMPLATE.replace(/validation:\n  outputSchemaRef: schemas\/market\.xsd\n/, ''),
+      VALID_TEMPLATE.replace(/validation:\n {2}outputSchemaRef: schemas\/market\.xsd\n/, ''),
     );
     const validation = el.shadowRoot?.querySelector<HTMLElement>(
       'section[aria-label="Validation"]',
