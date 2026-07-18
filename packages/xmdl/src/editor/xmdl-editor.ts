@@ -37,6 +37,8 @@ export class XmdlEditor extends HTMLElement {
   private mode: EditorMode = 'apply';
   private activeIndex = 0;
   private decisions = new Map<string, ParamDecision>();
+  private paramTypes = new Map<string, XmdlParam['type']>();
+  private activeParamName?: string;
   private rawEditor?: RawEditorElement | HTMLTextAreaElement;
 
   connectedCallback(): void {
@@ -45,6 +47,10 @@ export class XmdlEditor extends HTMLElement {
   }
 
   setContent(content: string): void {
+    if (content === this.content) {
+      this.render();
+      return;
+    }
     this.content = content;
     this.resetApplyState();
     this.render();
@@ -207,12 +213,29 @@ export class XmdlEditor extends HTMLElement {
 
     toggle.addEventListener('click', () => {
       if (this.mode === 'apply') {
+        this.captureActiveParamName();
         this.mode = 'raw';
         this.render();
         return;
       }
       this.content = this.readRawEditorContent();
-      this.resetApplyState();
+      const reconciliation = this.reconcileApplyState(this.content);
+      if (
+        reconciliation.lossyNames.length > 0 &&
+        !window.confirm(applyResetConfirmation(reconciliation.lossyNames))
+      ) {
+        return;
+      }
+      for (const name of reconciliation.incompatibleNames) {
+        this.decisions.delete(name);
+        this.paramTypes.delete(name);
+      }
+      if (reconciliation.document && this.activeParamName) {
+        const nextIndex = reconciliation.document.params.findIndex(
+          (param) => param.name === this.activeParamName,
+        );
+        if (nextIndex >= 0) this.activeIndex = nextIndex;
+      }
       this.mode = 'apply';
       this.render();
     });
@@ -342,6 +365,10 @@ export class XmdlEditor extends HTMLElement {
 
     input.setAttribute('aria-label', `Value for ${param.name}`);
     input.addEventListener('input', () => {
+      this.decisions.set(param.name, {
+        state: 'pending',
+        value: coerceInputValue(param, input.value),
+      });
       applyButton.disabled = !canApplyInput(param, input.value);
     });
 
@@ -375,7 +402,6 @@ export class XmdlEditor extends HTMLElement {
 
   private handleRawContentChange(editor: RawEditorElement | HTMLTextAreaElement): void {
     this.content = readEditorContent(editor);
-    this.resetApplyState();
     this.dispatchEvent(new CustomEvent('content-change', { bubbles: true }));
   }
 
@@ -389,9 +415,13 @@ export class XmdlEditor extends HTMLElement {
       if (!this.decisions.has(param.name)) {
         this.decisions.set(param.name, { state: 'pending', value: defaultValueFor(param) });
       }
+      this.paramTypes.set(param.name, param.type);
     }
     for (const name of this.decisions.keys()) {
-      if (!names.has(name)) this.decisions.delete(name);
+      if (!names.has(name)) {
+        this.decisions.delete(name);
+        this.paramTypes.delete(name);
+      }
     }
   }
 
@@ -448,7 +478,33 @@ export class XmdlEditor extends HTMLElement {
 
   private resetApplyState(): void {
     this.decisions.clear();
+    this.paramTypes.clear();
     this.activeIndex = 0;
+    this.activeParamName = undefined;
+  }
+
+  private captureActiveParamName(): void {
+    const result = parseXmdl(this.content);
+    if (result.ok) {
+      this.activeParamName = result.document.params[this.activeIndex]?.name;
+    }
+  }
+
+  private reconcileApplyState(content: string): {
+    document?: ParsedXmdlDocument;
+    incompatibleNames: string[];
+    lossyNames: string[];
+  } {
+    const result = parseXmdl(content);
+    if (!result.ok) return { incompatibleNames: [], lossyNames: [] };
+
+    const nextTypes = new Map(result.document.params.map((param) => [param.name, param.type]));
+    const incompatibleNames = [...this.decisions.keys()].filter(
+      (name) => !nextTypes.has(name) || nextTypes.get(name) !== this.paramTypes.get(name),
+    );
+    const lossyNames = incompatibleNames.filter((name) => hasUserWork(this.decisions.get(name)));
+
+    return { document: result.document, incompatibleNames, lossyNames };
   }
 
   private focusActiveControl(): void {
@@ -525,4 +581,16 @@ function wrapIndex(index: number, length: number): number {
 
 function isApplyOutputSupported(xmdl: ParsedXmdlDocument | undefined): boolean {
   return xmdl?.outputFileType === 'markdown' || xmdl?.outputFileType === 'xml';
+}
+
+function hasUserWork(decision: ParamDecision | undefined): boolean {
+  if (!decision) return false;
+  if (decision.state !== 'pending') return true;
+  if (typeof decision.value === 'string') return decision.value.trim().length > 0;
+  return decision.value !== undefined;
+}
+
+function applyResetConfirmation(names: string[]): string {
+  const params = names.map((name) => `“${name}”`).join(', ');
+  return `Returning to Apply mode will reset your work for ${params} because the parameters changed. Continue?`;
 }

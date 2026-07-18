@@ -1,4 +1,5 @@
 export { parseXmdl } from './parse';
+export { createXmdlStarter } from './starter';
 export { splitFrontmatterBlock, FRONTMATTER_BLOCK_PATTERN } from './frontmatter';
 export { renderXmdl } from '../render/render';
 export type {

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { XmdlEditor, type XmdlApplyEventDetail } from './xmdl-editor';
 
@@ -37,6 +37,7 @@ Due: {{dueDate}}
 
 afterEach(() => {
   document.body.innerHTML = '';
+  vi.restoreAllMocks();
 });
 
 function mount(content = TEMPLATE): XmdlEditor {
@@ -213,6 +214,107 @@ describe('xmdl-editor', () => {
     expect(text(el)).toContain('Edited Template');
     expect(text(el)).toContain('0 of 5 Applied');
     expect(modeSwitch(el).getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('preserves applied, skipped, pending, and active state across an unchanged mode round trip', () => {
+    const el = mount();
+
+    setInputValue(el, 'Market Brief');
+    button(el, 'Apply').click();
+    button(el, 'Next').click();
+    button(el, 'Skip').click();
+    button(el, 'Next').click();
+    setInputValue(el, 'urgent');
+
+    modeSwitch(el).click();
+    modeSwitch(el).click();
+
+    expect(text(el)).toContain('2 of 5 Applied');
+    expect(text(el)).toContain('tone');
+    expect(input(el).value).toBe('urgent');
+    expect(el.shadowRoot?.querySelector('.xmdl-editor__output-body')?.textContent).toContain(
+      '# Market Brief',
+    );
+  });
+
+  it('preserves compatible decisions after raw source edits', () => {
+    const el = mount();
+    setInputValue(el, 'Market Brief');
+    button(el, 'Apply').click();
+
+    modeSwitch(el).click();
+    const source = el.shadowRoot?.querySelector<HTMLTextAreaElement>('.xmdl-editor__source');
+    if (!source) throw new Error('Raw source textarea not found');
+    source.value = TEMPLATE.replace('Brief Template', 'Edited Template');
+    source.dispatchEvent(new Event('input', { bubbles: true }));
+    modeSwitch(el).click();
+
+    expect(text(el)).toContain('Edited Template');
+    expect(text(el)).toContain('1 of 5 Applied');
+    expect(input(el).value).toBe('Market Brief');
+  });
+
+  it('does not reset Apply state when identical content is set again', () => {
+    const el = mount();
+    setInputValue(el, 'Market Brief');
+    button(el, 'Apply').click();
+
+    el.setContent(TEMPLATE);
+
+    expect(text(el)).toContain('1 of 5 Applied');
+    expect(input(el).value).toBe('Market Brief');
+  });
+
+  it('warns before an incompatible raw edit discards user work', () => {
+    const confirm = vi
+      .spyOn(window, 'confirm')
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(true);
+    const el = mount();
+    setInputValue(el, 'Market Brief');
+    button(el, 'Apply').click();
+
+    modeSwitch(el).click();
+    const source = el.shadowRoot?.querySelector<HTMLTextAreaElement>('.xmdl-editor__source');
+    if (!source) throw new Error('Raw source textarea not found');
+    source.value = TEMPLATE.replace(
+      'name: title\n    type: string',
+      'name: title\n    type: number',
+    );
+    source.dispatchEvent(new Event('input', { bubbles: true }));
+
+    modeSwitch(el).click();
+    expect(modeSwitch(el).getAttribute('aria-checked')).toBe('false');
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining('“title”'));
+
+    modeSwitch(el).click();
+    expect(modeSwitch(el).getAttribute('aria-checked')).toBe('true');
+    expect(text(el)).toContain('0 of 5 Applied');
+    expect(input(el).value).toBe('');
+  });
+
+  it('retains Apply state while invalid raw source is repaired', () => {
+    const el = mount();
+    setInputValue(el, 'Market Brief');
+    button(el, 'Apply').click();
+
+    modeSwitch(el).click();
+    let source = el.shadowRoot?.querySelector<HTMLTextAreaElement>('.xmdl-editor__source');
+    if (!source) throw new Error('Raw source textarea not found');
+    source.value = 'not xmdl';
+    source.dispatchEvent(new Event('input', { bubbles: true }));
+    modeSwitch(el).click();
+    expect(text(el)).toContain('Invalid XMDL');
+
+    modeSwitch(el).click();
+    source = el.shadowRoot?.querySelector<HTMLTextAreaElement>('.xmdl-editor__source');
+    if (!source) throw new Error('Raw source textarea not found');
+    source.value = TEMPLATE;
+    source.dispatchEvent(new Event('input', { bubbles: true }));
+    modeSwitch(el).click();
+
+    expect(text(el)).toContain('1 of 5 Applied');
+    expect(input(el).value).toBe('Market Brief');
   });
 
   it('renders parse errors in apply mode', () => {
