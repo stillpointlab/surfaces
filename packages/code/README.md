@@ -39,7 +39,7 @@ The element matches `<md-editor>` so it drops into the same host machinery
 - `readonly` attribute — `"true"` makes the view non-editable.
 - `language` attribute — a CodeMirror language name (e.g. `python`, `javascript`,
   `json`); unknown/absent values render as plain text (line numbers only).
-- `keymap-mode` attribute — keyboard mode selector. `normal`, `vim`, and `emacs` are supported.
+- `keymap-mode` attribute — keyboard mode selector. `normal` and `vim` are supported.
 
 CodeMirror is loaded lazily on connect, so importing the package is cheap until an
 editor is actually mounted.
@@ -50,7 +50,7 @@ editor is actually mounted.
 keyboard preferences across editor packages:
 
 ```ts
-type EditorKeymapMode = 'normal' | 'vim' | 'emacs';
+type EditorKeymapMode = 'normal' | 'vim';
 type EditorKeymapModeStatus = 'applied' | 'unsupported';
 
 interface EditorKeymapModeResult {
@@ -65,9 +65,8 @@ editor.getKeymapMode(); // EditorKeymapMode
 await editor.setKeymapMode('vim'); // EditorKeymapModeResult
 ```
 
-Vim bindings are loaded dynamically the first time Vim mode is requested. Emacs mode uses a
-first-party CodeMirror keymap for the supported Emacs-style shortcut subset. Unsupported requests
-are non-fatal and leave the active mode unchanged. In read-only mode the toolbar is hidden and only
+Vim bindings are loaded dynamically the first time Vim mode is requested. Unsupported requests are
+non-fatal and leave the active mode unchanged. In read-only mode the toolbar is hidden and only
 `normal` is available; mode-specific command filtering is left to future package work.
 
 ## Scripts

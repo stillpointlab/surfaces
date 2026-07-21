@@ -3,8 +3,6 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { CodeEditor } from './code-editor';
 import * as keymapLoaders from './keymap-loaders';
 
-import type { EditorView } from '@codemirror/view';
-
 const waitFor = async (predicate: () => boolean) => {
   const deadline = Date.now() + 1000;
   while (Date.now() < deadline) {
@@ -24,21 +22,6 @@ describe('CodeEditor content buffering (pre-view)', () => {
   });
 
   const create = () => document.createElement('code-editor') as CodeEditor;
-  const getView = (el: CodeEditor) => (el as unknown as { view: EditorView | null }).view;
-  const dispatchKey = (
-    view: EditorView,
-    key: string,
-    options: KeyboardEventInit = {}
-  ): KeyboardEvent => {
-    const event = new KeyboardEvent('keydown', {
-      key,
-      bubbles: true,
-      cancelable: true,
-      ...options,
-    });
-    view.contentDOM.dispatchEvent(event);
-    return event;
-  };
 
   afterEach(() => {
     vi.restoreAllMocks();
@@ -69,7 +52,7 @@ describe('CodeEditor content buffering (pre-view)', () => {
   it('defaults to normal keymap mode', () => {
     const el = create();
     expect(el.getKeymapMode()).toBe('normal');
-    expect(el.getSupportedKeymapModes()).toEqual(['normal', 'vim', 'emacs']);
+    expect(el.getSupportedKeymapModes()).toEqual(['normal', 'vim']);
   });
 
   it('enables vim keymap mode through the loader', async () => {
@@ -112,24 +95,6 @@ describe('CodeEditor content buffering (pre-view)', () => {
     load.mockRestore();
   });
 
-  it('enables emacs keymap mode through first-party shortcuts', async () => {
-    const el = create();
-    const listener = vi.fn();
-    el.addEventListener('keymap-mode-change', listener);
-
-    const result = await el.setKeymapMode('emacs');
-
-    expect(result).toEqual({
-      requestedMode: 'emacs',
-      activeMode: 'emacs',
-      status: 'applied',
-    });
-    expect(el.getKeymapMode()).toBe('emacs');
-    expect(el.getAttribute('keymap-mode')).toBe('emacs');
-    expect(listener).toHaveBeenCalledTimes(1);
-    expect((listener.mock.calls[0][0] as CustomEvent).detail).toEqual(result);
-  });
-
   it('normalizes invalid keymap-mode attributes back to the active mode on connect', async () => {
     const el = create();
     el.setAttribute('keymap-mode', 'sublime');
@@ -140,7 +105,7 @@ describe('CodeEditor content buffering (pre-view)', () => {
     expect(el.getKeymapMode()).toBe('normal');
   });
 
-  it('renders an editable toolbar with only normal enabled', async () => {
+  it('renders the supported editable keymap modes', async () => {
     const el = create();
 
     document.body.append(el);
@@ -149,8 +114,8 @@ describe('CodeEditor content buffering (pre-view)', () => {
     const buttons = Array.from(
       el.shadowRoot!.querySelectorAll<HTMLButtonElement>('.code-editor-keymap-button')
     );
-    expect(buttons.map((button) => button.dataset.keymapMode)).toEqual(['normal', 'vim', 'emacs']);
-    expect(buttons.map((button) => button.disabled)).toEqual([false, false, false]);
+    expect(buttons.map((button) => button.dataset.keymapMode)).toEqual(['normal', 'vim']);
+    expect(buttons.map((button) => button.disabled)).toEqual([false, false]);
     expect(buttons[0].classList.contains('is-active')).toBe(true);
   });
 
@@ -167,133 +132,6 @@ describe('CodeEditor content buffering (pre-view)', () => {
     expect(active?.dataset.keymapMode).toBe('vim');
   });
 
-  it('applies initial keymap-mode="emacs" after the editor hydrates', async () => {
-    const el = create();
-    el.setAttribute('keymap-mode', 'emacs');
-
-    document.body.append(el);
-    await waitFor(() => el.getKeymapMode() === 'emacs');
-
-    const active = el.shadowRoot!.querySelector<HTMLButtonElement>(
-      '.code-editor-keymap-button.is-active'
-    );
-    expect(active?.dataset.keymapMode).toBe('emacs');
-  });
-
-  it('gives initial emacs keybindings precedence over default keymaps', async () => {
-    const el = create();
-    el.setContent('abc\ndef');
-    el.setAttribute('keymap-mode', 'emacs');
-
-    document.body.append(el);
-    await waitFor(() => el.getKeymapMode() === 'emacs' && Boolean(getView(el)));
-    const view = getView(el)!;
-    view.dispatch({ selection: { anchor: 2 } });
-
-    const event = dispatchKey(view, 'a', { code: 'KeyA', ctrlKey: true });
-
-    expect(view.state.selection.main.from).toBe(0);
-    expect(view.state.selection.main.to).toBe(0);
-    expect(event.defaultPrevented).toBe(true);
-  });
-
-  it('gives dynamically applied emacs keybindings precedence over default keymaps', async () => {
-    const el = create();
-    el.setContent('abc\ndef');
-
-    document.body.append(el);
-    await waitFor(() => Boolean(getView(el)));
-    await el.setKeymapMode('emacs');
-    await waitFor(() => el.getKeymapMode() === 'emacs');
-
-    const view = getView(el)!;
-    view.dispatch({ selection: { anchor: 2 } });
-
-    const event = dispatchKey(view, 'a', { code: 'KeyA', ctrlKey: true });
-
-    expect(view.state.selection.main.from).toBe(0);
-    expect(view.state.selection.main.to).toBe(0);
-    expect(event.defaultPrevented).toBe(true);
-  });
-
-  it('handles common emacs movement shortcuts and prevents default browser behavior', async () => {
-    const el = create();
-    el.setContent('one two\nthree');
-
-    document.body.append(el);
-    await waitFor(() => Boolean(getView(el)));
-    await el.setKeymapMode('emacs');
-    const view = getView(el)!;
-    const documentShortcut = vi.fn();
-    document.addEventListener('keydown', documentShortcut);
-
-    view.dispatch({ selection: { anchor: 1 } });
-    expect(dispatchKey(view, 'f', { code: 'KeyF', ctrlKey: true }).defaultPrevented).toBe(true);
-    expect(view.state.selection.main.head).toBe(2);
-    expect(dispatchKey(view, 'b', { code: 'KeyB', ctrlKey: true }).defaultPrevented).toBe(true);
-    expect(view.state.selection.main.head).toBe(1);
-    expect(dispatchKey(view, 'e', { code: 'KeyE', ctrlKey: true }).defaultPrevented).toBe(true);
-    expect(view.state.selection.main.head).toBe(7);
-    expect(dispatchKey(view, 'a', { code: 'KeyA', ctrlKey: true }).defaultPrevented).toBe(true);
-    expect(view.state.selection.main.head).toBe(0);
-    expect(dispatchKey(view, 'f', { code: 'KeyF', altKey: true }).defaultPrevented).toBe(true);
-    expect(view.state.selection.main.head).toBeGreaterThan(0);
-    expect(dispatchKey(view, 'b', { code: 'KeyB', altKey: true }).defaultPrevented).toBe(true);
-    expect(view.state.selection.main.head).toBe(0);
-
-    view.dispatch({ selection: { anchor: 11 } });
-    expect(dispatchKey(view, 'p', { code: 'KeyP', ctrlKey: true }).defaultPrevented).toBe(true);
-    expect(view.state.selection.main.head).toBeLessThan(8);
-    expect(dispatchKey(view, 'n', { code: 'KeyN', ctrlKey: true }).defaultPrevented).toBe(true);
-    expect(view.state.selection.main.head).toBeGreaterThanOrEqual(8);
-    expect(documentShortcut).not.toHaveBeenCalled();
-    document.removeEventListener('keydown', documentShortcut);
-  });
-
-  it('handles common emacs editing shortcuts and prevents default browser behavior', async () => {
-    const el = create();
-    el.setContent('abc\ndef');
-
-    document.body.append(el);
-    await waitFor(() => Boolean(getView(el)));
-    await el.setKeymapMode('emacs');
-    const view = getView(el)!;
-
-    view.dispatch({ selection: { anchor: 1 } });
-    expect(dispatchKey(view, 'd', { code: 'KeyD', ctrlKey: true }).defaultPrevented).toBe(true);
-    expect(el.getContent()).toBe('ac\ndef');
-    expect(dispatchKey(view, 'Backspace', { code: 'Backspace' }).defaultPrevented).toBe(true);
-    expect(el.getContent()).toBe('c\ndef');
-    view.dispatch({ selection: { anchor: 0 } });
-    expect(dispatchKey(view, 'k', { code: 'KeyK', ctrlKey: true }).defaultPrevented).toBe(true);
-    expect(el.getContent()).toBe('\ndef');
-    expect(dispatchKey(view, 'y', { code: 'KeyY', ctrlKey: true }).defaultPrevented).toBe(true);
-    expect(el.getContent()).toBe('c\ndef');
-    expect(dispatchKey(view, 'g', { code: 'KeyG', ctrlKey: true }).defaultPrevented).toBe(true);
-  });
-
-  it('handles emacs save chord without letting browser save run', async () => {
-    const el = create();
-    const listener = vi.fn();
-    const documentShortcut = vi.fn();
-    el.addEventListener('save-request', listener);
-    document.addEventListener('keydown', documentShortcut);
-
-    document.body.append(el);
-    await waitFor(() => Boolean(getView(el)));
-    await el.setKeymapMode('emacs');
-    const view = getView(el)!;
-
-    const prefix = dispatchKey(view, 'x', { code: 'KeyX', ctrlKey: true });
-    const save = dispatchKey(view, 's', { code: 'KeyS', ctrlKey: true });
-
-    expect(prefix.defaultPrevented).toBe(true);
-    expect(save.defaultPrevented).toBe(true);
-    expect(listener).toHaveBeenCalledTimes(1);
-    expect(documentShortcut).not.toHaveBeenCalled();
-    document.removeEventListener('keydown', documentShortcut);
-  });
-
   it('hides the toolbar and rejects non-normal modes in readonly mode', async () => {
     const el = create();
     el.setAttribute('readonly', 'true');
@@ -303,8 +141,8 @@ describe('CodeEditor content buffering (pre-view)', () => {
 
     expect(el.shadowRoot?.querySelector('.code-editor-toolbar')).toBeNull();
     expect(el.getSupportedKeymapModes()).toEqual(['normal']);
-    await expect(el.setKeymapMode('emacs')).resolves.toEqual({
-      requestedMode: 'emacs',
+    await expect(el.setKeymapMode('vim')).resolves.toEqual({
+      requestedMode: 'vim',
       activeMode: 'normal',
       status: 'unsupported',
       reason: 'readonly',
