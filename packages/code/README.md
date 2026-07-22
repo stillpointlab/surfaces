@@ -72,7 +72,8 @@ non-fatal and leave the active mode unchanged. In read-only mode the toolbar is 
 In Normal mode, `Tab` indents and `Shift-Tab` outdents using CodeMirror's language-aware indentation
 rules. To move keyboard focus out of the editor, press `Escape` and then `Tab` (or `Shift-Tab`) within
 two seconds. CodeMirror's persistent tab-focus toggle is `Ctrl-m` on Windows/Linux and `Shift-Alt-m`
-on macOS.
+on macOS. When text is selected, `ArrowUp` and `ArrowDown` move one visual line from the active end
+of the selection on the first key press instead of only collapsing the selection.
 
 ## Theming
 
