@@ -3,10 +3,11 @@ import { editorStyles } from './editor.styles';
 import { loadVimKeymapExtension } from './keymap-loaders';
 import { loadLanguage } from './language';
 import { reportError } from './log';
+import { normalModeKeymap } from './normal-keymap';
 import { codeEditorTheme } from './theme';
 
 import type { indentWithTab } from '@codemirror/commands';
-import type { Compartment, EditorState, Extension, Prec } from '@codemirror/state';
+import type { Compartment, EditorSelection, EditorState, Extension, Prec } from '@codemirror/state';
 import type { EditorView, keymap } from '@codemirror/view';
 import type { basicSetup } from 'codemirror';
 
@@ -38,6 +39,7 @@ const parseKeymapMode = (value: string | null): EditorKeymapMode | null => {
 // so this bag holds the constructors/values once they're available.
 interface EditorModules {
   EditorView: typeof EditorView;
+  EditorSelection: typeof EditorSelection;
   EditorState: typeof EditorState;
   Compartment: typeof Compartment;
   Prec: typeof Prec;
@@ -116,6 +118,7 @@ export class CodeEditor extends HTMLElement {
 
       this.modules = {
         EditorView: viewModule.EditorView,
+        EditorSelection: stateModule.EditorSelection,
         EditorState: stateModule.EditorState,
         Compartment: stateModule.Compartment,
         Prec: stateModule.Prec,
@@ -205,8 +208,8 @@ export class CodeEditor extends HTMLElement {
 
   private keymapModeExtensions(mode: EditorKeymapMode): Extension {
     if (mode === 'vim') return this.vimKeymapExtension ?? [];
-    const { keymap, indentWithTab } = this.modules!;
-    return keymap.of([indentWithTab]);
+    const { EditorSelection, keymap, indentWithTab } = this.modules!;
+    return keymap.of(normalModeKeymap(EditorSelection, indentWithTab));
   }
 
   private async loadKeymapModeExtension(mode: EditorKeymapMode): Promise<Extension> {
