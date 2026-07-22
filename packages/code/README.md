@@ -74,6 +74,12 @@ rules. To move keyboard focus out of the editor, press `Escape` and then `Tab` (
 two seconds. CodeMirror's persistent tab-focus toggle is `Ctrl-m` on Windows/Linux and `Shift-Alt-m`
 on macOS.
 
+## Theming
+
+The editor, preview, and diff surfaces inherit Stillpoint design-token custom properties when a
+host provides them and include standalone fallbacks. Set `--spl-code-selection-bg` on the component
+or an ancestor to customize the primary text-selection background.
+
 ## Scripts
 
 - `npm run build` — generate styles, then bundle with tsup (ESM + CJS + d.ts).
