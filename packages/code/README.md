@@ -69,6 +69,11 @@ Vim bindings are loaded dynamically the first time Vim mode is requested. Unsupp
 non-fatal and leave the active mode unchanged. In read-only mode the toolbar is hidden and only
 `normal` is available; mode-specific command filtering is left to future package work.
 
+In Normal mode, `Tab` indents and `Shift-Tab` outdents using CodeMirror's language-aware indentation
+rules. To move keyboard focus out of the editor, press `Escape` and then `Tab` (or `Shift-Tab`) within
+two seconds. CodeMirror's persistent tab-focus toggle is `Ctrl-m` on Windows/Linux and `Shift-Alt-m`
+on macOS.
+
 ## Theming
 
 The editor, preview, and diff surfaces inherit Stillpoint design-token custom properties when a

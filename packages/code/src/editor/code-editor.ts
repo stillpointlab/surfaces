@@ -5,8 +5,9 @@ import { loadLanguage } from './language';
 import { reportError } from './log';
 import { codeEditorTheme } from './theme';
 
+import type { indentWithTab } from '@codemirror/commands';
 import type { Compartment, EditorState, Extension, Prec } from '@codemirror/state';
-import type { EditorView } from '@codemirror/view';
+import type { EditorView, keymap } from '@codemirror/view';
 import type { basicSetup } from 'codemirror';
 
 export type EditorKeymapMode = 'normal' | 'vim';
@@ -40,6 +41,8 @@ interface EditorModules {
   EditorState: typeof EditorState;
   Compartment: typeof Compartment;
   Prec: typeof Prec;
+  keymap: typeof keymap;
+  indentWithTab: typeof indentWithTab;
   basicSetup: typeof basicSetup;
 }
 
@@ -104,9 +107,10 @@ export class CodeEditor extends HTMLElement {
 
   private async loadEditor() {
     try {
-      const [viewModule, stateModule, codemirrorModule] = await Promise.all([
+      const [viewModule, stateModule, commandModule, codemirrorModule] = await Promise.all([
         import('@codemirror/view'),
         import('@codemirror/state'),
+        import('@codemirror/commands'),
         import('codemirror'),
       ]);
 
@@ -115,6 +119,8 @@ export class CodeEditor extends HTMLElement {
         EditorState: stateModule.EditorState,
         Compartment: stateModule.Compartment,
         Prec: stateModule.Prec,
+        keymap: viewModule.keymap,
+        indentWithTab: commandModule.indentWithTab,
         basicSetup: codemirrorModule.basicSetup,
       };
 
@@ -199,7 +205,8 @@ export class CodeEditor extends HTMLElement {
 
   private keymapModeExtensions(mode: EditorKeymapMode): Extension {
     if (mode === 'vim') return this.vimKeymapExtension ?? [];
-    return [];
+    const { keymap, indentWithTab } = this.modules!;
+    return keymap.of([indentWithTab]);
   }
 
   private async loadKeymapModeExtension(mode: EditorKeymapMode): Promise<Extension> {
