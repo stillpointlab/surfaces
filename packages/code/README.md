@@ -69,6 +69,12 @@ Vim bindings are loaded dynamically the first time Vim mode is requested. Unsupp
 non-fatal and leave the active mode unchanged. In read-only mode the toolbar is hidden and only
 `normal` is available; mode-specific command filtering is left to future package work.
 
+## Theming
+
+The editor, preview, and diff surfaces inherit Stillpoint design-token custom properties when a
+host provides them and include standalone fallbacks. Set `--spl-code-selection-bg` on the component
+or an ancestor to customize the primary text-selection background.
+
 ## Scripts
 
 - `npm run build` — generate styles, then bundle with tsup (ESM + CJS + d.ts).
