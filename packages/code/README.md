@@ -78,7 +78,9 @@ on macOS.
 
 The editor, preview, and diff surfaces inherit Stillpoint design-token custom properties when a
 host provides them and include standalone fallbacks. Set `--spl-code-selection-bg` on the component
-or an ancestor to customize the primary text-selection background.
+or an ancestor to customize the primary text-selection background. The active-line background uses
+`--spl-code-active-line-bg`; keep its value translucent so the selection layer remains visible
+through it.
 
 ## Scripts
 

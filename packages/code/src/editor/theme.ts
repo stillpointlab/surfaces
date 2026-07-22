@@ -2,6 +2,8 @@ import type { Extension } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 
 export const CODE_SELECTION_BACKGROUND = 'var(--spl-code-selection-bg, rgba(88, 166, 255, 0.38))';
+export const CODE_ACTIVE_LINE_BACKGROUND =
+  'var(--spl-code-active-line-bg, rgba(88, 166, 255, 0.12))';
 
 export const codeEditorThemeSpec = {
   '&': {
@@ -32,7 +34,9 @@ export const codeEditorThemeSpec = {
     color: 'var(--spl-text-muted, #57606a)',
   },
   '.cm-activeLine': {
-    backgroundColor: 'var(--spl-background-muted, #f6f8fa)',
+    // CodeMirror draws selections in a layer behind the content. This must
+    // remain translucent or it hides the selected range on the caret line.
+    backgroundColor: CODE_ACTIVE_LINE_BACKGROUND,
   },
   '.cm-activeLineGutter': {
     backgroundColor: 'var(--spl-background-hover, #eaeef2)',
