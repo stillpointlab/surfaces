@@ -17,11 +17,42 @@ const waitFor = async (predicate: () => boolean) => {
 // state the host relies on when seeding draft content before the editor hydrates.
 describe('CodeEditor content buffering (pre-view)', () => {
   beforeAll(() => {
+    // CodeMirror's selection synchronization uses execCommand for a Safari
+    // compatibility path; jsdom does not provide the deprecated DOM method.
+    Object.defineProperty(document, 'execCommand', {
+      configurable: true,
+      value: vi.fn(() => false),
+    });
     // Importing the module registers the element; assert it took.
     expect(customElements.get('code-editor')).toBe(CodeEditor);
   });
 
   const create = () => document.createElement('code-editor') as CodeEditor;
+
+  const connect = async (content: string) => {
+    const el = create();
+    el.setContent(content);
+    document.body.append(el);
+    await waitFor(() => Boolean(el.shadowRoot?.querySelector('.cm-content')));
+    const editorContent = el.shadowRoot!.querySelector<HTMLElement>('.cm-content')!;
+    editorContent.focus();
+    return { el, editorContent };
+  };
+
+  const press = (target: HTMLElement, key: string, shiftKey = false) => {
+    const event = new KeyboardEvent('keydown', {
+      key,
+      shiftKey,
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+    });
+    Object.defineProperty(event, 'keyCode', {
+      value: key === 'Tab' ? 9 : key === 'Escape' ? 27 : 0,
+    });
+    target.dispatchEvent(event);
+    return event;
+  };
 
   afterEach(() => {
     vi.restoreAllMocks();
@@ -117,6 +148,43 @@ describe('CodeEditor content buffering (pre-view)', () => {
     expect(buttons.map((button) => button.dataset.keymapMode)).toEqual(['normal', 'vim']);
     expect(buttons.map((button) => button.disabled)).toEqual([false, false]);
     expect(buttons[0].classList.contains('is-active')).toBe(true);
+  });
+
+  it('indents and outdents with Tab in normal mode', async () => {
+    const { el, editorContent } = await connect('const value = 1;');
+    const listener = vi.fn();
+    el.addEventListener('content-change', listener);
+
+    const indent = press(editorContent, 'Tab');
+
+    expect(indent.defaultPrevented).toBe(true);
+    expect(el.getContent()).toBe('  const value = 1;');
+    expect(listener).toHaveBeenCalledOnce();
+
+    const outdent = press(editorContent, 'Tab', true);
+
+    expect(outdent.defaultPrevented).toBe(true);
+    expect(el.getContent()).toBe('const value = 1;');
+    expect(listener).toHaveBeenCalledTimes(2);
+  });
+
+  it('allows Escape then Tab to leave normal-mode indentation handling', async () => {
+    const { el, editorContent } = await connect('const value = 1;');
+
+    press(editorContent, 'Escape');
+    const tab = press(editorContent, 'Tab');
+
+    expect(tab.defaultPrevented).toBe(false);
+    expect(el.getContent()).toBe('const value = 1;');
+  });
+
+  it('does not apply the normal-mode Tab binding in Vim mode', async () => {
+    const { el, editorContent } = await connect('const value = 1;');
+    await el.setKeymapMode('vim');
+
+    press(editorContent, 'Tab');
+
+    expect(el.getContent()).toBe('const value = 1;');
   });
 
   it('applies initial keymap-mode="vim" after the editor hydrates', async () => {
