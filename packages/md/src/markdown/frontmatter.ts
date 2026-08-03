@@ -1,4 +1,4 @@
-import type MarkdownIt from 'markdown-it';
+import type { MarkdownIt } from 'markdown-it';
 
 /**
  * Raw YAML-frontmatter block splitting — no YAML parsing, byte-exact. This is

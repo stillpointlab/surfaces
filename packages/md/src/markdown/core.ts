@@ -1,4 +1,4 @@
-import MarkdownIt from 'markdown-it';
+import markdownit from 'markdown-it';
 
 import {
   FRONTMATTER_BLOCK_PATTERN,
@@ -8,6 +8,7 @@ import {
 } from './frontmatter';
 
 import type { FrontmatterRenderMode } from './frontmatter';
+import type { MarkdownIt } from 'markdown-it';
 
 export type MarkdownItPlugin = (md: MarkdownIt) => void;
 
@@ -22,13 +23,18 @@ export interface CreateMarkdownItOptions {
  * host-specific syntax is added via `options.plugins`.
  */
 export function createMarkdownIt(options: CreateMarkdownItOptions = {}): MarkdownIt {
-  const md = MarkdownIt('commonmark', {
+  const md = markdownit('commonmark', {
     html: false,
     linkify: true,
     typographer: true,
     breaks: true,
   });
 
+  // linkify-it 6 disables fuzzy links and email addresses by default. Keep the
+  // editor's established markdown-it 14 behavior explicit across that upgrade.
+  md.linkify.set({ fuzzyLink: true, fuzzyEmail: true, fuzzyIP: false });
+
+  md.enable('linkify');
   md.enable('strikethrough');
   md.enable('table');
   md.use(frontMatterPlugin);
@@ -92,4 +98,4 @@ export async function renderMarkdown(
   return md.render(text);
 }
 
-export type { default as MarkdownIt } from 'markdown-it';
+export type { MarkdownIt } from 'markdown-it';

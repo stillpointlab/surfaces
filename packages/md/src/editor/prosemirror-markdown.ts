@@ -13,9 +13,7 @@ import { FRONTMATTER_BLOCK_PATTERN, createMarkdownIt, splitFrontmatterBlock } fr
 import { getSchema } from './prosemirror-schema';
 import { getEditorPlugins } from './registry';
 
-import type MarkdownIt from 'markdown-it';
-
-type Token = ReturnType<MarkdownIt['parse']>[number];
+import type { MarkdownIt, Token } from 'markdown-it';
 
 // markdown-it configured for the editor, including any plugin (e.g. citation)
 // inline rules contributed by registered plugins.
@@ -251,8 +249,8 @@ function parseInlineTokens(tokens: Token[]): Node | Node[] {
 
       if (token.attrs) {
         for (const [key, value] of token.attrs) {
-          if (key === 'href') href = value;
-          if (key === 'title') title = value;
+          if (key === 'href') href = String(value);
+          if (key === 'title') title = String(value);
         }
       }
 

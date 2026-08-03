@@ -1,4 +1,4 @@
-import type MarkdownIt from 'markdown-it';
+import type { MarkdownIt } from 'markdown-it';
 import type { MarkdownSerializerState, ParseSpec } from 'prosemirror-markdown';
 import type { Node as ProseMirrorNode, NodeSpec } from 'prosemirror-model';
 import type { EditorView } from 'prosemirror-view';
