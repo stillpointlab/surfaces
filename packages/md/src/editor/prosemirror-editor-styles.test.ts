@@ -1,8 +1,19 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ProseMirrorEditor } from './prosemirror-editor';
 
 describe('ProseMirrorEditor styles', () => {
+  beforeEach(() => {
+    // These tests inspect the shells before deferred editor initialization.
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    document.body.replaceChildren();
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+
   beforeAll(() => {
     expect(customElements.get('md-editor')).toBe(ProseMirrorEditor);
   });
