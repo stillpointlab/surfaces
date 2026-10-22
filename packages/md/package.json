@@ -53,7 +53,7 @@
     "format:fix": "prettier --write \"**/*.{ts,mjs,json,md,scss,css,html}\""
   },
   "dependencies": {
-    "markdown-it": "^15.0.0",
+    "markdown-it": "^15.0.3",
     "prosemirror-commands": "^1.7.1",
     "prosemirror-history": "^1.5.0",
     "prosemirror-inputrules": "^1.5.1",
@@ -62,7 +62,7 @@
     "prosemirror-schema-list": "^1.5.1",
     "prosemirror-state": "^1.4.4",
     "prosemirror-tables": "^1.8.5",
-    "prosemirror-view": "^1.42.2"
+    "prosemirror-view": "^1.42.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
