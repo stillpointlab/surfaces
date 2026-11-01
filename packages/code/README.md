@@ -85,6 +85,9 @@ through it.
 
 ## Scripts
 
+Use Node.js 24.15+ on the 24.x line for development. Node.js 22.22.2+ on the
+22.x line and 26+ also satisfy the build and test requirements.
+
 - `npm run build` — generate styles, then bundle with tsup (ESM + CJS + d.ts).
 - `npm run dev` — standalone playground at <http://localhost:5181>.
 - `npm test` — unit tests (Vitest + jsdom).
