@@ -137,6 +137,9 @@ From `@stillpointlab/md-editor/markdown`:
 
 ## Development
 
+Use Node.js 24.15+ on the 24.x line for development. Node.js 22.22.2+ on the
+22.x line and 26+ also satisfy the build and test requirements.
+
 ```sh
 npm install
 npm run dev        # standalone Vite playground (dev/)
