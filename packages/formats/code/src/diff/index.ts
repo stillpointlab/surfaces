@@ -8,4 +8,4 @@ import './code-diff';
 export { CodeDiff } from './code-diff';
 export type { DiffContents } from './code-diff';
 export { findLanguage, loadLanguage } from '../editor/language';
-export { setErrorHandler, setReporter } from '../editor/log';
+export { setErrorHandler, setReporter } from '@stillpointlab/common-format';

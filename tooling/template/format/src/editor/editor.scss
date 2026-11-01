@@ -1,0 +1,19 @@
+@use 'common/src/styles/tokens' as *;
+
+:host {
+  display: block;
+  font-family: system-ui, sans-serif;
+}
+
+.sample-editor {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 10rem;
+  padding: $spacing-md;
+  border: 1px solid $border-color;
+  border-radius: $border-radius-md;
+  color: $text-primary;
+  background: $background-primary;
+  font: inherit;
+  resize: vertical;
+}

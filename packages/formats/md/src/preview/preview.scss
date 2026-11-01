@@ -1,4 +1,4 @@
-@use '../styles/variables' as *;
+@use 'common/src/styles/tokens' as *;
 @use '../styles/markdown' as markdown;
 
 // Content-sized by default so the consumer owns layout (height, scrolling,

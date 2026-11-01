@@ -5,6 +5,7 @@
   "license": "MIT",
   "type": "module",
   "workspaces": [
+    "packages/common",
     "packages/formats/*",
     "packages/apps/*"
   ],
@@ -14,14 +15,16 @@
   "scripts": {
     "gen:styles": "node tooling/gen-styles.mjs",
     "build": "npm run gen:styles && npm run build --workspaces",
-    "typecheck": "npm run gen:styles && npm run typecheck --workspaces",
-    "test": "npm run gen:styles && vitest run",
-    "watch:test": "npm run gen:styles && vitest watch",
+    "typecheck": "npm run gen:styles && npm run build:common && npm run typecheck --workspaces",
+    "test": "npm run gen:styles && npm run build:common && vitest run",
+    "watch:test": "npm run gen:styles && npm run build:common && vitest watch",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --check \"**/*.{ts,mjs,json,md,scss,css,html,yml}\"",
     "format:fix": "prettier --write \"**/*.{ts,mjs,json,md,scss,css,html,yml}\"",
-    "check": "npm run lint && npm run format && npm run typecheck && npm test && npm run build"
+    "check": "npm run lint && npm run format && npm run typecheck && npm test && npm run build",
+    "new-format": "node tooling/new-format.mjs",
+    "build:common": "npm run build --workspace @stillpointlab/common-format"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

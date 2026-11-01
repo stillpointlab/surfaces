@@ -38,5 +38,8 @@
     "dev": "npm run gen:styles && vite",
     "typecheck": "npm run gen:styles && tsc --noEmit",
     "test": "npm run gen:styles && vitest run"
+  },
+  "dependencies": {
+    "@stillpointlab/common-format": "*"
   }
 }

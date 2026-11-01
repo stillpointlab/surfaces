@@ -8,6 +8,7 @@ import { formatPackage } from '../../../tooling/tsup';
 export default formatPackage({
   entry: {
     index: 'src/index.ts',
+    editor: 'src/editor/index.ts',
     markdown: 'src/markdown/index.ts',
     preview: 'src/preview/index.ts',
   },

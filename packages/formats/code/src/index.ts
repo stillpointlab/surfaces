@@ -3,4 +3,4 @@ import './editor/code-editor';
 
 export { CodeEditor } from './editor/code-editor';
 export { findLanguage, loadLanguage } from './editor/language';
-export { setErrorHandler, setReporter } from './editor/log';
+export { setErrorHandler, setReporter } from '@stillpointlab/common-format';

@@ -1,7 +1,7 @@
+import { setErrorHandler } from '@stillpointlab/common-format';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { parseSheetDocument } from '../document';
-import { setErrorHandler } from '../log';
 
 import { SheetGrid } from './sheet-grid';
 

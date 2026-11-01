@@ -1,6 +1,7 @@
 /// <reference lib="dom" />
 
-import { reportError } from './log';
+import { reportError } from '@stillpointlab/common-format';
+
 import { previewStyles } from './preview.styles';
 
 type ImageState = 'empty' | 'loading' | 'loaded' | 'error';

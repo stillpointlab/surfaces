@@ -4,6 +4,10 @@ import { defineConfig } from 'vitest/config';
 // (built from tooling/vitest.ts). `npm test` here runs them all.
 export default defineConfig({
   test: {
-    projects: ['packages/formats/*/vitest.config.ts', 'packages/apps/*/vitest.config.ts'],
+    projects: [
+      'packages/common/vitest.config.ts',
+      'packages/formats/*/vitest.config.ts',
+      'packages/apps/*/vitest.config.ts',
+    ],
   },
 });

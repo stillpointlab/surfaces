@@ -1,5 +1,7 @@
 /// <reference lib="dom" />
 
+import { reportError } from '@stillpointlab/common-format';
+
 import { DEFAULT_CSV_LIMITS, utf8ByteLength } from '../csv';
 import {
   createSheetMergeIndex,
@@ -12,7 +14,6 @@ import {
   type SheetMoveDirection,
   type SheetSelection,
 } from '../interaction';
-import { reportError } from '../log';
 import {
   validateSheetPresentation,
   type SheetAlignmentRule,

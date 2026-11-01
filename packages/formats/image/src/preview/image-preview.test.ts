@@ -1,7 +1,7 @@
+import { setErrorHandler } from '@stillpointlab/common-format';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { ImagePreview } from './image-preview';
-import { setErrorHandler } from './log';
 
 describe('image-preview', () => {
   beforeAll(() => {

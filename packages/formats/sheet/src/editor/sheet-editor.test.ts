@@ -1,6 +1,5 @@
+import { setErrorHandler } from '@stillpointlab/common-format';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-
-import { setErrorHandler } from '../log';
 
 import { SheetEditor } from './sheet-editor';
 

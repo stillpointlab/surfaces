@@ -1,5 +1,5 @@
 /// <reference lib="dom" />
-import { reportError } from '../editor/log';
+import { reportError } from '@stillpointlab/common-format';
 
 import { previewStyles } from './preview.styles';
 import { getPreviewRenderer } from './render';
