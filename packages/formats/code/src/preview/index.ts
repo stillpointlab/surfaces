@@ -7,4 +7,4 @@ import './code-preview';
 
 export { CodePreview } from './code-preview';
 export { findLanguage, loadLanguage } from '../editor/language';
-export { setErrorHandler, setReporter } from '../editor/log';
+export { setErrorHandler, setReporter } from '@stillpointlab/common-format';

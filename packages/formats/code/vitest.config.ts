@@ -1,3 +1,3 @@
-import { formatTest } from '../../../tooling/vitest';
+import { formatTest } from '../../../tooling/vitest.ts';
 
 export default formatTest();

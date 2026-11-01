@@ -1,6 +1,5 @@
+import { reportError } from '@stillpointlab/common-format';
 import { InputRule } from 'prosemirror-inputrules';
-
-import { reportError } from './log';
 
 import type { Schema } from 'prosemirror-model';
 import type { EditorState, Transaction } from 'prosemirror-state';

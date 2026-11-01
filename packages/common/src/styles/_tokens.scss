@@ -1,4 +1,5 @@
-// Design tokens used by the editor styles + markdown mixin.
+// Design tokens shared by every surface. Each color is a CSS custom property
+// (`--spl-*`) with a default, so a host themes by setting the property.
 $border-color: var(--spl-border-color, #eee);
 $text-muted: var(--spl-text-muted, #666);
 $text-primary: var(--spl-text-primary, #000);

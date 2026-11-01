@@ -2,8 +2,9 @@
 import './md-icon';
 import './md-toggle';
 
+import { report, reportError } from '@stillpointlab/common-format';
+
 import { editorStyles } from './editor.styles';
-import { report, reportError } from './log';
 import { MdToggleEvent } from './md-toggle';
 import { ProseMirrorToolbar } from './prosemirror-toolbar';
 import { getEditorPlugins } from './registry';

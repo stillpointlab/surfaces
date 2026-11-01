@@ -5,8 +5,7 @@
 
 import { LanguageDescription } from '@codemirror/language';
 import { languages } from '@codemirror/language-data';
-
-import { reportError } from './log';
+import { reportError } from '@stillpointlab/common-format';
 
 import type { Extension } from '@codemirror/state';
 

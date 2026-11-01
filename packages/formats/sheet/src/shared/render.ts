@@ -1,4 +1,5 @@
-import { reportError } from '../log';
+import { reportError } from '@stillpointlab/common-format';
+
 import {
   validateSheetPresentation,
   type SheetCellRange,

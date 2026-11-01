@@ -14,7 +14,10 @@
     "./dist/preview.js",
     "./dist/preview.cjs",
     "./dist/parser.js",
-    "./dist/parser.cjs"
+    "./dist/parser.cjs",
+    "./src/editor/index.ts",
+    "./dist/editor.js",
+    "./dist/editor.cjs"
   ],
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -34,12 +37,18 @@
       "types": "./dist/preview.d.ts",
       "import": "./dist/preview.js",
       "require": "./dist/preview.cjs"
+    },
+    "./editor": {
+      "types": "./dist/editor.d.ts",
+      "import": "./dist/editor.js",
+      "require": "./dist/editor.cjs"
     }
   },
   "files": [
     "dist",
     "preview.d.ts",
-    "parser.d.ts"
+    "parser.d.ts",
+    "editor.d.ts"
   ],
   "scripts": {
     "gen:styles": "node ../../../tooling/gen-styles.mjs .",
@@ -49,6 +58,7 @@
     "test": "npm run gen:styles && vitest run"
   },
   "dependencies": {
+    "@stillpointlab/common-format": "*",
     "yaml": "^2.9.0",
     "zod": "^4.6.7"
   }

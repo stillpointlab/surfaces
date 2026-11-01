@@ -1,8 +1,9 @@
 /// <reference lib="dom" />
+import { reportError } from '@stillpointlab/common-format';
+
 import { editorStyles } from './editor.styles';
 import { loadVimKeymapExtension } from './keymap-loaders';
 import { loadLanguage } from './language';
-import { reportError } from './log';
 import { normalModeKeymap } from './normal-keymap';
 import { codeEditorTheme } from './theme';
 

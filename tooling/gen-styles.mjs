@@ -12,7 +12,8 @@ import { fileURLToPath } from 'node:url';
 import * as sass from 'sass';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const packageDirs = [join(root, 'packages', 'formats'), join(root, 'packages', 'apps')];
+const packagesDir = join(root, 'packages');
+const packageDirs = [join(packagesDir, 'formats'), join(packagesDir, 'apps')];
 
 function* scssFiles(dir) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -40,7 +41,8 @@ for (const pkg of targets) {
   for (const scssPath of scssFiles(join(pkg, 'src'))) {
     const name = basename(scssPath, '.scss');
     const outPath = join(dirname(scssPath), `${name}.styles.ts`);
-    const { css } = sass.compile(scssPath, { style: 'compressed' });
+    // `packages/` on the load path lets any package `@use 'common/src/styles/tokens'`.
+    const { css } = sass.compile(scssPath, { style: 'compressed', loadPaths: [packagesDir] });
     const banner = `// AUTO-GENERATED from ${name}.scss by tooling/gen-styles.mjs. Do not edit.\n`;
     writeFileSync(outPath, `${banner}export const ${name}Styles = ${JSON.stringify(css)};\n`);
     console.log(`gen-styles: wrote ${relative(root, outPath)} (${css.length} bytes)`);

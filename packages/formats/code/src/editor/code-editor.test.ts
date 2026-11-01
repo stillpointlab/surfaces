@@ -3,8 +3,8 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { CodeEditor } from './code-editor';
 import * as keymapLoaders from './keymap-loaders';
 
-const waitFor = async (predicate: () => boolean) => {
-  const deadline = Date.now() + 1000;
+const waitFor = async (predicate: () => boolean, timeoutMs = 1000) => {
+  const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (predicate()) return;
     await new Promise((resolve) => setTimeout(resolve, 10));
@@ -192,7 +192,9 @@ describe('CodeEditor content buffering (pre-view)', () => {
     el.setAttribute('keymap-mode', 'vim');
 
     document.body.append(el);
-    await waitFor(() => el.getKeymapMode() === 'vim');
+    // The vim keymap is a lazy import on top of CodeMirror's own; under a full
+    // parallel run (one jsdom worker per file) it can take well over a second.
+    await waitFor(() => el.getKeymapMode() === 'vim', 4000);
 
     const active = el.shadowRoot!.querySelector<HTMLButtonElement>(
       '.code-editor-keymap-button.is-active'

@@ -1,0 +1,14 @@
+@use 'common/src/styles/tokens' as *;
+
+:host {
+  display: block;
+  color: $text-primary;
+  background: $background-primary;
+  font-family: system-ui, sans-serif;
+}
+
+.sample-preview {
+  margin: 0;
+  padding: $spacing-md;
+  white-space: pre-wrap;
+}

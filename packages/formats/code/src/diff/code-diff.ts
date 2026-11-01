@@ -1,6 +1,7 @@
 /// <reference lib="dom" />
+import { reportError } from '@stillpointlab/common-format';
+
 import { loadLanguage } from '../editor/language';
-import { reportError } from '../editor/log';
 import { codeEditorTheme } from '../editor/theme';
 
 import { diffStyles } from './diff.styles';

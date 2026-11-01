@@ -1,4 +1,4 @@
-@use './variables.scss' as *;
+@use 'common/src/styles/tokens' as *;
 
 // Canonical styling for rendered markdown content inside the editor.
 @mixin markdown-styles {

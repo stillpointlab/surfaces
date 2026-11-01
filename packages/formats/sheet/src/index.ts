@@ -58,5 +58,5 @@ export type {
   SheetValueFormatKind,
   SheetValueFormatRule,
 } from './presentation';
-export { setErrorHandler } from './log';
+export { setErrorHandler } from '@stillpointlab/common-format';
 export { SheetPreview } from './preview/sheet-preview';

@@ -10,4 +10,4 @@ export type {
   SheetPresentation,
   SheetVerticalAlignment,
 } from '../presentation';
-export { setErrorHandler } from '../log';
+export { setErrorHandler } from '@stillpointlab/common-format';

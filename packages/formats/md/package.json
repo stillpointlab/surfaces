@@ -14,7 +14,10 @@
     "./dist/index.js",
     "./dist/index.cjs",
     "./dist/preview.js",
-    "./dist/preview.cjs"
+    "./dist/preview.cjs",
+    "./src/editor/index.ts",
+    "./dist/editor.js",
+    "./dist/editor.cjs"
   ],
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -34,12 +37,18 @@
       "types": "./dist/preview.d.ts",
       "import": "./dist/preview.js",
       "require": "./dist/preview.cjs"
+    },
+    "./editor": {
+      "types": "./dist/editor.d.ts",
+      "import": "./dist/editor.js",
+      "require": "./dist/editor.cjs"
     }
   },
   "files": [
     "dist",
     "markdown.d.ts",
-    "preview.d.ts"
+    "preview.d.ts",
+    "editor.d.ts"
   ],
   "scripts": {
     "gen:styles": "node ../../../tooling/gen-styles.mjs .",
@@ -49,6 +58,7 @@
     "test": "npm run gen:styles && vitest run"
   },
   "dependencies": {
+    "@stillpointlab/common-format": "*",
     "markdown-it": "^15.0.3",
     "prosemirror-commands": "^1.7.1",
     "prosemirror-history": "^1.5.0",

@@ -1,8 +1,8 @@
+import { setErrorHandler } from '@stillpointlab/common-format';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DEFAULT_CSV_LIMITS } from '../csv';
 import { parseSheetDocument } from '../document';
-import { setErrorHandler } from '../log';
 
 import { SheetEditor } from './sheet-editor';
 

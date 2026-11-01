@@ -9,4 +9,4 @@ export { MdPreview } from './md-preview';
 export { setPreviewRenderer, getPreviewRenderer } from './render';
 export type { PreviewRenderer, PreviewRenderOptions } from './render';
 export type { FrontmatterRenderMode } from '../markdown/frontmatter';
-export { setErrorHandler, setReporter } from '../editor/log';
+export { setErrorHandler, setReporter } from '@stillpointlab/common-format';

@@ -16,7 +16,10 @@
     "./dist/preview.js",
     "./dist/preview.cjs",
     "./dist/diff.js",
-    "./dist/diff.cjs"
+    "./dist/diff.cjs",
+    "./src/editor/index.ts",
+    "./dist/editor.js",
+    "./dist/editor.cjs"
   ],
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -36,12 +39,18 @@
       "types": "./dist/diff.d.ts",
       "import": "./dist/diff.js",
       "require": "./dist/diff.cjs"
+    },
+    "./editor": {
+      "types": "./dist/editor.d.ts",
+      "import": "./dist/editor.js",
+      "require": "./dist/editor.cjs"
     }
   },
   "files": [
     "dist",
     "preview.d.ts",
-    "diff.d.ts"
+    "diff.d.ts",
+    "editor.d.ts"
   ],
   "scripts": {
     "gen:styles": "node ../../../tooling/gen-styles.mjs .",
@@ -51,6 +60,7 @@
     "test": "npm run gen:styles && vitest run"
   },
   "dependencies": {
+    "@stillpointlab/common-format": "*",
     "@codemirror/commands": "^6.10.4",
     "@codemirror/language": "^6.13.1",
     "@codemirror/language-data": "^6.5.2",
