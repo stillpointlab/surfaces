@@ -65,7 +65,7 @@ export class XmdlEditor extends HTMLElement {
 
   focus(): void {
     const focusTarget = this.shadowRoot?.querySelector<HTMLElement>(
-      '.xmdl-editor__slot-control textarea, .xmdl-editor__slot-control input, .xmdl-editor__slot-control select, .xmdl-editor__source, code-editor',
+      '.xmdl-editor__slot-control textarea, .xmdl-editor__slot-control input, .xmdl-editor__slot-control select, .xmdl-editor__source, code-editor'
     );
     focusTarget?.focus();
   }
@@ -109,7 +109,7 @@ export class XmdlEditor extends HTMLElement {
       this.renderApplyToolbar(result.document),
       this.renderTemplateHeader(result.document),
       this.renderSlotPanel(result.document),
-      this.renderOutputPreview(result.document),
+      this.renderOutputPreview(result.document)
     );
     return container;
   }
@@ -177,7 +177,7 @@ export class XmdlEditor extends HTMLElement {
       status,
       applyButton,
       toolbarSpacer(),
-      this.renderModeToggle(),
+      this.renderModeToggle()
     );
     return toolbar;
   }
@@ -232,7 +232,7 @@ export class XmdlEditor extends HTMLElement {
       }
       if (reconciliation.document && this.activeParamName) {
         const nextIndex = reconciliation.document.params.findIndex(
-          (param) => param.name === this.activeParamName,
+          (param) => param.name === this.activeParamName
         );
         if (nextIndex >= 0) this.activeIndex = nextIndex;
       }
@@ -474,7 +474,7 @@ export class XmdlEditor extends HTMLElement {
         title: xmdl.title,
         outputContextType: xmdl.outputContextType,
         validation: xmdl.validation,
-      }),
+      })
     );
   }
 
@@ -502,7 +502,7 @@ export class XmdlEditor extends HTMLElement {
 
     const nextTypes = new Map(result.document.params.map((param) => [param.name, param.type]));
     const incompatibleNames = [...this.decisions.keys()].filter(
-      (name) => !nextTypes.has(name) || nextTypes.get(name) !== this.paramTypes.get(name),
+      (name) => !nextTypes.has(name) || nextTypes.get(name) !== this.paramTypes.get(name)
     );
     const lossyNames = incompatibleNames.filter((name) => hasUserWork(this.decisions.get(name)));
 
@@ -514,7 +514,7 @@ export class XmdlEditor extends HTMLElement {
     window.setTimeout(() => {
       this.shadowRoot
         ?.querySelector<HTMLElement>(
-          '.xmdl-editor__slot-control textarea, .xmdl-editor__slot-control input, .xmdl-editor__slot-control select',
+          '.xmdl-editor__slot-control textarea, .xmdl-editor__slot-control input, .xmdl-editor__slot-control select'
         )
         ?.focus();
     }, 0);

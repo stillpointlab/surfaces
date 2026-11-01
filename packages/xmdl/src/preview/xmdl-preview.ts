@@ -42,7 +42,7 @@ export class XmdlPreview extends HTMLElement {
         renderWarnings(result.warnings),
         renderParams(result.document.params),
         renderValidation(result.document),
-        renderBodyPreview(result.document),
+        renderBodyPreview(result.document)
       );
     } else {
       wrapper.append(renderInvalidState(result.errors, result.warnings, this.content));
@@ -196,7 +196,7 @@ function renderBodyPreview(xmdl: ParsedXmdlDocument): HTMLElement {
 function renderInvalidState(
   errors: XmdlParseError[],
   warnings: XmdlWarning[],
-  source: string,
+  source: string
 ): HTMLElement {
   const fragment = document.createElement('div');
   fragment.className = 'xmdl-preview__invalid';
@@ -247,10 +247,10 @@ function createBadge(label: string): HTMLElement {
 function appendMarkedBody(
   target: HTMLElement,
   source: string,
-  conditionals: XmdlConditionalReference[],
+  conditionals: XmdlConditionalReference[]
 ): void {
   const conditionalByStart = new Map(
-    conditionals.map((conditional) => [conditional.start, conditional]),
+    conditionals.map((conditional) => [conditional.start, conditional])
   );
   const tokenPattern = /{{\s*([^{}]+?)\s*}}/g;
   let cursor = 0;
@@ -270,7 +270,7 @@ function appendMarkedBody(
       marker.className = 'xmdl-preview__token xmdl-preview__token--conditional';
       marker.setAttribute(
         'aria-label',
-        `Conditional start for ${conditional?.name ?? expression.slice(4).trim()}`,
+        `Conditional start for ${conditional?.name ?? expression.slice(4).trim()}`
       );
     } else if (expression === '/if') {
       marker.className = 'xmdl-preview__token xmdl-preview__token--conditional';

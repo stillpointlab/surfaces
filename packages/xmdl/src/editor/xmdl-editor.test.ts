@@ -49,7 +49,7 @@ function mount(content = TEMPLATE): XmdlEditor {
 
 function button(el: XmdlEditor, label: string): HTMLButtonElement {
   const match = Array.from(el.shadowRoot?.querySelectorAll('button') ?? []).find(
-    (candidate) => candidate.textContent === label,
+    (candidate) => candidate.textContent === label
   );
   if (!match) throw new Error(`Button not found: ${label}`);
   return match as HTMLButtonElement;
@@ -57,7 +57,7 @@ function button(el: XmdlEditor, label: string): HTMLButtonElement {
 
 function modeSwitch(el: XmdlEditor): HTMLButtonElement {
   const match = el.shadowRoot?.querySelector<HTMLButtonElement>(
-    '.xmdl-editor__mode-toggle[role="switch"]',
+    '.xmdl-editor__mode-toggle[role="switch"]'
   );
   if (!match) throw new Error('Mode switch not found');
   return match;
@@ -67,7 +67,7 @@ function input(el: XmdlEditor): HTMLTextAreaElement | HTMLInputElement | HTMLSel
   const match = el.shadowRoot?.querySelector<
     HTMLTextAreaElement | HTMLInputElement | HTMLSelectElement
   >(
-    '.xmdl-editor__slot-control textarea, .xmdl-editor__slot-control input, .xmdl-editor__slot-control select',
+    '.xmdl-editor__slot-control textarea, .xmdl-editor__slot-control input, .xmdl-editor__slot-control select'
   );
   if (!match) throw new Error('Slot input not found');
   return match;
@@ -75,7 +75,7 @@ function input(el: XmdlEditor): HTMLTextAreaElement | HTMLInputElement | HTMLSel
 
 function setInputValue(
   el: XmdlEditor,
-  value: string,
+  value: string
 ): HTMLTextAreaElement | HTMLInputElement | HTMLSelectElement {
   const control = input(el);
   control.value = value;
@@ -113,7 +113,7 @@ describe('xmdl-editor', () => {
     button(el, 'Apply').click();
     expect(text(el)).toContain('1 of 5 Applied');
     expect(el.shadowRoot?.querySelector('.xmdl-editor__output-body')?.textContent).toContain(
-      '# Market Brief',
+      '# Market Brief'
     );
 
     button(el, 'Next').click();
@@ -169,7 +169,7 @@ describe('xmdl-editor', () => {
 
     expect(button(el, 'Apply Template').disabled).toBe(false);
     expect(el.shadowRoot?.querySelector('.xmdl-editor__output-body')?.textContent).not.toContain(
-      'Summary tone:',
+      'Summary tone:'
     );
   });
 
@@ -189,7 +189,7 @@ A{{#if show}}B{{/if}}C`;
     expect(text(included)).toContain('1 of 1 Applied');
     expect(button(included, 'Apply Template').disabled).toBe(false);
     expect(included.shadowRoot?.querySelector('.xmdl-editor__output-body')?.textContent).toBe(
-      'ABC',
+      'ABC'
     );
 
     const excluded = mount(requiredBool);
@@ -259,7 +259,7 @@ A{{#if show}}B{{/if}}C`;
     expect(text(el)).toContain('tone');
     expect(input(el).value).toBe('urgent');
     expect(el.shadowRoot?.querySelector('.xmdl-editor__output-body')?.textContent).toContain(
-      '# Market Brief',
+      '# Market Brief'
     );
   });
 
@@ -305,7 +305,7 @@ A{{#if show}}B{{/if}}C`;
     if (!source) throw new Error('Raw source textarea not found');
     source.value = TEMPLATE.replace(
       'name: title\n    type: string',
-      'name: title\n    type: number',
+      'name: title\n    type: number'
     );
     source.dispatchEvent(new Event('input', { bubbles: true }));
 
@@ -374,7 +374,7 @@ params:
           getContent(): string {
             return this.value;
           }
-        },
+        }
       );
     }
 

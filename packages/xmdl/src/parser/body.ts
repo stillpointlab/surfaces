@@ -26,7 +26,7 @@ export function isValidIdentifier(value: string): boolean {
 
 export function parseBodyReferences(
   body: string,
-  paramsByName: ReadonlyMap<string, XmdlParam>,
+  paramsByName: ReadonlyMap<string, XmdlParam>
 ): ParsedBodyReferences {
   const placeholders: XmdlPlaceholderReference[] = [];
   const conditionals: XmdlConditionalReference[] = [];
@@ -107,7 +107,7 @@ function validateBodyReference(
   paramsByName: ReadonlyMap<string, XmdlParam>,
   errors: XmdlParseError[],
   start: number,
-  kind: 'placeholder' | 'conditional',
+  kind: 'placeholder' | 'conditional'
 ): boolean {
   if (!isValidIdentifier(name)) {
     errors.push({

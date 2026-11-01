@@ -213,6 +213,6 @@ ${enumValues}---
         message: 'Conditional reference "value" must name a bool param.',
         path: 'body@0',
       });
-    },
+    }
   );
 });

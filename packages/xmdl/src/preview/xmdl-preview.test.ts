@@ -76,7 +76,7 @@ describe('xmdl-preview', () => {
   it('renders params in an expanded collapsible section', () => {
     const el = mount(VALID_TEMPLATE);
     const section = el.shadowRoot?.querySelector<HTMLDetailsElement>(
-      'details[aria-labelledby="xmdl-preview-params-title"]',
+      'details[aria-labelledby="xmdl-preview-params-title"]'
     );
     const style = el.shadowRoot?.querySelector('style')?.textContent ?? '';
 
@@ -93,10 +93,10 @@ describe('xmdl-preview', () => {
 
   it('hides empty validation sections without reserving preview grid space', () => {
     const el = mount(
-      VALID_TEMPLATE.replace(/validation:\n {2}outputSchemaRef: schemas\/market\.xsd\n/, ''),
+      VALID_TEMPLATE.replace(/validation:\n {2}outputSchemaRef: schemas\/market\.xsd\n/, '')
     );
     const validation = el.shadowRoot?.querySelector<HTMLElement>(
-      'section[aria-label="Validation"]',
+      'section[aria-label="Validation"]'
     );
     const style = el.shadowRoot?.querySelector('style')?.textContent ?? '';
 
@@ -114,10 +114,10 @@ describe('xmdl-preview', () => {
   it('marks placeholders and conditionals in the body preview', () => {
     const el = mount(VALID_TEMPLATE);
     const placeholders = Array.from(
-      el.shadowRoot?.querySelectorAll<HTMLElement>('.xmdl-preview__token--placeholder') ?? [],
+      el.shadowRoot?.querySelectorAll<HTMLElement>('.xmdl-preview__token--placeholder') ?? []
     );
     const conditionals = Array.from(
-      el.shadowRoot?.querySelectorAll<HTMLElement>('.xmdl-preview__token--conditional') ?? [],
+      el.shadowRoot?.querySelectorAll<HTMLElement>('.xmdl-preview__token--conditional') ?? []
     );
 
     expect(placeholders.map((node) => node.textContent)).toEqual(['{{reportTitle}}', '{{tone}}']);
@@ -143,7 +143,7 @@ params:
     expect(text(el)).toContain('Template body references undeclared param "missing".');
     expect(el.shadowRoot?.querySelector('.xmdl-preview__messages--error')).not.toBeNull();
     expect(el.shadowRoot?.querySelector('.xmdl-preview__body')?.textContent).toContain(
-      '# {{missing}}',
+      '# {{missing}}'
     );
   });
 

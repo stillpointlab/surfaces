@@ -173,7 +173,7 @@ function parseFrontmatterYaml(yaml: string, errors: XmdlParseError[]): unknown |
 function normalizeParams(
   params: z.infer<typeof paramSchema>[],
   errors: XmdlParseError[],
-  warnings: XmdlWarning[],
+  warnings: XmdlWarning[]
 ): XmdlParam[] {
   const names = new Set<string>();
   const normalized: XmdlParam[] = [];
@@ -232,7 +232,7 @@ function collectUnknownKeyWarnings(
   value: Record<string, unknown>,
   allowedKeys: Set<string>,
   warnings: XmdlWarning[],
-  basePath?: string,
+  basePath?: string
 ): void {
   for (const key of Object.keys(value)) {
     if (!allowedKeys.has(key)) {

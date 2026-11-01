@@ -73,7 +73,7 @@ function findMatchingClose(body: string, startAt: number): { start: number; end:
 
 function formatBinding(
   value: XmdlBindingValue,
-  outputFileType: ParsedXmdlDocument['outputFileType'],
+  outputFileType: ParsedXmdlDocument['outputFileType']
 ): string {
   if (value === null || value === undefined) return '';
   const text = value instanceof Date ? value.toISOString() : String(value);

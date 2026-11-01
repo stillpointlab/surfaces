@@ -38,7 +38,7 @@ params:
   <title>A &amp; B</title>
   <summary>&lt;strong&gt;safe text&lt;/strong&gt;</summary>
 </doc>
-`,
+`
     );
   });
 
