@@ -1,0 +1,101 @@
+// Self-contained styles for the <code-diff> shadow root. CodeMirror's merge addon
+// injects its own theme (change/delete/insert highlights, collapsed-line markers)
+// into the shadow root at runtime; these rules only handle the host container,
+// the side-by-side layout, the center divider, and the loading placeholder.
+// Mirrors preview.scss without any editor chrome.
+
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.code-diff-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--spl-background-primary, #ffffff);
+  border: 1px solid var(--spl-border-color, #d0d7de);
+  border-radius: 6px;
+  overflow: hidden;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.code-diff-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--spl-text-muted, #57606a);
+  font-size: 0.875rem;
+}
+
+.code-diff-content {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+// The merge view fills the content area and is the scroller: it has a bounded
+// height (100% of the content box) and `overflow-y: auto` (from MergeView's own
+// theme), while the two editors grow to full content height inside it and scroll
+// together. Do NOT force a height on `.cm-mergeViewEditors`/`.cm-editor` — that would
+// clamp the editors and let `.cm-mergeViewEditor { overflow: hidden }` clip the
+// overflow instead of scrolling.
+.cm-mergeView {
+  height: 100%;
+  background-color: var(--spl-background-primary, #ffffff);
+}
+
+.cm-mergeViewEditor {
+  flex: 1 1 0;
+  min-width: 0;
+  background-color: var(--spl-background-primary, #ffffff);
+}
+
+// Divider between the two panes, echoing the app's `.resize-handle` look.
+.cm-mergeViewEditor + .cm-mergeViewEditor {
+  border-left: 1px solid var(--spl-border-color, #d0d7de);
+}
+
+.cm-editor.cm-focused {
+  outline: none;
+}
+
+.cm-scroller {
+  font-family:
+    ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.cm-mergeViewEditors {
+  background-color: var(--spl-background-primary, #ffffff) !important;
+}
+
+.cm-merge-revert {
+  background-color: var(--spl-background-secondary, #f6f8fa) !important;
+  border-inline: 1px solid var(--spl-border-color, #d0d7de);
+}
+
+.cm-merge-revert button {
+  color: var(--spl-text-muted, #57606a) !important;
+
+  &:hover,
+  &:focus-visible {
+    background-color: var(--spl-background-hover, #eaeef2) !important;
+    color: var(--spl-text-primary, #24292f) !important;
+  }
+}
+
+.cm-collapsedLines {
+  color: var(--spl-text-muted, #57606a) !important;
+  background: linear-gradient(
+    to bottom,
+    transparent 0,
+    var(--spl-background-secondary, #f6f8fa) 30%,
+    var(--spl-background-secondary, #f6f8fa) 70%,
+    transparent 100%
+  ) !important;
+}
