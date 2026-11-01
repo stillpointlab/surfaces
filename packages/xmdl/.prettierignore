@@ -1,0 +1,5 @@
+dist/
+dist-dev/
+node_modules/
+src/editor/editor.styles.ts
+src/preview/preview.styles.ts

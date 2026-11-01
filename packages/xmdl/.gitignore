@@ -1,0 +1,7 @@
+node_modules/
+dist/
+dist-dev/
+*.tsbuildinfo
+# generated from *.scss by scripts/gen-styles.mjs
+src/editor/editor.styles.ts
+src/preview/preview.styles.ts
