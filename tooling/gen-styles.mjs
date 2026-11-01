@@ -2,17 +2,17 @@
 // the component can inject it into its shadow root without relying on a
 // bundler-specific `?inline` import. Run before build/dev/test.
 //
-// Every `packages/*/src/**/<name>.scss` (partials `_*.scss` excluded) becomes a
+// Every `packages/{formats,apps}/*/src/**/<name>.scss` (partials `_*.scss` excluded) becomes a
 // sibling `<name>.styles.ts` exporting `<name>Styles`. With a directory argument
 // only that package is generated; without one, all of them.
-import { readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import * as sass from 'sass';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const packagesDir = join(root, 'packages');
+const packageDirs = [join(root, 'packages', 'formats'), join(root, 'packages', 'apps')];
 
 function* scssFiles(dir) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -27,11 +27,16 @@ function* scssFiles(dir) {
 
 const targets = process.argv[2]
   ? [resolve(process.argv[2])]
-  : readdirSync(packagesDir, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => join(packagesDir, entry.name));
+  : packageDirs.flatMap((dir) =>
+      existsSync(dir)
+        ? readdirSync(dir, { withFileTypes: true })
+            .filter((entry) => entry.isDirectory())
+            .map((entry) => join(dir, entry.name))
+        : []
+    );
 
 for (const pkg of targets) {
+  if (!existsSync(join(pkg, 'src'))) continue;
   for (const scssPath of scssFiles(join(pkg, 'src'))) {
     const name = basename(scssPath, '.scss');
     const outPath = join(dirname(scssPath), `${name}.styles.ts`);

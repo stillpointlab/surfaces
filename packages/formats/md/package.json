@@ -1,0 +1,63 @@
+{
+  "name": "@stillpointlab/md-format",
+  "version": "0.1.0",
+  "description": "A ProseMirror-based markdown editor web component (<md-editor>) with isomorphic markdown rendering.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": [
+    "./src/index.ts",
+    "./src/editor/prosemirror-editor.ts",
+    "./src/editor/md-icon.ts",
+    "./src/editor/md-toggle.ts",
+    "./src/preview/index.ts",
+    "./src/preview/md-preview.ts",
+    "./dist/index.js",
+    "./dist/index.cjs",
+    "./dist/preview.js",
+    "./dist/preview.cjs"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./markdown": {
+      "types": "./dist/markdown.d.ts",
+      "import": "./dist/markdown.js",
+      "require": "./dist/markdown.cjs"
+    },
+    "./preview": {
+      "types": "./dist/preview.d.ts",
+      "import": "./dist/preview.js",
+      "require": "./dist/preview.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "markdown.d.ts",
+    "preview.d.ts"
+  ],
+  "scripts": {
+    "gen:styles": "node ../../../tooling/gen-styles.mjs .",
+    "build": "npm run gen:styles && tsup",
+    "dev": "npm run gen:styles && vite",
+    "typecheck": "npm run gen:styles && tsc --noEmit",
+    "test": "npm run gen:styles && vitest run"
+  },
+  "dependencies": {
+    "markdown-it": "^15.0.3",
+    "prosemirror-commands": "^1.7.1",
+    "prosemirror-history": "^1.5.0",
+    "prosemirror-inputrules": "^1.5.1",
+    "prosemirror-markdown": "^1.13.5",
+    "prosemirror-model": "^1.25.11",
+    "prosemirror-schema-list": "^1.5.1",
+    "prosemirror-state": "^1.4.4",
+    "prosemirror-tables": "^1.8.5",
+    "prosemirror-view": "^1.42.3"
+  }
+}

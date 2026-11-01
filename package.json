@@ -1,11 +1,12 @@
 {
-  "name": "@stillpointlab/formats",
+  "name": "@stillpointlab/surfaces",
   "private": true,
-  "description": "Stillpoint Lab content formats: each package is one format that always ships a core and a preview, and optionally an editor.",
+  "description": "Stillpoint Lab surfaces: the formats (preview + optional editor over one good) and apps (a manifest-mounted scope of goods) that sit over Context Manager.",
   "license": "MIT",
   "type": "module",
   "workspaces": [
-    "packages/*"
+    "packages/formats/*",
+    "packages/apps/*"
   ],
   "engines": {
     "node": ">=24.15 <25"

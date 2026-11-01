@@ -1,0 +1,42 @@
+{
+  "name": "@stillpointlab/image-format",
+  "version": "0.1.0",
+  "description": "A preview-only image web component package for Stillpoint Lab editors.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": [
+    "./src/index.ts",
+    "./src/preview/index.ts",
+    "./src/preview/image-preview.ts",
+    "./dist/index.js",
+    "./dist/index.cjs",
+    "./dist/preview.js",
+    "./dist/preview.cjs"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./preview": {
+      "types": "./dist/preview.d.ts",
+      "import": "./dist/preview.js",
+      "require": "./dist/preview.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "preview.d.ts"
+  ],
+  "scripts": {
+    "gen:styles": "node ../../../tooling/gen-styles.mjs .",
+    "build": "npm run gen:styles && tsup",
+    "dev": "npm run gen:styles && vite",
+    "typecheck": "npm run gen:styles && tsc --noEmit",
+    "test": "npm run gen:styles && vitest run"
+  }
+}

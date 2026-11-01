@@ -1,0 +1,68 @@
+# Tasks View manifest for the surfaces repository. Connecting this repo to a
+# Context Manager project turns every stage<N>/phase<M> folder below into a
+# Kanban board. The shape mirrors Context Manager's own docs/tasks/tasks.yaml;
+# this file is the one place this repository's process is configured.
+#
+# Until the migration out of the five editor repositories and into Context
+# Manager completes, that work is tracked on Context Manager's boards
+# (stage 5, phase 11). Work that is this repository's own starts here.
+version: 1
+
+# Three states: not handed to an agent, handed but not landed in main, landed.
+columns:
+  - id: todo
+    label: Todo
+    description: Not yet handed to an agent.
+  - id: in-progress
+    label: In progress
+    description: Handed to an agent; work exists but has not landed in main (PR may be open).
+  - id: done
+    label: Done
+    description: Landed in main.
+
+frontmatterKey: column
+defaultColumn: todo
+doneColumn: done
+
+# Card kinds in workflow order: a seed is the raw idea a spike or brief grows
+# from, a spike distils into a brief, a brief breaks down into specs. A kind
+# without a template creates from a frontmatter stub. The backlog pool is
+# unassigned/ next to this file, with its priority list in order.yaml.
+kinds:
+  - id: seed
+    badge: sd
+  - id: spike
+    template: docs/tasks/spike.template.md
+  - id: brief
+    template: docs/tasks/brief.template.md
+  - id: spec
+    badge: sp
+    creatable: false
+    template: docs/tasks/spec.template.md
+  - id: review
+    template: docs/tasks/review.template.md
+  - id: test
+    template: docs/tasks/test.template.md
+
+# Current stage/phase pointer: the tasks page opens here.
+current:
+  stage: 1
+  phase: 1
+
+# Tags: type, size, and area. Add through the board's "+ add new" or here.
+tags:
+  # Type
+  - feature
+  - code
+  - polish
+  - docs
+  # Size / readiness
+  - quick-win
+  - major-feature
+  # Area
+  - formats
+  - apps
+  - common
+  - scaffold
+  - dev-tooling
+  - host-contract

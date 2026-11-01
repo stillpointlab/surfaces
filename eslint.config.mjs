@@ -20,10 +20,10 @@ export default [
   eslint.configs.recommended,
   {
     files: [
-      'packages/*/{src,dev}/**/*.ts',
+      'packages/{formats,apps}/*/{src,dev}/**/*.ts',
       'tooling/**/*.ts',
       '*.config.ts',
-      'packages/*/*.config.ts',
+      'packages/{formats,apps}/*/*.config.ts',
     ],
     languageOptions: {
       parser: tsparser,

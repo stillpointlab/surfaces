@@ -1,0 +1,63 @@
+{
+  "name": "@stillpointlab/code-format",
+  "version": "0.1.0",
+  "description": "A CodeMirror-based code editor web component (<code-editor>) with syntax highlighting and line numbers.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": [
+    "./src/index.ts",
+    "./src/editor/code-editor.ts",
+    "./src/preview/index.ts",
+    "./src/preview/code-preview.ts",
+    "./src/diff/index.ts",
+    "./src/diff/code-diff.ts",
+    "./dist/index.js",
+    "./dist/index.cjs",
+    "./dist/preview.js",
+    "./dist/preview.cjs",
+    "./dist/diff.js",
+    "./dist/diff.cjs"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./preview": {
+      "types": "./dist/preview.d.ts",
+      "import": "./dist/preview.js",
+      "require": "./dist/preview.cjs"
+    },
+    "./diff": {
+      "types": "./dist/diff.d.ts",
+      "import": "./dist/diff.js",
+      "require": "./dist/diff.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "preview.d.ts",
+    "diff.d.ts"
+  ],
+  "scripts": {
+    "gen:styles": "node ../../../tooling/gen-styles.mjs .",
+    "build": "npm run gen:styles && tsup",
+    "dev": "npm run gen:styles && vite",
+    "typecheck": "npm run gen:styles && tsc --noEmit",
+    "test": "npm run gen:styles && vitest run"
+  },
+  "dependencies": {
+    "@codemirror/commands": "^6.10.4",
+    "@codemirror/language": "^6.13.1",
+    "@codemirror/language-data": "^6.5.2",
+    "@codemirror/merge": "^6.12.2",
+    "@codemirror/state": "^6.7.1",
+    "@codemirror/view": "^6.43.14",
+    "@replit/codemirror-vim": "^6.4.0",
+    "codemirror": "^6.0.2"
+  }
+}
