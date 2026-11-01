@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>sheet-editor playground</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --spl-background-primary: #ffffff;
+        --spl-header-bg: #f6f8fa;
+        --spl-text-primary: #1f2933;
+        --spl-text-muted: #57606a;
+        --spl-border-light: #d0d7de;
+        --spl-primary-blue: #0969da;
+        --spl-error-color: #b42318;
+        --harness-background: #f6f8fa;
+      }
+
+      body {
+        box-sizing: border-box;
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 24px;
+        color: var(--spl-text-primary);
+        background: var(--harness-background);
+        font-family: system-ui, sans-serif;
+      }
+
+      body.dark {
+        color-scheme: dark;
+        --spl-background-primary: #0d1117;
+        --spl-header-bg: #161b22;
+        --spl-text-primary: #e6edf3;
+        --spl-text-muted: #8b949e;
+        --spl-border-light: #30363d;
+        --spl-primary-blue: #58a6ff;
+        --spl-error-color: #ff7b72;
+        --harness-background: #010409;
+      }
+
+      h1 {
+        font-size: 1.4rem;
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      .fixture {
+        display: grid;
+        gap: 16px;
+      }
+
+      .pane {
+        box-sizing: border-box;
+        width: 100%;
+        height: 360px;
+        transition: width 120ms ease;
+      }
+
+      .pane.narrow {
+        width: 260px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>sheet-editor preview harness</h1>
+    <div class="controls">
+      <label>
+        Fixture
+        <select id="fixture">
+          <option value="empty">Empty virtual A1</option>
+          <option value="ragged">Ragged rows</option>
+          <option value="bom-lf">BOM + LF + final newline</option>
+          <option value="regular">Quoted and ragged</option>
+          <option value="clipboard-literals">Clipboard literal values</option>
+          <option value="wide">Columns beyond Z</option>
+          <option value="truncated">1,001 rows</option>
+          <option value="malformed">Malformed CSV</option>
+          <option value="oversized">Over 256 KiB</option>
+          <option value="row-cap">1,000-row insertion cap</option>
+          <option value="column-cap">256-column insertion cap</option>
+          <option value="horizontal">Horizontal merge</option>
+          <option value="vertical">Vertical merge</option>
+          <option value="rectangle">Rectangle merge</option>
+          <option value="promoted-header">Promoted-header group</option>
+          <option value="rejected">Rejected merge fallback</option>
+          <option value="document-default">.sheet default CSV format</option>
+          <option value="document-explicit">.sheet explicit CSV format</option>
+          <option value="document-override">.sheet call-site replacement</option>
+          <option value="document-invalid">.sheet invalid contextual merge</option>
+          <option value="document-formatting">.sheet overlapping/mixed formatting</option>
+          <option value="document-alignments">.sheet all alignments</option>
+          <option value="document-value-formats">.sheet value formatting</option>
+          <option value="document-merged-alignment">.sheet merged alignment</option>
+          <option value="document-ragged-format">.sheet ragged formatted slots</option>
+          <option value="document-malformed-format">.sheet malformed formatting</option>
+          <option value="document-over-limit-format">.sheet over-limit formatting</option>
+        </select>
+      </label>
+      <label><input id="readonly" type="checkbox" /> Read-only editor</label>
+      <button id="width" type="button">Toggle narrow pane</button>
+      <button id="theme" type="button">Toggle dark theme</button>
+    </div>
+
+    <div class="fixture">
+      <section>
+        <h2>Interactive sheet selection</h2>
+        <div class="pane"><sheet-editor id="editor"></sheet-editor></div>
+        <p>
+          Document fixtures add emphasis, alignment, Currency, Percent, decimal-place, and Value
+          format controls to the row/column tools. Left/Right and Home/End move within the toolbar;
+          Escape returns to the grid. Enter quick-edits; F2/double-click caret-edits;
+          Alt/Option+Enter inserts a line break. Escape cancels, Enter/Shift+Enter commit and move,
+          and Ctrl/Cmd+Z undoes in navigation. Grid Ctrl/Cmd+C and Ctrl/Cmd+V copy and paste literal
+          TSV; Delete or Backspace clears values.
+        </p>
+        <p>
+          Formatting smoke test: use Sheet value formatting to exercise all kinds, mixed selections,
+          decimal bounds, incompatible raw text, editing/copying raw values, undo, reload,
+          read-only, narrow panes, and both themes. The source block below should always show the
+          complete current file.
+        </p>
+        <pre><code id="editor-content"></code></pre>
+      </section>
+      <section>
+        <h2>A1 sheet preview</h2>
+        <div class="pane"><sheet-preview id="preview"></sheet-preview></div>
+      </section>
+      <section>
+        <h2>Gutterless grid with header row</h2>
+        <div class="pane"><sheet-grid id="grid" header-row></sheet-grid></div>
+      </section>
+    </div>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
