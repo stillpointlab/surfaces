@@ -1,20 +1,14 @@
-import { defineConfig } from 'tsup';
+import { formatPackage } from '../../tooling/tsup';
 
 // Three entry points:
-//  - index: the browser editor (registers <md-editor>) - ESM-primary + CJS fallback + d.ts
-//  - markdown: isomorphic markdown rendering (Node + browser) - ESM-primary + CJS fallback + d.ts
+//  - index: the browser editor (registers <md-editor>)
+//  - markdown: isomorphic markdown rendering (Node + browser)
 //  - preview: the read-only <md-preview> element (markdown only, no ProseMirror)
 // prosemirror-* and markdown-it are dependencies (external), resolved by the consumer.
-export default defineConfig({
+export default formatPackage({
   entry: {
     index: 'src/index.ts',
     markdown: 'src/markdown/index.ts',
     preview: 'src/preview/index.ts',
   },
-  format: ['esm', 'cjs'],
-  dts: true,
-  clean: true,
-  sourcemap: true,
-  target: 'es2022',
-  splitting: false,
 });

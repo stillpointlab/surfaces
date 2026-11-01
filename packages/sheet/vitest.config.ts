@@ -1,9 +1,3 @@
-import { defineConfig } from 'vitest/config';
+import { formatTest } from '../../tooling/vitest';
 
-export default defineConfig({
-  test: {
-    environment: 'jsdom',
-    globals: true,
-    include: ['src/**/*.{test,spec}.ts'],
-  },
-});
+export default formatTest({ globals: true });

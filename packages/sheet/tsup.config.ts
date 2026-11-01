@@ -1,6 +1,6 @@
-import { defineConfig } from 'tsup';
+import { formatPackage } from '../../tooling/tsup';
 
-export default defineConfig({
+export default formatPackage({
   entry: {
     index: 'src/index.ts',
     csv: 'src/csv/index.ts',
@@ -11,10 +11,4 @@ export default defineConfig({
     editor: 'src/editor/index.ts',
     interaction: 'src/interaction/index.ts',
   },
-  format: ['esm', 'cjs'],
-  dts: true,
-  clean: true,
-  sourcemap: true,
-  target: 'es2022',
-  splitting: false,
 });

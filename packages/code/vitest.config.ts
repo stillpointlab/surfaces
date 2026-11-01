@@ -1,8 +1,3 @@
-import { defineConfig } from 'vitest/config';
+import { formatTest } from '../../tooling/vitest';
 
-export default defineConfig({
-  test: {
-    environment: 'jsdom',
-    include: ['src/**/*.{test,spec}.ts'],
-  },
-});
+export default formatTest();
