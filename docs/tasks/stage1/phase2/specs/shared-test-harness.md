@@ -1,11 +1,16 @@
 ---
-column: in-progress
-pr: 6
+column: done
+pr: 7
+completed: 2026-11-02
 created: 2026-11-02T13:05:00-07:00
 tags: [dev-tooling, formats, host-contract, common, scaffold]
 ---
 
 # Spec: the ready signal, one playground host, and the contract conformance suite
+
+_Landed 2026-11-02 in two PRs: [#6](https://github.com/stillpointlab/surfaces/pull/6) (signal,
+gate, suites, browser-mode proof) and [#7](https://github.com/stillpointlab/surfaces/pull/7) (the
+harness). The Context Manager follow-ups are one PR there, opened the same day._
 
 ## High-level goal
 
@@ -109,21 +114,21 @@ options)`, `describeImagePreviewContract`, `describeDiffContract`. Each is a vit
 
 ## Acceptance / completion checklist
 
-- [ ] `whenReady`, the `ready` attribute and the `ready` event exist on all nine elements and
+- [x] `whenReady`, the `ready` attribute and the `ready` event exist on all nine elements and
       agree with each other; `packages/common/src/contracts.ts` documents the settled semantics.
-- [ ] Every format runs the conformance suite for each element it ships; no element test uses
+- [x] Every format runs the conformance suite for each element it ships; no element test uses
       fake timers, `_loading` pokes or sleeps to wait for hydration.
-- [ ] `npm run check` is green and the vim keymap test no longer carries a widened timeout.
-- [ ] The conformance suite was run once under vitest browser mode locally (dependencies not
+- [x] `npm run check` is green and the vim keymap test no longer carries a widened timeout.
+- [x] The conformance suite was run once under vitest browser mode locally (dependencies not
       committed) and the result is recorded in the first PR, so `formatTest({ browser: true })` is a
       proven switch and not a promise.
-- [ ] `packages/formats/*/dev/index.html`, `dev/main.ts` and `vite.config.ts` are gone; each
+- [x] `packages/formats/*/dev/index.html`, `dev/main.ts` and `vite.config.ts` are gone; each
       format has `dev/fixtures.ts`; sheet's fixture list is intact in the harness.
-- [ ] `npm run dev` at the root and in any package opens the harness; the README port table is
+- [x] `npm run dev` at the root and in any package opens the harness; the README port table is
       replaced by one port and the harness section.
-- [ ] A format scaffolded by `npm run new-format` runs the suite and appears in the harness with
+- [x] A format scaffolded by `npm run new-format` runs the suite and appears in the harness with
       no edits beyond its name.
-- [ ] Context Manager follow-ups are listed in its stage 5 WAL with a link to this spec.
+- [x] Context Manager follow-ups are listed in its stage 5 WAL with a link to this spec.
 
 ## Implementation plan
 

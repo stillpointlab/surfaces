@@ -54,8 +54,16 @@ nothing announces completion: `content-change` is the only custom event any elem
 repository emits. The playgrounds cope with a 300 ms sleep. The tests cope with fake timers,
 poking `_loading = false` and calling `render()` directly (`prosemirror-editor-styles.test.ts`),
 real sleeps (`md-preview.test.ts`), and the one test that waits up to 4 s for the vim import and
-flaked twice under the parallel run before PR 2 widened its timeout. Any harness, by hand or
+flaked twice under the parallel run before PR 2 widened its timeout.[^vim] Any harness, by hand or
 automated, needs a readiness signal, and today it would have to invent one per format.
+
+[^vim]:
+    Footnote, 2026-11-02 (after PR 5): the vim flake was not the slow import this paragraph and
+    PR 2 assumed. Two lazy imports race in that test: the vim keymap starts when the attribute is
+    set before connect, CodeMirror starts on connect, and when vim wins `getKeymapMode()` reads
+    `vim` while the editor is still loading and has no toolbar. The widened timeout could never
+    fix it; waiting for the toolbar did (PR 5), and the settled `whenReady` from PR 6 made the
+    wait unnecessary.
 
 ### What the automated tests share, and where the contract is actually tested
 
