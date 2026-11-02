@@ -33,6 +33,8 @@ export class ProseMirrorToolbar {
   linkHandler?: (url: string) => void;
 
   private inTable = false;
+  // While read-only every command, popover trigger and the raw toggle is disabled.
+  private isReadOnly = false;
   private documentClickHandler?: (e: Event) => void;
   private keydownHandler?: (e: KeyboardEvent) => void;
   private resizeObserver?: ResizeObserver;
@@ -55,26 +57,27 @@ export class ProseMirrorToolbar {
     this.setupOverflow();
   }
 
+  /** Disable (or restore) every control; the editor calls this with its `readonly` state. */
+  setReadOnly(readonly: boolean): void {
+    this.isReadOnly = readonly;
+    if (readonly) this.closeAllPopovers();
+    this.updateState();
+  }
+
   updateState(): void {
     this.inTable = this.isCursorInTable();
 
     const buttons = this.container.querySelectorAll<HTMLButtonElement>('.toolbar-button');
     buttons.forEach((btn) => {
       const commandName = btn.dataset.command;
-      if (!commandName) return;
+      const command = commandName ? this.commands.get(commandName) : undefined;
 
-      const command = this.commands.get(commandName);
-      if (!command) return;
-
-      btn.classList.remove('is-active');
-      if (command.isActive && command.isActive()) {
-        btn.classList.add('is-active');
-      }
-
-      if (command.isEnabled) {
-        btn.disabled = !command.isEnabled();
-      }
+      btn.classList.toggle('is-active', Boolean(command?.isActive?.()));
+      btn.disabled = this.isReadOnly || (command?.isEnabled ? !command.isEnabled() : false);
     });
+
+    const toggle = this.container.querySelector<HTMLElement>('.markdown-toggle');
+    toggle?.toggleAttribute('disabled', this.isReadOnly);
 
     this.updateHeadingLabel();
     this.updateTableTrigger();
@@ -423,6 +426,7 @@ export class ProseMirrorToolbar {
 
   /** Open the link popover (e.g. from the Mod-k keyboard shortcut). */
   openLinkPopover(): void {
+    if (this.isReadOnly) return;
     this.openPopover('link');
   }
 
