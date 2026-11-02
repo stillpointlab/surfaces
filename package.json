@@ -14,8 +14,9 @@
   },
   "scripts": {
     "gen:styles": "node tooling/gen-styles.mjs",
+    "dev": "npm run gen:styles && vite --config tooling/harness/vite.config.ts",
     "build": "npm run gen:styles && npm run build --workspaces",
-    "typecheck": "npm run gen:styles && npm run build:common && npm run typecheck --workspaces",
+    "typecheck": "npm run gen:styles && npm run build:common && npm run typecheck --workspaces && tsc -p tooling/harness",
     "test": "npm run gen:styles && npm run build:common && vitest run",
     "watch:test": "npm run gen:styles && npm run build:common && vitest watch",
     "lint": "eslint .",
