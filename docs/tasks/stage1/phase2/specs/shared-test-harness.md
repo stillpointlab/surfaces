@@ -76,10 +76,25 @@ options)`, `describeImagePreviewContract`, `describeDiffContract`. Each is a vit
 
 ## Clarifications
 
-- Jamie's note of 2026-11-02 mentions "playwright tests". The spike keeps the conformance suite on
-  jsdom and leaves real-browser interaction to Context Manager's walks; this spec follows the spike.
-  If the suite hits a jsdom wall (sheet clipboard is the likely first case), vitest browser mode is
-  the upgrade path and is a separate decision.
+- **jsdom now, browser mode per package when earned.** Jamie's note of 2026-11-02 mentioned
+  "playwright tests" with the longer view in mind: more complex image, video and audio editors,
+  and a repository that stands on its own so anyone can take one surface into their own project.
+  jsdom has no layout, computed styles, canvas, media playback, real clipboard, IME or pointer
+  gestures, so it tests the wrapper of a media editor and nothing that matters; those need a real
+  browser. The path that does not fork the suite is vitest's browser mode (on this vitest 5 line,
+  `@vitest/browser` plus `@vitest/browser-playwright` and a Chromium install in CI), which runs
+  the same test files in headless Chromium. So: testing is chosen per package through
+  `formatTest({ browser: true })`, the five text formats stay on jsdom, nothing is added to the
+  dependency graph until a package needs it, and the first media editor (or sheet's clipboard
+  tests, if they move here first) flips the flag and CI gains Chromium then. Jamie, 2026-11-02:
+  "stick with testing per project and keep the playground separate from that concern until we
+  have an explicit reason."
+- **Environment-agnostic tests, as a requirement.** The conformance suite and every element test
+  must pass unchanged under either environment: no fake timers on hydration, no private-field
+  pokes, no jsdom-specific stubs. The settled `whenReady` is what makes that possible.
+- **The playground is not a test runner.** `tooling/harness/` is for hands and eyes; it is not
+  wired into vitest or Playwright. If screenshot comparison or page-level walks are ever wanted
+  here, that is a new decision with its own reason.
 - `whenReady` is required on the contract, not optional. Synchronous elements pay one line; the
   suite needs to rely on it.
 
@@ -87,7 +102,9 @@ options)`, `describeImagePreviewContract`, `describeDiffContract`. Each is a vit
 
 - Any change to what an element renders or how it edits.
 - A fake `get` / `list` / `put` host; that arrives with the apps breakout and lands in the harness.
-- Playwright or browser-mode tests in this repository.
+- Adding `@vitest/browser`, Playwright or a Chromium install to this repository now; browser mode
+  is a per-package switch for a package that needs it.
+- Visual regression or page-level e2e against the harness.
 - Changing Context Manager's host behaviour in this PR; item 6 is tracked on its boards.
 
 ## Acceptance / completion checklist
@@ -97,6 +114,9 @@ options)`, `describeImagePreviewContract`, `describeDiffContract`. Each is a vit
 - [ ] Every format runs the conformance suite for each element it ships; no element test uses
       fake timers, `_loading` pokes or sleeps to wait for hydration.
 - [ ] `npm run check` is green and the vim keymap test no longer carries a widened timeout.
+- [ ] The conformance suite was run once under vitest browser mode locally (dependencies not
+      committed) and the result is recorded in the first PR, so `formatTest({ browser: true })` is a
+      proven switch and not a promise.
 - [ ] `packages/formats/*/dev/index.html`, `dev/main.ts` and `vite.config.ts` are gone; each
       format has `dev/fixtures.ts`; sheet's fixture list is intact in the harness.
 - [ ] `npm run dev` at the root and in any package opens the harness; the README port table is
@@ -111,8 +131,10 @@ Two PRs, in order, so the host can take the pin after the first without waiting 
 
 1. **Signal and suite.** Gate helper and contract change in `common`; `whenReady` on the nine
    elements; the `./testing` subpath with the four `describe*Contract` suites; each format adopts
-   the suite and sheds its timing workarounds; template tests switch to the suite. Verify with
-   `npm run check` and by running the code-format tests ten times in the parallel configuration.
+   the suite and sheds its timing workarounds; template tests switch to the suite; `formatTest()`
+   accepts `browser: true` and documents what a package must add to use it. Verify with
+   `npm run check`, by running the code-format tests ten times in the parallel configuration, and
+   by one local run of the suite under browser mode, recorded in the PR.
 2. **Harness.** `tooling/harness/` with the Vite app and the fixtures module shape; port sheet's
    playground first (it is the acceptance test for the host), then md, code, xmdl, image; delete
    the five `dev/` folders and vite configs; template and scaffold follow; README. Verify by
