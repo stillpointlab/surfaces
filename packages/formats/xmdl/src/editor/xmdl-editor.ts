@@ -48,6 +48,10 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
   private activeParamName?: string;
   private rawEditor?: RawEditorElement | HTMLTextAreaElement;
 
+  static get observedAttributes(): string[] {
+    return ['readonly'];
+  }
+
   connectedCallback(): void {
     if (!this.shadowRoot) this.attachShadow({ mode: 'open' });
     this.render();
@@ -55,6 +59,10 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
 
   disconnectedCallback(): void {
     this.ready.begin();
+  }
+
+  attributeChangedCallback(name: string): void {
+    if (name === 'readonly' && this.isConnected) this.render();
   }
 
   whenReady(): Promise<void> {
@@ -85,6 +93,11 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
     focusTarget?.focus();
   }
 
+  /** `readonly="true"` disables every control that would change the content. */
+  private get isReadonly(): boolean {
+    return this.getAttribute('readonly') === 'true';
+  }
+
   private render(): void {
     if (!this.shadowRoot) return;
 
@@ -95,6 +108,7 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
     const wrapper = document.createElement('section');
     wrapper.className = `xmdl-editor xmdl-editor--${this.mode}`;
     wrapper.setAttribute('aria-label', 'XMDL editor');
+    wrapper.setAttribute('aria-readonly', this.isReadonly ? 'true' : 'false');
 
     if (this.mode === 'raw') {
       wrapper.append(this.renderRawToolbar(), this.renderRawEditor());
@@ -179,12 +193,15 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
       this.dispatchApplyEvent(xmdl);
     });
     applyButton.className = 'xmdl-editor__apply-button';
-    applyButton.disabled = !xmdl || !this.isComplete(xmdl) || !isApplyOutputSupported(xmdl);
-    applyButton.title = applyButton.disabled
-      ? isApplyOutputSupported(xmdl) || !xmdl
-        ? 'Fill in template to apply'
-        : 'Apply supports Markdown and XML outputs for MVP'
-      : 'Apply template';
+    applyButton.disabled =
+      this.isReadonly || !xmdl || !this.isComplete(xmdl) || !isApplyOutputSupported(xmdl);
+    applyButton.title = this.isReadonly
+      ? 'Read-only'
+      : applyButton.disabled
+        ? isApplyOutputSupported(xmdl) || !xmdl
+          ? 'Fill in template to apply'
+          : 'Apply supports Markdown and XML outputs for MVP'
+        : 'Apply template';
 
     toolbar.append(
       previousButton,
@@ -221,13 +238,19 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
     toggle.setAttribute('role', 'switch');
     toggle.setAttribute('aria-checked', this.mode === 'apply' ? 'true' : 'false');
     toggle.setAttribute('aria-label', 'Apply Mode');
-    toggle.title = this.mode === 'apply' ? 'Edit template source' : 'Return to apply mode';
+    toggle.disabled = this.isReadonly;
+    toggle.title = this.isReadonly
+      ? 'Read-only'
+      : this.mode === 'apply'
+        ? 'Edit template source'
+        : 'Return to apply mode';
 
     const knob = document.createElement('span');
     knob.className = 'xmdl-editor__mode-toggle-knob';
     toggle.append(knob);
 
     toggle.addEventListener('click', () => {
+      if (this.isReadonly) return;
       if (this.mode === 'apply') {
         this.captureActiveParamName();
         this.mode = 'raw';
@@ -267,6 +290,7 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
     if (customElements.get('code-editor')) {
       const editor = document.createElement('code-editor') as RawEditorElement;
       editor.setAttribute('language', 'yaml');
+      if (this.isReadonly) editor.setAttribute('readonly', 'true');
       editor.setContent?.(this.content);
       editor.addEventListener('content-change', () => this.handleRawContentChange(editor));
       container.append(editor);
@@ -277,6 +301,7 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
     const textarea = document.createElement('textarea');
     textarea.className = 'xmdl-editor__source';
     textarea.value = this.content;
+    textarea.readOnly = this.isReadonly;
     textarea.setAttribute('aria-label', 'XMDL source');
     textarea.addEventListener('input', () => this.handleRawContentChange(textarea));
     container.append(textarea);
@@ -340,6 +365,16 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
   }
 
   private renderParamControl(param: XmdlParam, decision: ParamDecision): HTMLElement[] {
+    const controls = this.buildParamControl(param, decision);
+    if (this.isReadonly) {
+      for (const control of controls) {
+        (control as HTMLButtonElement | HTMLInputElement).disabled = true;
+      }
+    }
+    return controls;
+  }
+
+  private buildParamControl(param: XmdlParam, decision: ParamDecision): HTMLElement[] {
     if (param.type === 'bool') {
       return [
         button('Include', () => this.applyDecision(param, true)),
@@ -419,6 +454,7 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
   }
 
   private handleRawContentChange(editor: RawEditorElement | HTMLTextAreaElement): void {
+    if (this.isReadonly) return;
     this.content = readEditorContent(editor);
     this.dispatchEvent(
       new CustomEvent('content-change', { bubbles: true, detail: { content: this.content } })

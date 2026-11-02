@@ -360,6 +360,64 @@ params:
     expect(button(el, 'Apply Template').disabled).toBe(true);
   });
 
+  it('disables every edit control while readonly and restores them when it is removed', () => {
+    const el = mount();
+    const root = () => el.shadowRoot?.querySelector('.xmdl-editor');
+
+    el.setAttribute('readonly', 'true');
+    expect(root()?.getAttribute('aria-readonly')).toBe('true');
+    expect(input(el).disabled).toBe(true);
+    expect(button(el, 'Apply').disabled).toBe(true);
+    expect(button(el, 'Apply Template').disabled).toBe(true);
+    expect(button(el, 'Next').disabled).toBe(false);
+    expect(modeSwitch(el).disabled).toBe(true);
+    modeSwitch(el).click();
+    expect(modeSwitch(el).getAttribute('aria-checked')).toBe('true');
+    expect(el.getContent()).toBe(TEMPLATE);
+
+    el.removeAttribute('readonly');
+    expect(root()?.getAttribute('aria-readonly')).toBe('false');
+    expect(input(el).disabled).toBe(false);
+    expect(modeSwitch(el).disabled).toBe(false);
+    setInputValue(el, 'Market Brief');
+    button(el, 'Apply').click();
+    expect(text(el)).toContain('1 of 5 Applied');
+  });
+
+  it('makes the raw source read-only when readonly arrives in raw mode', () => {
+    const el = mount();
+    let changes = 0;
+    el.addEventListener('content-change', () => {
+      changes += 1;
+    });
+    const source = () => {
+      const match = el.shadowRoot?.querySelector<HTMLTextAreaElement>('.xmdl-editor__source');
+      if (!match) throw new Error('Raw source textarea not found');
+      return match;
+    };
+    const typeInto = (textarea: HTMLTextAreaElement, value: string) => {
+      textarea.value = value;
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+
+    modeSwitch(el).click();
+    el.setAttribute('readonly', 'true');
+    expect(modeSwitch(el).getAttribute('aria-checked')).toBe('false');
+    expect(source().readOnly).toBe(true);
+    expect(modeSwitch(el).disabled).toBe(true);
+    // A read-only textarea never changes its value on keystrokes; an input
+    // event that still reaches the element must not count as an edit.
+    source().dispatchEvent(new Event('input', { bubbles: true }));
+    expect(changes).toBe(0);
+    expect(el.getContent()).toBe(TEMPLATE);
+
+    el.removeAttribute('readonly');
+    expect(source().readOnly).toBe(false);
+    typeInto(source(), TEMPLATE.replace('Brief Template', 'Edited Template'));
+    expect(changes).toBe(1);
+    expect(el.getContent()).toContain('Edited Template');
+  });
+
   it('uses a registered code-editor element for raw editing when available', () => {
     if (!customElements.get('code-editor')) {
       customElements.define(
@@ -389,5 +447,19 @@ params:
     rawEditor?.dispatchEvent(new CustomEvent('content-change', { bubbles: true }));
 
     expect(el.getContent()).toContain('Code Editor Template');
+  });
+
+  it('forwards readonly to the embedded code-editor and lifts it when removed', () => {
+    // The stub registered by the previous test stands in for <code-editor>.
+    expect(customElements.get('code-editor')).toBeDefined();
+    const el = mount();
+    modeSwitch(el).click();
+    const rawEditor = () => el.shadowRoot?.querySelector('code-editor');
+
+    el.setAttribute('readonly', 'true');
+    expect(rawEditor()?.getAttribute('readonly')).toBe('true');
+
+    el.removeAttribute('readonly');
+    expect(rawEditor()?.hasAttribute('readonly')).toBe(false);
   });
 });

@@ -146,10 +146,14 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
   }
 
   attributeChangedCallback(name: string, _oldValue: string | null, newValue: string | null) {
+    // Before the view exists the attribute is read once the engine loads.
     if (name === 'readonly' && this.view) {
-      // We'll handle readonly state in the view configuration
       this.updateReadOnlyState(newValue === 'true');
     }
+  }
+
+  private get isReadonly(): boolean {
+    return this.getAttribute('readonly') === 'true';
   }
 
   private async loadEditor(cycle: number) {
@@ -373,6 +377,7 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
     // Listen for selection changes
     setInterval(() => this.toolbar?.updateState(), 100);
 
+    this.updateReadOnlyState(this.isReadonly);
     this.ready.settle(cycle);
   }
 
@@ -405,9 +410,16 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
     }
   }
 
+  // Read-only means no user action inside the element changes the content:
+  // the editing surface, the toolbar and the raw textarea all go inert.
   private updateReadOnlyState(readonly: boolean) {
     if (!this.view) return;
+    if (readonly && this.isRawMode) this.toggleRawMode();
     this.view.setProps({ editable: () => !readonly });
+    this.toolbar?.setReadOnly(readonly);
+    const rawTextarea =
+      this._shadowRoot.querySelector<HTMLTextAreaElement>('.prosemirror-editor-raw');
+    if (rawTextarea) rawTextarea.readOnly = readonly;
   }
 
   // Get current heading level for toolbar display
@@ -605,7 +617,7 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
 
     // Render the toolbar
     this.toolbar.render();
-    this.toolbar.updateState();
+    this.toolbar.setReadOnly(this.isReadonly);
   }
 
   private setBlock(nodeType: NodeType, attrs?: Record<string, unknown>) {
@@ -811,6 +823,7 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
   }
 
   private toggleRawMode() {
+    if (this.isReadonly && !this.isRawMode) return;
     this.isRawMode = !this.isRawMode;
     this.updateViewMode();
   }
@@ -886,6 +899,7 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
   }
 
   private handleRawInput = () => {
+    if (this.isReadonly) return;
     // Store the raw content but don't update the editor until switching back
     this._content = this.rawTextarea?.value || '';
 

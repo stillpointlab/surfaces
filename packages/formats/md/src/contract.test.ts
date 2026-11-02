@@ -31,6 +31,7 @@ describeEditorContract<ProseMirrorEditor>('md-editor', {
     expect(el.shadowRoot?.querySelector('.ProseMirror')?.textContent).toContain('Some bold text.');
   },
   // One user edit through the toolbar: wrap the current block in a blockquote.
+  // While readonly the button is disabled, so the click is a no-op.
   edit: (el) => {
     const button = el.shadowRoot?.querySelector<HTMLButtonElement>(
       '.toolbar-button[data-command="toggleBlockquote"]'
@@ -38,9 +39,6 @@ describeEditorContract<ProseMirrorEditor>('md-editor', {
     if (!button) throw new Error('toolbar button missing');
     button.click();
   },
-  // The toolbar drives ProseMirror commands, which do not consult `readonly`;
-  // only the editing surface does (editable: false). Covered in the editor's own tests.
-  readonly: false,
 });
 
 describePreviewContract<MdPreview>('md-preview', {

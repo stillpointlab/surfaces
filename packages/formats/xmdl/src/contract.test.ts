@@ -28,6 +28,8 @@ describeEditorContract<XmdlEditor>('xmdl-editor', {
   altContent: content.replace('Brief Template', 'Other Template'),
   rendered: (el) => expect(el.shadowRoot?.textContent).toContain('Brief Template'),
   // One user edit: switch to raw mode and type into the source textarea.
+  // While readonly the switch is disabled, so the click is a no-op and there is
+  // no textarea to type into; the suite then expects no change.
   edit: (el) => {
     const toggle = el.shadowRoot?.querySelector<HTMLButtonElement>(
       '.xmdl-editor__mode-toggle[role="switch"]'
@@ -35,13 +37,10 @@ describeEditorContract<XmdlEditor>('xmdl-editor', {
     if (!toggle) throw new Error('mode switch missing');
     toggle.click();
     const source = el.shadowRoot?.querySelector<HTMLTextAreaElement>('.xmdl-editor__source');
-    if (!source) throw new Error('raw source textarea missing');
+    if (!source) return;
     source.value = content.replace('Brief Template', 'Edited Template');
     source.dispatchEvent(new Event('input', { bubbles: true }));
   },
-  // <xmdl-editor> does not observe `readonly` yet (the host sets it on dormant
-  // goods); tracked as a gap in the harness spec.
-  readonly: false,
 });
 
 describePreviewContract<XmdlPreview>('xmdl-preview', {

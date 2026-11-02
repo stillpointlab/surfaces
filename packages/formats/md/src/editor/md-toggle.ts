@@ -23,13 +23,14 @@ const STYLE = `
     border-radius: 50%; background: var(--spl-background-primary, #fff); transition: transform 0.2s ease;
   }
   button.on .knob { transform: translateX(16px); }
+  button:disabled { cursor: default; opacity: 0.5; }
 `;
 
 export class MdToggle extends HTMLElement {
   private root: ShadowRoot;
 
   static get observedAttributes(): string[] {
-    return ['checked'];
+    return ['checked', 'disabled'];
   }
 
   constructor() {
@@ -54,11 +55,20 @@ export class MdToggle extends HTMLElement {
     else this.removeAttribute('checked');
   }
 
+  get disabled(): boolean {
+    return this.hasAttribute('disabled');
+  }
+
+  set disabled(value: boolean) {
+    this.toggleAttribute('disabled', value);
+  }
+
   private render(): void {
     const on = this.checked;
-    this.root.innerHTML = `<style>${STYLE}</style><button type="button" role="switch" aria-checked="${on}" class="${on ? 'on' : ''}"><span class="knob"></span></button>`;
+    this.root.innerHTML = `<style>${STYLE}</style><button type="button" role="switch" aria-checked="${on}" class="${on ? 'on' : ''}"${this.disabled ? ' disabled' : ''}><span class="knob"></span></button>`;
     const button = this.root.querySelector('button');
     button?.addEventListener('click', () => {
+      if (this.disabled) return;
       this.checked = !this.checked;
       this.dispatchEvent(new MdToggleEvent(this.checked));
     });
