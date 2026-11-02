@@ -1,6 +1,7 @@
 ---
-column: in-progress
+column: done
 pr: 3
+completed: 2026-11-02
 created: 2026-11-02T12:33:37-07:00
 tags: [dev-tooling, formats, host-contract]
 ---
@@ -109,10 +110,81 @@ right; the doubt is right about scope.
    is the upgrade path if the conformance suite hits a jsdom wall; sheet's clipboard tests in
    Context Manager are the likely first case.
 
-Write the brief from this. The forward-looking argument, flagged as speculation: when the apps
-breakout lands, apps will need a fake host for `get` / `list` / `put`, and formats will need the same
-one once `put`-as-proposal reaches them. A harness that already mounts any surface from a manifest
-is where that fake host goes; five playgrounds are not.
+The forward-looking argument, flagged as speculation: when the apps breakout lands, apps will
+need a fake host for `get` / `list` / `put`, and formats will need the same one once
+`put`-as-proposal reaches them. A harness that already mounts any surface from a manifest is where
+that fake host goes; five playgrounds are not.
+
+## Addendum, 2026-11-02: the ready signal, and what it does to the host
+
+_Written after PR 3 merged, from Jamie's ask to expand on the signal and its impact on Context
+Manager. Read against the elements and every host call site; nothing was built._
+
+### What is already safe without it
+
+Both lazy editors keep a private content buffer. `setContent` before the engine loads stores the
+string, hydration builds the initial document from it, and `getContent` returns the buffer until
+the view exists (`code-editor.ts` says so in a comment; `prosemirror-editor.ts` does the same).
+That is why Context Manager has no sleeps: `digitalGood.ts` sets the draft on page load, the draft
+manager snapshots `getContent` at once, and both work pre-hydration. The e2e walk's
+`readEditorContent` polls for the element _upgrade_ (`typeof getContent === 'function'`), not for
+hydration, and the buffer makes that enough. Sheet and xmdl are synchronous.
+
+### What is not safe, and how the host gets away with it today
+
+- `focus()` is a silent no-op before hydration in md and code. The host never calls it, so nothing
+  breaks, but a host cannot focus on load.
+- `setKeymapMode` before hydration returns `applied` while nothing is applied; `reconfigureKeymapMode`
+  bails without a view. It works because the mode is reflected to the `keymap-mode` attribute and
+  re-read in `initializeEditor`. The stored vim preference (`applyStoredEditorKeymapMode`)
+  survives on that round-trip.
+- The draft manager's dirty-check baseline (`initializeContent`) is the raw buffer, while every
+  later `getContent` on md comes from the ProseMirror serializer. If serialization normalises the
+  source at all, the first no-op edit reads as unsaved and schedules an autosave of normalised
+  content. Not reproduced; the mechanism is in the code paths.
+- Asynchrony is wider than the two editors. `md-preview` renders through a lazy renderer with a
+  latest-write-wins token; `code-preview` and `code-diff` lazy-load CodeMirror and then the
+  grammar; `image-preview` fetches SVGs to classify sizing. Six of the nine elements can be
+  observed before their last `setContent` has reached the DOM. That is the gap the harness and
+  any screenshot hit first.
+
+### The signal
+
+`whenReady(): Promise<void>` on `PreviewElement`, inherited by `EditorElement`, with **settled**
+semantics: it resolves once the element is hydrated _and_ the most recent `setContent` (or
+`setSource` / `setContents`) has reached the DOM. Synchronous elements return a resolved promise.
+Alongside it a reflected `ready` attribute, so Playwright can wait on `md-editor[ready]`, and a
+`ready` event for listeners that only subscribe. The promise is per connection cycle, since md
+destroys its view on disconnect and rebuilds on reconnect. A small gate helper in `common` keeps
+the async implementations identical.
+
+Decision (Jamie, 2026-11-02): settled, "since that is the further bar. If anyone needs loaded
+for some reason later we can add a new event."
+
+### Impact on Context Manager
+
+- **Compile:** none. The contracts are re-exported from `@stillpointlab/common-format`, so the
+  member arrives with the submodule pin. The test fakes cast a `div` through `unknown`; one object
+  literal in `conversationManager.test.ts` may need a one-line stub.
+- **Behaviour:** none required. The host must keep calling `setContent` immediately and must not
+  await readiness first, or first paint regresses to after the lazy load. Readiness is for the
+  engine-dependent calls only.
+- **Optional host follow-up, one small change each:** draft-manager baseline after
+  `await editor.whenReady()`; stored keymap preference applied after readiness instead of via the
+  attribute round-trip; the e2e walk waits on `[ready]` before reading content or snapping
+  evidence; the markdown preview utility awaits it where the host renders then measures.
+- **Docs:** ADR-0009 describes the contract and takes an amendment line; the contract source
+  lives here now.
+- **Sequencing:** surfaces lands `whenReady` on all nine elements plus the conformance suite;
+  Context Manager bumps the pin; then the optional host PR. Nothing in the host blocks on the
+  harness.
+
+### Where this goes
+
+Straight to a spec, no brief: Jamie, 2026-11-02, "we don't require a brief for a change like this
+if going straight to a spec makes sense. I would ask for a brief if we have multiple specs or if we
+need to clarify user/agent facing changes." The spec is
+[shared-test-harness](../specs/shared-test-harness.md).
 
 ## References
 
