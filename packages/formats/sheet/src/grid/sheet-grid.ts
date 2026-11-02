@@ -1,5 +1,7 @@
 /// <reference lib="dom" />
 
+import { createReadyGate, type ReadyGate } from '@stillpointlab/common-format';
+
 import { parseCsv, type CsvParseResult } from '../csv';
 import {
   resolveSheetPresentation,
@@ -11,13 +13,16 @@ import { modelFromRows, snapshotSuccessfulModel } from '../shared/model';
 import { renderTable } from '../shared/render';
 
 import type { ParsedSheetDocument } from '../document';
+import type { PreviewElement } from '@stillpointlab/common-format';
 
 export interface SheetGridDataOptions extends SheetContentOptions {
   headerRow?: boolean;
 }
 
-export class SheetGrid extends HTMLElement {
+export class SheetGrid extends HTMLElement implements PreviewElement {
   private readonly root: ShadowRoot;
+  // Rendering is synchronous: settled whenever connected and rendered.
+  private readonly ready: ReadyGate = createReadyGate(this);
   private model: CsvParseResult = parseCsv('');
   private headerRowOverride: boolean | undefined;
   private presentation: SheetPresentation = {};
@@ -33,6 +38,14 @@ export class SheetGrid extends HTMLElement {
 
   connectedCallback(): void {
     this.render();
+  }
+
+  disconnectedCallback(): void {
+    this.ready.begin();
+  }
+
+  whenReady(): Promise<void> {
+    return this.ready.whenReady();
   }
 
   attributeChangedCallback(_name: string, oldValue: string | null, newValue: string | null): void {
@@ -71,6 +84,7 @@ export class SheetGrid extends HTMLElement {
       emptyMessage: 'No grid data.',
       presentation: this.presentation,
     });
+    this.ready.settle();
   }
 }
 

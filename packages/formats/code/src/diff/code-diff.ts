@@ -1,5 +1,5 @@
 /// <reference lib="dom" />
-import { reportError } from '@stillpointlab/common-format';
+import { createReadyGate, reportError, type ReadyGate } from '@stillpointlab/common-format';
 
 import { loadLanguage } from '../editor/language';
 import { codeEditorTheme } from '../editor/theme';
@@ -11,6 +11,7 @@ import type { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/lang
 import type { MergeView } from '@codemirror/merge';
 import type { Compartment, EditorState } from '@codemirror/state';
 import type { EditorView, lineNumbers, highlightWhitespace } from '@codemirror/view';
+import type { DiffElement } from '@stillpointlab/common-format';
 
 // The CodeMirror modules are dynamically imported on connect (see loadView), so
 // this bag holds the constructors/values once they're available.
@@ -44,8 +45,10 @@ export interface DiffContents {
  * It diffs the raw text of each side; markdown is compared as source (with
  * `language="markdown"` highlighting), so one element serves every content type.
  */
-export class CodeDiff extends HTMLElement {
+export class CodeDiff extends HTMLElement implements DiffElement {
   private view: MergeView | null = null;
+  // Settled once the merge view exists with the current sides and language.
+  private readonly ready: ReadyGate = createReadyGate(this);
   // Buffers the two sides set before the lazy-loaded view exists, and mirrors the
   // live docs afterwards (same lifecycle handling as <code-preview>).
   private _left = '';
@@ -84,19 +87,28 @@ export class CodeDiff extends HTMLElement {
   }
 
   connectedCallback() {
+    const cycle = this.ready.begin();
     this.render();
     // Defer to the next tick so the shadow DOM is ready before we mount the view.
-    setTimeout(() => this.loadView(), 0);
+    setTimeout(() => this.loadView(cycle), 0);
   }
 
   disconnectedCallback() {
     this.view?.destroy();
     this.view = null;
+    this.ready.begin();
+  }
+
+  whenReady(): Promise<void> {
+    return this.ready.whenReady();
   }
 
   attributeChangedCallback(name: string, _oldValue: string | null, newValue: string | null) {
     if (!this.view) return;
-    if (name === 'language') void this.updateLanguage(newValue);
+    if (name === 'language') {
+      const cycle = this.ready.begin();
+      void this.updateLanguage(newValue).then(() => this.ready.settle(cycle));
+    }
     // Wrap + show-whitespace are live compartment swaps; ignore-whitespace and
     // collapse-unchanged change a constructor option, so they rebuild the view.
     else if (name === 'wrap') this.updateWrap();
@@ -104,7 +116,7 @@ export class CodeDiff extends HTMLElement {
     else if (name === 'ignore-whitespace' || name === 'collapse-unchanged') this.rebuildView();
   }
 
-  private async loadView() {
+  private async loadView(cycle: number) {
     try {
       const [mergeModule, viewModule, stateModule, languageModule] = await Promise.all([
         import('@codemirror/merge'),
@@ -129,15 +141,16 @@ export class CodeDiff extends HTMLElement {
       this._loading = false;
       this.render();
 
-      setTimeout(() => this.initializeView(), 0);
+      setTimeout(() => this.initializeView(cycle), 0);
     } catch (err) {
       reportError('Failed to load code diff', err);
       this._loading = false;
       this.render();
+      this.ready.settle(cycle);
     }
   }
 
-  private initializeView() {
+  private initializeView(cycle: number) {
     // Guard against double initialization (e.g. rapid connect/disconnect).
     if (this.view || !this.modules) return;
 
@@ -240,9 +253,12 @@ export class CodeDiff extends HTMLElement {
       diffConfig,
     });
 
-    // Resolve the initial language (if any) once the view exists.
+    // Resolve the initial language (if any) once the view exists; the element
+    // is ready once the grammar has been applied too.
     const language = this.getAttribute('language');
-    if (language) void this.updateLanguage(language);
+    void (language ? this.updateLanguage(language) : Promise.resolve()).then(() =>
+      this.ready.settle(cycle)
+    );
   }
 
   private async updateLanguage(name: string | null) {
@@ -279,7 +295,7 @@ export class CodeDiff extends HTMLElement {
     if (!this.view) return;
     this.view.destroy();
     this.view = null;
-    this.initializeView();
+    this.initializeView(this.ready.begin());
   }
 
   /**

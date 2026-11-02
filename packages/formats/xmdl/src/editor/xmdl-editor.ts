@@ -1,9 +1,12 @@
+import { createReadyGate, type ReadyGate } from '@stillpointlab/common-format';
+
 import { parseXmdl } from '../parser/parse';
 import { renderXmdl } from '../render/render';
 
 import { editorStyles } from './editor.styles';
 
 import type { ParsedXmdlDocument, XmdlBindingValue, XmdlParam } from '../parser/types';
+import type { EditorElement } from '@stillpointlab/common-format';
 
 type EditorMode = 'apply' | 'raw';
 type DecisionState = 'pending' | 'applied' | 'skipped';
@@ -16,6 +19,7 @@ interface ParamDecision {
 interface RawEditorElement extends HTMLElement {
   setContent?: (content: string) => void;
   getContent?: () => string;
+  whenReady?: () => Promise<void>;
 }
 
 export interface XmdlApplyEventDetail {
@@ -32,8 +36,11 @@ export class XmdlApplyEvent extends CustomEvent<XmdlApplyEventDetail> {
   }
 }
 
-export class XmdlEditor extends HTMLElement {
+export class XmdlEditor extends HTMLElement implements EditorElement {
   private content = '';
+  // Settled whenever connected and rendered; in raw mode, once the embedded
+  // raw editor (a lazy <code-editor> when one is registered) is ready too.
+  private readonly ready: ReadyGate = createReadyGate(this);
   private mode: EditorMode = 'apply';
   private activeIndex = 0;
   private decisions = new Map<string, ParamDecision>();
@@ -44,6 +51,14 @@ export class XmdlEditor extends HTMLElement {
   connectedCallback(): void {
     if (!this.shadowRoot) this.attachShadow({ mode: 'open' });
     this.render();
+  }
+
+  disconnectedCallback(): void {
+    this.ready.begin();
+  }
+
+  whenReady(): Promise<void> {
+    return this.ready.whenReady();
   }
 
   setContent(content: string): void {
@@ -89,6 +104,7 @@ export class XmdlEditor extends HTMLElement {
 
     this.shadowRoot.append(style, wrapper);
     this.focusActiveControl();
+    this.syncReady();
   }
 
   private renderApplySurface(): HTMLElement {
@@ -404,7 +420,24 @@ export class XmdlEditor extends HTMLElement {
 
   private handleRawContentChange(editor: RawEditorElement | HTMLTextAreaElement): void {
     this.content = readEditorContent(editor);
-    this.dispatchEvent(new CustomEvent('content-change', { bubbles: true }));
+    this.dispatchEvent(
+      new CustomEvent('content-change', { bubbles: true, detail: { content: this.content } })
+    );
+  }
+
+  /** Settle now, or once the embedded raw editor is ready if it is a lazy element. */
+  private syncReady(): void {
+    if (!this.isConnected) return;
+    const raw = this.rawEditor;
+    const whenReady = raw && 'whenReady' in raw ? raw.whenReady : undefined;
+    if (raw && whenReady) {
+      const cycle = this.ready.begin();
+      void whenReady.call(raw).then(() => {
+        if (this.rawEditor === raw) this.ready.settle(cycle);
+      });
+      return;
+    }
+    this.ready.settle();
   }
 
   private readRawEditorContent(): string {

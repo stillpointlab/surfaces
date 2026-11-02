@@ -4,15 +4,34 @@
 // `src/client/types/components.d.ts` (ADR-0009) and now live with the formats.
 
 /**
+ * What every surface element can say about itself: whether it is ready.
+ *
+ * Ready has *settled* semantics: the element is hydrated (its lazy engine, if
+ * any, loaded and its view built) and the most recent content it was given has
+ * reached its DOM. A later `setContent` (or `setSource`, `setContents`) starts a
+ * new cycle, so `await el.whenReady()` right after a set resolves once that set
+ * is visible. Synchronous elements resolve as soon as they are connected and
+ * rendered. The state is reflected as a boolean `ready` attribute (present when
+ * settled, absent while pending, so `tag[ready]` selects settled elements) and
+ * announced by a non-bubbling `ready` event each time the element settles.
+ * Disconnecting makes the element pending again until it is reconnected and
+ * rendered. A host must never wait for readiness before its first `setContent`:
+ * content set early is buffered and shows as soon as the element can.
+ */
+export interface ReadyElement extends HTMLElement {
+  whenReady(): Promise<void>;
+}
+
+/**
  * A read-only preview element: it takes string content and renders it. This is
  * the subset the host drives when it only needs to display content, not edit it.
  */
-export interface PreviewElement extends HTMLElement {
+export interface PreviewElement extends ReadyElement {
   setContent(content: string): void;
 }
 
 /** A preview-only element for binary media addressed by URL (`<image-preview>`). */
-export interface ImagePreviewElement extends HTMLElement {
+export interface ImagePreviewElement extends ReadyElement {
   setSource(src: string, alt?: string): void;
 }
 
@@ -30,8 +49,9 @@ export interface EditorKeymapModeResult {
 /**
  * An editor element, so a host page can drive any editor interchangeably. Editors
  * expose string content in and out and emit a `content-change` CustomEvent
- * (detail: `{ content: string }`) on every edit; the host listens through the
- * inherited `addEventListener`. Keymap-mode methods are optional: an editor that
+ * (detail: `{ content: string }`) on every user edit, and never for `setContent`;
+ * the host listens through the inherited `addEventListener`. A `readonly="true"`
+ * attribute disables editing. Keymap-mode methods are optional: an editor that
  * does not support a requested mode can omit them or return an explicit
  * unsupported result. The editor contract extends the preview one: an editor can
  * do everything a preview can, plus read back and focus.
@@ -48,6 +68,6 @@ export interface EditorElement extends PreviewElement {
  * A read-only side-by-side diff element (`<code-diff>`): it takes two strings
  * (left = base, right = current) and renders a highlighted diff.
  */
-export interface DiffElement extends HTMLElement {
+export interface DiffElement extends ReadyElement {
   setContents(contents: { left: string; right: string }): void;
 }

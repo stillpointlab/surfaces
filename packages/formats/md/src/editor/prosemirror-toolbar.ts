@@ -431,8 +431,12 @@ export class ProseMirrorToolbar {
   private setupOverflow(): void {
     this.toolbarEl = this.container.querySelector('.prosemirror-editor-toolbar');
     if (!this.toolbarEl) return;
-    this.resizeObserver = new ResizeObserver(() => this.updateOverflow());
-    this.resizeObserver.observe(this.container);
+    // Without ResizeObserver (older engines, DOM shims) the overflow is still
+    // computed once; it just does not follow later resizes.
+    if (typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(() => this.updateOverflow());
+      this.resizeObserver.observe(this.container);
+    }
     this.updateOverflow();
   }
 

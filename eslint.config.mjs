@@ -20,6 +20,7 @@ export default [
   eslint.configs.recommended,
   {
     files: [
+      'packages/common/src/**/*.ts',
       'packages/{formats,apps}/*/{src,dev}/**/*.ts',
       'tooling/**/*.ts',
       '*.config.ts',

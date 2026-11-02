@@ -1,8 +1,10 @@
 /// <reference lib="dom" />
-import { reportError } from '@stillpointlab/common-format';
+import { createReadyGate, reportError, type ReadyGate } from '@stillpointlab/common-format';
 
 import { previewStyles } from './preview.styles';
 import { getPreviewRenderer } from './render';
+
+import type { PreviewElement } from '@stillpointlab/common-format';
 
 /**
  * Read-only markdown preview web component — the companion to `<md-editor>`.
@@ -21,11 +23,13 @@ import { getPreviewRenderer } from './render';
  * metadata panel above the body. The mode is passed to the renderer; injected
  * renderers must forward it to `renderMarkdown` for it to take effect.
  */
-export class MdPreview extends HTMLElement {
+export class MdPreview extends HTMLElement implements PreviewElement {
   private _content = '';
   private _shadowRoot: ShadowRoot;
   // Guards against out-of-order async renders: only the latest write wins.
   private renderToken = 0;
+  // Settled once the latest render has landed (see the contract in common).
+  private readonly ready: ReadyGate = createReadyGate(this);
 
   static get observedAttributes(): string[] {
     return ['frontmatter'];
@@ -47,8 +51,13 @@ export class MdPreview extends HTMLElement {
 
   disconnectedCallback(): void {
     // Invalidate any in-flight render so a late resolve doesn't write to a
-    // detached root.
+    // detached root, and go pending until reconnected and rendered.
     this.renderToken++;
+    this.ready.begin();
+  }
+
+  whenReady(): Promise<void> {
+    return this.ready.whenReady();
   }
 
   /** Set the markdown source to preview. Renders asynchronously; latest call wins. */
@@ -59,6 +68,7 @@ export class MdPreview extends HTMLElement {
 
   private async renderContent(): Promise<void> {
     const token = ++this.renderToken;
+    const cycle = this.ready.begin();
     if (!this.isConnected) return; // buffered until connected
     const body = this._shadowRoot.querySelector('.md-preview-body');
     if (!body) return;
@@ -74,9 +84,11 @@ export class MdPreview extends HTMLElement {
           composed: true,
         })
       );
+      this.ready.settle(cycle);
     } catch (err) {
       if (token !== this.renderToken) return;
       reportError('Failed to render markdown preview', err);
+      this.ready.settle(cycle);
     }
   }
 

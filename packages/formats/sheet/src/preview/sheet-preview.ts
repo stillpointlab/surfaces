@@ -1,5 +1,7 @@
 /// <reference lib="dom" />
 
+import { createReadyGate, type ReadyGate } from '@stillpointlab/common-format';
+
 import { parseCsv, type CsvParseResult } from '../csv';
 import {
   resolveSheetPresentation,
@@ -11,9 +13,12 @@ import { snapshotSuccessfulModel } from '../shared/model';
 import { renderTable } from '../shared/render';
 
 import type { ParsedSheetDocument } from '../document';
+import type { PreviewElement } from '@stillpointlab/common-format';
 
-export class SheetPreview extends HTMLElement {
+export class SheetPreview extends HTMLElement implements PreviewElement {
   private readonly root: ShadowRoot;
+  // Rendering is synchronous: settled whenever connected and rendered.
+  private readonly ready: ReadyGate = createReadyGate(this);
   private model: CsvParseResult = parseCsv('');
   private presentation: SheetPresentation = {};
 
@@ -24,6 +29,14 @@ export class SheetPreview extends HTMLElement {
 
   connectedCallback(): void {
     this.render();
+  }
+
+  disconnectedCallback(): void {
+    this.ready.begin();
+  }
+
+  whenReady(): Promise<void> {
+    return this.ready.whenReady();
   }
 
   setContent(content: string, options: SheetContentOptions = {}): void {
@@ -46,6 +59,7 @@ export class SheetPreview extends HTMLElement {
       emptyMessage: 'No sheet data.',
       presentation: this.presentation,
     });
+    this.ready.settle();
   }
 }
 

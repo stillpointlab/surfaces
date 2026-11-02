@@ -1,3 +1,5 @@
+import { createReadyGate, type ReadyGate } from '@stillpointlab/common-format';
+
 import { parseXmdl } from '../parser/parse';
 
 import { previewStyles } from './preview.styles';
@@ -9,13 +11,24 @@ import type {
   XmdlParseError,
   XmdlWarning,
 } from '../parser/types';
+import type { PreviewElement } from '@stillpointlab/common-format';
 
-export class XmdlPreview extends HTMLElement {
+export class XmdlPreview extends HTMLElement implements PreviewElement {
   private content = '';
+  // Rendering is synchronous: settled whenever connected and rendered.
+  private readonly ready: ReadyGate = createReadyGate(this);
 
   connectedCallback(): void {
     if (!this.shadowRoot) this.attachShadow({ mode: 'open' });
     this.render();
+  }
+
+  disconnectedCallback(): void {
+    this.ready.begin();
+  }
+
+  whenReady(): Promise<void> {
+    return this.ready.whenReady();
   }
 
   setContent(content: string): void {
@@ -49,6 +62,7 @@ export class XmdlPreview extends HTMLElement {
     }
 
     this.shadowRoot.append(style, wrapper);
+    if (this.isConnected) this.ready.settle();
   }
 }
 

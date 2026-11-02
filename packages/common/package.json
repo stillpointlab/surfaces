@@ -1,7 +1,7 @@
 {
   "name": "@stillpointlab/common-format",
   "version": "0.1.0",
-  "description": "What every Stillpoint Lab surface shares: injectable logging, the element contracts the host drives, and the SCSS design tokens.",
+  "description": "What every Stillpoint Lab surface shares: injectable logging, the element contracts the host drives, the ready gate behind them, the SCSS design tokens, and the contract conformance suite for tests.",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -14,6 +14,11 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.js",
+      "require": "./dist/testing.cjs"
+    },
     "./styles/tokens": "./src/styles/_tokens.scss"
   },
   "files": [
@@ -24,5 +29,13 @@
     "build": "tsup",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
+  },
+  "peerDependencies": {
+    "vitest": "*"
+  },
+  "peerDependenciesMeta": {
+    "vitest": {
+      "optional": true
+    }
   }
 }

@@ -8,4 +8,7 @@ export type {
   EditorKeymapModeStatus,
   ImagePreviewElement,
   PreviewElement,
+  ReadyElement,
 } from './contracts';
+export { createReadyGate, READY_ATTRIBUTE, READY_EVENT } from './ready';
+export type { ReadyGate, ReadyHost } from './ready';

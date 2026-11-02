@@ -55,7 +55,7 @@ describe('image-preview', () => {
     document.body.appendChild(el);
 
     el.shadowRoot?.querySelector('img')?.dispatchEvent(new Event('load'));
-    await flushAsync();
+    await el.whenReady();
 
     expect(el.shadowRoot?.querySelector('img')?.className).toBe('image-preview__image');
   });
@@ -73,7 +73,7 @@ describe('image-preview', () => {
     document.body.appendChild(el);
 
     el.shadowRoot?.querySelector('img')?.dispatchEvent(new Event('load'));
-    await flushAsync();
+    await el.whenReady();
 
     expect(
       el.shadowRoot?.querySelector('img')?.classList.contains('image-preview__image--scalable')
@@ -93,7 +93,3 @@ describe('image-preview', () => {
     expect(handler).toHaveBeenCalledWith('Image preview failed to load', { src: '/missing.webp' });
   });
 });
-
-function flushAsync(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 0));
-}

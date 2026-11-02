@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 
-import { reportError } from '@stillpointlab/common-format';
+import { createReadyGate, reportError, type ReadyGate } from '@stillpointlab/common-format';
 
 import { DEFAULT_CSV_LIMITS, utf8ByteLength } from '../csv';
 import {
@@ -65,6 +65,8 @@ import {
   transformSheetPresentation,
   type SheetStructureOperation,
 } from './structure';
+
+import type { EditorElement } from '@stillpointlab/common-format';
 
 export type SheetEditorMode = 'navigation' | 'quick-edit' | 'caret-edit';
 
@@ -171,8 +173,10 @@ const TOOLBAR_COMMANDS: readonly ToolbarCommandDefinition[] = [
   { command: 'delete-column', label: 'Delete column', icon: 'delete-column', group: 'delete' },
 ];
 
-export class SheetEditor extends HTMLElement {
+export class SheetEditor extends HTMLElement implements EditorElement {
   private readonly root: ShadowRoot;
+  // Rendering is synchronous: settled whenever connected and rendered.
+  private readonly ready: ReadyGate = createReadyGate(this);
   private sourceSession: SheetEditorSourceSession = createCsvSourceSession('');
   private committedRows: string[][] = [];
   private embeddedPresentation: SheetPresentation = {};
@@ -229,11 +233,17 @@ export class SheetEditor extends HTMLElement {
     window.addEventListener('resize', this.handleOverlayGeometry);
     document.addEventListener('pointerdown', this.handleDocumentPointerDown, true);
     this.render();
+    this.ready.settle();
   }
 
   disconnectedCallback(): void {
     window.removeEventListener('resize', this.handleOverlayGeometry);
     document.removeEventListener('pointerdown', this.handleDocumentPointerDown, true);
+    this.ready.begin();
+  }
+
+  whenReady(): Promise<void> {
+    return this.ready.whenReady();
   }
 
   attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
@@ -252,13 +262,19 @@ export class SheetEditor extends HTMLElement {
   setContent(content: string, options: SheetContentOptions = {}): void {
     this.sourceSession = createCsvSourceSession(content, options);
     this.prepareLoad();
-    if (this.isConnected) this.render();
+    if (this.isConnected) {
+      this.render();
+      this.ready.settle();
+    }
   }
 
   setDocumentSource(source: string, options: SheetContentOptions = {}): void {
     this.sourceSession = createDocumentSourceSession(source, options);
     this.prepareLoad();
-    if (this.isConnected) this.render();
+    if (this.isConnected) {
+      this.render();
+      this.ready.settle();
+    }
   }
 
   getContent(): string {
