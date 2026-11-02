@@ -1,5 +1,5 @@
 /// <reference lib="dom" />
-import { reportError } from '@stillpointlab/common-format';
+import { createReadyGate, reportError, type ReadyGate } from '@stillpointlab/common-format';
 
 import { loadLanguage } from '../editor/language';
 import { codeEditorTheme } from '../editor/theme';
@@ -9,6 +9,7 @@ import { previewStyles } from './preview.styles';
 import type { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
 import type { Compartment, EditorState } from '@codemirror/state';
 import type { EditorView, lineNumbers } from '@codemirror/view';
+import type { PreviewElement } from '@stillpointlab/common-format';
 
 // The CodeMirror modules are dynamically imported on connect (see loadView), so
 // this bag holds the constructors/values once they're available.
@@ -29,8 +30,10 @@ interface PreviewModules {
  * search, bracket matching…), keeping only line numbers + syntax highlighting and
  * a permanently read-only state, so preview-only pages load far less.
  */
-export class CodePreview extends HTMLElement {
+export class CodePreview extends HTMLElement implements PreviewElement {
   private view: EditorView | null = null;
+  // Settled once the view exists with the current content and language.
+  private readonly ready: ReadyGate = createReadyGate(this);
   // Buffers content set before the lazy-loaded view exists, and mirrors the live
   // doc afterwards (same lifecycle handling as <code-editor>).
   private _content = '';
@@ -49,22 +52,31 @@ export class CodePreview extends HTMLElement {
   }
 
   connectedCallback() {
+    const cycle = this.ready.begin();
     this.render();
     // Defer to the next tick so the shadow DOM is ready before we mount the view.
-    setTimeout(() => this.loadView(), 0);
+    setTimeout(() => this.loadView(cycle), 0);
   }
 
   disconnectedCallback() {
     this.view?.destroy();
     this.view = null;
+    this.ready.begin();
+  }
+
+  whenReady(): Promise<void> {
+    return this.ready.whenReady();
   }
 
   attributeChangedCallback(name: string, _oldValue: string | null, newValue: string | null) {
     if (!this.view) return;
-    if (name === 'language') void this.updateLanguage(newValue);
+    if (name === 'language') {
+      const cycle = this.ready.begin();
+      void this.updateLanguage(newValue).then(() => this.ready.settle(cycle));
+    }
   }
 
-  private async loadView() {
+  private async loadView(cycle: number) {
     try {
       const [viewModule, stateModule, languageModule] = await Promise.all([
         import('@codemirror/view'),
@@ -84,15 +96,16 @@ export class CodePreview extends HTMLElement {
       this._loading = false;
       this.render();
 
-      setTimeout(() => this.initializeView(), 0);
+      setTimeout(() => this.initializeView(cycle), 0);
     } catch (err) {
       reportError('Failed to load code preview', err);
       this._loading = false;
       this.render();
+      this.ready.settle(cycle);
     }
   }
 
-  private initializeView() {
+  private initializeView(cycle: number) {
     // Guard against double initialization (e.g. rapid connect/disconnect).
     if (this.view || !this.modules) return;
 
@@ -128,9 +141,12 @@ export class CodePreview extends HTMLElement {
 
     this.view = new EditorView({ state, parent: mount });
 
-    // Resolve the initial language (if any) once the view exists.
+    // Resolve the initial language (if any) once the view exists; the element
+    // is ready once the grammar has been applied too.
     const language = this.getAttribute('language');
-    if (language) void this.updateLanguage(language);
+    void (language ? this.updateLanguage(language) : Promise.resolve()).then(() =>
+      this.ready.settle(cycle)
+    );
   }
 
   private async updateLanguage(name: string | null) {

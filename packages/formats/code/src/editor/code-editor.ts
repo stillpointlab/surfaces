@@ -1,5 +1,5 @@
 /// <reference lib="dom" />
-import { reportError } from '@stillpointlab/common-format';
+import { createReadyGate, reportError, type ReadyGate } from '@stillpointlab/common-format';
 
 import { editorStyles } from './editor.styles';
 import { loadVimKeymapExtension } from './keymap-loaders';
@@ -10,6 +10,7 @@ import { codeEditorTheme } from './theme';
 import type { indentWithTab } from '@codemirror/commands';
 import type { Compartment, EditorSelection, EditorState, Extension, Prec } from '@codemirror/state';
 import type { EditorView, keymap } from '@codemirror/view';
+import type { EditorElement } from '@stillpointlab/common-format';
 import type { basicSetup } from 'codemirror';
 
 export type EditorKeymapMode = 'normal' | 'vim';
@@ -58,8 +59,12 @@ interface EditorModules {
  * `keymap-mode` selects normal or Vim keyboard behavior and returns explicit
  * unsupported results for invalid modes.
  */
-export class CodeEditor extends HTMLElement {
+export class CodeEditor extends HTMLElement implements EditorElement {
   private view: EditorView | null = null;
+  // Settled once the view exists with the current content, language and keymap mode.
+  private readonly ready: ReadyGate = createReadyGate(this);
+  // True while setContent replaces the doc, so the change is not reported as an edit.
+  private applyingContent = false;
   // Buffers content set before the lazy-loaded view exists, and mirrors the live
   // doc afterwards, so getContent()/setContent() work at any point in the lifecycle.
   private _content = '';
@@ -83,32 +88,43 @@ export class CodeEditor extends HTMLElement {
   }
 
   connectedCallback() {
+    const cycle = this.ready.begin();
     if (!parseKeymapMode(this.getAttribute('keymap-mode'))) this.reflectKeymapMode();
     this.render();
     // Defer to the next tick so the shadow DOM is ready before we mount the view.
-    setTimeout(() => this.loadEditor(), 0);
+    setTimeout(() => this.loadEditor(cycle), 0);
   }
 
   disconnectedCallback() {
     this.view?.destroy();
     this.view = null;
+    this.ready.begin();
+  }
+
+  whenReady(): Promise<void> {
+    return this.ready.whenReady();
   }
 
   attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
     if (oldValue === newValue) return;
     if (name === 'keymap-mode') {
-      void this.applyKeymapModeFromAttribute(newValue);
+      // Before the view exists the mode is only recorded; hydration applies it.
+      const cycle = this.view ? this.ready.begin() : null;
+      void this.applyKeymapModeFromAttribute(newValue).then(() => {
+        if (cycle !== null) this.ready.settle(cycle);
+      });
       return;
     }
     if (!this.view) return;
     if (name === 'readonly') {
       this.updateReadOnlyState(newValue === 'true');
     } else if (name === 'language') {
-      void this.updateLanguage(newValue);
+      const cycle = this.ready.begin();
+      void this.updateLanguage(newValue).then(() => this.ready.settle(cycle));
     }
   }
 
-  private async loadEditor() {
+  private async loadEditor(cycle: number) {
     try {
       const [viewModule, stateModule, commandModule, codemirrorModule] = await Promise.all([
         import('@codemirror/view'),
@@ -131,15 +147,16 @@ export class CodeEditor extends HTMLElement {
       this._loading = false;
       this.render();
 
-      setTimeout(() => this.initializeEditor(), 0);
+      setTimeout(() => this.initializeEditor(cycle), 0);
     } catch (err) {
       reportError('Failed to load code editor', err);
       this._loading = false;
       this.render();
+      this.ready.settle(cycle);
     }
   }
 
-  private initializeEditor() {
+  private initializeEditor(cycle: number) {
     // Guard against double initialization (e.g. rapid connect/disconnect).
     if (this.view || !this.modules) return;
 
@@ -178,10 +195,14 @@ export class CodeEditor extends HTMLElement {
 
     this.view = new EditorView({ state, parent: mount });
 
-    // Resolve the initial language (if any) once the view exists.
+    // Resolve the initial language and keymap mode once the view exists; the
+    // element is ready once both have been applied (the vim keymap is a lazy
+    // import of its own, so the toolbar can lag the view).
     const language = this.getAttribute('language');
-    if (language) void this.updateLanguage(language);
-    void this.applyKeymapModeFromAttribute(this.getAttribute('keymap-mode'));
+    void Promise.all([
+      language ? this.updateLanguage(language) : undefined,
+      this.applyKeymapModeFromAttribute(this.getAttribute('keymap-mode')),
+    ]).then(() => this.ready.settle(cycle));
   }
 
   private readonlyExtensions(readonly: boolean): Extension {
@@ -193,6 +214,7 @@ export class CodeEditor extends HTMLElement {
     if (!this.view) return;
     const content = this.view.state.doc.toString();
     this._content = content;
+    if (this.applyingContent) return; // a setContent, not an edit
     this.dispatchEvent(new CustomEvent('content-change', { detail: { content } }));
   }
 
@@ -350,9 +372,14 @@ export class CodeEditor extends HTMLElement {
   setContent(content: string) {
     this._content = content;
     if (this.view) {
-      this.view.dispatch({
-        changes: { from: 0, to: this.view.state.doc.length, insert: content },
-      });
+      this.applyingContent = true;
+      try {
+        this.view.dispatch({
+          changes: { from: 0, to: this.view.state.doc.length, insert: content },
+        });
+      } finally {
+        this.applyingContent = false;
+      }
     }
   }
 

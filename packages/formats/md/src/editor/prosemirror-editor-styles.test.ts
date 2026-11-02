@@ -1,17 +1,10 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { ProseMirrorEditor } from './prosemirror-editor';
 
 describe('ProseMirrorEditor styles', () => {
-  beforeEach(() => {
-    // These tests inspect the shells before deferred editor initialization.
-    vi.useFakeTimers();
-  });
-
   afterEach(() => {
     document.body.replaceChildren();
-    vi.clearAllTimers();
-    vi.useRealTimers();
   });
 
   beforeAll(() => {
@@ -22,17 +15,16 @@ describe('ProseMirrorEditor styles', () => {
     const el = document.createElement('md-editor') as ProseMirrorEditor;
     document.body.appendChild(el);
 
+    // The shell renders synchronously on connect; the engine loads afterwards.
     const style = el.shadowRoot?.querySelector('style');
     expect(style?.textContent).toContain('.prosemirror-editor-toolbar');
     expect(style?.textContent).toContain('.toolbar-button');
-
-    el.remove();
   });
 
-  it('keeps editor styles when rendering the editable shell', () => {
+  it('keeps editor styles when rendering the editable shell', async () => {
     const el = document.createElement('md-editor') as ProseMirrorEditor;
-    (el as any)._loading = false;
-    (el as any).render();
+    document.body.appendChild(el);
+    await el.whenReady();
 
     const style = el.shadowRoot?.querySelector('style');
     expect(style?.textContent).toContain('.prosemirror-editor-toolbar');

@@ -1,5 +1,7 @@
 /// <reference lib="dom" />
 
+import { createReadyGate, type ReadyGate } from '@stillpointlab/common-format';
+
 import { parseSample } from '../core/parse';
 
 import { previewStyles } from './preview.styles';
@@ -10,6 +12,8 @@ import type { PreviewElement } from '@stillpointlab/common-format';
 export class SamplePreview extends HTMLElement implements PreviewElement {
   private readonly root: ShadowRoot;
   private readonly body: HTMLPreElement;
+  // Rendering is synchronous: settled whenever connected (see the contract in common).
+  private readonly ready: ReadyGate = createReadyGate(this);
 
   constructor() {
     super();
@@ -19,6 +23,18 @@ export class SamplePreview extends HTMLElement implements PreviewElement {
     this.body = document.createElement('pre');
     this.body.className = 'sample-preview';
     this.root.append(style, this.body);
+  }
+
+  connectedCallback(): void {
+    this.ready.settle();
+  }
+
+  disconnectedCallback(): void {
+    this.ready.begin();
+  }
+
+  whenReady(): Promise<void> {
+    return this.ready.whenReady();
   }
 
   setContent(content: string): void {

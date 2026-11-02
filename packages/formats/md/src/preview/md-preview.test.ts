@@ -25,19 +25,6 @@ function mount(content?: string): MdPreview {
 const body = (el: MdPreview): HTMLElement | null =>
   el.shadowRoot?.querySelector('.md-preview-body') ?? null;
 
-/**
- * Poll until `predicate` is true or the timeout elapses. The preview renders
- * asynchronously (the default renderer even dynamically imports markdown-it), so a
- * fixed delay is flaky on a cold/loaded run — wait for the actual result instead.
- */
-async function waitFor(predicate: () => boolean, timeout = 3000): Promise<void> {
-  const start = Date.now();
-  while (!predicate()) {
-    if (Date.now() - start > timeout) return;
-    await new Promise((r) => setTimeout(r, 10));
-  }
-}
-
 const bodyHtml = (el: MdPreview): string => body(el)?.innerHTML ?? '';
 
 describe('md-preview', () => {
@@ -47,15 +34,15 @@ describe('md-preview', () => {
 
   it('renders content set before connect (buffering) via the default renderer', async () => {
     const el = mount('# Hello');
-    // The default renderer dynamically imports markdown-it; poll until it resolves.
-    await waitFor(() => bodyHtml(el).includes('<h1>Hello</h1>'));
+    // The default renderer dynamically imports markdown-it; ready means it landed.
+    await el.whenReady();
     expect(bodyHtml(el)).toContain('<h1>Hello</h1>');
   });
 
   it('uses an injected renderer instead of the default', async () => {
     setPreviewRenderer(async (content) => `<p class="x">${content.toUpperCase()}</p>`);
     const el = mount('hi');
-    await waitFor(() => bodyHtml(el) === '<p class="x">HI</p>');
+    await el.whenReady();
     expect(bodyHtml(el)).toBe('<p class="x">HI</p>');
   });
 
@@ -87,9 +74,10 @@ describe('md-preview', () => {
     const el = mount();
     el.setContent('first');
     el.setContent('second');
-    // Wait for the fast 'second' to land, then past the slow 'first' (30ms) to
+    // Ready once 'second' lands; then wait past the slow 'first' (30ms) to
     // prove the older, slower render never clobbers it.
-    await waitFor(() => bodyHtml(el) === '<p>second</p>');
+    await el.whenReady();
+    expect(bodyHtml(el)).toBe('<p>second</p>');
     await new Promise((r) => setTimeout(r, 60));
     expect(bodyHtml(el)).toBe('<p>second</p>');
   });
@@ -100,24 +88,24 @@ describe('md-preview', () => {
     el.setContent('---\ncolumn: briefed\n---\n\n# Hello');
     document.body.appendChild(el);
 
-    await waitFor(() => bodyHtml(el).includes('<h1>Hello</h1>'));
+    await el.whenReady();
     expect(bodyHtml(el)).toContain('md-frontmatter-panel');
     expect(bodyHtml(el)).toContain('<dt>column</dt><dd>briefed</dd>');
   });
 
   it('hides frontmatter by default (no attribute)', async () => {
     const el = mount('---\ncolumn: briefed\n---\n\n# Hello');
-    await waitFor(() => bodyHtml(el).includes('<h1>Hello</h1>'));
+    await el.whenReady();
     expect(bodyHtml(el)).toBe('<h1>Hello</h1>\n');
   });
 
   it('re-renders when the frontmatter attribute changes', async () => {
     const el = mount('---\ncolumn: briefed\n---\n\n# Hello');
-    await waitFor(() => bodyHtml(el).includes('<h1>Hello</h1>'));
+    await el.whenReady();
     expect(bodyHtml(el)).not.toContain('md-frontmatter-panel');
 
     el.setAttribute('frontmatter', 'panel');
-    await waitFor(() => bodyHtml(el).includes('md-frontmatter-panel'));
+    await el.whenReady();
     expect(bodyHtml(el)).toContain('<dt>column</dt><dd>briefed</dd>');
   });
 
@@ -128,9 +116,9 @@ describe('md-preview', () => {
       return `<p>${content}</p>`;
     });
     const el = mount('hi');
-    await waitFor(() => bodyHtml(el) === '<p>hi</p>');
+    await el.whenReady();
     el.setAttribute('frontmatter', 'panel');
-    await waitFor(() => seen.length >= 2);
+    await el.whenReady();
 
     expect(seen[0]).toBe('hidden');
     expect(seen[1]).toBe('panel');

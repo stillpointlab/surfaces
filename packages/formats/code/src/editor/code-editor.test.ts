@@ -3,15 +3,6 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { CodeEditor } from './code-editor';
 import * as keymapLoaders from './keymap-loaders';
 
-const waitFor = async (predicate: () => boolean, timeoutMs = 1000) => {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    if (predicate()) return;
-    await new Promise((resolve) => setTimeout(resolve, 10));
-  }
-  expect(predicate()).toBe(true);
-};
-
 // These exercise the string contract before the lazy-loaded CodeMirror view exists
 // (the element is created but never connected, so no view is built). This is the
 // state the host relies on when seeding draft content before the editor hydrates.
@@ -33,7 +24,7 @@ describe('CodeEditor content buffering (pre-view)', () => {
     const el = create();
     el.setContent(content);
     document.body.append(el);
-    await waitFor(() => Boolean(el.shadowRoot?.querySelector('.cm-content')));
+    await el.whenReady();
     const editorContent = el.shadowRoot!.querySelector<HTMLElement>('.cm-content')!;
     editorContent.focus();
     return { el, editorContent };
@@ -131,8 +122,9 @@ describe('CodeEditor content buffering (pre-view)', () => {
     el.setAttribute('keymap-mode', 'sublime');
 
     document.body.append(el);
-    await waitFor(() => el.getAttribute('keymap-mode') === 'normal');
+    await el.whenReady();
 
+    expect(el.getAttribute('keymap-mode')).toBe('normal');
     expect(el.getKeymapMode()).toBe('normal');
   });
 
@@ -140,7 +132,7 @@ describe('CodeEditor content buffering (pre-view)', () => {
     const el = create();
 
     document.body.append(el);
-    await waitFor(() => Boolean(el.shadowRoot?.querySelector('.code-editor-toolbar')));
+    await el.whenReady();
 
     const buttons = Array.from(
       el.shadowRoot!.querySelectorAll<HTMLButtonElement>('.code-editor-keymap-button')
@@ -192,16 +184,13 @@ describe('CodeEditor content buffering (pre-view)', () => {
     el.setAttribute('keymap-mode', 'vim');
 
     document.body.append(el);
-    // Two lazy imports race here: the vim keymap (started by the attribute, before
-    // connect) and CodeMirror itself (started on connect). The mode can read 'vim'
-    // while the editor is still loading and has no toolbar, so wait for the toolbar
-    // to show the mode rather than for the mode alone. Under a full parallel run
-    // (one jsdom worker per file) the imports can take well over a second.
-    const activeMode = () =>
-      el.shadowRoot?.querySelector<HTMLButtonElement>('.code-editor-keymap-button.is-active')
-        ?.dataset.keymapMode;
-    await waitFor(() => activeMode() === 'vim', 4000);
+    // Ready means the view exists and the lazily imported vim keymap is applied.
+    await el.whenReady();
 
+    const active = el.shadowRoot?.querySelector<HTMLButtonElement>(
+      '.code-editor-keymap-button.is-active'
+    );
+    expect(active?.dataset.keymapMode).toBe('vim');
     expect(el.getKeymapMode()).toBe('vim');
   });
 
@@ -210,7 +199,7 @@ describe('CodeEditor content buffering (pre-view)', () => {
     el.setAttribute('readonly', 'true');
 
     document.body.append(el);
-    await waitFor(() => Boolean(el.shadowRoot?.querySelector('.code-editor-content')));
+    await el.whenReady();
 
     expect(el.shadowRoot?.querySelector('.code-editor-toolbar')).toBeNull();
     expect(el.getSupportedKeymapModes()).toEqual(['normal']);

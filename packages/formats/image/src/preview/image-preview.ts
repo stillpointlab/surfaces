@@ -1,16 +1,21 @@
 /// <reference lib="dom" />
 
-import { reportError } from '@stillpointlab/common-format';
+import { createReadyGate, reportError, type ReadyGate } from '@stillpointlab/common-format';
 
 import { previewStyles } from './preview.styles';
+
+import type { ImagePreviewElement } from '@stillpointlab/common-format';
 
 type ImageState = 'empty' | 'loading' | 'loaded' | 'error';
 type SvgSizing = 'fixed' | 'scalable';
 
-export class ImagePreview extends HTMLElement {
+export class ImagePreview extends HTMLElement implements ImagePreviewElement {
   private readonly root: ShadowRoot;
   private state: ImageState = 'empty';
   private svgSizing: SvgSizing = 'fixed';
+  // Pending while an image loads; settled once it has loaded or failed, or when
+  // there is nothing to show.
+  private readonly ready: ReadyGate = createReadyGate(this);
 
   static get observedAttributes(): string[] {
     return ['src', 'alt'];
@@ -24,6 +29,14 @@ export class ImagePreview extends HTMLElement {
   connectedCallback(): void {
     this.syncStateFromSource();
     this.render();
+  }
+
+  disconnectedCallback(): void {
+    this.ready.begin();
+  }
+
+  whenReady(): Promise<void> {
+    return this.ready.whenReady();
   }
 
   attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
@@ -107,6 +120,9 @@ export class ImagePreview extends HTMLElement {
     const img = this.root.querySelector('img');
     img?.addEventListener('load', this.handleLoad, { once: true });
     img?.addEventListener('error', this.handleError, { once: true });
+
+    if (this.state === 'loading') this.ready.begin();
+    else this.ready.settle();
   }
 }
 

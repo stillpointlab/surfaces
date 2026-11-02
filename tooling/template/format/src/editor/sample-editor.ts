@@ -1,5 +1,7 @@
 /// <reference lib="dom" />
 
+import { createReadyGate, type ReadyGate } from '@stillpointlab/common-format';
+
 import { editorStyles } from './editor.styles';
 
 import type { EditorElement } from '@stillpointlab/common-format';
@@ -11,6 +13,8 @@ import type { EditorElement } from '@stillpointlab/common-format';
 export class SampleEditor extends HTMLElement implements EditorElement {
   private readonly root: ShadowRoot;
   private readonly area: HTMLTextAreaElement;
+  // Rendering is synchronous: settled whenever connected (see the contract in common).
+  private readonly ready: ReadyGate = createReadyGate(this);
 
   constructor() {
     super();
@@ -25,6 +29,26 @@ export class SampleEditor extends HTMLElement implements EditorElement {
       );
     });
     this.root.append(style, this.area);
+  }
+
+  static get observedAttributes(): string[] {
+    return ['readonly'];
+  }
+
+  connectedCallback(): void {
+    this.ready.settle();
+  }
+
+  disconnectedCallback(): void {
+    this.ready.begin();
+  }
+
+  attributeChangedCallback(name: string, _oldValue: string | null, newValue: string | null): void {
+    if (name === 'readonly') this.area.readOnly = newValue === 'true';
+  }
+
+  whenReady(): Promise<void> {
+    return this.ready.whenReady();
   }
 
   setContent(content: string): void {

@@ -2,7 +2,7 @@
 import './md-icon';
 import './md-toggle';
 
-import { report, reportError } from '@stillpointlab/common-format';
+import { createReadyGate, report, reportError, type ReadyGate } from '@stillpointlab/common-format';
 
 import { editorStyles } from './editor.styles';
 import { MdToggleEvent } from './md-toggle';
@@ -10,6 +10,7 @@ import { ProseMirrorToolbar } from './prosemirror-toolbar';
 import { getEditorPlugins } from './registry';
 
 import type { frontmatterViewPlugin } from './frontmatter-view';
+import type { EditorElement } from '@stillpointlab/common-format';
 import type { baseKeymap, lift, setBlockType, toggleMark, wrapIn } from 'prosemirror-commands';
 import type { history, redo, undo } from 'prosemirror-history';
 import type { keymap } from 'prosemirror-keymap';
@@ -97,10 +98,14 @@ export function buildTableNode(schema: Schema, rows: number, cols: number): Pros
   return schema.nodes.table.create(null, tableRows);
 }
 
-export class ProseMirrorEditor extends HTMLElement {
+export class ProseMirrorEditor extends HTMLElement implements EditorElement {
   private view: EditorView | null = null;
   private _content = '';
   private _loading = true;
+  // Settled once the ProseMirror view exists with the current content.
+  private readonly ready: ReadyGate = createReadyGate(this);
+  // True while setContent replaces the doc, so the change is not reported as an edit.
+  private applyingContent = false;
   private _shadowRoot!: ShadowRoot;
   private editorModules: EditorModules | null = null;
   private toolbar: ProseMirrorToolbar | null = null;
@@ -117,14 +122,27 @@ export class ProseMirrorEditor extends HTMLElement {
   }
 
   connectedCallback() {
+    const cycle = this.ready.begin();
     this.render();
     // Wait for next tick to ensure shadow DOM is ready
-    setTimeout(() => this.loadEditor(), 0);
+    setTimeout(() => this.loadEditor(cycle), 0);
   }
 
   disconnectedCallback() {
+    // Keep the latest text so a reconnect rebuilds the view from it, and tear
+    // the view down so the rebuild is allowed; raw mode does not survive either.
+    this._content = this.getContent();
     this.view?.destroy();
+    this.view = null;
     this.toolbar?.destroy();
+    this.toolbar = null;
+    this.isRawMode = false;
+    this.rawTextarea = null;
+    this.ready.begin();
+  }
+
+  whenReady(): Promise<void> {
+    return this.ready.whenReady();
   }
 
   attributeChangedCallback(name: string, _oldValue: string | null, newValue: string | null) {
@@ -134,7 +152,7 @@ export class ProseMirrorEditor extends HTMLElement {
     }
   }
 
-  private async loadEditor() {
+  private async loadEditor(cycle: number) {
     try {
       // Lazy load the ProseMirror modules
       const modules = await Promise.all([
@@ -195,15 +213,16 @@ export class ProseMirrorEditor extends HTMLElement {
       this.render();
 
       // Initialize editor after rendering the UI
-      setTimeout(() => this.initializeEditor(), 0);
+      setTimeout(() => this.initializeEditor(cycle), 0);
     } catch (error) {
       reportError('Failed to load editor', error);
       this._loading = false;
       this.render();
+      this.ready.settle(cycle);
     }
   }
 
-  private initializeEditor() {
+  private initializeEditor(cycle: number) {
     // Prevent double initialization
     if (this.view || !this.editorModules) {
       report('Editor already initialized or modules not loaded', { level: 'warn' });
@@ -353,10 +372,13 @@ export class ProseMirrorEditor extends HTMLElement {
 
     // Listen for selection changes
     setInterval(() => this.toolbar?.updateState(), 100);
+
+    this.ready.settle(cycle);
   }
 
   private handleContentChange() {
     if (!this.view || !this.editorModules) return;
+    if (this.applyingContent) return; // a setContent, not an edit
 
     const { markdownSerializer } = this.editorModules;
     const markdown = markdownSerializer.serialize(this.view.state.doc);
@@ -375,7 +397,12 @@ export class ProseMirrorEditor extends HTMLElement {
     const doc = markdownParser.parse(content);
     const state = this.view.state;
     const tr = state.tr.replaceWith(0, state.doc.content.size, doc.content);
-    this.view.dispatch(tr);
+    this.applyingContent = true;
+    try {
+      this.view.dispatch(tr);
+    } finally {
+      this.applyingContent = false;
+    }
   }
 
   private updateReadOnlyState(readonly: boolean) {

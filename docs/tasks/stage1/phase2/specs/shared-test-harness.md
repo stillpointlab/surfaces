@@ -1,6 +1,6 @@
 ---
-column: todo
-pr: 4
+column: in-progress
+pr: 6
 created: 2026-11-02T13:05:00-07:00
 tags: [dev-tooling, formats, host-contract, common, scaffold]
 ---

@@ -89,8 +89,35 @@ everything; `./editor` is the explicit alias.
 `packages/common` (`@stillpointlab/common-format`) holds what every surface shares and nothing
 else: the injectable logging (`setErrorHandler`, `setReporter`; one instance for all formats, which
 each format also re-exports), the element contracts the host drives (`PreviewElement`,
-`EditorElement`, `ImagePreviewElement`, `DiffElement`), and the `--spl-*` SCSS tokens. A format
+`EditorElement`, `ImagePreviewElement`, `DiffElement`), the ready gate behind them, the `--spl-*`
+SCSS tokens, and the contract conformance suites (`@stillpointlab/common-format/testing`). A format
 styles with `@use 'common/src/styles/tokens' as *;`.
+
+### Ready
+
+Every element answers `whenReady(): Promise<void>` with _settled_ semantics: it resolves once the
+element is hydrated (its lazy engine, if any, loaded and its view built) and the most recent
+content it was given has reached its DOM. A later `setContent` starts a new cycle, so
+`await el.whenReady()` right after a set resolves once that set is visible. The state is reflected
+as a boolean `ready` attribute (so `md-editor[ready]` selects settled elements) and announced by a
+non-bubbling `ready` event each time the element settles; disconnecting makes the element pending
+again. Elements implement it with `createReadyGate(this)` from `common`. A host must never wait for
+readiness before its first `setContent`: content set early is buffered and shows as soon as the
+element can. Readiness is for what needs the engine, such as `focus()`, keymap modes, reading back
+normalised content, and tests.
+
+### Conformance
+
+`@stillpointlab/common-format/testing` exports `describePreviewContract`, `describeEditorContract`,
+`describeImagePreviewContract` and `describeDiffContract`: vitest `describe` blocks a format runs
+in `src/contract.test.ts` for each element it ships. They prove readiness, set and read back,
+`content-change` on user edits and never on `setContent`, `readonly`, keymap modes and focus,
+and take hooks for what only the format knows (how to tell content reached the DOM, how to
+perform one edit). They use no fake timers, private fields or jsdom-specific stubs, so they run
+unchanged under vitest browser mode: a package that needs a real browser (media editors, clipboard)
+sets `formatTest({ browser: true })` in its `vitest.config.ts` and the root adds `@vitest/browser`,
+`@vitest/browser-playwright` and Playwright's Chromium at that point. Until then everything runs on
+jsdom.
 
 Styles: write SCSS next to the component. `gen:styles` compiles every non-partial
 `src/**/<name>.scss` into a sibling `<name>.styles.ts` exporting `<name>Styles`; the generated files
