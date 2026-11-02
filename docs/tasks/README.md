@@ -10,5 +10,7 @@ specs from it, implements, opens a PR, and a human reviews and squash-merges. De
 follow-up WAL will arrive with the first stage close.
 
 The migration that created this repository (five editor repositories into one, then Context
-Manager mounting it as one submodule) is tracked on Context Manager's boards, stage 5 phase 11,
-until it completes.
+Manager mounting it as one submodule) was tracked on Context Manager's boards, stage 5 phase 11,
+and closed there on 2026-11-01. Phases here close the way Context Manager's do: cards to `done`,
+the `current` pointer in `tasks.yaml` moved on, and a `stage<N>-phase<M>-complete` tag on the last
+merge of the phase.

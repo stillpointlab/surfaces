@@ -1,6 +1,7 @@
 ---
-column: in-progress
+column: done
 pr: 2
+completed: 2026-11-01
 created: 2026-11-01T16:32:57-07:00
 tags: [common, scaffold, formats, host-contract]
 ---
@@ -46,6 +47,7 @@ the convention instead of reading each package.
 3. **The image question.** Decide, with Jamie, whether `image` is a format (default) or a preview
    shim. If a format, it gains nothing but the README line; if a shim, it moves into `common` and
    Context Manager's import changes with it.
+   _Closed 2026-11-01 with PR 2: `image` stays a format; nothing moved._
 4. **Scaffold.** `packages/formats/_template` (excluded from the workspace glob) and an
    `npm run new-format <name>` script that copies it, with the three entry points stubbed, a `dev/`
    playground on the next free port, and a test per entry. Shape the script so a `new-app` sibling
@@ -62,9 +64,12 @@ the convention instead of reading each package.
 
 ## Acceptance / completion checklist
 
-- [ ] `npm run check` passes with `common` in the graph.
-- [ ] Each format's `exports` lists `.` and `./preview`, plus `./editor` where an editor exists.
-- [ ] `log.ts` exists once; the four copies import it.
-- [ ] A format created from the template builds, tests and lints with no edits beyond its name.
-- [ ] Root README documents the convention and the port table.
-- [ ] Context Manager follow-up PR imports the contracts from `common` (tracked there).
+- [x] `npm run check` passes with `common` in the graph.
+- [x] Each format's `exports` lists `.` and `./preview`, plus `./editor` where an editor exists.
+- [x] `log.ts` exists once; the four copies import it.
+- [x] A format created from the template builds, tests and lints with no edits beyond its name.
+- [x] Root README documents the convention and the port table.
+- [x] Context Manager follow-up PR imports the contracts from `common` (tracked there).
+      Landed 2026-11-01: `packages/surfaces/packages/common` is first in Context Manager's
+      workspaces and `src/client/types/components.d.ts` re-exports from
+      `@stillpointlab/common-format`.
