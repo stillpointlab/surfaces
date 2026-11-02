@@ -192,14 +192,17 @@ describe('CodeEditor content buffering (pre-view)', () => {
     el.setAttribute('keymap-mode', 'vim');
 
     document.body.append(el);
-    // The vim keymap is a lazy import on top of CodeMirror's own; under a full
-    // parallel run (one jsdom worker per file) it can take well over a second.
-    await waitFor(() => el.getKeymapMode() === 'vim', 4000);
+    // Two lazy imports race here: the vim keymap (started by the attribute, before
+    // connect) and CodeMirror itself (started on connect). The mode can read 'vim'
+    // while the editor is still loading and has no toolbar, so wait for the toolbar
+    // to show the mode rather than for the mode alone. Under a full parallel run
+    // (one jsdom worker per file) the imports can take well over a second.
+    const activeMode = () =>
+      el.shadowRoot?.querySelector<HTMLButtonElement>('.code-editor-keymap-button.is-active')
+        ?.dataset.keymapMode;
+    await waitFor(() => activeMode() === 'vim', 4000);
 
-    const active = el.shadowRoot!.querySelector<HTMLButtonElement>(
-      '.code-editor-keymap-button.is-active'
-    );
-    expect(active?.dataset.keymapMode).toBe('vim');
+    expect(el.getKeymapMode()).toBe('vim');
   });
 
   it('hides the toolbar and rejects non-normal modes in readonly mode', async () => {
