@@ -5,18 +5,18 @@ and optionally an editor over one good, and **apps**, each a manifest-mounted sc
 are stateless clients of the same host contract (`get` / `list` / `put`, where `put` is a proposal),
 so they share one toolchain, one `common` package and, in time, one scaffold.
 
-| Package                  | npm name                       | Ships                                                       | Port |
-| ------------------------ | ------------------------------ | ----------------------------------------------------------- | ---- |
-| `packages/common`        | `@stillpointlab/common-format` | logging, element contracts, SCSS tokens; no elements        |      |
-| `packages/formats/md`    | `@stillpointlab/md-format`     | core + `<md-preview>` + `<md-editor>`                       | 5180 |
-| `packages/formats/code`  | `@stillpointlab/code-format`   | core + `<code-preview>` + `<code-editor>`, `<code-diff>`    | 5181 |
-| `packages/formats/sheet` | `@stillpointlab/sheet-format`  | core + `<sheet-preview>` + `<sheet-editor>`, `<sheet-grid>` | 5182 |
-| `packages/formats/xmdl`  | `@stillpointlab/xmdl-format`   | core + `<xmdl-preview>` + `<xmdl-editor>`                   | 5183 |
-| `packages/formats/image` | `@stillpointlab/image-format`  | `<image-preview>` only                                      | 5184 |
-| `packages/apps/`         |                                | tasks and inventory arrive with the apps breakout           |      |
+| Package                  | npm name                       | Ships                                                       |
+| ------------------------ | ------------------------------ | ----------------------------------------------------------- |
+| `packages/common`        | `@stillpointlab/common-format` | logging, contracts, ready gate, tokens, conformance suites  |
+| `packages/formats/md`    | `@stillpointlab/md-format`     | core + `<md-preview>` + `<md-editor>`                       |
+| `packages/formats/code`  | `@stillpointlab/code-format`   | core + `<code-preview>` + `<code-editor>`, `<code-diff>`    |
+| `packages/formats/sheet` | `@stillpointlab/sheet-format`  | core + `<sheet-preview>` + `<sheet-editor>`, `<sheet-grid>` |
+| `packages/formats/xmdl`  | `@stillpointlab/xmdl-format`   | core + `<xmdl-preview>` + `<xmdl-editor>`                   |
+| `packages/formats/image` | `@stillpointlab/image-format`  | `<image-preview>` only                                      |
+| `packages/apps/`         |                                | tasks and inventory arrive with the apps breakout           |
 
-The port column is the registry for `npm run dev` playgrounds; `npm run new-format` takes the next
-free one.
+Every format opens in the one harness (`npm run dev`, <http://localhost:5180>); see
+[the harness](#the-harness) below.
 
 A **format** always ships a core (parser, document model, theme) and a preview (the read-only
 element, friendly to a no-JS fallback), and optionally an editor (the interactive element). Image,
@@ -42,6 +42,7 @@ tooling/
   vitest.ts          the shared test preset
   new-format.mjs     scaffolds packages/formats/<name> from tooling/template/format
   template/format/   a complete, buildable sample format: what every new one starts from
+  harness/           the one playground: mounts any format from its dev/fixtures.ts
 docs/
   tasks/             this repository's own task boards (tasks.yaml + templates)
 packages/
@@ -52,8 +53,8 @@ packages/
     tsconfig.json    extends the base; overrides only what the package needs
     tsup.config.ts   entries and externals through `formatPackage()`
     vitest.config.ts `formatTest()` with any override
-    vite.config.ts   the `dev/` playground
-    src/, dev/, README.md
+    src/, README.md
+    dev/fixtures.ts  this format in the harness: elements by role, fixtures, controls
 ```
 
 ## Working on it
@@ -63,13 +64,31 @@ npm install        # once, at the root
 npm run check      # lint, format, typecheck, test, build: what CI runs
 npm run build      # every package
 npm test           # every package
+npm run dev        # the harness, every format, at http://localhost:5180
 
 cd packages/formats/sheet   # or any package
-npm run dev                 # the playground on that package's port
+npm run dev                 # the harness opened on this package
 npm test                    # that package only
 
 npm run new-format -- video # a new format from the template; then npm install and add its row above
 ```
+
+## The harness
+
+`tooling/harness/` is the one playground. It finds every `packages/formats/*/dev/fixtures.ts`,
+mounts the chosen format's elements by role (editor beside preview, extras below), applies a
+fixture, mirrors edits into the preview, reads the source back, and shows each element's `ready`
+state and events. Read-only, narrow panes and light/dark (with the shared `--spl-*` tokens) are
+common controls; `?format=sheet&fixture=Ragged%20rows` deep-links a state.
+
+A format's `dev/fixtures.ts` imports its own entries (so the elements register) and default-exports
+a `HarnessFormat` (`tooling/harness/types.ts`): `elements` (`editor`, `preview`, `extra` tags),
+`fixtures` (name → content, or `{ content, apply }` when the fixture must drive a setter beyond the
+contract), an optional module-level `apply`, `controls` (toggles and selects beside the common
+ones) and `mirror: false` when a plain `setContent` mirror would lose something. The harness drives
+elements only through the contracts in `common`; whatever a format wants beyond them, it does in
+`apply` or a control. The template ships a minimal one, so a new format appears in the harness
+with no edits beyond its name.
 
 ## The format convention
 

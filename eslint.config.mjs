@@ -11,7 +11,6 @@ export default [
   {
     ignores: [
       '**/dist/**',
-      '**/dist-dev/**',
       '**/node_modules/**',
       // generated from *.scss by tooling/gen-styles.mjs
       '**/*.styles.ts',

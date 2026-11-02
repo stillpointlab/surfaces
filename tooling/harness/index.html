@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Surfaces harness</title>
+    <link rel="stylesheet" href="./harness.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <h1>Surfaces harness</h1>
+      <label
+        >Format
+        <select id="format"></select
+      ></label>
+      <label
+        >Fixture
+        <select id="fixture"></select
+      ></label>
+      <label><input id="readonly" type="checkbox" /> Read-only</label>
+      <label><input id="narrow" type="checkbox" /> Narrow panes</label>
+      <label><input id="dark" type="checkbox" /> Dark</label>
+      <span id="controls" class="controls"></span>
+    </header>
+
+    <main class="stage">
+      <section class="pane-block" id="editor-block">
+        <h2>Editor <span class="status" data-role="editor"></span></h2>
+        <div class="pane" id="editor-pane"></div>
+      </section>
+      <section class="pane-block" id="preview-block">
+        <h2>Preview <span class="status" data-role="preview"></span></h2>
+        <div class="pane" id="preview-pane"></div>
+      </section>
+      <section class="pane-block wide" id="extras-block">
+        <h2>Extras</h2>
+        <div id="extras"></div>
+      </section>
+      <section class="pane-block" id="source-block">
+        <h2>Source (editor.getContent)</h2>
+        <pre class="source"><code id="source"></code></pre>
+      </section>
+      <section class="pane-block" id="events-block">
+        <h2>Events</h2>
+        <ol id="events" class="events"></ol>
+      </section>
+    </main>
+
+    <p class="help">
+      Each format contributes <code>dev/fixtures.ts</code>; this page mounts its elements by role,
+      applies the chosen fixture, mirrors edits into the preview and reads the source back. The
+      badges follow each element's <code>ready</code> attribute.
+    </p>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

@@ -1,6 +1,5 @@
 node_modules/
 dist/
-dist-dev/
 *.tsbuildinfo
 # generated from *.scss by tooling/gen-styles.mjs
 *.styles.ts

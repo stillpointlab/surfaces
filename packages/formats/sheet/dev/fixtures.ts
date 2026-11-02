@@ -1,9 +1,13 @@
-import '../src/grid';
+// This format in the surfaces harness (`npm run dev`). The fixtures are the
+// edge cases the tests know about, each applied through the sheet-specific
+// setters (presentation options, `.sheet` documents, call-site overrides).
 import '../src/editor';
+import '../src/grid';
 import '../src/preview';
 
 import { parseSheetDocument } from '../src/document';
 
+import type { HarnessElements, HarnessFormat } from '../../../../tooling/harness/types';
 import type { SheetEditor } from '../src/editor';
 import type { SheetGrid } from '../src/grid';
 import type { SheetPresentation } from '../src/presentation';
@@ -26,86 +30,80 @@ const overLimitFormatDocument = [
   'Over limit',
 ].join('\n');
 
-interface Fixture {
+interface SheetFixture {
   source: string;
   presentation?: SheetPresentation;
   documentSource?: string;
   documentOverride?: SheetPresentation | null;
 }
 
-const fixtures: Record<string, Fixture> = {
-  empty: { source: '' },
-  ragged: { source: 'A\nB,C,D\nE,F' },
-  'bom-lf': { source: '\uFEFFName,Value\nCoffee,12\n' },
-  regular: { source: regular },
-  'clipboard-literals': {
+const sheetFixtures: Record<string, SheetFixture> = {
+  'Empty virtual A1': { source: '' },
+  'Ragged rows': { source: 'A\nB,C,D\nE,F' },
+  'BOM + LF + final newline': { source: '﻿Name,Value\nCoffee,12\n' },
+  'Quoted and ragged': { source: regular },
+  'Clipboard literal values': {
     source: [
       'Label,Tab,Multiline,Quote,Formula,HTML',
       'Source,"contains\ta tab","line one\nline two","say ""hello""",=SUM(A1),<b>literal</b>',
     ].join('\n'),
   },
-  wide: { source: Array.from({ length: 30 }, (_, index) => `Column ${index + 1}`).join(',') },
-  truncated: {
+  'Columns beyond Z': {
+    source: Array.from({ length: 30 }, (_, index) => `Column ${index + 1}`).join(','),
+  },
+  '1,001 rows': {
     source: Array.from({ length: 1001 }, (_, index) => `${index},Item ${index}`).join('\n'),
   },
-  malformed: { source: '"Unclosed quoted field' },
-  oversized: { source: 'x'.repeat(256 * 1024 + 1) },
-  'row-cap': { source: Array.from({ length: 1000 }, (_, index) => `Row ${index + 1}`).join('\n') },
-  'column-cap': { source: Array.from({ length: 256 }, (_, index) => `C${index + 1}`).join(',') },
-  horizontal: {
+  'Malformed CSV': { source: '"Unclosed quoted field' },
+  'Over 256 KiB': { source: 'x'.repeat(256 * 1024 + 1) },
+  '1,000-row insertion cap': {
+    source: Array.from({ length: 1000 }, (_, index) => `Row ${index + 1}`).join('\n'),
+  },
+  '256-column insertion cap': {
+    source: Array.from({ length: 256 }, (_, index) => `C${index + 1}`).join(','),
+  },
+  'Horizontal merge': {
     source: 'Header A,Header B,Header C\nWide value,,Tail\nOne,Two,Three',
-    presentation: {
-      merges: [{ startRow: 1, endRow: 2, startColumn: 0, endColumn: 2 }],
-    },
+    presentation: { merges: [{ startRow: 1, endRow: 2, startColumn: 0, endColumn: 2 }] },
   },
-  vertical: {
+  'Vertical merge': {
     source: 'Header A,Header B\nTall value,One\n,Two',
-    presentation: {
-      merges: [{ startRow: 1, endRow: 3, startColumn: 0, endColumn: 1 }],
-    },
+    presentation: { merges: [{ startRow: 1, endRow: 3, startColumn: 0, endColumn: 1 }] },
   },
-  rectangle: {
+  'Rectangle merge': {
     source: 'Header A,Header B,Header C\nRectangle,,Tail\n,,Other',
-    presentation: {
-      merges: [{ startRow: 1, endRow: 3, startColumn: 0, endColumn: 2 }],
-    },
+    presentation: { merges: [{ startRow: 1, endRow: 3, startColumn: 0, endColumn: 2 }] },
   },
-  'promoted-header': {
+  'Promoted-header group': {
     source: 'Grouped heading,,Other\nOne,Two,Three',
-    presentation: {
-      merges: [{ startRow: 0, endRow: 1, startColumn: 0, endColumn: 2 }],
-    },
+    presentation: { merges: [{ startRow: 0, endRow: 1, startColumn: 0, endColumn: 2 }] },
   },
-  rejected: {
+  'Rejected merge fallback': {
     source: 'Header A,Header B\nVisible,Would be hidden',
-    presentation: {
-      merges: [{ startRow: 1, endRow: 2, startColumn: 0, endColumn: 2 }],
-    },
+    presentation: { merges: [{ startRow: 1, endRow: 2, startColumn: 0, endColumn: 2 }] },
   },
-  'document-default': {
+  '.sheet default CSV format': {
     source: '',
     documentSource:
       '---\nsheet: stillpoint/v1\npresentation:\n  merges:\n    - range: A1:B1\n---\nEmbedded merge,\nOne,Two',
   },
-  'document-explicit': {
+  '.sheet explicit CSV format': {
     source: '',
     documentSource:
       '---\nsheet: stillpoint/v1\nformat: csv\npresentation:\n  merges:\n    - range: A2:A3\n---\nHeader A,Header B\nTall value,One\n,Two',
   },
-  'document-override': {
+  '.sheet call-site replacement': {
     source: '',
     documentSource:
       '---\nsheet: stillpoint/v1\npresentation:\n  merges:\n    - range: A1:B1\n---\nHeader A,\nReplacement,One\n,Two',
-    documentOverride: {
-      merges: [{ startRow: 1, endRow: 3, startColumn: 0, endColumn: 1 }],
-    },
+    documentOverride: { merges: [{ startRow: 1, endRow: 3, startColumn: 0, endColumn: 1 }] },
   },
-  'document-invalid': {
+  '.sheet invalid contextual merge': {
     source: '',
     documentSource:
       '---\nsheet: stillpoint/v1\npresentation:\n  merges:\n    - range: A2:B2\n---\nHeader A,Header B\nVisible,Would be hidden',
   },
-  'document-formatting': {
+  '.sheet overlapping/mixed formatting': {
     source: '',
     documentSource: [
       '---',
@@ -129,7 +127,7 @@ const fixtures: Record<string, Fixture> = {
       'All emphasis,Except bold,Right',
     ].join('\n'),
   },
-  'document-alignments': {
+  '.sheet all alignments': {
     source: '',
     documentSource: [
       '---',
@@ -149,7 +147,7 @@ const fixtures: Record<string, Fixture> = {
       'Left top,Center middle,Right bottom',
     ].join('\n'),
   },
-  'document-value-formats': {
+  '.sheet value formatting': {
     source: '',
     documentSource: [
       '---',
@@ -188,7 +186,7 @@ const fixtures: Record<string, Fixture> = {
       '1234.5,1e-2,12.345,0.125,2026-08-10,14:05,2.625,0012',
     ].join('\n'),
   },
-  'document-merged-alignment': {
+  '.sheet merged alignment': {
     source: '',
     documentSource: [
       '---',
@@ -209,7 +207,7 @@ const fixtures: Record<string, Fixture> = {
       'One,Two,Three',
     ].join('\n'),
   },
-  'document-ragged-format': {
+  '.sheet ragged formatted slots': {
     source: '',
     documentSource: [
       '---',
@@ -226,65 +224,51 @@ const fixtures: Record<string, Fixture> = {
       'Wide,row,establishes bounds',
     ].join('\n'),
   },
-  'document-malformed-format': {
+  '.sheet malformed formatting': {
     source: '',
     documentSource:
       '---\nsheet: stillpoint/v1\npresentation:\n  formats:\n    - range: A1\n      bold: yes\n---\nMalformed',
   },
-  'document-over-limit-format': {
-    source: '',
-    documentSource: overLimitFormatDocument,
-  },
+  '.sheet over-limit formatting': { source: '', documentSource: overLimitFormatDocument },
 };
 
-const preview = document.querySelector('#preview') as SheetPreview;
-const grid = document.querySelector('#grid') as SheetGrid;
-const editor = document.querySelector('#editor') as SheetEditor;
-const editorContent = document.querySelector('#editor-content') as HTMLElement;
-const fixture = document.querySelector('#fixture') as HTMLSelectElement;
-const readonlyToggle = document.querySelector('#readonly') as HTMLInputElement;
-const panes = [...document.querySelectorAll('.pane')];
+function applySheet(elements: HarnessElements, fixture: SheetFixture): void {
+  const editor = elements.editor as SheetEditor | null;
+  const preview = elements.preview as SheetPreview | null;
+  const grid = elements.extras['sheet-grid'] as SheetGrid | undefined;
+  grid?.setAttribute('header-row', '');
 
-function render(): void {
-  const selected = fixtures[fixture.value] ?? fixtures.regular;
-  if (selected.documentSource !== undefined) {
-    const parsed = parseSheetDocument(selected.documentSource);
-    if (!parsed.ok) {
-      preview.setContent('');
-      grid.setContent('');
-      editor.setDocumentSource(selected.documentSource, {
-        presentation: selected.documentOverride,
-      });
-      editorContent.textContent = editor.getContent();
-      return;
+  if (fixture.documentSource !== undefined) {
+    const parsed = parseSheetDocument(fixture.documentSource);
+    const options = { presentation: fixture.documentOverride };
+    if (parsed.ok) {
+      preview?.setDocument(parsed.document, options);
+      grid?.setDocument(parsed.document, options);
+    } else {
+      preview?.setContent('');
+      grid?.setContent('');
     }
-    preview.setDocument(parsed.document, { presentation: selected.documentOverride });
-    grid.setDocument(parsed.document, { presentation: selected.documentOverride });
-    editor.setDocumentSource(selected.documentSource, {
-      presentation: selected.documentOverride,
-    });
-    editorContent.textContent = editor.getContent();
+    editor?.setDocumentSource(fixture.documentSource, options);
     return;
   }
-  preview.setContent(selected.source, { presentation: selected.presentation });
-  grid.setContent(selected.source, { presentation: selected.presentation });
-  editor.setContent(selected.source, { presentation: selected.presentation });
-  editorContent.textContent = editor.getContent();
+  const options = { presentation: fixture.presentation };
+  preview?.setContent(fixture.source, options);
+  grid?.setContent(fixture.source, options);
+  editor?.setContent(fixture.source, options);
 }
 
-editor.addEventListener('content-change', () => {
-  editorContent.textContent = editor.getContent();
-});
-
-fixture.addEventListener('change', render);
-readonlyToggle.addEventListener('change', () => {
-  editor.setAttribute('readonly', String(readonlyToggle.checked));
-});
-document.querySelector('#width')?.addEventListener('click', () => {
-  for (const pane of panes) pane.classList.toggle('narrow');
-});
-document.querySelector('#theme')?.addEventListener('click', () => {
-  document.body.classList.toggle('dark');
-});
-
-render();
+export default {
+  elements: { editor: 'sheet-editor', preview: 'sheet-preview', extra: ['sheet-grid'] },
+  // The preview is driven with the same presentation as the editor by each
+  // fixture; a plain setContent mirror would drop it.
+  mirror: false,
+  fixtures: Object.fromEntries(
+    Object.entries(sheetFixtures).map(([name, fixture]) => [
+      name,
+      {
+        content: fixture.documentSource ?? fixture.source,
+        apply: (elements: HarnessElements) => applySheet(elements, fixture),
+      },
+    ])
+  ),
+} satisfies HarnessFormat;
