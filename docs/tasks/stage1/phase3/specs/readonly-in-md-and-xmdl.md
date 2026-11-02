@@ -1,10 +1,17 @@
 ---
-column: todo
+column: done
+pr: 11
+completed: 2026-11-02
 created: 2026-11-02T15:05:00-07:00
 tags: [formats, host-contract, polish, quick-win]
 ---
 
 # Spec: `readonly` in `<md-editor>` and `<xmdl-editor>`
+
+_Landed 2026-11-02 in [#11](https://github.com/stillpointlab/surfaces/pull/11). One finding beyond
+the spec: `<md-editor>` only read `readonly` on attribute change, so a value set before the engine
+loaded was ignored; it is now applied when the view is created, and the restored contract case
+is what caught it. Playwright-driven harness pass recorded in the PR._
 
 _Straight to a spec (Jamie, 2026-11-02): the gap is known, the fix is small, and the acceptance is
 already written as the two opted-out cases in the contract suites._
@@ -61,12 +68,12 @@ content or emits `content-change`. The two contract tests that opt out today run
 
 ## Acceptance / completion checklist
 
-- [ ] `readonly: false` is gone from both contract tests and `npm run check` is green.
-- [ ] `<xmdl-editor readonly="true">`: no control changes the content in apply or raw mode; the
+- [x] `readonly: false` is gone from both contract tests and `npm run check` is green (700 tests).
+- [x] `<xmdl-editor readonly="true">`: no control changes the content in apply or raw mode; the
       embedded `<code-editor>` is readonly; removing the attribute re-enables everything.
-- [ ] `<md-editor readonly="true">`: typing, every toolbar command and the raw toggle are inert;
+- [x] `<md-editor readonly="true">`: typing, every toolbar command and the raw toggle are inert;
       removing the attribute restores them.
-- [ ] One element test per format for the restore path.
+- [x] One element test per format for the restore path (three for xmdl, three for md).
 - [ ] Context Manager: no change needed (it already sets the attribute); note in the WAL entry that
       the gaps are closed, with the surfaces PR, when the pin next moves.
 
