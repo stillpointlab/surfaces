@@ -1,10 +1,14 @@
 /// <reference lib="dom" />
 import {
   booleanAttribute,
+  createLazyLoader,
   createReadyGate,
+  createStatus,
   defineElement,
+  hydrate,
   type ReadyGate,
   reportError,
+  STATUS_MESSAGES,
 } from '@stillpointlab/common-format';
 
 import { loadLanguage } from '../editor/language';
@@ -19,7 +23,7 @@ import type { Compartment, EditorState } from '@codemirror/state';
 import type { EditorView, lineNumbers, highlightWhitespace } from '@codemirror/view';
 import type { DiffElement } from '@stillpointlab/common-format';
 
-// The CodeMirror modules are dynamically imported on connect (see loadView), so
+// The CodeMirror modules are dynamically imported on connect (see loadEngine), so
 // this bag holds the constructors/values once they're available.
 interface DiffModules {
   MergeView: typeof MergeView;
@@ -33,6 +37,28 @@ interface DiffModules {
   syntaxHighlighting: typeof syntaxHighlighting;
   defaultHighlightStyle: typeof defaultHighlightStyle;
 }
+
+// The engine's modules: imported on first connect and shared by every instance.
+const loadEngine = createLazyLoader(async (): Promise<DiffModules> => {
+  const [mergeModule, viewModule, stateModule, languageModule] = await Promise.all([
+    import('@codemirror/merge'),
+    import('@codemirror/view'),
+    import('@codemirror/state'),
+    import('@codemirror/language'),
+  ]);
+  return {
+    MergeView: mergeModule.MergeView,
+    diff: mergeModule.diff,
+    Change: mergeModule.Change,
+    EditorView: viewModule.EditorView,
+    lineNumbers: viewModule.lineNumbers,
+    highlightWhitespace: viewModule.highlightWhitespace,
+    EditorState: stateModule.EditorState,
+    Compartment: stateModule.Compartment,
+    syntaxHighlighting: languageModule.syntaxHighlighting,
+    defaultHighlightStyle: languageModule.defaultHighlightStyle,
+  };
+});
 
 /** The two documents to compare. `left` is the base (red removals), `right` the current (green additions). */
 export interface DiffContents {
@@ -59,7 +85,8 @@ export class CodeDiff extends HTMLElement implements DiffElement {
   // live docs afterwards (same lifecycle handling as <code-preview>).
   private _left = '';
   private _right = '';
-  private _loading = true;
+  // Loading until the engine arrives; failed if it could not load.
+  private phase: 'loading' | 'loaded' | 'failed' = 'loading';
   private _shadowRoot: ShadowRoot;
   private modules: DiffModules | null = null;
   private languageCompartmentA: Compartment | null = null;
@@ -83,10 +110,23 @@ export class CodeDiff extends HTMLElement implements DiffElement {
   }
 
   connectedCallback() {
-    const cycle = this.ready.begin();
+    // A failed load is retried on the next connection.
+    if (this.phase === 'failed') this.phase = 'loading';
     this.render();
-    // Defer to the next tick so the shadow DOM is ready before we mount the view.
-    setTimeout(() => this.loadView(cycle), 0);
+    this.hydrateView();
+  }
+
+  /** Load the engine (shared, once) and build this connection's view. */
+  private hydrateView() {
+    hydrate(this.ready, {
+      load: loadEngine,
+      build: (modules) => this.buildView(modules),
+      fail: (error) => {
+        reportError('Failed to load code diff', error);
+        this.phase = 'failed';
+        this.render();
+      },
+    });
   }
 
   disconnectedCallback() {
@@ -112,58 +152,16 @@ export class CodeDiff extends HTMLElement implements DiffElement {
     else if (name === 'ignore-whitespace' || name === 'collapse-unchanged') this.rebuildView();
   }
 
-  private async loadView(cycle: number) {
-    try {
-      const [mergeModule, viewModule, stateModule, languageModule] = await Promise.all([
-        import('@codemirror/merge'),
-        import('@codemirror/view'),
-        import('@codemirror/state'),
-        import('@codemirror/language'),
-      ]);
-
-      this.modules = {
-        MergeView: mergeModule.MergeView,
-        diff: mergeModule.diff,
-        Change: mergeModule.Change,
-        EditorView: viewModule.EditorView,
-        lineNumbers: viewModule.lineNumbers,
-        highlightWhitespace: viewModule.highlightWhitespace,
-        EditorState: stateModule.EditorState,
-        Compartment: stateModule.Compartment,
-        syntaxHighlighting: languageModule.syntaxHighlighting,
-        defaultHighlightStyle: languageModule.defaultHighlightStyle,
-      };
-
-      // A newer connection owns the element now; it loads and settles itself.
-      if (!this.ready.isCurrent(cycle)) return;
-      this._loading = false;
+  private buildView(modules: DiffModules): Promise<void> | void {
+    this.modules = modules;
+    if (this.phase !== 'loaded') {
+      this.phase = 'loaded';
       this.render();
-
-      setTimeout(() => this.initializeView(cycle), 0);
-    } catch (err) {
-      reportError('Failed to load code diff', err);
-      if (!this.ready.isCurrent(cycle)) return;
-      this._loading = false;
-      this.render();
-      this.ready.settle(cycle);
-    }
-  }
-
-  private initializeView(cycle: number) {
-    // Only the live connection builds; a stale one (moved or reconnected since)
-    // stops here, and the live one settles even if a view is already in place.
-    if (!this.ready.isCurrent(cycle) || !this.modules) return;
-    if (this.view) {
-      this.ready.settle(cycle);
-      return;
     }
 
     const mount = this._shadowRoot.querySelector('.code-diff-content') as HTMLElement | null;
     if (!mount) {
-      reportError('Code diff mount element not found');
-      // Settle empty, as a failed import does, rather than strand whenReady().
-      this.ready.settle(cycle);
-      return;
+      throw new Error('Code diff mount element not found');
     }
 
     const {
@@ -264,9 +262,7 @@ export class CodeDiff extends HTMLElement implements DiffElement {
     // Resolve the initial language (if any) once the view exists; the element
     // is ready once the grammar has been applied too.
     const language = this.getAttribute('language');
-    void (language ? this.updateLanguage(language) : Promise.resolve()).then(() =>
-      this.ready.settle(cycle)
-    );
+    return language ? this.updateLanguage(language) : undefined;
   }
 
   private async updateLanguage(name: string | null) {
@@ -307,7 +303,7 @@ export class CodeDiff extends HTMLElement implements DiffElement {
     if (!this.view) return;
     this.view.destroy();
     this.view = null;
-    this.initializeView(this.ready.begin());
+    this.hydrateView();
   }
 
   /**
@@ -336,13 +332,21 @@ export class CodeDiff extends HTMLElement implements DiffElement {
   }
 
   private render() {
-    const body = this._loading
-      ? '<div class="code-diff-loading">Loading…</div>'
-      : '<div class="code-diff-content"></div>';
+    const body = this.phase === 'loaded' ? '<div class="code-diff-content"></div>' : '';
     this._shadowRoot.innerHTML = `
       <style>${diffStyles}</style>
       <div class="code-diff-container">${body}</div>
     `;
+    if (this.phase !== 'loaded') {
+      this._shadowRoot.querySelector('.code-diff-container')?.append(this.status());
+    }
+  }
+
+  /** The placeholder shown while loading, or after the engine failed to load. */
+  private status(): HTMLElement {
+    return this.phase === 'failed'
+      ? createStatus('error', STATUS_MESSAGES.previewFailed)
+      : createStatus('loading', STATUS_MESSAGES.loading);
   }
 }
 

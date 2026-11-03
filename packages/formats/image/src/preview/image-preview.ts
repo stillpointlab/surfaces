@@ -2,9 +2,11 @@
 
 import {
   createReadyGate,
+  createStatus,
   defineElement,
   type ReadyGate,
   reportError,
+  STATUS_MESSAGES,
 } from '@stillpointlab/common-format';
 
 import { previewStyles } from './preview.styles';
@@ -93,16 +95,8 @@ export class ImagePreview extends HTMLElement implements ImagePreviewElement {
     const src = this.src;
     const alt = this.alt;
 
-    let body = '<div class="image-preview__message">No image selected.</div>';
+    let body = '';
     if (src) {
-      const loading =
-        this.state === 'loading'
-          ? '<div class="image-preview__loading"><span class="image-preview__message">Loading...</span></div>'
-          : '';
-      const error =
-        this.state === 'error'
-          ? '<div class="image-preview__message image-preview__message--error">Could not load this image.</div>'
-          : '';
       const imageClass =
         this.svgSizing === 'scalable'
           ? 'image-preview__image image-preview__image--scalable'
@@ -111,8 +105,8 @@ export class ImagePreview extends HTMLElement implements ImagePreviewElement {
         <div class="image-preview__frame">
           ${
             this.state === 'error'
-              ? error
-              : `<img class="${imageClass}" src="${escapeAttribute(src)}" alt="${escapeAttribute(alt)}" />${loading}`
+              ? ''
+              : `<img class="${imageClass}" src="${escapeAttribute(src)}" alt="${escapeAttribute(alt)}" />`
           }
         </div>`;
     }
@@ -121,6 +115,7 @@ export class ImagePreview extends HTMLElement implements ImagePreviewElement {
       <style>${previewStyles}</style>
       <div class="image-preview" part="container">${body}</div>
     `;
+    this.renderStatus();
 
     const img = this.root.querySelector('img');
     img?.addEventListener('load', this.handleLoad, { once: true });
@@ -128,6 +123,24 @@ export class ImagePreview extends HTMLElement implements ImagePreviewElement {
 
     if (this.state === 'loading') this.ready.begin();
     else this.ready.settle();
+  }
+
+  /** The empty, loading or error placeholder over the frame. */
+  private renderStatus(): void {
+    if (!this.src) {
+      this.root
+        .querySelector('.image-preview')
+        ?.append(createStatus('empty', 'No image selected.'));
+    } else if (this.state === 'loading') {
+      const overlay = document.createElement('div');
+      overlay.className = 'image-preview__loading';
+      overlay.append(createStatus('loading', STATUS_MESSAGES.loading));
+      this.root.querySelector('.image-preview__frame')?.append(overlay);
+    } else if (this.state === 'error') {
+      this.root
+        .querySelector('.image-preview__frame')
+        ?.append(createStatus('error', "Couldn't load this image."));
+    }
   }
 }
 

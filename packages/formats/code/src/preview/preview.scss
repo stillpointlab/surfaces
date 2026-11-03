@@ -1,9 +1,11 @@
 // Self-contained styles for the <code-preview> shadow root. CodeMirror injects its
 // own theme/highlight styles into the shadow root at runtime; these rules only
-// handle the host container, layout, and the loading placeholder. Mirrors
+// handle the host container and layout; the loading and error placeholders come
+// from common's status partial. Mirrors
 // editor.scss without any editor chrome.
 
 @use 'common/src/styles/tokens' as *;
+@use 'common/src/styles/status';
 
 :host {
   display: block;
@@ -21,15 +23,6 @@
   overflow: hidden;
   box-sizing: border-box;
   position: relative;
-}
-
-.code-preview-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: $text-muted;
-  font-size: 0.875rem;
 }
 
 .code-preview-content {

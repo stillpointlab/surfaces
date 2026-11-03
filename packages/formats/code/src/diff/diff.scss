@@ -1,10 +1,12 @@
 // Self-contained styles for the <code-diff> shadow root. CodeMirror's merge addon
 // injects its own theme (change/delete/insert highlights, collapsed-line markers)
 // into the shadow root at runtime; these rules only handle the host container,
-// the side-by-side layout, the center divider, and the loading placeholder.
+// the side-by-side layout and the center divider; the loading and error
+// placeholders come from common's status partial.
 // Mirrors preview.scss without any editor chrome.
 
 @use 'common/src/styles/tokens' as *;
+@use 'common/src/styles/status';
 
 :host {
   display: block;
@@ -22,15 +24,6 @@
   overflow: hidden;
   box-sizing: border-box;
   position: relative;
-}
-
-.code-diff-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: $text-muted;
-  font-size: 0.875rem;
 }
 
 .code-diff-content {

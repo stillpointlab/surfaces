@@ -143,6 +143,23 @@ when present and not `"false"`, so `<code-diff wrap>` and `wrap="true"` wrap and
 does not; an option that defaults on is off only with `"false"`. `booleanAttribute(el, name,
 { defaultOn })` from `common` reads the second kind.
 
+### Lazy engines
+
+An element that loads a heavy engine on demand (ProseMirror in `md-editor`, CodeMirror in the code
+elements) composes three functions from `common` instead of hand-writing the lifecycle:
+
+- `createLazyLoader(load)` wraps the element's dynamic imports, defined once at module level, so
+  every instance shares one import; a failed import is retried by the next connection.
+- `hydrate(gate, { load, build, fail })`, called from `connectedCallback` after rendering the
+  loading state, begins a ready cycle, loads, and calls `build` only while that connection is the
+  live one. It settles when `build` (which may be async) finishes, and calls `fail` and settles if
+  the load or the build throws. A connection superseded by a move or reconnect does nothing.
+- `createStatus(kind, message)` renders the `loading`, `empty` or `error` placeholder, styled by
+  `@use 'common/src/styles/status';`, with the standard texts in `STATUS_MESSAGES`.
+
+The element keeps everything else: its fields, `render()`, the code that builds its view, and its
+teardown in `disconnectedCallback`. There is deliberately no base class.
+
 ### Theming
 
 Every colour an element draws comes from a `--spl-*` custom property, defined once in
