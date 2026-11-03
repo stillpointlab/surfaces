@@ -1,10 +1,16 @@
 ---
-column: todo
+column: done
+pr: 16
+completed: 2026-11-02
 created: 2026-11-02T19:05:48-07:00
 tags: [formats, common, code]
 ---
 
 # Spec: a lazy-engine helper, composed by each element
+
+_Landed 2026-11-02 in [#16](https://github.com/stillpointlab/surfaces/pull/16). No deferral turned
+out to be needed. `code-diff` uses the preview's failure text. Image's error now reads "Couldn't
+load this image."_
 
 _From the phase 4 spike [shared-element-patterns](../spikes/shared-element-patterns.md), finding 2.
 Jamie, 2026-11-02: hoist interfaces and helper functions, not a configurable component framework._
@@ -93,14 +99,14 @@ a blank pane. Each element keeps its own fields, rendering, engine construction 
 
 ## Acceptance / completion checklist
 
-- [ ] `createLazyLoader`, `hydrate` and `createStatus` are exported from `common`, unit-tested,
+- [x] `createLazyLoader`, `hydrate` and `createStatus` are exported from `common`, unit-tested,
       and described in the README next to the ready gate.
-- [ ] The four lazy elements use them; none has a `setTimeout` hop or an instance-level
+- [x] The four lazy elements use them; none has a `setTimeout` hop or an instance-level
       `Promise.all` of imports left, unless a comment names the test that needs it.
-- [ ] A failed engine import shows the error placeholder and settles, with one test per format.
-- [ ] Loading and error text is consistent across the four elements and image.
-- [ ] The conformance suites are green, including the move and reconnect cases.
-- [ ] `npm run check` is green; the harness shows each element loading normally.
+- [x] A failed engine import shows the error placeholder and settles, with one test per format.
+- [x] Loading and error text is consistent across the four elements and image.
+- [x] The conformance suites are green, including the move and reconnect cases.
+- [x] `npm run check` is green; the harness shows each element loading normally.
 
 ## Implementation plan
 

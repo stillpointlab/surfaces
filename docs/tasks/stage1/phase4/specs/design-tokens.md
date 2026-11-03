@@ -1,10 +1,18 @@
 ---
-column: todo
+column: done
+pr: 15
+completed: 2026-11-02
 created: 2026-11-02T19:05:48-07:00
 tags: [formats, common, polish]
 ---
 
 # Spec: one token set, used by every format
+
+_Landed 2026-11-02 in [#15](https://github.com/stillpointlab/surfaces/pull/15). One mapping changed
+from the table below: `--spl-action-border` became `--spl-button-bg` (the old border matched the
+button's fill). xmdl's slot and conditional markers fall back to new `info-*` and `success-*`
+tokens. Light mode changed only in xmdl, as intended; dark mode now reaches xmdl and image. Context
+Manager sets the six new tokens in context-manager#1002._
 
 _From the phase 4 spike [shared-element-patterns](../spikes/shared-element-patterns.md), finding 1.
 Independent of the other phase 4 specs; the toolbar spec's style partial builds on it._
@@ -90,19 +98,19 @@ consistent light default.
 
 ## Acceptance / completion checklist
 
-- [ ] Every format stylesheet `@use`s the tokens; `npm run lint` includes the literal check and
+- [x] Every format stylesheet `@use`s the tokens; `npm run lint` includes the literal check and
       passes; a deliberate literal makes it fail.
-- [ ] No `--color-*` names remain; every `--spl-*` colour name in `packages/formats` is in the
+- [x] No `--color-*` names remain; every `--spl-*` colour name in `packages/formats` is in the
       token file or is format-scoped with a token fallback.
-- [ ] No `*.styles.ts` is tracked.
-- [ ] The harness renders every format unchanged in light and dark, checked by hand or with
+- [x] No `*.styles.ts` is tracked.
+- [x] The harness renders every format unchanged in light and dark, checked by hand or with
       screenshots before and after. Any intended change is listed in the PR.
-- [ ] The README's "Theming" table matches `_tokens.scss`.
-- [ ] Context Manager follow-up written into the stage 5 WAL for the next pin move: set the new
+- [x] The README's "Theming" table matches `_tokens.scss`.
+- [x] Context Manager follow-up written into the stage 5 WAL for the next pin move: set the new
       tokens (`--spl-error-border`, `--spl-warning-border`, `--spl-code-active-line-bg`,
       `--spl-code-selection-bg`, and any others the PR adds) in `_base.scss` for both themes, and
       check xmdl and image in dark mode.
-- [ ] `npm run check` is green.
+- [x] `npm run check` is green.
 
 ## Implementation plan
 
