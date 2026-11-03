@@ -1,12 +1,20 @@
 import {
+  createNotice,
+  createRawSource,
   createReadyGate,
   createSwitch,
+  createViewState,
   defineElement,
   isReadonly,
   moveToolbarFocus,
+  parseView,
+  RAW_VIEW_LABEL,
+  type RawSource,
   type ReadyGate,
   reflectReadonly,
   setToolbarTabStop,
+  type SurfaceView,
+  type ViewChangeReason,
 } from '@stillpointlab/common-format';
 
 import { parseXmdl } from '../parser/parse';
@@ -14,7 +22,12 @@ import { renderXmdl } from '../render/render';
 
 import { editorStyles } from './editor.styles';
 
-import type { ParsedXmdlDocument, XmdlBindingValue, XmdlParam } from '../parser/types';
+import type {
+  ParsedXmdlDocument,
+  XmdlBindingValue,
+  XmdlParam,
+  XmdlParseError,
+} from '../parser/types';
 import type { EditorElement } from '@stillpointlab/common-format';
 
 type EditorMode = 'apply' | 'raw';
@@ -23,12 +36,6 @@ type DecisionState = 'pending' | 'applied' | 'skipped';
 interface ParamDecision {
   state: DecisionState;
   value?: XmdlBindingValue;
-}
-
-interface RawEditorElement extends HTMLElement {
-  setContent?: (content: string) => void;
-  getContent?: () => string;
-  whenReady?: () => Promise<void>;
 }
 
 export interface XmdlApplyEventDetail {
@@ -47,18 +54,25 @@ export class XmdlApplyEvent extends CustomEvent<XmdlApplyEventDetail> {
 
 export class XmdlEditor extends HTMLElement implements EditorElement {
   private content = '';
-  // Settled whenever connected and rendered; in raw mode, once the embedded
-  // raw editor (a lazy <code-editor> when one is registered) is ready too.
+  // Settled whenever connected and rendered; in raw, once the raw surface (a lazy
+  // <code-editor> when the host registered one) is ready too.
   private readonly ready: ReadyGate = createReadyGate(this);
-  private mode: EditorMode = 'apply';
+  // The apply view is the rich view; raw is the template source.
+  private readonly viewState = createViewState(this);
+  private raw: RawSource | null = null;
+  // Why the raw view is showing, when it is not just the user's choice.
+  private notice: HTMLElement | null = null;
   private activeIndex = 0;
   private decisions = new Map<string, ParamDecision>();
   private paramTypes = new Map<string, XmdlParam['type']>();
   private activeParamName?: string;
-  private rawEditor?: RawEditorElement | HTMLTextAreaElement;
 
   static get observedAttributes(): string[] {
-    return ['readonly'];
+    return ['readonly', 'view'];
+  }
+
+  private get mode(): EditorMode {
+    return this.viewState.current === 'raw' ? 'raw' : 'apply';
   }
 
   connectedCallback(): void {
@@ -70,8 +84,15 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
     this.ready.begin();
   }
 
-  attributeChangedCallback(name: string): void {
-    if (name === 'readonly' && this.isConnected) this.render();
+  attributeChangedCallback(name: string, _oldValue: string | null, newValue: string | null): void {
+    if (name === 'view') {
+      if (!this.viewState.reflecting) this.requestView(parseView(newValue), 'host');
+      return;
+    }
+    if (name === 'readonly') {
+      this.raw?.setReadonly(isReadonly(this));
+      if (this.isConnected) this.render();
+    }
   }
 
   whenReady(): Promise<void> {
@@ -85,21 +106,85 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
     }
     this.content = content;
     this.resetApplyState();
+    const result = parseXmdl(content);
+    if (result.ok) {
+      this.notice = null;
+    } else {
+      // A template the apply view cannot read opens as raw text the user can fix.
+      if (this.mode === 'apply') this.viewState.commit('raw', 'fallback');
+      this.notice = createNotice({
+        tone: 'error',
+        title: 'This template could not be read; showing the raw text.',
+        items: result.errors.map(formatParseError),
+      });
+    }
+    this.raw?.setValue(content);
     this.render();
   }
 
   getContent(): string {
-    if (this.mode === 'raw') {
-      return this.readRawEditorContent();
-    }
     return this.content;
   }
 
   focus(): void {
-    const focusTarget = this.shadowRoot?.querySelector<HTMLElement>(
-      '.xmdl-editor__slot-control textarea, .xmdl-editor__slot-control input, .xmdl-editor__slot-control select, .xmdl-editor__source, code-editor'
-    );
-    focusTarget?.focus();
+    if (this.raw) {
+      this.raw.focus();
+      return;
+    }
+    this.shadowRoot
+      ?.querySelector<HTMLElement>(
+        '.xmdl-editor__slot-control textarea, .xmdl-editor__slot-control input, .xmdl-editor__slot-control select'
+      )
+      ?.focus();
+  }
+
+  /** Move to `view`; leaving raw re-parses, and stays raw while the text has errors. */
+  private requestView(view: SurfaceView, reason: ViewChangeReason): void {
+    if (view === this.viewState.current) {
+      this.viewState.reflect();
+      return;
+    }
+    if (view === 'raw') {
+      this.captureActiveParamName();
+      this.viewState.commit('raw', reason);
+      this.render();
+      return;
+    }
+
+    const result = parseXmdl(this.content);
+    if (!result.ok) {
+      this.notice = createNotice({
+        tone: 'error',
+        title: 'The template still has errors.',
+        items: result.errors.map(formatParseError),
+        announce: 'assertive',
+      });
+      this.viewState.reflect();
+      this.render();
+      return;
+    }
+    const reconciliation = this.reconcileApplyState(this.content);
+    if (
+      reconciliation.lossyNames.length > 0 &&
+      !window.confirm(applyResetConfirmation(reconciliation.lossyNames))
+    ) {
+      this.viewState.reflect();
+      return;
+    }
+    for (const name of reconciliation.incompatibleNames) {
+      this.decisions.delete(name);
+      this.paramTypes.delete(name);
+    }
+    if (reconciliation.document && this.activeParamName) {
+      const nextIndex = reconciliation.document.params.findIndex(
+        (param) => param.name === this.activeParamName
+      );
+      if (nextIndex >= 0) this.activeIndex = nextIndex;
+    }
+    this.notice = null;
+    this.raw = null;
+    this.viewState.commit('rich', reason);
+    this.render();
   }
 
   private render(): void {
@@ -116,7 +201,9 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
     reflectReadonly(this, wrapper);
 
     if (this.mode === 'raw') {
-      wrapper.append(this.renderRawToolbar(), this.renderRawEditor());
+      wrapper.append(this.renderRawToolbar());
+      if (this.notice) wrapper.append(this.notice);
+      wrapper.append(this.renderRawEditor());
     } else {
       wrapper.append(this.renderApplySurface());
     }
@@ -129,9 +216,10 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
   private renderApplySurface(): HTMLElement {
     const result = parseXmdl(this.content);
     if (!result.ok) {
+      // Only before any content is set: invalid content opens the raw view instead.
       const container = document.createElement('div');
       container.className = 'xmdl-editor__apply';
-      container.append(this.renderApplyToolbar(undefined), this.renderParseErrors(result.errors));
+      container.append(this.renderApplyToolbar(undefined));
       return container;
     }
 
@@ -237,49 +325,21 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
 
     const label = document.createElement('label');
     label.className = 'xmdl-editor__toggle-label';
-    label.textContent = 'Apply Mode';
+    label.textContent = RAW_VIEW_LABEL;
 
-    // The switch is on in apply mode; every successful toggle re-renders.
+    // On in raw. The switch follows the view, which a refused switch back leaves
+    // raw, so it never flips itself; every change re-renders the toolbar.
     const toggle = createSwitch({
-      label: 'Apply Mode',
-      checked: this.mode === 'apply',
-      disabled: isReadonly(this),
-      onToggle: () => {
-        if (this.mode === 'apply') {
-          this.captureActiveParamName();
-          this.mode = 'raw';
-          this.render();
-          return true;
-        }
-        this.content = this.readRawEditorContent();
-        const reconciliation = this.reconcileApplyState(this.content);
-        if (
-          reconciliation.lossyNames.length > 0 &&
-          !window.confirm(applyResetConfirmation(reconciliation.lossyNames))
-        ) {
-          return false;
-        }
-        for (const name of reconciliation.incompatibleNames) {
-          this.decisions.delete(name);
-          this.paramTypes.delete(name);
-        }
-        if (reconciliation.document && this.activeParamName) {
-          const nextIndex = reconciliation.document.params.findIndex(
-            (param) => param.name === this.activeParamName
-          );
-          if (nextIndex >= 0) this.activeIndex = nextIndex;
-        }
-        this.mode = 'apply';
-        this.render();
-        return true;
+      label: RAW_VIEW_LABEL,
+      checked: this.mode === 'raw',
+      onToggle: (raw) => {
+        this.requestView(raw ? 'raw' : 'rich', 'user');
+        return false;
       },
     });
     toggle.element.classList.add('xmdl-editor__mode-toggle');
-    toggle.element.title = isReadonly(this)
-      ? 'Read-only'
-      : this.mode === 'apply'
-        ? 'Edit template source'
-        : 'Return to apply mode';
+    toggle.element.title =
+      this.mode === 'raw' ? 'Return to the apply view' : 'Edit the template source';
 
     group.append(label, toggle.element);
     return group;
@@ -288,44 +348,16 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
   private renderRawEditor(): HTMLElement {
     const container = document.createElement('div');
     container.className = 'xmdl-editor__raw';
-
-    if (customElements.get('code-editor')) {
-      const editor = document.createElement('code-editor') as RawEditorElement;
-      editor.setAttribute('language', 'yaml');
-      if (isReadonly(this)) editor.setAttribute('readonly', 'true');
-      editor.setContent?.(this.content);
-      editor.addEventListener('content-change', () => this.handleRawContentChange(editor));
-      container.append(editor);
-      this.rawEditor = editor;
-      return container;
-    }
-
-    const textarea = document.createElement('textarea');
-    textarea.className = 'xmdl-editor__source';
-    textarea.value = this.content;
-    textarea.readOnly = isReadonly(this);
-    textarea.setAttribute('aria-label', 'XMDL source');
-    textarea.addEventListener('input', () => this.handleRawContentChange(textarea));
-    container.append(textarea);
-    this.rawEditor = textarea;
+    // One raw surface for as long as raw shows, so re-renders keep its cursor.
+    this.raw ??= createRawSource({
+      value: this.content,
+      language: 'yaml',
+      label: 'XMDL source',
+      readonly: isReadonly(this),
+      onInput: (text) => this.handleRawInput(text),
+    });
+    container.append(this.raw.element);
     return container;
-  }
-
-  private renderParseErrors(errors: Array<{ message: string; path?: string }>): HTMLElement {
-    const panel = document.createElement('section');
-    panel.className = 'xmdl-editor__errors';
-
-    const heading = document.createElement('h2');
-    heading.textContent = 'Invalid XMDL';
-    const list = document.createElement('ul');
-    for (const error of errors) {
-      const item = document.createElement('li');
-      item.textContent = error.path ? `${error.path}: ${error.message}` : error.message;
-      list.append(item);
-    }
-
-    panel.append(heading, list);
-    return panel;
   }
 
   private renderSlotPanel(xmdl: ParsedXmdlDocument): HTMLElement {
@@ -455,31 +487,25 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
     return section;
   }
 
-  private handleRawContentChange(editor: RawEditorElement | HTMLTextAreaElement): void {
-    if (isReadonly(this)) return;
-    this.content = readEditorContent(editor);
+  private handleRawInput(text: string): void {
+    this.content = text;
     this.dispatchEvent(
       new CustomEvent('content-change', { bubbles: true, detail: { content: this.content } })
     );
   }
 
-  /** Settle now, or once the embedded raw editor is ready if it is a lazy element. */
+  /** Settle now, or once the raw surface is ready (a lazy <code-editor>). */
   private syncReady(): void {
     if (!this.isConnected) return;
-    const raw = this.rawEditor;
-    const whenReady = raw && 'whenReady' in raw ? raw.whenReady : undefined;
-    if (raw && whenReady) {
-      const cycle = this.ready.begin();
-      void whenReady.call(raw).then(() => {
-        if (this.rawEditor === raw) this.ready.settle(cycle);
-      });
+    const raw = this.raw;
+    if (!raw) {
+      this.ready.settle();
       return;
     }
-    this.ready.settle();
-  }
-
-  private readRawEditorContent(): string {
-    return this.rawEditor ? readEditorContent(this.rawEditor) : this.content;
+    const cycle = this.ready.begin();
+    void raw.whenReady().then(() => {
+      if (this.raw === raw) this.ready.settle(cycle);
+    });
   }
 
   private ensureDecisions(params: XmdlParam[]): void {
@@ -616,12 +642,6 @@ function toolbarSpacer(): HTMLDivElement {
   return spacer;
 }
 
-function readEditorContent(editor: RawEditorElement | HTMLTextAreaElement): string {
-  if ('getContent' in editor && typeof editor.getContent === 'function') return editor.getContent();
-  if ('value' in editor) return editor.value;
-  return '';
-}
-
 function defaultValueFor(param: XmdlParam): XmdlBindingValue {
   if (param.default instanceof Date) return param.default;
   if (
@@ -672,4 +692,8 @@ function hasUserWork(decision: ParamDecision | undefined): boolean {
 function applyResetConfirmation(names: string[]): string {
   const params = names.map((name) => `“${name}”`).join(', ');
   return `Returning to Apply mode will reset your work for ${params} because the parameters changed. Continue?`;
+}
+
+function formatParseError(error: XmdlParseError): string {
+  return error.path ? `${error.path}: ${error.message}` : error.message;
 }
