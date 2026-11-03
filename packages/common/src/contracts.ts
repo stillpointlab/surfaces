@@ -64,6 +64,30 @@ export interface EditorElement extends PreviewElement {
   setKeymapMode?(mode: EditorKeymapMode): EditorKeymapModeResult | Promise<EditorKeymapModeResult>;
 }
 
+/** Which view a text surface shows: its rendered (rich) view or its source as text. */
+export type SurfaceView = 'rich' | 'raw';
+
+/** Why a surface changed view: its own switch, an automatic fallback, or the host's `view` attribute. */
+export type ViewChangeReason = 'user' | 'fallback' | 'host';
+
+/** The detail of a `view-change` event. */
+export interface ViewChangeDetail {
+  view: SurfaceView;
+  reason: ViewChangeReason;
+}
+
+/*
+ * The raw view capability (optional, like the keymap-mode methods). A preview or
+ * editor over a text format that supports it observes a `view` attribute
+ * (`"rich"` or `"raw"`; absent or anything else means rich), reflects its current
+ * view to that attribute, and dispatches a non-bubbling `view-change`
+ * `CustomEvent<ViewChangeDetail>` each time the view changes. There is no `view`
+ * property: the attribute is the API. The rules (switching never changes the
+ * text, a failed switch back stays raw with the current errors, content the rich
+ * view cannot show opens raw, `readonly` never changes the view) are in the
+ * README's "Raw view" section and proved by `describeRawViewContract`.
+ */
+
 /**
  * A read-only side-by-side diff element (`<code-diff>`): it takes two strings
  * (left = base, right = current) and renders a highlighted diff.

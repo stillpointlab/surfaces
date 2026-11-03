@@ -10,5 +10,7 @@ export default {
   fixtures: {
     'Sample document': 'A sample document.\nEdit me and the preview follows.',
     Empty: '',
+    // Lines starting with '!' do not parse, so this opens in the raw view.
+    'Invalid (opens raw)': '!not a sample line\nThe sample rejects lines starting with "!".',
   },
 } satisfies HarnessFormat;

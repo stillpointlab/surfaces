@@ -1,4 +1,7 @@
 @use 'common/src/styles/tokens' as *;
+@use 'common/src/styles/notice';
+@use 'common/src/styles/raw';
+@use 'common/src/styles/switch';
 
 :host {
   display: block;
@@ -16,4 +19,17 @@
   background: $background-primary;
   font: inherit;
   resize: vertical;
+}
+
+.sample-editor__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-sm;
+}
+
+.sample-editor__switch-label {
+  color: $text-secondary;
+  font-size: 0.875rem;
 }

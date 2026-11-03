@@ -26,6 +26,7 @@ const formatSelect = $<HTMLSelectElement>('format');
 const fixtureSelect = $<HTMLSelectElement>('fixture');
 const controlsHost = $<HTMLElement>('controls');
 const readonlyToggle = $<HTMLInputElement>('readonly');
+const rawToggle = $<HTMLInputElement>('raw');
 const narrowToggle = $<HTMLInputElement>('narrow');
 const darkToggle = $<HTMLInputElement>('dark');
 const editorPane = $<HTMLElement>('editor-pane');
@@ -40,6 +41,7 @@ const WATCHED_EVENTS = [
   'keymap-mode-change',
   'md-preview-rendered',
   'xmdl-apply',
+  'view-change',
 ] as const;
 
 let current: { name: string; format: HarnessFormat; elements: HarnessElements } | null = null;
@@ -69,10 +71,13 @@ function wire(el: HTMLElement, tag: string): void {
   for (const type of WATCHED_EVENTS) {
     el.addEventListener(type, (event) => {
       const detail = (event as CustomEvent<unknown>).detail;
-      const summary =
-        detail && typeof detail === 'object' && 'content' in detail
-          ? ` (${String((detail as { content: unknown }).content).length} chars)`
-          : '';
+      let summary = '';
+      if (detail && typeof detail === 'object' && 'content' in detail) {
+        summary = ` (${String((detail as { content: unknown }).content).length} chars)`;
+      } else if (detail && typeof detail === 'object' && 'reason' in detail) {
+        const { view, reason } = detail as { view: string; reason: string };
+        summary = ` (${view}, ${reason})`;
+      }
       log(`${tag} ${type}${summary}`);
     });
   }
@@ -172,6 +177,12 @@ async function selectFormat(name: string, fixtureName?: string): Promise<void> {
       // Listen before connecting: a synchronous element settles on connect.
       watchReady(el, document.querySelector('.status[data-role="editor"]'));
       wire(el, editorTag);
+      // The control follows the editor's view: its own switch, a fallback, or a refusal.
+      const viewObserver = new MutationObserver(() => {
+        rawToggle.checked = el.getAttribute('view') === 'raw';
+      });
+      viewObserver.observe(el, { attributes: true, attributeFilter: ['view'] });
+      observers.push(viewObserver);
       el.addEventListener('content-change', () => {
         updateSource();
         if (format.mirror !== false && elements.preview) {
@@ -207,10 +218,21 @@ async function selectFormat(name: string, fixtureName?: string): Promise<void> {
   }
   renderControls(format.controls ?? [], elements);
   applyReadonly();
+  if (rawToggle.checked) applyRaw();
 
   const first = fixtureName && format.fixtures[fixtureName] ? fixtureName : fixtureSelect.value;
   fixtureSelect.value = first;
   applyFixture(first);
+}
+
+/** The Raw control: ask the editor and preview for their raw view, or the rich one. */
+function applyRaw(): void {
+  const targets = [current?.elements.editor, current?.elements.preview];
+  for (const el of targets) {
+    if (!el) continue;
+    if (rawToggle.checked) el.setAttribute('view', 'raw');
+    else if (el.hasAttribute('view')) el.setAttribute('view', 'rich');
+  }
 }
 
 function applyReadonly(): void {
@@ -224,6 +246,7 @@ for (const name of [...formats.keys()].sort()) formatSelect.add(new Option(name,
 formatSelect.addEventListener('change', () => void selectFormat(formatSelect.value));
 fixtureSelect.addEventListener('change', () => applyFixture(fixtureSelect.value));
 readonlyToggle.addEventListener('change', applyReadonly);
+rawToggle.addEventListener('change', applyRaw);
 narrowToggle.addEventListener('change', () => {
   for (const pane of document.querySelectorAll('.pane')) {
     pane.classList.toggle('narrow', narrowToggle.checked);
@@ -234,6 +257,15 @@ darkToggle.addEventListener('change', () => {
 });
 
 const params = new URLSearchParams(location.search);
+// Raw views use <code-editor> and <code-preview> when they are registered, as a
+// host such as Context Manager does; `?raw=plain` leaves them out to show the
+// textarea and <pre> fallbacks.
+if (params.get('raw') !== 'plain') {
+  await Promise.all([
+    import('../../packages/formats/code/src/editor'),
+    import('../../packages/formats/code/src/preview'),
+  ]);
+}
 const requested = params.get('format') ?? __HARNESS_DEFAULT_FORMAT__;
 const initial = formats.has(requested) ? requested : [...formats.keys()].sort()[0];
 if (initial) void selectFormat(initial, params.get('fixture') ?? undefined);

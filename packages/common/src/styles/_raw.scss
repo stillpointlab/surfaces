@@ -1,0 +1,46 @@
+// Styles for createRawSource()'s textarea and createRawView()'s <pre>, the plain
+// fallbacks used when the host has not registered <code-editor> or
+// <code-preview>. An element's stylesheet includes them with
+// `@use 'common/src/styles/raw';`.
+
+@use 'tokens' as *;
+@use 'toolbar';
+
+.spl-raw-source,
+.spl-raw-view {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: $spacing-md;
+  border: 1px solid $border-color;
+  border-radius: $border-radius-md;
+  color: $text-primary;
+  background: $background-primary;
+  font-family:
+    ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.spl-raw-source {
+  min-height: 12rem;
+  resize: vertical;
+
+  &:focus-visible {
+    outline: 2px solid $focus-ring;
+    outline-offset: 1px;
+  }
+
+  &[readonly] {
+    background: $background-muted;
+  }
+}
+
+.spl-raw-view {
+  overflow: auto;
+
+  @include toolbar.focus-ring;
+}
