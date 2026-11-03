@@ -1,10 +1,16 @@
 ---
-column: todo
+column: done
+pr: 21
+completed: 2026-11-02
 created: 2026-11-02T20:14:50-07:00
 tags: [formats, host-contract]
 ---
 
 # Spec: `<xmdl-editor>` adopts the raw view convention
+
+_Landed 2026-11-02 in [#21](https://github.com/stillpointlab/surfaces/pull/21). "Apply Mode" is gone
+and `mode` derives from the view. The lossy-switch confirmation is kept; declining it leaves the
+view where it was._
 
 _From the phase 5 brief [raw_mode](../briefs/raw_mode.md). Depends on
 [raw-view-convention](raw-view-convention.md)._
@@ -56,10 +62,10 @@ the user can fix it.
 
 ## Acceptance / completion checklist
 
-- [ ] The raw view suite passes for `xmdl-editor`, including the invalid-content cases.
-- [ ] Invalid XMDL opens in raw with its errors; a failed switch back shows the current errors.
-- [ ] "Raw Text" replaces "Apply Mode", on in raw, enabled while read-only.
-- [ ] `npm run check` is green; the harness shows both raw surfaces.
+- [x] The raw view suite passes for `xmdl-editor`, including the invalid-content cases.
+- [x] Invalid XMDL opens in raw with its errors; a failed switch back shows the current errors.
+- [x] "Raw Text" replaces "Apply Mode", on in raw, enabled while read-only.
+- [x] `npm run check` is green; the harness shows both raw surfaces.
 
 ## Implementation plan
 

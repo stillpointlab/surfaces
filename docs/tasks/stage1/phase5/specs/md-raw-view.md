@@ -1,10 +1,16 @@
 ---
-column: todo
+column: done
+pr: 22
+completed: 2026-11-02
 created: 2026-11-02T20:14:50-07:00
 tags: [formats, host-contract]
 ---
 
 # Spec: `<md-editor>` adopts the raw view convention
+
+_Landed 2026-11-02 in [#22](https://github.com/stillpointlab/surfaces/pull/22). The six normalising
+samples round-trip byte-identically. A failed engine load opens raw with a warning notice, and
+switching back retries the load. Read-only no longer leaves raw, per the brief's decision._
 
 _From the phase 5 brief [raw_mode](../briefs/raw_mode.md). Depends on
 [raw-view-convention](raw-view-convention.md)._
@@ -70,12 +76,12 @@ view.
 
 ## Acceptance / completion checklist
 
-- [ ] The raw view suite passes for `md-editor`.
-- [ ] The six samples round-trip byte-identically; `getContent()` after load equals the text set.
-- [ ] One "Raw Text" switch, on in raw, enabled while read-only; no "Markdown" label.
-- [ ] Raw uses `<code-editor>` when registered (checked in the harness both ways).
-- [ ] Engine failure lands in raw with the notice; switching back retries.
-- [ ] `npm run check` is green.
+- [x] The raw view suite passes for `md-editor`.
+- [x] The six samples round-trip byte-identically; `getContent()` after load equals the text set.
+- [x] One "Raw Text" switch, on in raw, enabled while read-only; no "Markdown" label.
+- [x] Raw uses `<code-editor>` when registered (checked in the harness both ways).
+- [x] Engine failure lands in raw with the notice; switching back retries.
+- [x] `npm run check` is green.
 
 ## Implementation plan
 

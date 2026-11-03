@@ -1,10 +1,23 @@
 ---
-column: todo
+column: done
+pr: 20
+completed: 2026-11-02
 created: 2026-11-02T20:14:50-07:00
 tags: [common, host-contract, dev-tooling, major-feature]
 ---
 
 # Spec: the raw view convention in `common`
+
+_Landed 2026-11-02 in [#20](https://github.com/stillpointlab/surfaces/pull/20), as specified; the
+template's sample elements treat a line starting with `!` as invalid, so new formats start with the
+fallback path exercised. Context Manager adopted it in context-manager#1009, with two departures
+from the follow-up below. Defining `<code-editor>` costs a host about 108 KB gzipped of CodeMirror
+up front, because `language.ts` imports CodeMirror's language core statically, so CodeMirror does
+not yet load only when raw opens ([phase 6](../../phase6/specs/code-format-light-entries.md)). And
+`sheetPreview.ts` keeps its `<pre>` for a `.sheet` envelope that does not parse, since
+`<sheet-preview>` takes parsed documents only
+([phase 6](../../phase6/specs/sheet-preview-document-source.md)). The host's hydrated baseline stays
+for `<code-editor>`, which reads CRLF back as LF._
 
 _From the phase 5 brief [raw_mode](../briefs/raw_mode.md) and Jamie's decisions on PR 19. This spec
 lands the contract, the helpers, the conformance suite and the harness controls. The four specs
@@ -128,13 +141,13 @@ editRaw?(el, text), invalidContent?, invalidErrors?(el): string[], prepare?, fal
 
 ## Acceptance / completion checklist
 
-- [ ] The contract types, the README rules and the attribute note are in place.
-- [ ] `createRawSource`, `createRawView`, `createNotice` and `RAW_VIEW_LABEL` are exported and
+- [x] The contract types, the README rules and the attribute note are in place.
+- [x] `createRawSource`, `createRawView`, `createNotice` and `RAW_VIEW_LABEL` are exported and
       unit-tested, including the `<code-editor>` / `<code-preview>` and fallback paths.
-- [ ] `describeRawViewContract` exists and passes against a sample implementation in the template
+- [x] `describeRawViewContract` exists and passes against a sample implementation in the template
       (the template's sample editor and preview gain raw view, so new formats start with it).
-- [ ] The harness's Raw control, events, registration and `?raw=plain` work.
-- [ ] `npm run check` is green.
+- [x] The harness's Raw control, events, registration and `?raw=plain` work.
+- [x] `npm run check` is green.
 
 ## Context Manager follow-up (one CM PR after the phase 5 specs land)
 
