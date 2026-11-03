@@ -1,20 +1,22 @@
 /// <reference lib="dom" />
 import './md-icon';
-import './md-toggle';
 
 import {
   createLazyLoader,
   createReadyGate,
   createStatus,
+  createSwitch,
   defineElement,
   hydrate,
+  isReadonly,
+  moveToolbarFocus,
   type ReadyGate,
+  reflectReadonly,
   reportError,
   STATUS_MESSAGES,
 } from '@stillpointlab/common-format';
 
 import { editorStyles } from './editor.styles';
-import { MdToggleEvent } from './md-toggle';
 import { ProseMirrorToolbar } from './prosemirror-toolbar';
 import { getEditorPlugins } from './registry';
 
@@ -231,10 +233,6 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
     }
   }
 
-  private get isReadonly(): boolean {
-    return this.getAttribute('readonly') === 'true';
-  }
-
   private buildView(modules: EditorModules): Promise<void> | void {
     this.editorModules = modules;
     if (this.phase !== 'loaded') {
@@ -383,7 +381,7 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
       plugin.onReady?.(this.view);
     }
 
-    this.updateReadOnlyState(this.isReadonly);
+    this.updateReadOnlyState(isReadonly(this));
   }
 
   private handleContentChange() {
@@ -421,6 +419,7 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
     if (!this.view) return;
     if (readonly && this.isRawMode) this.toggleRawMode();
     this.view.setProps({ editable: () => !readonly });
+    reflectReadonly(this, this.view.dom, readonly);
     this.toolbar?.setReadOnly(readonly);
     const rawTextarea =
       this._shadowRoot.querySelector<HTMLTextAreaElement>('.prosemirror-editor-raw');
@@ -621,7 +620,7 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
 
     // Render the toolbar
     this.toolbar.render();
-    this.toolbar.setReadOnly(this.isReadonly);
+    this.toolbar.setReadOnly(isReadonly(this));
   }
 
   private setBlock(nodeType: NodeType, attrs?: Record<string, unknown>) {
@@ -827,7 +826,7 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
   }
 
   private toggleRawMode() {
-    if (this.isReadonly && !this.isRawMode) return;
+    if (isReadonly(this) && !this.isRawMode) return;
     this.isRawMode = !this.isRawMode;
     this.updateViewMode();
   }
@@ -903,7 +902,7 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
   }
 
   private handleRawInput = () => {
-    if (this.isReadonly) return;
+    if (isReadonly(this)) return;
     // Store the raw content but don't update the editor until switching back
     this._content = this.rawTextarea?.value || '';
 
@@ -922,26 +921,30 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
     if (!toolbarContainer) return;
 
     toolbarContainer.innerHTML = `
-      <div class="prosemirror-editor-toolbar raw-mode">
+      <div class="prosemirror-editor-toolbar raw-mode" role="toolbar" aria-label="Markdown source">
         <div class="toolbar-spacer"></div>
         <div class="toolbar-group">
           <label class="toggle-label">Markdown</label>
-          <md-toggle class="markdown-toggle"></md-toggle>
         </div>
       </div>
     `;
 
-    // Add toggle event listener
-    const toggle = toolbarContainer.querySelector('.markdown-toggle');
-    if (toggle) {
-      toggle.addEventListener('md-toggle', (e: Event) => {
-        const toggleEvent = e as MdToggleEvent;
-        // When toggle is checked (ON), switch back to markdown editor
-        if (toggleEvent.detail.checked) {
-          this.toggleRawMode();
-        }
-      });
-    }
+    // The switch is off in raw mode; turning it on returns to the rich editor.
+    const toggle = createSwitch({
+      label: 'Markdown',
+      checked: false,
+      onToggle: (checked) => {
+        if (checked) this.toggleRawMode();
+      },
+    });
+    toggle.element.classList.add('markdown-toggle');
+    toggle.element.tabIndex = 0;
+    toolbarContainer.querySelector('.toolbar-group')?.append(toggle.element);
+    toolbarContainer
+      .querySelector('.prosemirror-editor-toolbar')
+      ?.addEventListener('keydown', (event) =>
+        moveToolbarFocus(event as KeyboardEvent, [toggle.element])
+      );
   }
 
   private getStyles(): string {

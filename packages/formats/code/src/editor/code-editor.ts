@@ -5,8 +5,11 @@ import {
   createStatus,
   defineElement,
   hydrate,
+  isReadonly,
+  moveToolbarFocus,
   type ReadyGate,
   reportError,
+  setToolbarTabStop,
   STATUS_MESSAGES,
 } from '@stillpointlab/common-format';
 
@@ -184,7 +187,8 @@ export class CodeEditor extends HTMLElement implements EditorElement {
     this.languageCompartment = new Compartment();
     this.readonlyCompartment = new Compartment();
     this.keymapModeCompartment = new Compartment();
-    const readonly = this.getAttribute('readonly') === 'true';
+    // CodeMirror reflects the read-only state as aria-readonly on its content element.
+    const readonly = isReadonly(this);
     if (readonly) {
       this.activeKeymapMode = 'normal';
       this.reflectKeymapMode();
@@ -259,7 +263,7 @@ export class CodeEditor extends HTMLElement implements EditorElement {
   }
 
   getSupportedKeymapModes(): readonly EditorKeymapMode[] {
-    return this.isReadOnly() ? ['normal'] : SUPPORTED_KEYMAP_MODES;
+    return isReadonly(this) ? ['normal'] : SUPPORTED_KEYMAP_MODES;
   }
 
   getKeymapMode(): EditorKeymapMode {
@@ -282,7 +286,7 @@ export class CodeEditor extends HTMLElement implements EditorElement {
 
     const requestedMode = parsedMode;
 
-    if (this.isReadOnly() && requestedMode !== 'normal') {
+    if (isReadonly(this) && requestedMode !== 'normal') {
       const result: EditorKeymapModeResult = {
         requestedMode,
         activeMode: this.activeKeymapMode,
@@ -365,10 +369,6 @@ export class CodeEditor extends HTMLElement implements EditorElement {
     }
   }
 
-  private isReadOnly(): boolean {
-    return this.getAttribute('readonly') === 'true';
-  }
-
   private async updateLanguage(name: string | null) {
     if (!this.view || !this.languageCompartment) return;
     const extension = await loadLanguage(name);
@@ -409,11 +409,11 @@ export class CodeEditor extends HTMLElement implements EditorElement {
   }
 
   private renderToolbar(): string {
-    if (this.phase !== 'loaded' || this.isReadOnly()) return '';
+    if (this.phase !== 'loaded' || isReadonly(this)) return '';
     const supportedModes = new Set(this.getSupportedKeymapModes());
 
     return `
-      <div class="code-editor-toolbar" aria-label="Editor keyboard mode">
+      <div class="code-editor-toolbar" role="toolbar" aria-label="Editor keyboard mode">
         <div class="code-editor-keymap-toggle" role="group" aria-label="Keyboard mode">
           ${KEYMAP_MODES.map((mode) => {
             const selected = this.activeKeymapMode === mode;
@@ -445,9 +445,16 @@ export class CodeEditor extends HTMLElement implements EditorElement {
   }
 
   private bindToolbarEvents() {
-    this._shadowRoot
-      .querySelector('.code-editor-toolbar')
-      ?.addEventListener('click', (event) => this.handleToolbarClick(event));
+    const toolbar = this._shadowRoot.querySelector<HTMLElement>('.code-editor-toolbar');
+    if (!toolbar) return;
+    toolbar.addEventListener('click', (event) => this.handleToolbarClick(event));
+    // One tab stop, on the active mode; arrow keys, Home and End move between modes.
+    const items = () => [...toolbar.querySelectorAll<HTMLElement>('.code-editor-keymap-button')];
+    setToolbarTabStop(
+      items(),
+      toolbar.querySelector<HTMLElement>('.code-editor-keymap-button.is-active')
+    );
+    toolbar.addEventListener('keydown', (event) => moveToolbarFocus(event, items()));
   }
 
   private render() {

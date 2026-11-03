@@ -1,4 +1,5 @@
 @use 'common/src/styles/tokens' as *;
+@use 'common/src/styles/toolbar';
 
 :host {
   display: block;
@@ -133,10 +134,12 @@
   color: var(--spl-sheet-danger, $error-color);
 }
 
-.sheet-editor__toolbar-button:disabled {
-  color: var(--spl-sheet-muted, $text-muted);
-  cursor: not-allowed;
-  opacity: 0.55;
+.sheet-editor__toolbar-button {
+  @include toolbar.disabled;
+
+  &:disabled {
+    color: var(--spl-sheet-muted, $text-muted);
+  }
 }
 
 .sheet-editor__alignment-menu {

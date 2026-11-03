@@ -5,6 +5,7 @@
 
 @use 'common/src/styles/tokens' as *;
 @use 'common/src/styles/status';
+@use 'common/src/styles/toolbar';
 
 :host {
   display: block;
@@ -65,20 +66,18 @@
   color: $text-primary;
 }
 
-.code-editor-keymap-button:focus-visible {
-  outline: 2px solid $focus-ring;
-  outline-offset: 1px;
-}
-
 .code-editor-keymap-button.is-active {
   background: $button-bg;
   color: $button-text;
 }
 
-.code-editor-keymap-button:disabled {
-  color: $text-muted;
-  cursor: not-allowed;
-  opacity: 0.65;
+.code-editor-keymap-button {
+  @include toolbar.focus-ring;
+  @include toolbar.disabled;
+
+  &:disabled {
+    color: $text-muted;
+  }
 }
 
 .code-editor-content {

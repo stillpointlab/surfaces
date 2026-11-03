@@ -1,0 +1,23 @@
+// The states every toolbar control must draw the same way, as mixins a format
+// includes in its own class names (`@use 'common/src/styles/toolbar';` then
+// `@include toolbar.focus-ring;`). Geometry (sizes, padding, grouping) stays with
+// each format's toolbar.
+
+@use 'tokens' as *;
+
+/// Keyboard focus: a 2px ring in the focus colour.
+@mixin focus-ring {
+  &:focus-visible {
+    outline: 2px solid $focus-ring;
+    outline-offset: 1px;
+  }
+}
+
+/// A disabled control (including every control while the editor is read-only).
+@mixin disabled {
+  &:disabled,
+  &[aria-disabled='true'] {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}

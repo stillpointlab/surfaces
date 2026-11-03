@@ -1,4 +1,13 @@
-import { createReadyGate, defineElement, type ReadyGate } from '@stillpointlab/common-format';
+import {
+  createReadyGate,
+  createSwitch,
+  defineElement,
+  isReadonly,
+  moveToolbarFocus,
+  type ReadyGate,
+  reflectReadonly,
+  setToolbarTabStop,
+} from '@stillpointlab/common-format';
 
 import { parseXmdl } from '../parser/parse';
 import { renderXmdl } from '../render/render';
@@ -93,11 +102,6 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
     focusTarget?.focus();
   }
 
-  /** `readonly="true"` disables every control that would change the content. */
-  private get isReadonly(): boolean {
-    return this.getAttribute('readonly') === 'true';
-  }
-
   private render(): void {
     if (!this.shadowRoot) return;
 
@@ -108,7 +112,8 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
     const wrapper = document.createElement('section');
     wrapper.className = `xmdl-editor xmdl-editor--${this.mode}`;
     wrapper.setAttribute('aria-label', 'XMDL editor');
-    wrapper.setAttribute('aria-readonly', this.isReadonly ? 'true' : 'false');
+    // `readonly="true"` disables every control that would change the content.
+    reflectReadonly(this, wrapper);
 
     if (this.mode === 'raw') {
       wrapper.append(this.renderRawToolbar(), this.renderRawEditor());
@@ -162,6 +167,7 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
     const toolbar = document.createElement('div');
     toolbar.className = 'xmdl-editor__toolbar';
     toolbar.setAttribute('role', 'toolbar');
+    toolbar.setAttribute('aria-label', 'Template actions');
 
     const previousButton = button('Previous', () => {
       if (!xmdl) return;
@@ -194,8 +200,8 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
     });
     applyButton.className = 'xmdl-editor__apply-button';
     applyButton.disabled =
-      this.isReadonly || !xmdl || !this.isComplete(xmdl) || !isApplyOutputSupported(xmdl);
-    applyButton.title = this.isReadonly
+      isReadonly(this) || !xmdl || !this.isComplete(xmdl) || !isApplyOutputSupported(xmdl);
+    applyButton.title = isReadonly(this)
       ? 'Read-only'
       : applyButton.disabled
         ? isApplyOutputSupported(xmdl) || !xmdl
@@ -212,16 +218,17 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
       toolbarSpacer(),
       this.renderModeToggle()
     );
-    return toolbar;
+    return withToolbarKeys(toolbar);
   }
 
   private renderRawToolbar(): HTMLElement {
     const toolbar = document.createElement('div');
     toolbar.className = 'xmdl-editor__toolbar xmdl-editor__toolbar--raw';
     toolbar.setAttribute('role', 'toolbar');
+    toolbar.setAttribute('aria-label', 'Source actions');
 
     toolbar.append(toolbarSpacer(), this.renderModeToggle());
-    return toolbar;
+    return withToolbarKeys(toolbar);
   }
 
   private renderModeToggle(): HTMLElement {
@@ -232,54 +239,49 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
     label.className = 'xmdl-editor__toggle-label';
     label.textContent = 'Apply Mode';
 
-    const toggle = document.createElement('button');
-    toggle.type = 'button';
-    toggle.className = 'xmdl-editor__mode-toggle';
-    toggle.setAttribute('role', 'switch');
-    toggle.setAttribute('aria-checked', this.mode === 'apply' ? 'true' : 'false');
-    toggle.setAttribute('aria-label', 'Apply Mode');
-    toggle.disabled = this.isReadonly;
-    toggle.title = this.isReadonly
+    // The switch is on in apply mode; every successful toggle re-renders.
+    const toggle = createSwitch({
+      label: 'Apply Mode',
+      checked: this.mode === 'apply',
+      disabled: isReadonly(this),
+      onToggle: () => {
+        if (this.mode === 'apply') {
+          this.captureActiveParamName();
+          this.mode = 'raw';
+          this.render();
+          return true;
+        }
+        this.content = this.readRawEditorContent();
+        const reconciliation = this.reconcileApplyState(this.content);
+        if (
+          reconciliation.lossyNames.length > 0 &&
+          !window.confirm(applyResetConfirmation(reconciliation.lossyNames))
+        ) {
+          return false;
+        }
+        for (const name of reconciliation.incompatibleNames) {
+          this.decisions.delete(name);
+          this.paramTypes.delete(name);
+        }
+        if (reconciliation.document && this.activeParamName) {
+          const nextIndex = reconciliation.document.params.findIndex(
+            (param) => param.name === this.activeParamName
+          );
+          if (nextIndex >= 0) this.activeIndex = nextIndex;
+        }
+        this.mode = 'apply';
+        this.render();
+        return true;
+      },
+    });
+    toggle.element.classList.add('xmdl-editor__mode-toggle');
+    toggle.element.title = isReadonly(this)
       ? 'Read-only'
       : this.mode === 'apply'
         ? 'Edit template source'
         : 'Return to apply mode';
 
-    const knob = document.createElement('span');
-    knob.className = 'xmdl-editor__mode-toggle-knob';
-    toggle.append(knob);
-
-    toggle.addEventListener('click', () => {
-      if (this.isReadonly) return;
-      if (this.mode === 'apply') {
-        this.captureActiveParamName();
-        this.mode = 'raw';
-        this.render();
-        return;
-      }
-      this.content = this.readRawEditorContent();
-      const reconciliation = this.reconcileApplyState(this.content);
-      if (
-        reconciliation.lossyNames.length > 0 &&
-        !window.confirm(applyResetConfirmation(reconciliation.lossyNames))
-      ) {
-        return;
-      }
-      for (const name of reconciliation.incompatibleNames) {
-        this.decisions.delete(name);
-        this.paramTypes.delete(name);
-      }
-      if (reconciliation.document && this.activeParamName) {
-        const nextIndex = reconciliation.document.params.findIndex(
-          (param) => param.name === this.activeParamName
-        );
-        if (nextIndex >= 0) this.activeIndex = nextIndex;
-      }
-      this.mode = 'apply';
-      this.render();
-    });
-
-    group.append(label, toggle);
+    group.append(label, toggle.element);
     return group;
   }
 
@@ -290,7 +292,7 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
     if (customElements.get('code-editor')) {
       const editor = document.createElement('code-editor') as RawEditorElement;
       editor.setAttribute('language', 'yaml');
-      if (this.isReadonly) editor.setAttribute('readonly', 'true');
+      if (isReadonly(this)) editor.setAttribute('readonly', 'true');
       editor.setContent?.(this.content);
       editor.addEventListener('content-change', () => this.handleRawContentChange(editor));
       container.append(editor);
@@ -301,7 +303,7 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
     const textarea = document.createElement('textarea');
     textarea.className = 'xmdl-editor__source';
     textarea.value = this.content;
-    textarea.readOnly = this.isReadonly;
+    textarea.readOnly = isReadonly(this);
     textarea.setAttribute('aria-label', 'XMDL source');
     textarea.addEventListener('input', () => this.handleRawContentChange(textarea));
     container.append(textarea);
@@ -366,7 +368,7 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
 
   private renderParamControl(param: XmdlParam, decision: ParamDecision): HTMLElement[] {
     const controls = this.buildParamControl(param, decision);
-    if (this.isReadonly) {
+    if (isReadonly(this)) {
       for (const control of controls) {
         (control as HTMLButtonElement | HTMLInputElement).disabled = true;
       }
@@ -454,7 +456,7 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
   }
 
   private handleRawContentChange(editor: RawEditorElement | HTMLTextAreaElement): void {
-    if (this.isReadonly) return;
+    if (isReadonly(this)) return;
     this.content = readEditorContent(editor);
     this.dispatchEvent(
       new CustomEvent('content-change', { bubbles: true, detail: { content: this.content } })
@@ -598,6 +600,14 @@ function button(label: string, onClick: () => void): HTMLButtonElement {
   element.textContent = label;
   element.addEventListener('click', onClick);
   return element;
+}
+
+/** Arrow keys, Home and End move between the toolbar's buttons; one tab stop. */
+function withToolbarKeys(toolbar: HTMLElement): HTMLElement {
+  const items = () => [...toolbar.querySelectorAll<HTMLElement>('button')];
+  setToolbarTabStop(items());
+  toolbar.addEventListener('keydown', (event) => moveToolbarFocus(event, items()));
+  return toolbar;
 }
 
 function toolbarSpacer(): HTMLDivElement {

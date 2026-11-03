@@ -3,7 +3,11 @@
 import {
   createReadyGate,
   defineElement,
+  dismissOnOutside,
+  isReadonly,
+  moveToolbarFocus,
   type ReadyGate,
+  reflectReadonly,
   reportError,
 } from '@stillpointlab/common-format';
 
@@ -208,6 +212,7 @@ export class SheetEditor extends HTMLElement implements EditorElement {
   private composing = false;
   private dragPointerId: number | null = null;
   private dragAnchor: SheetCoordinate | null = null;
+  private disposeFlyoutDismiss?: () => void;
 
   static get observedAttributes(): string[] {
     return ['readonly'];
@@ -236,14 +241,21 @@ export class SheetEditor extends HTMLElement implements EditorElement {
 
   connectedCallback(): void {
     window.addEventListener('resize', this.handleOverlayGeometry);
-    document.addEventListener('pointerdown', this.handleDocumentPointerDown, true);
+    // A pointer outside the open flyout and its trigger closes it; Escape is
+    // handled by the flyout itself, which also restores focus.
+    this.disposeFlyoutDismiss = dismissOnOutside(() => this.openFlyoutElements(), {
+      isOpen: () => this.openToolbarMenu !== null,
+      close: () => this.closeToolbarFlyout(false),
+      escape: false,
+    });
     this.render();
     this.ready.settle();
   }
 
   disconnectedCallback(): void {
     window.removeEventListener('resize', this.handleOverlayGeometry);
-    document.removeEventListener('pointerdown', this.handleDocumentPointerDown, true);
+    this.disposeFlyoutDismiss?.();
+    this.disposeFlyoutDismiss = undefined;
     this.ready.begin();
   }
 
@@ -258,9 +270,7 @@ export class SheetEditor extends HTMLElement implements EditorElement {
       return;
     }
     if (newValue === 'true') this.closeToolbarFlyout(false);
-    this.root
-      .querySelector('[role="grid"]')
-      ?.setAttribute('aria-readonly', String(this.isEditingDisabled()));
+    reflectReadonly(this, this.root.querySelector('[role="grid"]'), this.isEditingDisabled());
     this.syncToolbarState();
   }
 
@@ -423,7 +433,7 @@ export class SheetEditor extends HTMLElement implements EditorElement {
     table.setAttribute('role', 'grid');
     table.setAttribute('aria-label', 'Spreadsheet editor');
     table.setAttribute('aria-multiselectable', 'true');
-    table.setAttribute('aria-readonly', String(this.isEditingDisabled()));
+    reflectReadonly(this, table, this.isEditingDisabled());
     appendColumnGroups(table, this.bounds.columnCount, true, false, this.mergeIndex.ranges);
     table.append(createAddressedHead(this.bounds.columnCount));
 
@@ -767,31 +777,14 @@ export class SheetEditor extends HTMLElement implements EditorElement {
       this.focusActiveCell({ preventScroll: true });
       return;
     }
-    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-
     const buttons = [
-      ...this.root.querySelectorAll<HTMLButtonElement>(
-        '.sheet-editor__toolbar-button:not(:disabled)'
-      ),
+      ...this.root.querySelectorAll<HTMLButtonElement>('.sheet-editor__toolbar-button'),
     ];
-    if (buttons.length === 0) return;
-    event.preventDefault();
-    const currentIndex = Math.max(0, buttons.indexOf(button));
-    let nextIndex: number;
-    if (event.key === 'Home') nextIndex = 0;
-    else if (event.key === 'End') nextIndex = buttons.length - 1;
-    else if (event.key === 'ArrowLeft') {
-      nextIndex = (currentIndex - 1 + buttons.length) % buttons.length;
-    } else {
-      nextIndex = (currentIndex + 1) % buttons.length;
-    }
-    const next = buttons[nextIndex];
-    if (!next) return;
-    const command = toolbarCommandFromButton(next);
+    const next = moveToolbarFocus(event, buttons);
+    const command = next ? toolbarCommandFromButton(next as HTMLButtonElement) : null;
     if (!command) return;
     this.toolbarTabCommand = command;
     this.syncToolbarState();
-    next.focus();
   }
 
   private handleToolbarMenuKeyDown(event: KeyboardEvent, item: HTMLButtonElement): void {
@@ -1263,19 +1256,16 @@ export class SheetEditor extends HTMLElement implements EditorElement {
     menu.style.left = `${Math.min(maximum, Math.max(0, triggerRect.left - shellRect.left))}px`;
   }
 
-  private readonly handleDocumentPointerDown = (event: PointerEvent): void => {
+  /** The open flyout and the button that opened it. */
+  private openFlyoutElements(): (Element | null)[] {
     const open = this.openToolbarMenu;
-    if (!open) return;
-    const menu =
-      open === 'value-format'
-        ? this.valueFormatMenu()
-        : this.root.querySelector<HTMLElement>(`[data-sheet-alignment-menu="${open}"]`);
-    const trigger =
-      open === 'value-format' ? this.valueFormatTrigger() : this.alignmentTrigger(open);
-    const path = event.composedPath();
-    if ((menu && path.includes(menu)) || (trigger && path.includes(trigger))) return;
-    this.closeToolbarFlyout(false);
-  };
+    if (!open) return [];
+    if (open === 'value-format') return [this.valueFormatMenu(), this.valueFormatTrigger()];
+    return [
+      this.root.querySelector<HTMLElement>(`[data-sheet-alignment-menu="${open}"]`),
+      this.alignmentTrigger(open),
+    ];
+  }
 
   private alignmentTrigger(axis: SheetAlignmentAxis): HTMLButtonElement | null {
     return this.root.querySelector<HTMLButtonElement>(`[data-sheet-alignment-trigger="${axis}"]`);
@@ -2307,10 +2297,6 @@ export class SheetEditor extends HTMLElement implements EditorElement {
     return this.sourceSession.model.ok && !this.sourceSession.model.truncated;
   }
 
-  private isReadOnly(): boolean {
-    return this.getAttribute('readonly') === 'true';
-  }
-
   private canEdit(): boolean {
     return (
       this.canMutate() &&
@@ -2323,7 +2309,7 @@ export class SheetEditor extends HTMLElement implements EditorElement {
   }
 
   private isEditingDisabled(): boolean {
-    return !this.sourceSession.editable || this.isReadOnly();
+    return !this.sourceSession.editable || isReadonly(this);
   }
 
   private isComposingEvent(event: KeyboardEvent): boolean {

@@ -1,5 +1,7 @@
 @use 'common/src/styles/tokens' as *;
 @use 'common/src/styles/status';
+@use 'common/src/styles/switch';
+@use 'common/src/styles/toolbar';
 @use '../styles/markdown' as markdown;
 
 :host {
@@ -86,10 +88,8 @@
     }
   }
 
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+  @include toolbar.focus-ring;
+  @include toolbar.disabled;
 }
 
 // Dropdown trigger (heading style) — label + chevron, auto width.

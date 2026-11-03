@@ -160,6 +160,27 @@ elements) composes three functions from `common` instead of hand-writing the lif
 The element keeps everything else: its fields, `render()`, the code that builds its view, and its
 teardown in `disconnectedCallback`. There is deliberately no base class.
 
+### Toolbars
+
+Each format builds its own toolbar and owns its commands. `common` supplies only behaviour and
+states every toolbar must share, as functions the format calls and mixins it includes:
+
+- `moveToolbarFocus(event, items)` and `setToolbarTabStop(items, preferred)`: the toolbar is one
+  tab stop, and ArrowLeft, ArrowRight (wrapping), Home and End move between its enabled controls.
+- `dismissOnOutside(inside, { isOpen, close, escape })`: closes a popover or menu on a pointer
+  outside it, or on Escape, across shadow roots; returns a dispose function.
+- `isReadonly(el)` and `reflectReadonly(el, target, readonly?)`: the contract's `readonly="true"`,
+  and `aria-readonly` on the editing root.
+- `createSwitch({ label, checked, disabled, onToggle })`: the on/off switch (`role="switch"`),
+  styled by `@use 'common/src/styles/switch';`. `onToggle` may return false to refuse the change.
+- `@use 'common/src/styles/toolbar';` provides `toolbar.focus-ring` and `toolbar.disabled`, the
+  keyboard focus and disabled states, included in each format's own button classes. Sizes and
+  layout stay with the format.
+
+Every toolbar carries `role="toolbar"` and an `aria-label`, icon-only buttons have an accessible
+name, and popover triggers expose `aria-haspopup` and `aria-expanded`. There is deliberately no
+toolbar component or command schema in `common`.
+
 ### Theming
 
 Every colour an element draws comes from a `--spl-*` custom property, defined once in
