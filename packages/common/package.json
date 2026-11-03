@@ -19,7 +19,10 @@
       "import": "./dist/testing.js",
       "require": "./dist/testing.cjs"
     },
-    "./styles/tokens": "./src/styles/_tokens.scss"
+    "./styles/tokens": "./src/styles/_tokens.scss",
+    "./styles/status": "./src/styles/_status.scss",
+    "./styles/switch": "./src/styles/_switch.scss",
+    "./styles/toolbar": "./src/styles/_toolbar.scss"
   },
   "files": [
     "dist",

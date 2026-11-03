@@ -1,11 +1,22 @@
 /// <reference lib="dom" />
 import './md-icon';
-import './md-toggle';
 
-import { createReadyGate, report, reportError, type ReadyGate } from '@stillpointlab/common-format';
+import {
+  createLazyLoader,
+  createReadyGate,
+  createStatus,
+  createSwitch,
+  defineElement,
+  hydrate,
+  isReadonly,
+  moveToolbarFocus,
+  type ReadyGate,
+  reflectReadonly,
+  reportError,
+  STATUS_MESSAGES,
+} from '@stillpointlab/common-format';
 
 import { editorStyles } from './editor.styles';
-import { MdToggleEvent } from './md-toggle';
 import { ProseMirrorToolbar } from './prosemirror-toolbar';
 import { getEditorPlugins } from './registry';
 
@@ -80,6 +91,62 @@ interface EditorModules {
   frontmatterViewPlugin: typeof frontmatterViewPlugin;
 }
 
+// The engine's modules: imported on first connect and shared by every instance.
+const loadEngine = createLazyLoader(async (): Promise<EditorModules> => {
+  const modules = await Promise.all([
+    import('prosemirror-view'),
+    import('prosemirror-state'),
+    import('prosemirror-model'),
+    import('prosemirror-commands'),
+    import('prosemirror-keymap'),
+    import('prosemirror-history'),
+    import('prosemirror-schema-list'),
+    import('prosemirror-tables'),
+    import('./prosemirror-schema'),
+    import('./prosemirror-markdown'),
+    import('./prosemirror-keymap'),
+    import('./prosemirror-input-rules'),
+    import('prosemirror-inputrules'),
+    import('./frontmatter-view'),
+  ]);
+  return {
+    EditorView: modules[0].EditorView,
+    EditorState: modules[1].EditorState,
+    DOMParser: modules[2].DOMParser,
+    baseKeymap: modules[3].baseKeymap,
+    toggleMark: modules[3].toggleMark,
+    setBlockType: modules[3].setBlockType,
+    wrapIn: modules[3].wrapIn,
+    lift: modules[3].lift,
+    keymap: modules[4].keymap,
+    history: modules[5].history,
+    undo: modules[5].undo,
+    redo: modules[5].redo,
+    splitListItem: modules[6].splitListItem,
+    liftListItem: modules[6].liftListItem,
+    sinkListItem: modules[6].sinkListItem,
+    wrapInList: modules[6].wrapInList,
+    tableEditing: modules[7].tableEditing,
+    addRowBefore: modules[7].addRowBefore,
+    addRowAfter: modules[7].addRowAfter,
+    addColumnBefore: modules[7].addColumnBefore,
+    addColumnAfter: modules[7].addColumnAfter,
+    deleteRow: modules[7].deleteRow,
+    deleteColumn: modules[7].deleteColumn,
+    deleteTable: modules[7].deleteTable,
+    goToNextCell: modules[7].goToNextCell,
+    isInTable: modules[7].isInTable,
+    TextSelection: modules[1].TextSelection,
+    schema: modules[8].getSchema(),
+    markdownSerializer: modules[9].getMarkdownSerializer(),
+    markdownParser: modules[9].getMarkdownParser(),
+    createExtendedKeymap: modules[10].createExtendedKeymap,
+    createInputRules: modules[11].createInputRules,
+    inputRules: modules[12].inputRules,
+    frontmatterViewPlugin: modules[13].frontmatterViewPlugin,
+  } as EditorModules;
+});
+
 /**
  * Build a table node of the given size. The first row uses header cells; the rest
  * use regular cells. Each cell contains an empty paragraph.
@@ -101,7 +168,8 @@ export function buildTableNode(schema: Schema, rows: number, cols: number): Pros
 export class ProseMirrorEditor extends HTMLElement implements EditorElement {
   private view: EditorView | null = null;
   private _content = '';
-  private _loading = true;
+  // Loading until the engine arrives; failed if it could not load.
+  private phase: 'loading' | 'loaded' | 'failed' = 'loading';
   // Settled once the ProseMirror view exists with the current content.
   private readonly ready: ReadyGate = createReadyGate(this);
   // True while setContent replaces the doc, so the change is not reported as an edit.
@@ -122,10 +190,23 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
   }
 
   connectedCallback() {
-    const cycle = this.ready.begin();
+    // A failed load is retried on the next connection.
+    if (this.phase === 'failed') this.phase = 'loading';
     this.render();
-    // Wait for next tick to ensure shadow DOM is ready
-    setTimeout(() => this.loadEditor(cycle), 0);
+    this.hydrateView();
+  }
+
+  /** Load the engine (shared, once) and build this connection's view. */
+  private hydrateView() {
+    hydrate(this.ready, {
+      load: loadEngine,
+      build: (modules) => this.buildView(modules),
+      fail: (error) => {
+        reportError('Failed to load editor', error);
+        this.phase = 'failed';
+        this.render();
+      },
+    });
   }
 
   disconnectedCallback() {
@@ -152,93 +233,18 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
     }
   }
 
-  private get isReadonly(): boolean {
-    return this.getAttribute('readonly') === 'true';
-  }
-
-  private async loadEditor(cycle: number) {
-    try {
-      // Lazy load the ProseMirror modules
-      const modules = await Promise.all([
-        import('prosemirror-view'),
-        import('prosemirror-state'),
-        import('prosemirror-model'),
-        import('prosemirror-commands'),
-        import('prosemirror-keymap'),
-        import('prosemirror-history'),
-        import('prosemirror-schema-list'),
-        import('prosemirror-tables'),
-        import('./prosemirror-schema'),
-        import('./prosemirror-markdown'),
-        import('./prosemirror-keymap'),
-        import('./prosemirror-input-rules'),
-        import('prosemirror-inputrules'),
-        import('./frontmatter-view'),
-      ]);
-
-      this.editorModules = {
-        EditorView: modules[0].EditorView,
-        EditorState: modules[1].EditorState,
-        DOMParser: modules[2].DOMParser,
-        baseKeymap: modules[3].baseKeymap,
-        toggleMark: modules[3].toggleMark,
-        setBlockType: modules[3].setBlockType,
-        wrapIn: modules[3].wrapIn,
-        lift: modules[3].lift,
-        keymap: modules[4].keymap,
-        history: modules[5].history,
-        undo: modules[5].undo,
-        redo: modules[5].redo,
-        splitListItem: modules[6].splitListItem,
-        liftListItem: modules[6].liftListItem,
-        sinkListItem: modules[6].sinkListItem,
-        wrapInList: modules[6].wrapInList,
-        tableEditing: modules[7].tableEditing,
-        addRowBefore: modules[7].addRowBefore,
-        addRowAfter: modules[7].addRowAfter,
-        addColumnBefore: modules[7].addColumnBefore,
-        addColumnAfter: modules[7].addColumnAfter,
-        deleteRow: modules[7].deleteRow,
-        deleteColumn: modules[7].deleteColumn,
-        deleteTable: modules[7].deleteTable,
-        goToNextCell: modules[7].goToNextCell,
-        isInTable: modules[7].isInTable,
-        TextSelection: modules[1].TextSelection,
-        schema: modules[8].getSchema(),
-        markdownSerializer: modules[9].getMarkdownSerializer(),
-        markdownParser: modules[9].getMarkdownParser(),
-        createExtendedKeymap: modules[10].createExtendedKeymap,
-        createInputRules: modules[11].createInputRules,
-        inputRules: modules[12].inputRules,
-        frontmatterViewPlugin: modules[13].frontmatterViewPlugin,
-      } as EditorModules;
-
-      this._loading = false;
+  private buildView(modules: EditorModules): Promise<void> | void {
+    this.editorModules = modules;
+    if (this.phase !== 'loaded') {
+      this.phase = 'loaded';
       this.render();
-
-      // Initialize editor after rendering the UI
-      setTimeout(() => this.initializeEditor(cycle), 0);
-    } catch (error) {
-      reportError('Failed to load editor', error);
-      this._loading = false;
-      this.render();
-      this.ready.settle(cycle);
-    }
-  }
-
-  private initializeEditor(cycle: number) {
-    // Prevent double initialization
-    if (this.view || !this.editorModules) {
-      report('Editor already initialized or modules not loaded', { level: 'warn' });
-      return;
     }
 
     const editorElement = this._shadowRoot.querySelector(
       '.prosemirror-editor-content'
     ) as HTMLElement;
     if (!editorElement) {
-      reportError('Editor element not found');
-      return;
+      throw new Error('Editor element not found');
     }
 
     const {
@@ -346,7 +352,8 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
           this.handleContentChange();
         }
 
-        // Update toolbar state on any transaction
+        // Every transaction refreshes the toolbar, selection changes included
+        // (ProseMirror dispatches one for each, mouse selection too), so no polling.
         this.toolbar?.updateState();
       },
       handlePaste: (view: EditorView, event: ClipboardEvent) => {
@@ -374,11 +381,7 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
       plugin.onReady?.(this.view);
     }
 
-    // Listen for selection changes
-    setInterval(() => this.toolbar?.updateState(), 100);
-
-    this.updateReadOnlyState(this.isReadonly);
-    this.ready.settle(cycle);
+    this.updateReadOnlyState(isReadonly(this));
   }
 
   private handleContentChange() {
@@ -416,6 +419,7 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
     if (!this.view) return;
     if (readonly && this.isRawMode) this.toggleRawMode();
     this.view.setProps({ editable: () => !readonly });
+    reflectReadonly(this, this.view.dom, readonly);
     this.toolbar?.setReadOnly(readonly);
     const rawTextarea =
       this._shadowRoot.querySelector<HTMLTextAreaElement>('.prosemirror-editor-raw');
@@ -495,13 +499,12 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
   }
 
   private render() {
-    if (this._loading) {
+    if (this.phase !== 'loaded') {
       this._shadowRoot.innerHTML = `
         <style>${this.getStyles()}</style>
-        <div class="prosemirror-editor-container">
-          <div class="prosemirror-editor-loading">Loading editor...</div>
-        </div>
+        <div class="prosemirror-editor-container"></div>
       `;
+      this._shadowRoot.querySelector('.prosemirror-editor-container')?.append(this.status());
       return;
     }
 
@@ -617,7 +620,7 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
 
     // Render the toolbar
     this.toolbar.render();
-    this.toolbar.setReadOnly(this.isReadonly);
+    this.toolbar.setReadOnly(isReadonly(this));
   }
 
   private setBlock(nodeType: NodeType, attrs?: Record<string, unknown>) {
@@ -823,7 +826,7 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
   }
 
   private toggleRawMode() {
-    if (this.isReadonly && !this.isRawMode) return;
+    if (isReadonly(this) && !this.isRawMode) return;
     this.isRawMode = !this.isRawMode;
     this.updateViewMode();
   }
@@ -899,7 +902,7 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
   }
 
   private handleRawInput = () => {
-    if (this.isReadonly) return;
+    if (isReadonly(this)) return;
     // Store the raw content but don't update the editor until switching back
     this._content = this.rawTextarea?.value || '';
 
@@ -918,31 +921,42 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
     if (!toolbarContainer) return;
 
     toolbarContainer.innerHTML = `
-      <div class="prosemirror-editor-toolbar raw-mode">
+      <div class="prosemirror-editor-toolbar raw-mode" role="toolbar" aria-label="Markdown source">
         <div class="toolbar-spacer"></div>
         <div class="toolbar-group">
           <label class="toggle-label">Markdown</label>
-          <md-toggle class="markdown-toggle"></md-toggle>
         </div>
       </div>
     `;
 
-    // Add toggle event listener
-    const toggle = toolbarContainer.querySelector('.markdown-toggle');
-    if (toggle) {
-      toggle.addEventListener('md-toggle', (e: Event) => {
-        const toggleEvent = e as MdToggleEvent;
-        // When toggle is checked (ON), switch back to markdown editor
-        if (toggleEvent.detail.checked) {
-          this.toggleRawMode();
-        }
-      });
-    }
+    // The switch is off in raw mode; turning it on returns to the rich editor.
+    const toggle = createSwitch({
+      label: 'Markdown',
+      checked: false,
+      onToggle: (checked) => {
+        if (checked) this.toggleRawMode();
+      },
+    });
+    toggle.element.classList.add('markdown-toggle');
+    toggle.element.tabIndex = 0;
+    toolbarContainer.querySelector('.toolbar-group')?.append(toggle.element);
+    toolbarContainer
+      .querySelector('.prosemirror-editor-toolbar')
+      ?.addEventListener('keydown', (event) =>
+        moveToolbarFocus(event as KeyboardEvent, [toggle.element])
+      );
   }
 
   private getStyles(): string {
     return editorStyles;
   }
+
+  /** The placeholder shown while loading, or after the engine failed to load. */
+  private status(): HTMLElement {
+    return this.phase === 'failed'
+      ? createStatus('error', STATUS_MESSAGES.editorFailed)
+      : createStatus('loading', STATUS_MESSAGES.loading);
+  }
 }
 
-customElements.define('md-editor', ProseMirrorEditor);
+defineElement('md-editor', ProseMirrorEditor);

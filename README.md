@@ -109,8 +109,8 @@ everything; `./editor` is the explicit alias.
 else: the injectable logging (`setErrorHandler`, `setReporter`; one instance for all formats, which
 each format also re-exports), the element contracts the host drives (`PreviewElement`,
 `EditorElement`, `ImagePreviewElement`, `DiffElement`), the ready gate behind them, the `--spl-*`
-SCSS tokens, and the contract conformance suites (`@stillpointlab/common-format/testing`). A format
-styles with `@use 'common/src/styles/tokens' as *;`.
+SCSS tokens (see "Theming"), and the contract conformance suites
+(`@stillpointlab/common-format/testing`).
 
 ### Ready
 
@@ -125,12 +125,120 @@ readiness before its first `setContent`: content set early is buffered and shows
 element can. Readiness is for what needs the engine, such as `focus()`, keymap modes, reading back
 normalised content, and tests.
 
+Cycles carry tokens: `begin()` returns one, `settle(token)` is ignored once a newer cycle has
+begun, and `isCurrent(token)` tells an asynchronous continuation whether its cycle is still the
+live one. An element that loads an engine checks `isCurrent` after every `await` and stops if a
+newer connection has taken over (a DOM move is a disconnect and a reconnect in one tick), and it
+settles the live cycle on every path: success, a failed load, and nothing left to do.
+
+### Registration and attributes
+
+Elements register with `defineElement(tag, constructor)` from `common`, which leaves a tag that is
+already registered alone (and warns if a different copy of the package registered it), so loading
+an element module twice never throws.
+
+Attributes follow one of two rules. Contract attributes compare to an explicit value:
+`readonly="true"` makes an editor read-only, and a bare `readonly` does not. Display options are on
+when present and not `"false"`, so `<code-diff wrap>` and `wrap="true"` wrap and `wrap="false"`
+does not; an option that defaults on is off only with `"false"`. `booleanAttribute(el, name,
+{ defaultOn })` from `common` reads the second kind.
+
+### Lazy engines
+
+An element that loads a heavy engine on demand (ProseMirror in `md-editor`, CodeMirror in the code
+elements) composes three functions from `common` instead of hand-writing the lifecycle:
+
+- `createLazyLoader(load)` wraps the element's dynamic imports, defined once at module level, so
+  every instance shares one import; a failed import is retried by the next connection.
+- `hydrate(gate, { load, build, fail })`, called from `connectedCallback` after rendering the
+  loading state, begins a ready cycle, loads, and calls `build` only while that connection is the
+  live one. It settles when `build` (which may be async) finishes, and calls `fail` and settles if
+  the load or the build throws. A connection superseded by a move or reconnect does nothing.
+- `createStatus(kind, message)` renders the `loading`, `empty` or `error` placeholder, styled by
+  `@use 'common/src/styles/status';`, with the standard texts in `STATUS_MESSAGES`.
+
+The element keeps everything else: its fields, `render()`, the code that builds its view, and its
+teardown in `disconnectedCallback`. There is deliberately no base class.
+
+### Toolbars
+
+Each format builds its own toolbar and owns its commands. `common` supplies only behaviour and
+states every toolbar must share, as functions the format calls and mixins it includes:
+
+- `moveToolbarFocus(event, items)` and `setToolbarTabStop(items, preferred)`: the toolbar is one
+  tab stop, and ArrowLeft, ArrowRight (wrapping), Home and End move between its enabled controls.
+- `dismissOnOutside(inside, { isOpen, close, escape })`: closes a popover or menu on a pointer
+  outside it, or on Escape, across shadow roots; returns a dispose function.
+- `isReadonly(el)` and `reflectReadonly(el, target, readonly?)`: the contract's `readonly="true"`,
+  and `aria-readonly` on the editing root.
+- `createSwitch({ label, checked, disabled, onToggle })`: the on/off switch (`role="switch"`),
+  styled by `@use 'common/src/styles/switch';`. `onToggle` may return false to refuse the change.
+- `@use 'common/src/styles/toolbar';` provides `toolbar.focus-ring` and `toolbar.disabled`, the
+  keyboard focus and disabled states, included in each format's own button classes. Sizes and
+  layout stay with the format.
+
+Every toolbar carries `role="toolbar"` and an `aria-label`, icon-only buttons have an accessible
+name, and popover triggers expose `aria-haspopup` and `aria-expanded`. There is deliberately no
+toolbar component or command schema in `common`.
+
+### Theming
+
+Every colour an element draws comes from a `--spl-*` custom property, defined once in
+`packages/common/src/styles/_tokens.scss` with a light default. A host themes every surface by
+setting the properties on `:root` or any ancestor, and provides dark values the same way (the
+harness does it in `tooling/harness/harness.css`, Context Manager in its base stylesheet). Elements
+ship light defaults only and carry no `prefers-color-scheme` rules of their own.
+
+| Property                     | Light default              | Colours                                  |
+| ---------------------------- | -------------------------- | ---------------------------------------- |
+| `--spl-background-primary`   | `#ffffff`                  | element surfaces, editing areas          |
+| `--spl-background-secondary` | `#f5f5f5`                  | toolbars, gutters, secondary panels      |
+| `--spl-background-muted`     | `#f8f8f8`                  | quiet panels (frontmatter, chips)        |
+| `--spl-background-hover`     | `#e8e8e8`                  | hovered controls and menu items          |
+| `--spl-surface-overlay`      | `#ffffff`                  | popovers and menus                       |
+| `--spl-header-bg`            | `#f6f8fa`                  | table headers, sheet toolbar and notices |
+| `--spl-code-bg`              | `#f0f0f0`                  | inline code and code blocks              |
+| `--spl-text-primary`         | `#000`                     | body text                                |
+| `--spl-text-secondary`       | `#333`                     | secondary text, labels                   |
+| `--spl-text-color`           | `#444`                     | toolbar icons and controls               |
+| `--spl-text-muted`           | `#666`                     | hints, metadata, line numbers            |
+| `--spl-border-color`         | `#eee`                     | element frames and dividers              |
+| `--spl-border-light`         | `#ddd`                     | light rules, table borders               |
+| `--spl-border-dark`          | `#ccc`                     | inputs, menu outlines                    |
+| `--spl-border-strong`        | `#b0b0b0`                  | table cell borders                       |
+| `--spl-primary-blue`         | `#0066cc`                  | accent: links, active states, selection  |
+| `--spl-primary-blue-hover`   | `#0052a3`                  | accent on hover                          |
+| `--spl-focus-ring`           | `#0969da`                  | focus outlines                           |
+| `--spl-button-bg`            | `#2f6b5b`                  | filled buttons and active toggles        |
+| `--spl-button-text`          | `#ffffff`                  | text on filled buttons and accents       |
+| `--spl-error-color`          | `#dc3545`                  | error text and danger actions            |
+| `--spl-error-bg`             | `#fff1f1`                  | error panels                             |
+| `--spl-error-bg-subtle`      | `rgba(220, 53, 69, 0.08)`  | error line highlights                    |
+| `--spl-error-border`         | `#f2a7a7`                  | error panel borders                      |
+| `--spl-warning-color`        | `#5f4400`                  | warning text, incomplete status          |
+| `--spl-warning-bg`           | `#fff8e6`                  | warning panels and badges                |
+| `--spl-warning-border`       | `#f0c36a`                  | warning panel borders                    |
+| `--spl-success-color`        | `#166534`                  | success text, complete status            |
+| `--spl-success-bg`           | `#dcfce7`                  | success badges, conditional markers      |
+| `--spl-info-color`           | `#1d4ed8`                  | informational text, template slots       |
+| `--spl-info-bg`              | `#dbeafe`                  | informational badges, template slots     |
+| `--spl-code-active-line-bg`  | `rgba(88, 166, 255, 0.12)` | CodeMirror's active line                 |
+| `--spl-code-selection-bg`    | `rgba(88, 166, 255, 0.38)` | CodeMirror's selection                   |
+| `--spl-shadow-color`         | `rgba(0, 0, 0, 0.18)`      | popover and menu shadows                 |
+
+A format stylesheet starts with `@use 'common/src/styles/tokens' as *;` and uses the variables
+(`$text-primary`, `$error-bg`, …) for every colour. A format may add properties of its own
+(`--spl-sheet-*`, `--spl-xmdl-*`) as long as each falls back to a token, never to a literal.
+`npm run lint` runs `tooling/check-tokens.mjs`, which fails on a hardcoded colour in any format
+stylesheet.
+
 ### Conformance
 
 `@stillpointlab/common-format/testing` exports `describePreviewContract`, `describeEditorContract`,
 `describeImagePreviewContract` and `describeDiffContract`: vitest `describe` blocks a format runs
 in `src/contract.test.ts` for each element it ships. They prove readiness, set and read back,
 `content-change` on user edits and never on `setContent`, `readonly`, keymap modes and focus,
+settling after a DOM move and after a reconnect,
 and take hooks for what only the format knows (how to tell content reached the DOM, how to
 perform one edit). They use no fake timers, private fields or jsdom-specific stubs, so they run
 unchanged under vitest browser mode: a package that needs a real browser (media editors, clipboard)

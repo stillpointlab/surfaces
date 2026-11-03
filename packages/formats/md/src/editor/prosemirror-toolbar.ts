@@ -1,7 +1,12 @@
 import './md-icon';
-import './md-toggle';
 
-import { MdToggleEvent } from './md-toggle';
+import {
+  createSwitch,
+  dismissOnOutside,
+  moveToolbarFocus,
+  setToolbarTabStop,
+  type SwitchHandle,
+} from '@stillpointlab/common-format';
 
 import type { Schema } from 'prosemirror-model';
 import type { EditorView } from 'prosemirror-view';
@@ -35,8 +40,8 @@ export class ProseMirrorToolbar {
   private inTable = false;
   // While read-only every command, popover trigger and the raw toggle is disabled.
   private isReadOnly = false;
-  private documentClickHandler?: (e: Event) => void;
-  private keydownHandler?: (e: KeyboardEvent) => void;
+  private disposeDismiss?: () => void;
+  private rawSwitch: SwitchHandle | null = null;
   private resizeObserver?: ResizeObserver;
   private toolbarEl: HTMLElement | null = null;
 
@@ -52,7 +57,10 @@ export class ProseMirrorToolbar {
 
   render(): void {
     this.container.innerHTML = this.generateHTML();
+    this.labelControls();
+    this.mountRawSwitch();
     this.setupEventListeners();
+    this.setupKeyboard();
     this.setupDismissListeners();
     this.setupOverflow();
   }
@@ -72,12 +80,17 @@ export class ProseMirrorToolbar {
       const commandName = btn.dataset.command;
       const command = commandName ? this.commands.get(commandName) : undefined;
 
-      btn.classList.toggle('is-active', Boolean(command?.isActive?.()));
+      const active = Boolean(command?.isActive?.());
+      btn.classList.toggle('is-active', active);
+      // Top-level toggle commands (bold, lists, blockquote…) expose their state.
+      if (command?.isActive && !btn.classList.contains('menu-item')) {
+        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      }
       btn.disabled = this.isReadOnly || (command?.isEnabled ? !command.isEnabled() : false);
     });
 
-    const toggle = this.container.querySelector<HTMLElement>('.markdown-toggle');
-    toggle?.toggleAttribute('disabled', this.isReadOnly);
+    this.rawSwitch?.setDisabled(this.isReadOnly);
+    this.syncTabStop();
 
     this.updateHeadingLabel();
     this.updateTableTrigger();
@@ -113,7 +126,7 @@ export class ProseMirrorToolbar {
 
   private generateHTML(): string {
     return `
-      <div class="prosemirror-editor-toolbar">
+      <div class="prosemirror-editor-toolbar" role="toolbar" aria-label="Formatting">
         ${this.generateFormattingGroup()}
         ${this.generateHeadingGroup()}
         ${this.generateListGroup()}
@@ -292,7 +305,7 @@ export class ProseMirrorToolbar {
     return `
       <div class="toolbar-group">
         <label class="toggle-label">Raw</label>
-        <md-toggle class="markdown-toggle" checked></md-toggle>
+        <span class="raw-switch-slot"></span>
       </div>
     `;
   }
@@ -319,29 +332,13 @@ export class ProseMirrorToolbar {
           this.updateState();
         }
 
-        // Commands invoked from inside a popover (heading, format, table edit) close it.
-        if (btn.classList.contains('menu-item')) {
-          this.closeAllPopovers();
-        }
+        // A command closes any open popover (menu items run from inside one).
+        this.closeAllPopovers();
       });
     });
 
     this.setupGridListeners();
     this.setupLinkListeners();
-
-    // View toggle
-    const toggle = this.container.querySelector('.markdown-toggle');
-    if (toggle) {
-      toggle.addEventListener('md-toggle', (e: Event) => {
-        const toggleEvent = e as MdToggleEvent;
-        if (!toggleEvent.detail.checked) {
-          const viewMarkdownCommand = this.commands.get('viewMarkdown');
-          if (viewMarkdownCommand && viewMarkdownCommand.execute) {
-            viewMarkdownCommand.execute();
-          }
-        }
-      });
-    }
   }
 
   private setupGridListeners(): void {
@@ -406,22 +403,90 @@ export class ProseMirrorToolbar {
   }
 
   private setupDismissListeners(): void {
-    this.documentClickHandler = (e: Event) => {
-      if (!this.hasOpenPopover()) return;
-      const insideMenu = e
-        .composedPath()
-        .some((el) => el instanceof HTMLElement && el.classList.contains('toolbar-menu'));
-      if (!insideMenu) this.closeAllPopovers();
-    };
-    document.addEventListener('click', this.documentClickHandler, true);
-
-    this.keydownHandler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && this.hasOpenPopover()) {
-        this.closeAllPopovers();
-        this.view.focus();
+    this.disposeDismiss?.();
+    this.disposeDismiss = dismissOnOutside(
+      // The open popover's menu (its trigger and panel) counts as inside.
+      () =>
+        [...this.container.querySelectorAll('.toolbar-popover.is-open')].map((panel) =>
+          panel.closest('.toolbar-menu')
+        ),
+      {
+        isOpen: () => this.hasOpenPopover(),
+        close: (reason) => {
+          this.closeAllPopovers();
+          if (reason === 'escape') this.view.focus();
+        },
       }
-    };
-    document.addEventListener('keydown', this.keydownHandler, true);
+    );
+  }
+
+  /** Name icon-only buttons and mark popover triggers for assistive technology. */
+  private labelControls(): void {
+    this.container.querySelectorAll<HTMLButtonElement>('.toolbar-button').forEach((button) => {
+      const hasVisibleName = button.querySelector('.menu-item-label, .dropdown-label');
+      if (button.title && !hasVisibleName) button.setAttribute('aria-label', button.title);
+      const popover = button.dataset.popover;
+      if (popover) {
+        button.setAttribute('aria-haspopup', popover === 'link' ? 'dialog' : 'menu');
+        button.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
+  /** The raw toggle: on while editing rich text (label and sense unchanged for now). */
+  private mountRawSwitch(): void {
+    const slot = this.container.querySelector('.raw-switch-slot');
+    if (!slot) return;
+    this.rawSwitch = createSwitch({
+      label: 'Raw',
+      checked: true,
+      disabled: this.isReadOnly,
+      onToggle: (checked) => {
+        if (!checked) this.commands.get('viewMarkdown')?.execute();
+      },
+    });
+    this.rawSwitch.element.classList.add('markdown-toggle');
+    slot.replaceWith(this.rawSwitch.element);
+  }
+
+  /** Arrow keys, Home and End move between the visible top-level controls. */
+  private setupKeyboard(): void {
+    const toolbar = this.container.querySelector<HTMLElement>('.prosemirror-editor-toolbar');
+    toolbar?.addEventListener('keydown', (event) => {
+      if ((event.target as Element).closest('.toolbar-popover')) return;
+      moveToolbarFocus(event, this.focusItems());
+    });
+    this.syncTabStop();
+  }
+
+  /** Keep one tab stop among the visible top-level controls; hidden ones get none. */
+  private syncTabStop(): void {
+    const items = this.focusItems();
+    for (const control of this.topLevelControls()) {
+      if (!items.includes(control)) control.tabIndex = -1;
+    }
+    setToolbarTabStop(
+      items,
+      items.find((item) => item.tabIndex === 0)
+    );
+  }
+
+  private topLevelControls(): HTMLElement[] {
+    const toolbar = this.container.querySelector<HTMLElement>('.prosemirror-editor-toolbar');
+    if (!toolbar) return [];
+    return [...toolbar.querySelectorAll<HTMLElement>('.toolbar-button, .spl-switch')].filter(
+      (control) => !control.closest('.toolbar-popover')
+    );
+  }
+
+  /** The top-level controls a keyboard user moves between, in order. */
+  private focusItems(): HTMLElement[] {
+    const toolbar = this.container.querySelector<HTMLElement>('.prosemirror-editor-toolbar');
+    const compact = toolbar?.classList.contains('is-compact') ?? false;
+    // Compact mode hides the collapsible groups and shows the overflow menu.
+    return this.topLevelControls().filter((control) =>
+      compact ? !control.closest('[data-collapsible]') : !control.closest('.toolbar-overflow')
+    );
   }
 
   /** Open the link popover (e.g. from the Mod-k keyboard shortcut). */
@@ -455,6 +520,8 @@ export class ProseMirrorToolbar {
     if (toolbar.scrollWidth > toolbar.clientWidth + 1) {
       toolbar.classList.add('is-compact');
     }
+    // Controls shown or hidden by the change join or leave the keyboard order.
+    this.syncTabStop();
   }
 
   private handlePopoverTrigger(name: string): void {
@@ -475,6 +542,11 @@ export class ProseMirrorToolbar {
     const panel = this.getPanel(name);
     if (!panel) return;
     panel.classList.add('is-open');
+    // The table trigger opens either table panel.
+    const trigger = name.startsWith('table') ? 'table' : name;
+    this.container
+      .querySelector(`[data-popover="${trigger}"]`)
+      ?.setAttribute('aria-expanded', 'true');
 
     if (name === 'link') {
       const input = panel.querySelector<HTMLInputElement>('.link-input');
@@ -494,15 +566,14 @@ export class ProseMirrorToolbar {
     this.container
       .querySelectorAll('.toolbar-popover.is-open')
       .forEach((panel) => panel.classList.remove('is-open'));
+    this.container
+      .querySelectorAll('[data-popover][aria-expanded="true"]')
+      .forEach((trigger) => trigger.setAttribute('aria-expanded', 'false'));
   }
 
   destroy(): void {
-    if (this.documentClickHandler) {
-      document.removeEventListener('click', this.documentClickHandler, true);
-    }
-    if (this.keydownHandler) {
-      document.removeEventListener('keydown', this.keydownHandler, true);
-    }
+    this.disposeDismiss?.();
+    this.disposeDismiss = undefined;
     this.resizeObserver?.disconnect();
     this.commands.clear();
   }

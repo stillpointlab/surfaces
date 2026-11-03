@@ -1,3 +1,6 @@
+@use 'common/src/styles/tokens' as *;
+@use 'common/src/styles/toolbar';
+
 :host {
   display: block;
   box-sizing: border-box;
@@ -5,8 +8,8 @@
   height: 100%;
   min-width: 0;
   min-height: 0;
-  color: var(--spl-sheet-text, var(--spl-text-primary, #1f2933));
-  background: var(--spl-sheet-background, var(--spl-background-primary, #ffffff));
+  color: var(--spl-sheet-text, $text-primary);
+  background: var(--spl-sheet-background, $background-primary);
   font:
     0.875rem/1.4 system-ui,
     -apple-system,
@@ -23,7 +26,7 @@
   height: 100%;
   min-height: 220px;
   overflow: hidden;
-  border: 1px solid var(--spl-sheet-border, var(--spl-border-light, #d0d7de));
+  border: 1px solid var(--spl-sheet-border, $border-light);
   border-radius: 6px;
   background: inherit;
 }
@@ -49,8 +52,8 @@
   padding: 4px 8px;
   overflow-x: auto;
   overflow-y: hidden;
-  border-bottom: 1px solid var(--spl-sheet-border, var(--spl-border-light, #d0d7de));
-  background: var(--spl-sheet-header-background, var(--spl-header-bg, #f6f8fa));
+  border-bottom: 1px solid var(--spl-sheet-border, $border-light);
+  background: var(--spl-sheet-header-background, $header-bg);
   scrollbar-width: thin;
 }
 
@@ -66,7 +69,7 @@
   width: 1px;
   height: 20px;
   margin: 0 2px;
-  background: var(--spl-sheet-border, var(--spl-border-light, #d0d7de));
+  background: var(--spl-sheet-border, $border-light);
 }
 
 .sheet-editor__toolbar-button {
@@ -81,7 +84,7 @@
   padding: 3px;
   border: 1px solid transparent;
   border-radius: 4px;
-  color: var(--spl-sheet-text, var(--spl-text-primary, #1f2933));
+  color: var(--spl-sheet-text, $text-primary);
   background: transparent;
   cursor: pointer;
 }
@@ -101,46 +104,42 @@
 }
 
 .sheet-editor__toolbar-button:hover:not(:disabled) {
-  border-color: var(--spl-sheet-border, var(--spl-border-light, #d0d7de));
-  background: var(--spl-sheet-background, var(--spl-background-primary, #ffffff));
+  border-color: var(--spl-sheet-border, $border-light);
+  background: var(--spl-sheet-background, $background-primary);
 }
 
 .sheet-editor__toolbar-button:active:not(:disabled) {
-  background: var(
-    --spl-sheet-selection,
-    color-mix(in srgb, var(--spl-primary-blue, #0969da) 18%, transparent)
-  );
+  background: var(--spl-sheet-selection, color-mix(in srgb, #{$primary-blue} 18%, transparent));
 }
 
 .sheet-editor__toolbar-button[aria-pressed='true']:not(:disabled),
 .sheet-editor__toolbar-button[aria-expanded='true']:not(:disabled) {
-  border-color: var(--spl-sheet-focus, var(--spl-focus-ring, #0969da));
-  background: var(
-    --spl-sheet-selection,
-    color-mix(in srgb, var(--spl-primary-blue, #0969da) 18%, transparent)
-  );
+  border-color: var(--spl-sheet-focus, $focus-ring);
+  background: var(--spl-sheet-selection, color-mix(in srgb, #{$primary-blue} 18%, transparent));
 }
 
 .sheet-editor__toolbar-button[aria-pressed='mixed']:not(:disabled) {
-  border-color: var(--spl-sheet-focus, var(--spl-focus-ring, #0969da));
-  background: var(--spl-sheet-background, var(--spl-background-primary, #ffffff));
-  box-shadow: inset 0 -2px 0 var(--spl-sheet-focus, var(--spl-focus-ring, #0969da));
+  border-color: var(--spl-sheet-focus, $focus-ring);
+  background: var(--spl-sheet-background, $background-primary);
+  box-shadow: inset 0 -2px 0 var(--spl-sheet-focus, $focus-ring);
 }
 
 .sheet-editor__toolbar-button:focus-visible {
-  outline: 2px solid var(--spl-sheet-focus, var(--spl-focus-ring, #0969da));
+  outline: 2px solid var(--spl-sheet-focus, $focus-ring);
   outline-offset: 1px;
 }
 
 .sheet-editor__toolbar-button--delete:hover:not(:disabled),
 .sheet-editor__toolbar-button--delete:focus-visible {
-  color: var(--spl-sheet-danger, var(--spl-error-color, #b42318));
+  color: var(--spl-sheet-danger, $error-color);
 }
 
-.sheet-editor__toolbar-button:disabled {
-  color: var(--spl-sheet-muted, var(--spl-text-muted, #8c959f));
-  cursor: not-allowed;
-  opacity: 0.55;
+.sheet-editor__toolbar-button {
+  @include toolbar.disabled;
+
+  &:disabled {
+    color: var(--spl-sheet-muted, $text-muted);
+  }
 }
 
 .sheet-editor__alignment-menu {
@@ -150,10 +149,10 @@
   display: grid;
   min-width: min(152px, 100%);
   padding: 4px;
-  border: 1px solid var(--spl-sheet-border, var(--spl-border-light, #d0d7de));
+  border: 1px solid var(--spl-sheet-border, $border-light);
   border-radius: 6px;
-  background: var(--spl-sheet-background, var(--spl-background-primary, #ffffff));
-  box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+  background: var(--spl-sheet-background, $background-primary);
+  box-shadow: 0 8px 24px $shadow-color;
 }
 
 .sheet-editor__alignment-menu[hidden] {
@@ -178,19 +177,16 @@
 }
 
 .sheet-editor__alignment-item[aria-checked='true'] {
-  border-color: var(--spl-sheet-focus, var(--spl-focus-ring, #0969da));
-  background: var(
-    --spl-sheet-selection,
-    color-mix(in srgb, var(--spl-primary-blue, #0969da) 18%, transparent)
-  );
+  border-color: var(--spl-sheet-focus, $focus-ring);
+  background: var(--spl-sheet-selection, color-mix(in srgb, #{$primary-blue} 18%, transparent));
 }
 
 .sheet-editor__alignment-item:hover:not(:disabled) {
-  background: var(--spl-sheet-header-background, var(--spl-header-bg, #f6f8fa));
+  background: var(--spl-sheet-header-background, $header-bg);
 }
 
 .sheet-editor__alignment-item:focus-visible {
-  outline: 2px solid var(--spl-sheet-focus, var(--spl-focus-ring, #0969da));
+  outline: 2px solid var(--spl-sheet-focus, $focus-ring);
   outline-offset: -2px;
 }
 
@@ -202,7 +198,7 @@
 }
 
 .sheet-surface__scroll:focus-visible {
-  outline: 2px solid var(--spl-sheet-focus, var(--spl-primary-blue, #0969da));
+  outline: 2px solid var(--spl-sheet-focus, $primary-blue);
   outline-offset: -2px;
 }
 
@@ -233,10 +229,10 @@
   height: var(--spl-sheet-row-height, 20px);
   padding: 3px;
   overflow: hidden;
-  border-right: 1px solid var(--spl-sheet-border, var(--spl-border-light, #d0d7de));
-  border-bottom: 1px solid var(--spl-sheet-border, var(--spl-border-light, #d0d7de));
+  border-right: 1px solid var(--spl-sheet-border, $border-light);
+  border-bottom: 1px solid var(--spl-sheet-border, $border-light);
   color: inherit;
-  background: var(--spl-sheet-background, var(--spl-background-primary, #ffffff));
+  background: var(--spl-sheet-background, $background-primary);
   font-size: 0.625rem;
   line-height: 1.4;
   text-align: left;
@@ -245,7 +241,7 @@
 
 .sheet-table th {
   font-weight: 600;
-  background: var(--spl-sheet-header-background, var(--spl-header-bg, #f6f8fa));
+  background: var(--spl-sheet-header-background, $header-bg);
 }
 
 .sheet-table thead th {
@@ -303,16 +299,13 @@
 }
 
 .sheet-surface--interactive .sheet-table td[aria-selected='true'] {
-  background: var(
-    --spl-sheet-selection,
-    color-mix(in srgb, var(--spl-primary-blue, #0969da) 18%, transparent)
-  );
+  background: var(--spl-sheet-selection, color-mix(in srgb, #{$primary-blue} 18%, transparent));
 }
 
 .sheet-surface--interactive .sheet-table__cell--active {
   position: relative;
   z-index: 1;
-  outline: 2px solid var(--spl-sheet-focus, var(--spl-primary-blue, #0969da));
+  outline: 2px solid var(--spl-sheet-focus, $primary-blue);
   outline-offset: -2px;
 }
 
@@ -345,12 +338,12 @@
   padding: 3px;
   resize: none;
   overflow: hidden;
-  border: 2px solid var(--spl-sheet-focus, var(--spl-primary-blue, #0969da));
+  border: 2px solid var(--spl-sheet-focus, $primary-blue);
   border-radius: 0;
   outline: 0;
   color: inherit;
-  background: var(--spl-sheet-background, var(--spl-background-primary, #ffffff));
-  caret-color: var(--spl-sheet-focus, var(--spl-primary-blue, #0969da));
+  background: var(--spl-sheet-background, $background-primary);
+  caret-color: var(--spl-sheet-focus, $primary-blue);
   font: inherit;
   line-height: inherit;
   text-align: inherit;
@@ -367,7 +360,7 @@
 }
 
 .sheet-editor__limit {
-  color: var(--spl-sheet-danger, var(--spl-error-color, #b42318));
+  color: var(--spl-sheet-danger, $error-color);
 }
 
 .sheet-surface--addressed .sheet-table__row-header,
@@ -375,7 +368,7 @@
   position: sticky;
   z-index: 2;
   left: 0;
-  color: var(--spl-sheet-muted, var(--spl-text-muted, #57606a));
+  color: var(--spl-sheet-muted, $text-muted);
   text-align: center;
 }
 
@@ -388,7 +381,7 @@
 }
 
 .sheet-table__column-header {
-  color: var(--spl-sheet-muted, var(--spl-text-muted, #57606a));
+  color: var(--spl-sheet-muted, $text-muted);
   text-align: center !important;
 }
 
@@ -397,9 +390,9 @@
   min-height: 32px;
   margin: 0;
   padding: 7px 12px;
-  border-top: 1px solid var(--spl-sheet-border, var(--spl-border-light, #d0d7de));
-  color: var(--spl-sheet-muted, var(--spl-text-muted, #57606a));
-  background: var(--spl-sheet-header-background, var(--spl-header-bg, #f6f8fa));
+  border-top: 1px solid var(--spl-sheet-border, $border-light);
+  color: var(--spl-sheet-muted, $text-muted);
+  background: var(--spl-sheet-header-background, $header-bg);
 }
 
 .sheet-surface__message {
@@ -407,35 +400,10 @@
   justify-self: center;
   max-width: 44rem;
   padding: 24px;
-  color: var(--spl-sheet-muted, var(--spl-text-muted, #57606a));
+  color: var(--spl-sheet-muted, $text-muted);
   text-align: center;
 }
 
 .sheet-surface__message--error {
-  color: var(--spl-sheet-danger, var(--spl-error-color, #b42318));
-}
-
-@media (prefers-color-scheme: dark) {
-  :host {
-    color: var(--spl-sheet-text, var(--spl-text-primary, #e6edf3));
-    background: var(--spl-sheet-background, var(--spl-background-primary, #0d1117));
-  }
-
-  .sheet-table th,
-  .sheet-table td {
-    background: var(--spl-sheet-background, var(--spl-background-primary, #0d1117));
-  }
-
-  .sheet-surface--interactive .sheet-table td[aria-selected='true'] {
-    background: var(
-      --spl-sheet-selection,
-      color-mix(in srgb, var(--spl-primary-blue, #58a6ff) 24%, transparent)
-    );
-  }
-
-  .sheet-table th,
-  .sheet-editor__toolbar,
-  .sheet-surface__notice {
-    background: var(--spl-sheet-header-background, var(--spl-header-bg, #161b22));
-  }
+  color: var(--spl-sheet-danger, $error-color);
 }

@@ -1,0 +1,42 @@
+// Styles for createSwitch(): a 34 × 18 track with a sliding knob, on in the
+// accent colour. An element's stylesheet includes them with
+// `@use 'common/src/styles/switch';`.
+
+@use 'tokens' as *;
+@use 'toolbar';
+
+.spl-switch {
+  position: relative;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: $border-dark;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  &[aria-checked='true'] {
+    background: $primary-blue;
+  }
+
+  @include toolbar.focus-ring;
+  @include toolbar.disabled;
+}
+
+.spl-switch__knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: $background-primary;
+  transition: transform 0.2s ease;
+
+  .spl-switch[aria-checked='true'] & {
+    transform: translateX(16px);
+  }
+}

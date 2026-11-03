@@ -1,5 +1,14 @@
 /// <reference lib="dom" />
-import { createReadyGate, reportError, type ReadyGate } from '@stillpointlab/common-format';
+import {
+  createLazyLoader,
+  createReadyGate,
+  createStatus,
+  defineElement,
+  hydrate,
+  type ReadyGate,
+  reportError,
+  STATUS_MESSAGES,
+} from '@stillpointlab/common-format';
 
 import { loadLanguage } from '../editor/language';
 import { codeEditorTheme } from '../editor/theme';
@@ -11,7 +20,7 @@ import type { Compartment, EditorState } from '@codemirror/state';
 import type { EditorView, lineNumbers } from '@codemirror/view';
 import type { PreviewElement } from '@stillpointlab/common-format';
 
-// The CodeMirror modules are dynamically imported on connect (see loadView), so
+// The CodeMirror modules are dynamically imported on connect (see loadEngine), so
 // this bag holds the constructors/values once they're available.
 interface PreviewModules {
   EditorView: typeof EditorView;
@@ -21,6 +30,23 @@ interface PreviewModules {
   syntaxHighlighting: typeof syntaxHighlighting;
   defaultHighlightStyle: typeof defaultHighlightStyle;
 }
+
+// The engine's modules: imported on first connect and shared by every instance.
+const loadEngine = createLazyLoader(async (): Promise<PreviewModules> => {
+  const [viewModule, stateModule, languageModule] = await Promise.all([
+    import('@codemirror/view'),
+    import('@codemirror/state'),
+    import('@codemirror/language'),
+  ]);
+  return {
+    EditorView: viewModule.EditorView,
+    lineNumbers: viewModule.lineNumbers,
+    EditorState: stateModule.EditorState,
+    Compartment: stateModule.Compartment,
+    syntaxHighlighting: languageModule.syntaxHighlighting,
+    defaultHighlightStyle: languageModule.defaultHighlightStyle,
+  };
+});
 
 /**
  * A read-only, syntax-highlighted code view: `<code-preview>` — the lightweight
@@ -37,7 +63,8 @@ export class CodePreview extends HTMLElement implements PreviewElement {
   // Buffers content set before the lazy-loaded view exists, and mirrors the live
   // doc afterwards (same lifecycle handling as <code-editor>).
   private _content = '';
-  private _loading = true;
+  // Loading until the engine arrives; failed if it could not load.
+  private phase: 'loading' | 'loaded' | 'failed' = 'loading';
   private _shadowRoot: ShadowRoot;
   private modules: PreviewModules | null = null;
   private languageCompartment: Compartment | null = null;
@@ -52,10 +79,23 @@ export class CodePreview extends HTMLElement implements PreviewElement {
   }
 
   connectedCallback() {
-    const cycle = this.ready.begin();
+    // A failed load is retried on the next connection.
+    if (this.phase === 'failed') this.phase = 'loading';
     this.render();
-    // Defer to the next tick so the shadow DOM is ready before we mount the view.
-    setTimeout(() => this.loadView(cycle), 0);
+    this.hydrateView();
+  }
+
+  /** Load the engine (shared, once) and build this connection's view. */
+  private hydrateView() {
+    hydrate(this.ready, {
+      load: loadEngine,
+      build: (modules) => this.buildView(modules),
+      fail: (error) => {
+        reportError('Failed to load code preview', error);
+        this.phase = 'failed';
+        this.render();
+      },
+    });
   }
 
   disconnectedCallback() {
@@ -76,43 +116,16 @@ export class CodePreview extends HTMLElement implements PreviewElement {
     }
   }
 
-  private async loadView(cycle: number) {
-    try {
-      const [viewModule, stateModule, languageModule] = await Promise.all([
-        import('@codemirror/view'),
-        import('@codemirror/state'),
-        import('@codemirror/language'),
-      ]);
-
-      this.modules = {
-        EditorView: viewModule.EditorView,
-        lineNumbers: viewModule.lineNumbers,
-        EditorState: stateModule.EditorState,
-        Compartment: stateModule.Compartment,
-        syntaxHighlighting: languageModule.syntaxHighlighting,
-        defaultHighlightStyle: languageModule.defaultHighlightStyle,
-      };
-
-      this._loading = false;
+  private buildView(modules: PreviewModules): Promise<void> | void {
+    this.modules = modules;
+    if (this.phase !== 'loaded') {
+      this.phase = 'loaded';
       this.render();
-
-      setTimeout(() => this.initializeView(cycle), 0);
-    } catch (err) {
-      reportError('Failed to load code preview', err);
-      this._loading = false;
-      this.render();
-      this.ready.settle(cycle);
     }
-  }
-
-  private initializeView(cycle: number) {
-    // Guard against double initialization (e.g. rapid connect/disconnect).
-    if (this.view || !this.modules) return;
 
     const mount = this._shadowRoot.querySelector('.code-preview-content') as HTMLElement | null;
     if (!mount) {
-      reportError('Code preview mount element not found');
-      return;
+      throw new Error('Code preview mount element not found');
     }
 
     const {
@@ -144,9 +157,7 @@ export class CodePreview extends HTMLElement implements PreviewElement {
     // Resolve the initial language (if any) once the view exists; the element
     // is ready once the grammar has been applied too.
     const language = this.getAttribute('language');
-    void (language ? this.updateLanguage(language) : Promise.resolve()).then(() =>
-      this.ready.settle(cycle)
-    );
+    return language ? this.updateLanguage(language) : undefined;
   }
 
   private async updateLanguage(name: string | null) {
@@ -174,14 +185,22 @@ export class CodePreview extends HTMLElement implements PreviewElement {
   }
 
   private render() {
-    const body = this._loading
-      ? '<div class="code-preview-loading">Loading…</div>'
-      : '<div class="code-preview-content"></div>';
+    const body = this.phase === 'loaded' ? '<div class="code-preview-content"></div>' : '';
     this._shadowRoot.innerHTML = `
       <style>${previewStyles}</style>
       <div class="code-preview-container">${body}</div>
     `;
+    if (this.phase !== 'loaded') {
+      this._shadowRoot.querySelector('.code-preview-container')?.append(this.status());
+    }
+  }
+
+  /** The placeholder shown while loading, or after the engine failed to load. */
+  private status(): HTMLElement {
+    return this.phase === 'failed'
+      ? createStatus('error', STATUS_MESSAGES.previewFailed)
+      : createStatus('loading', STATUS_MESSAGES.loading);
   }
 }
 
-customElements.define('code-preview', CodePreview);
+defineElement('code-preview', CodePreview);

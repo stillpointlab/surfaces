@@ -12,7 +12,9 @@
 // a newer cycle has begun since, so a superseded render or a torn-down view never
 // settles the element early. `settle()` with no token settles unconditionally
 // (for synchronous work). Disconnecting is `begin()` too: a detached element is
-// not ready until it is connected and rendered again.
+// not ready until it is connected and rendered again. `isCurrent(token)` lets an
+// asynchronous continuation ask whether its cycle is still the live one, so work
+// for a superseded connection stops instead of building or settling.
 
 /** The attribute present on a settled element and absent while it is pending. */
 export const READY_ATTRIBUTE = 'ready';
@@ -43,6 +45,8 @@ export interface ReadyGate {
    * current one; without, unconditionally. Idempotent while settled.
    */
   settle(token?: number): void;
+  /** True when `token` is the cycle the latest `begin()` returned. */
+  isCurrent(token: number): boolean;
 }
 
 interface Deferred {
@@ -90,6 +94,9 @@ export function createReadyGate(host: ReadyHost): ReadyGate {
       waiting = null;
       resolved?.resolve();
       host.dispatchEvent(new Event(READY_EVENT));
+    },
+    isCurrent(token: number) {
+      return token === cycle;
     },
   };
 }

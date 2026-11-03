@@ -1,4 +1,7 @@
 @use 'common/src/styles/tokens' as *;
+@use 'common/src/styles/status';
+@use 'common/src/styles/switch';
+@use 'common/src/styles/toolbar';
 @use '../styles/markdown' as markdown;
 
 :host {
@@ -17,15 +20,6 @@
   overflow: hidden;
   position: relative;
   box-sizing: border-box;
-}
-
-.prosemirror-editor-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: $text-secondary;
-  font-size: 0.875rem;
 }
 
 .prosemirror-editor-toolbar {
@@ -87,17 +81,15 @@
 
   &.is-active {
     background-color: $primary-blue;
-    color: #ffffff;
+    color: $button-text;
 
     &:hover {
       background-color: $primary-blue-hover;
     }
   }
 
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+  @include toolbar.focus-ring;
+  @include toolbar.disabled;
 }
 
 // Dropdown trigger (heading style) — label + chevron, auto width.
@@ -280,7 +272,7 @@
   .link-submit {
     padding: $spacing-xs $spacing-sm;
     background: $primary-blue;
-    color: #ffffff;
+    color: $button-text;
     border: none;
     border-radius: $border-radius-sm;
     cursor: pointer;

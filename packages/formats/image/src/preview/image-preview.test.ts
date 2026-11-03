@@ -89,7 +89,7 @@ describe('image-preview', () => {
 
     el.shadowRoot?.querySelector('img')?.dispatchEvent(new Event('error'));
 
-    expect(el.shadowRoot?.textContent).toContain('Could not load this image.');
+    expect(el.shadowRoot?.textContent).toContain("Couldn't load this image.");
     expect(handler).toHaveBeenCalledWith('Image preview failed to load', { src: '/missing.webp' });
   });
 });

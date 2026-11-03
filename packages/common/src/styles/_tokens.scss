@@ -1,22 +1,63 @@
-// Design tokens shared by every surface. Each color is a CSS custom property
-// (`--spl-*`) with a default, so a host themes by setting the property.
-$border-color: var(--spl-border-color, #eee);
-$text-muted: var(--spl-text-muted, #666);
+// Design tokens shared by every surface. Each colour is a CSS custom property
+// (`--spl-*`) with a light default, so a host themes every surface, light and
+// dark, by setting the properties on `:root` or any ancestor. Elements ship light
+// defaults only; dark values are the host's (the harness and Context Manager both
+// set them). Names follow the ones Context Manager already sets; a new name is
+// added only where no host name fits. The README's "Theming" table lists them.
+//
+// A format stylesheet starts with `@use 'common/src/styles/tokens' as *;` and uses
+// these variables for every colour (`tooling/check-tokens.mjs` enforces it). A
+// format-scoped property such as `--spl-sheet-text` is fine, with a token as its
+// fallback: `var(--spl-sheet-text, #{$text-primary})`.
+
+// Surfaces
+$background-primary: var(--spl-background-primary, #ffffff);
+$background-secondary: var(--spl-background-secondary, #f5f5f5);
+$background-muted: var(--spl-background-muted, #f8f8f8);
+$background-hover: var(--spl-background-hover, #e8e8e8);
+$surface-overlay: var(--spl-surface-overlay, #ffffff);
+$header-bg: var(--spl-header-bg, #f6f8fa);
+$code-bg: var(--spl-code-bg, #f0f0f0);
+
+// Text
 $text-primary: var(--spl-text-primary, #000);
 $text-secondary: var(--spl-text-secondary, #333);
+$text-color: var(--spl-text-color, #444);
+$text-muted: var(--spl-text-muted, #666);
+
+// Borders
+$border-color: var(--spl-border-color, #eee);
 $border-light: var(--spl-border-light, #ddd);
 $border-dark: var(--spl-border-dark, #ccc);
 $border-strong: var(--spl-border-strong, #b0b0b0);
+
+// Accent and focus
 $primary-blue: var(--spl-primary-blue, #0066cc);
 $primary-blue-hover: var(--spl-primary-blue-hover, #0052a3);
-$background-primary: var(--spl-background-primary, #ffffff);
-$background-secondary: var(--spl-background-secondary, #f5f5f5);
-$code-bg: var(--spl-code-bg, #f0f0f0);
-$background-hover: var(--spl-background-hover, #e8e8e8);
-$background-muted: var(--spl-background-muted, #f8f8f8);
-$surface-overlay: var(--spl-surface-overlay, #ffffff);
+$focus-ring: var(--spl-focus-ring, #0969da);
+
+// Buttons (a filled control, and the text on it)
+$button-bg: var(--spl-button-bg, #2f6b5b);
+$button-text: var(--spl-button-text, #ffffff);
+
+// Feedback
 $error-color: var(--spl-error-color, #dc3545);
-$text-color: var(--spl-text-color, #444);
+$error-bg: var(--spl-error-bg, #fff1f1);
+$error-bg-subtle: var(--spl-error-bg-subtle, rgba(220, 53, 69, 0.08));
+$error-border: var(--spl-error-border, #f2a7a7);
+$warning-color: var(--spl-warning-color, #5f4400);
+$warning-bg: var(--spl-warning-bg, #fff8e6);
+$warning-border: var(--spl-warning-border, #f0c36a);
+$success-color: var(--spl-success-color, #166534);
+$success-bg: var(--spl-success-bg, #dcfce7);
+$info-color: var(--spl-info-color, #1d4ed8);
+$info-bg: var(--spl-info-bg, #dbeafe);
+
+// Code (the CodeMirror theme in code's theme.ts uses these properties too)
+$code-active-line-bg: var(--spl-code-active-line-bg, rgba(88, 166, 255, 0.12));
+$code-selection-bg: var(--spl-code-selection-bg, rgba(88, 166, 255, 0.38));
+
+// Overlay
 $shadow-color: var(--spl-shadow-color, rgba(0, 0, 0, 0.18));
 
 // Spacing

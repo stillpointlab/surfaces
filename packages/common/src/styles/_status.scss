@@ -1,0 +1,22 @@
+// Styles for createStatus() placeholders. An element's stylesheet includes them
+// with `@use 'common/src/styles/status';`.
+
+@use 'tokens' as *;
+
+.spl-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 3rem;
+  padding: $spacing-lg;
+  color: $text-muted;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.spl-status--error {
+  color: $error-color;
+}

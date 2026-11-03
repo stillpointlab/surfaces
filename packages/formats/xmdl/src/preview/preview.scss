@@ -1,10 +1,12 @@
+@use 'common/src/styles/tokens' as *;
+
 :host {
   display: block;
   box-sizing: border-box;
   font:
     14px/1.5 system-ui,
     sans-serif;
-  color: var(--spl-text-primary, #1f2933);
+  color: $text-primary;
 }
 
 .xmdl-preview {
@@ -28,7 +30,7 @@
   margin: 0;
   font-size: 1.125rem;
   line-height: 1.25;
-  color: var(--spl-text-primary, #1f2933);
+  color: $text-primary;
 }
 
 .xmdl-preview__section {
@@ -60,7 +62,7 @@
   border-style: solid;
   border-width: 0.45rem 0 0.45rem 0.675rem;
   border-color: transparent transparent transparent currentColor;
-  color: var(--spl-text-muted, #64748b);
+  color: $text-muted;
 }
 
 details[open] > .xmdl-preview__section-summary::before {
@@ -79,7 +81,7 @@ details[open] > .xmdl-preview__section-summary::before {
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--spl-text-muted, #64748b);
+  color: $text-muted;
 }
 
 .xmdl-preview__meta {
@@ -91,7 +93,7 @@ details[open] > .xmdl-preview__section-summary::before {
 }
 
 .xmdl-preview__meta dt {
-  color: var(--spl-text-muted, #64748b);
+  color: $text-muted;
 }
 
 .xmdl-preview__meta dd {
@@ -100,17 +102,17 @@ details[open] > .xmdl-preview__section-summary::before {
 }
 
 .xmdl-preview__messages {
-  border: 1px solid var(--spl-warning-border, #f0c36a);
+  border: 1px solid $warning-border;
   border-radius: 6px;
   padding: 0.75rem;
-  background: var(--spl-warning-background, #fff8e6);
-  color: var(--spl-warning-text, #5f4400);
+  background: $warning-bg;
+  color: $warning-color;
 }
 
 .xmdl-preview__messages--error {
-  border-color: var(--spl-error-border, #f2a7a7);
-  background: var(--spl-error-background, #fff1f1);
-  color: var(--spl-error-text, #991b1b);
+  border-color: $error-border;
+  background: $error-bg;
+  color: $error-color;
 }
 
 .xmdl-preview__messages ul {
@@ -129,10 +131,10 @@ details[open] > .xmdl-preview__section-summary::before {
 .xmdl-preview__param {
   display: grid;
   gap: 0.25rem;
-  border: 1px solid var(--spl-border-color, #d0d7de);
+  border: 1px solid $border-color;
   border-radius: 6px;
   padding: 0.75rem;
-  background: var(--spl-background-primary, #ffffff);
+  background: $background-primary;
 }
 
 .xmdl-preview__param-summary {
@@ -156,18 +158,18 @@ details[open] > .xmdl-preview__section-summary::before {
 }
 
 .xmdl-preview__badge {
-  border: 1px solid var(--spl-border-color, #d0d7de);
+  border: 1px solid $border-color;
   border-radius: 999px;
   padding: 0.0625rem 0.5rem;
   font-size: 0.75rem;
-  color: var(--spl-text-secondary, #475569);
-  background: var(--spl-background-secondary, #f8fafc);
+  color: $text-secondary;
+  background: $background-secondary;
 }
 
 .xmdl-preview__description,
 .xmdl-preview__empty {
   margin: 0;
-  color: var(--spl-text-secondary, #475569);
+  color: $text-secondary;
 }
 
 .xmdl-preview__schema {
@@ -177,10 +179,10 @@ details[open] > .xmdl-preview__section-summary::before {
 
 .xmdl-preview__body {
   overflow: auto;
-  border: 1px solid var(--spl-border-color, #d0d7de);
+  border: 1px solid $border-color;
   border-radius: 6px;
   padding: 0.75rem;
-  background: var(--spl-background-secondary, #f8fafc);
+  background: $background-secondary;
   font:
     13px/1.5 ui-monospace,
     SFMono-Regular,
@@ -198,13 +200,13 @@ details[open] > .xmdl-preview__section-summary::before {
 }
 
 .xmdl-preview__token--placeholder {
-  background: var(--spl-xmdl-placeholder-bg, #dbeafe);
-  color: var(--spl-xmdl-placeholder-text, #1d4ed8);
+  background: var(--spl-xmdl-placeholder-bg, $info-bg);
+  color: var(--spl-xmdl-placeholder-text, $info-color);
 }
 
 .xmdl-preview__token--conditional {
-  background: var(--spl-xmdl-conditional-bg, #dcfce7);
-  color: var(--spl-xmdl-conditional-text, #166534);
+  background: var(--spl-xmdl-conditional-bg, $success-bg);
+  color: var(--spl-xmdl-conditional-text, $success-color);
 }
 
 .xmdl-preview__invalid {

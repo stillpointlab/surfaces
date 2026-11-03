@@ -1,5 +1,17 @@
 /// <reference lib="dom" />
-import { createReadyGate, reportError, type ReadyGate } from '@stillpointlab/common-format';
+import {
+  createLazyLoader,
+  createReadyGate,
+  createStatus,
+  defineElement,
+  hydrate,
+  isReadonly,
+  moveToolbarFocus,
+  type ReadyGate,
+  reportError,
+  setToolbarTabStop,
+  STATUS_MESSAGES,
+} from '@stillpointlab/common-format';
 
 import { editorStyles } from './editor.styles';
 import { loadVimKeymapExtension } from './keymap-loaders';
@@ -37,7 +49,7 @@ const parseKeymapMode = (value: string | null): EditorKeymapMode | null => {
   return KEYMAP_MODES.includes(value as EditorKeymapMode) ? (value as EditorKeymapMode) : null;
 };
 
-// The heavy CodeMirror modules are dynamically imported on connect (see loadEditor),
+// The heavy CodeMirror modules are dynamically imported on connect (see loadEngine),
 // so this bag holds the constructors/values once they're available.
 interface EditorModules {
   EditorView: typeof EditorView;
@@ -49,6 +61,26 @@ interface EditorModules {
   indentWithTab: typeof indentWithTab;
   basicSetup: typeof basicSetup;
 }
+
+// The engine's modules: imported on first connect and shared by every instance.
+const loadEngine = createLazyLoader(async (): Promise<EditorModules> => {
+  const [viewModule, stateModule, commandModule, codemirrorModule] = await Promise.all([
+    import('@codemirror/view'),
+    import('@codemirror/state'),
+    import('@codemirror/commands'),
+    import('codemirror'),
+  ]);
+  return {
+    EditorView: viewModule.EditorView,
+    EditorSelection: stateModule.EditorSelection,
+    EditorState: stateModule.EditorState,
+    Compartment: stateModule.Compartment,
+    Prec: stateModule.Prec,
+    keymap: viewModule.keymap,
+    indentWithTab: commandModule.indentWithTab,
+    basicSetup: codemirrorModule.basicSetup,
+  };
+});
 
 /**
  * A CodeMirror-based code editor web component: `<code-editor>`. It mirrors the
@@ -68,7 +100,8 @@ export class CodeEditor extends HTMLElement implements EditorElement {
   // Buffers content set before the lazy-loaded view exists, and mirrors the live
   // doc afterwards, so getContent()/setContent() work at any point in the lifecycle.
   private _content = '';
-  private _loading = true;
+  // Loading until the engine arrives; failed if it could not load.
+  private phase: 'loading' | 'loaded' | 'failed' = 'loading';
   private _shadowRoot: ShadowRoot;
   private modules: EditorModules | null = null;
   private languageCompartment: Compartment | null = null;
@@ -88,11 +121,24 @@ export class CodeEditor extends HTMLElement implements EditorElement {
   }
 
   connectedCallback() {
-    const cycle = this.ready.begin();
     if (!parseKeymapMode(this.getAttribute('keymap-mode'))) this.reflectKeymapMode();
+    // A failed load is retried on the next connection.
+    if (this.phase === 'failed') this.phase = 'loading';
     this.render();
-    // Defer to the next tick so the shadow DOM is ready before we mount the view.
-    setTimeout(() => this.loadEditor(cycle), 0);
+    this.hydrateView();
+  }
+
+  /** Load the engine (shared, once) and build this connection's view. */
+  private hydrateView() {
+    hydrate(this.ready, {
+      load: loadEngine,
+      build: (modules) => this.buildView(modules),
+      fail: (error) => {
+        reportError('Failed to load code editor', error);
+        this.phase = 'failed';
+        this.render();
+      },
+    });
   }
 
   disconnectedCallback() {
@@ -124,46 +170,16 @@ export class CodeEditor extends HTMLElement implements EditorElement {
     }
   }
 
-  private async loadEditor(cycle: number) {
-    try {
-      const [viewModule, stateModule, commandModule, codemirrorModule] = await Promise.all([
-        import('@codemirror/view'),
-        import('@codemirror/state'),
-        import('@codemirror/commands'),
-        import('codemirror'),
-      ]);
-
-      this.modules = {
-        EditorView: viewModule.EditorView,
-        EditorSelection: stateModule.EditorSelection,
-        EditorState: stateModule.EditorState,
-        Compartment: stateModule.Compartment,
-        Prec: stateModule.Prec,
-        keymap: viewModule.keymap,
-        indentWithTab: commandModule.indentWithTab,
-        basicSetup: codemirrorModule.basicSetup,
-      };
-
-      this._loading = false;
+  private buildView(modules: EditorModules): Promise<void> | void {
+    this.modules = modules;
+    if (this.phase !== 'loaded') {
+      this.phase = 'loaded';
       this.render();
-
-      setTimeout(() => this.initializeEditor(cycle), 0);
-    } catch (err) {
-      reportError('Failed to load code editor', err);
-      this._loading = false;
-      this.render();
-      this.ready.settle(cycle);
     }
-  }
-
-  private initializeEditor(cycle: number) {
-    // Guard against double initialization (e.g. rapid connect/disconnect).
-    if (this.view || !this.modules) return;
 
     const mount = this._shadowRoot.querySelector('.code-editor-content') as HTMLElement | null;
     if (!mount) {
-      reportError('Code editor mount element not found');
-      return;
+      throw new Error('Code editor mount element not found');
     }
 
     const { EditorView, EditorState, Compartment, Prec, basicSetup } = this.modules;
@@ -171,7 +187,8 @@ export class CodeEditor extends HTMLElement implements EditorElement {
     this.languageCompartment = new Compartment();
     this.readonlyCompartment = new Compartment();
     this.keymapModeCompartment = new Compartment();
-    const readonly = this.getAttribute('readonly') === 'true';
+    // CodeMirror reflects the read-only state as aria-readonly on its content element.
+    const readonly = isReadonly(this);
     if (readonly) {
       this.activeKeymapMode = 'normal';
       this.reflectKeymapMode();
@@ -199,10 +216,10 @@ export class CodeEditor extends HTMLElement implements EditorElement {
     // element is ready once both have been applied (the vim keymap is a lazy
     // import of its own, so the toolbar can lag the view).
     const language = this.getAttribute('language');
-    void Promise.all([
+    return Promise.all([
       language ? this.updateLanguage(language) : undefined,
       this.applyKeymapModeFromAttribute(this.getAttribute('keymap-mode')),
-    ]).then(() => this.ready.settle(cycle));
+    ]).then(() => undefined);
   }
 
   private readonlyExtensions(readonly: boolean): Extension {
@@ -246,7 +263,7 @@ export class CodeEditor extends HTMLElement implements EditorElement {
   }
 
   getSupportedKeymapModes(): readonly EditorKeymapMode[] {
-    return this.isReadOnly() ? ['normal'] : SUPPORTED_KEYMAP_MODES;
+    return isReadonly(this) ? ['normal'] : SUPPORTED_KEYMAP_MODES;
   }
 
   getKeymapMode(): EditorKeymapMode {
@@ -269,7 +286,7 @@ export class CodeEditor extends HTMLElement implements EditorElement {
 
     const requestedMode = parsedMode;
 
-    if (this.isReadOnly() && requestedMode !== 'normal') {
+    if (isReadonly(this) && requestedMode !== 'normal') {
       const result: EditorKeymapModeResult = {
         requestedMode,
         activeMode: this.activeKeymapMode,
@@ -352,10 +369,6 @@ export class CodeEditor extends HTMLElement implements EditorElement {
     }
   }
 
-  private isReadOnly(): boolean {
-    return this.getAttribute('readonly') === 'true';
-  }
-
   private async updateLanguage(name: string | null) {
     if (!this.view || !this.languageCompartment) return;
     const extension = await loadLanguage(name);
@@ -396,11 +409,11 @@ export class CodeEditor extends HTMLElement implements EditorElement {
   }
 
   private renderToolbar(): string {
-    if (this._loading || this.isReadOnly()) return '';
+    if (this.phase !== 'loaded' || isReadonly(this)) return '';
     const supportedModes = new Set(this.getSupportedKeymapModes());
 
     return `
-      <div class="code-editor-toolbar" aria-label="Editor keyboard mode">
+      <div class="code-editor-toolbar" role="toolbar" aria-label="Editor keyboard mode">
         <div class="code-editor-keymap-toggle" role="group" aria-label="Keyboard mode">
           ${KEYMAP_MODES.map((mode) => {
             const selected = this.activeKeymapMode === mode;
@@ -426,27 +439,42 @@ export class CodeEditor extends HTMLElement implements EditorElement {
     const toolbar = this.renderToolbar();
     if (!toolbar) return;
 
-    const content = this._shadowRoot.querySelector('.code-editor-content, .code-editor-loading');
+    const content = this._shadowRoot.querySelector('.code-editor-content, .spl-status');
     content?.insertAdjacentHTML('beforebegin', toolbar);
     this.bindToolbarEvents();
   }
 
   private bindToolbarEvents() {
-    this._shadowRoot
-      .querySelector('.code-editor-toolbar')
-      ?.addEventListener('click', (event) => this.handleToolbarClick(event));
+    const toolbar = this._shadowRoot.querySelector<HTMLElement>('.code-editor-toolbar');
+    if (!toolbar) return;
+    toolbar.addEventListener('click', (event) => this.handleToolbarClick(event));
+    // One tab stop, on the active mode; arrow keys, Home and End move between modes.
+    const items = () => [...toolbar.querySelectorAll<HTMLElement>('.code-editor-keymap-button')];
+    setToolbarTabStop(
+      items(),
+      toolbar.querySelector<HTMLElement>('.code-editor-keymap-button.is-active')
+    );
+    toolbar.addEventListener('keydown', (event) => moveToolbarFocus(event, items()));
   }
 
   private render() {
-    const body = this._loading
-      ? '<div class="code-editor-loading">Loading editor…</div>'
-      : '<div class="code-editor-content"></div>';
+    const body = this.phase === 'loaded' ? '<div class="code-editor-content"></div>' : '';
     this._shadowRoot.innerHTML = `
       <style>${editorStyles}</style>
       <div class="code-editor-container">${this.renderToolbar()}${body}</div>
     `;
+    if (this.phase !== 'loaded') {
+      this._shadowRoot.querySelector('.code-editor-container')?.append(this.status());
+    }
     this.bindToolbarEvents();
+  }
+
+  /** The placeholder shown while loading, or after the engine failed to load. */
+  private status(): HTMLElement {
+    return this.phase === 'failed'
+      ? createStatus('error', STATUS_MESSAGES.editorFailed)
+      : createStatus('loading', STATUS_MESSAGES.loading);
   }
 }
 
-customElements.define('code-editor', CodeEditor);
+defineElement('code-editor', CodeEditor);

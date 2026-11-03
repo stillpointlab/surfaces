@@ -1,6 +1,11 @@
 // Self-contained styles for the <code-editor> shadow root. CodeMirror injects its
 // own theme/highlight styles into the shadow root at runtime; these rules only
-// handle the host container, layout, and the loading placeholder.
+// handle the host container and layout; the loading and error placeholders come
+// from common's status partial.
+
+@use 'common/src/styles/tokens' as *;
+@use 'common/src/styles/status';
+@use 'common/src/styles/toolbar';
 
 :host {
   display: block;
@@ -12,21 +17,12 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: var(--spl-background-primary, #ffffff);
-  border: 1px solid var(--spl-border-color, #d0d7de);
+  background-color: $background-primary;
+  border: 1px solid $border-color;
   border-radius: 6px;
   overflow: hidden;
   box-sizing: border-box;
   position: relative;
-}
-
-.code-editor-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--spl-text-muted, #57606a);
-  font-size: 0.875rem;
 }
 
 .code-editor-toolbar {
@@ -36,8 +32,8 @@
   flex: 0 0 auto;
   min-height: 36px;
   padding: 4px 8px;
-  border-bottom: 1px solid var(--spl-border-color, #d0d7de);
-  background: var(--spl-background-secondary, #f6f8fa);
+  border-bottom: 1px solid $border-color;
+  background: $background-secondary;
   box-sizing: border-box;
 }
 
@@ -46,9 +42,9 @@
   align-items: center;
   gap: 2px;
   padding: 2px;
-  border: 1px solid var(--spl-border-color, #d0d7de);
+  border: 1px solid $border-color;
   border-radius: 6px;
-  background: var(--spl-background-primary, #ffffff);
+  background: $background-primary;
 }
 
 .code-editor-keymap-button {
@@ -56,7 +52,7 @@
   border: 0;
   border-radius: 4px;
   background: transparent;
-  color: var(--spl-text-secondary, #57606a);
+  color: $text-secondary;
   cursor: pointer;
   font: inherit;
   font-size: 0.75rem;
@@ -66,24 +62,22 @@
 }
 
 .code-editor-keymap-button:hover:not(:disabled) {
-  background: var(--spl-background-hover, #eaeef2);
-  color: var(--spl-text-primary, #24292f);
-}
-
-.code-editor-keymap-button:focus-visible {
-  outline: 2px solid var(--spl-focus-ring, #0969da);
-  outline-offset: 1px;
+  background: $background-hover;
+  color: $text-primary;
 }
 
 .code-editor-keymap-button.is-active {
-  background: var(--spl-button-bg, #2f6b5b);
-  color: var(--spl-button-text, #ffffff);
+  background: $button-bg;
+  color: $button-text;
 }
 
-.code-editor-keymap-button:disabled {
-  color: var(--spl-text-muted, #8c959f);
-  cursor: not-allowed;
-  opacity: 0.65;
+.code-editor-keymap-button {
+  @include toolbar.focus-ring;
+  @include toolbar.disabled;
+
+  &:disabled {
+    color: $text-muted;
+  }
 }
 
 .code-editor-content {

@@ -2,8 +2,6 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import './prosemirror-editor';
 
-import { MdToggleEvent } from './md-toggle';
-
 import type { ProseMirrorEditor } from './prosemirror-editor';
 
 const CONTENT = '# Title\n\nSome text.';
@@ -32,7 +30,7 @@ describe('ProseMirrorEditor readonly', () => {
 
   const blockquote = (el: ProseMirrorEditor) =>
     query<HTMLButtonElement>(el, '.toolbar-button[data-command="toggleBlockquote"]');
-  const rawToggle = (el: ProseMirrorEditor) => query<HTMLElement>(el, '.markdown-toggle');
+  const rawToggle = (el: ProseMirrorEditor) => query<HTMLButtonElement>(el, '.markdown-toggle');
   const rawTextarea = (el: ProseMirrorEditor) =>
     query<HTMLTextAreaElement>(el, '.prosemirror-editor-raw');
 
@@ -57,7 +55,7 @@ describe('ProseMirrorEditor readonly', () => {
     const el = await mount(true);
 
     expect(blockquote(el).disabled).toBe(true);
-    expect(rawToggle(el).hasAttribute('disabled')).toBe(true);
+    expect(rawToggle(el).disabled).toBe(true);
     expect(rawTextarea(el).readOnly).toBe(true);
     expect(query<HTMLElement>(el, '.ProseMirror').getAttribute('contenteditable')).toBe('false');
   });
@@ -72,7 +70,7 @@ describe('ProseMirrorEditor readonly', () => {
 
     el.removeAttribute('readonly');
     expect(blockquote(el).disabled).toBe(false);
-    expect(rawToggle(el).hasAttribute('disabled')).toBe(false);
+    expect(rawToggle(el).disabled).toBe(false);
     expect(rawTextarea(el).readOnly).toBe(false);
     expect(query<HTMLElement>(el, '.ProseMirror').getAttribute('contenteditable')).toBe('true');
 
@@ -86,7 +84,7 @@ describe('ProseMirrorEditor readonly', () => {
     const el = await mount(false);
     const seen = contentChanges(el);
 
-    rawToggle(el).dispatchEvent(new MdToggleEvent(false));
+    rawToggle(el).click();
     expect(rawTextarea(el).style.display).toBe('block');
     rawTextarea(el).value = '# Edited\n\nSome text.';
     rawTextarea(el).dispatchEvent(new Event('input', { bubbles: true }));
@@ -97,10 +95,10 @@ describe('ProseMirrorEditor readonly', () => {
     expect(rawTextarea(el).readOnly).toBe(true);
     expect(el.getContent()).toContain('# Edited');
     expect(blockquote(el).disabled).toBe(true);
-    expect(rawToggle(el).hasAttribute('disabled')).toBe(true);
+    expect(rawToggle(el).disabled).toBe(true);
 
-    // The raw toggle is inert while readonly even if its event fires.
-    rawToggle(el).dispatchEvent(new MdToggleEvent(false));
+    // The raw toggle is inert while readonly, even when clicked.
+    rawToggle(el).click();
     expect(rawTextarea(el).style.display).toBe('none');
   });
 });

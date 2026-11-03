@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 
-import { createReadyGate, type ReadyGate } from '@stillpointlab/common-format';
+import { createReadyGate, defineElement, type ReadyGate } from '@stillpointlab/common-format';
 
 import { parseCsv, type CsvParseResult } from '../csv';
 import {
@@ -88,6 +88,4 @@ export class SheetGrid extends HTMLElement implements PreviewElement {
   }
 }
 
-if (!customElements.get('sheet-grid')) {
-  customElements.define('sheet-grid', SheetGrid);
-}
+defineElement('sheet-grid', SheetGrid);

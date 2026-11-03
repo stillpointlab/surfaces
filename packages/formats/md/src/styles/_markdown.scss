@@ -55,8 +55,8 @@
 
   code {
     background-color: $code-bg;
-    color: var(--spl-text-primary, $text-primary);
-    border: 1px solid var(--spl-border-color, $border-color);
+    color: $text-primary;
+    border: 1px solid $border-color;
     border-radius: $border-radius-sm;
     padding: 0.125em 0.25em;
     font-family: monospace;
@@ -65,8 +65,8 @@
 
   pre {
     background-color: $code-bg;
-    color: var(--spl-text-primary, $text-primary);
-    border: 1px solid var(--spl-border-color, $border-color);
+    color: $text-primary;
+    border: 1px solid $border-color;
     border-radius: $border-radius-md;
     padding: $spacing-md;
     overflow-x: auto;
