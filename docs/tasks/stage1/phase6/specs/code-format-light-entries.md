@@ -1,10 +1,17 @@
 ---
-column: todo
+column: done
+pr: 27
+completed: 2026-11-03
 created: 2026-11-02T23:46:29-07:00
 tags: [formats, polish, quick-win]
 ---
 
 # Spec: defining `<code-editor>` loads no CodeMirror
+
+_Landed 2026-11-03 in [#27](https://github.com/stillpointlab/surfaces/pull/27), as specified.
+`language.ts` held the only value imports; `loadLanguage` now also reports a failure to load the
+descriptors, not only a grammar. Context Manager moved its pin in context-manager#1013: defining
+`<code-editor>` adds 4.3 KB gzipped to its md, xmdl and sheet editor pages, down from 112.3 KB._
 
 _From the Context Manager adoption of the raw view (context-manager#1009, stage 5 WAL). Independent
 of the other phase 6 spec._
@@ -65,13 +72,13 @@ the engines import the real modules in their `createLazyLoader` callbacks.
 
 ## Acceptance / completion checklist
 
-- [ ] No value import of `codemirror`, `@codemirror/*` or `@replit/*` is left in a code-format
+- [x] No value import of `codemirror`, `@codemirror/*` or `@replit/*` is left in a code-format
       module that an entry imports statically.
-- [ ] The per-entry evaluation tests pass and fail when a static import is put back.
-- [ ] `loadLanguage` and the async `findLanguage` keep their behaviour; `language.test.ts` is updated.
-- [ ] The harness shows `code-editor`, `code-preview` and `code-diff` as before, and md's raw view
+- [x] The per-entry evaluation tests pass and fail when a static import is put back.
+- [x] `loadLanguage` and the async `findLanguage` keep their behaviour; `language.test.ts` is updated.
+- [x] The harness shows `code-editor`, `code-preview` and `code-diff` as before, and md's raw view
       still uses `<code-editor>`.
-- [ ] `npm run check` is green.
+- [x] `npm run check` is green.
 
 ## Context Manager follow-up (with the next pin move)
 
