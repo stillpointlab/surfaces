@@ -1,5 +1,10 @@
 /// <reference lib="dom" />
-import { createReadyGate, reportError, type ReadyGate } from '@stillpointlab/common-format';
+import {
+  createReadyGate,
+  defineElement,
+  type ReadyGate,
+  reportError,
+} from '@stillpointlab/common-format';
 
 import { editorStyles } from './editor.styles';
 import { loadVimKeymapExtension } from './keymap-loaders';
@@ -144,12 +149,15 @@ export class CodeEditor extends HTMLElement implements EditorElement {
         basicSetup: codemirrorModule.basicSetup,
       };
 
+      // A newer connection owns the element now; it loads and settles itself.
+      if (!this.ready.isCurrent(cycle)) return;
       this._loading = false;
       this.render();
 
       setTimeout(() => this.initializeEditor(cycle), 0);
     } catch (err) {
       reportError('Failed to load code editor', err);
+      if (!this.ready.isCurrent(cycle)) return;
       this._loading = false;
       this.render();
       this.ready.settle(cycle);
@@ -157,12 +165,19 @@ export class CodeEditor extends HTMLElement implements EditorElement {
   }
 
   private initializeEditor(cycle: number) {
-    // Guard against double initialization (e.g. rapid connect/disconnect).
-    if (this.view || !this.modules) return;
+    // Only the live connection builds; a stale one (moved or reconnected since)
+    // stops here, and the live one settles even if a view is already in place.
+    if (!this.ready.isCurrent(cycle) || !this.modules) return;
+    if (this.view) {
+      this.ready.settle(cycle);
+      return;
+    }
 
     const mount = this._shadowRoot.querySelector('.code-editor-content') as HTMLElement | null;
     if (!mount) {
       reportError('Code editor mount element not found');
+      // Settle empty, as a failed import does, rather than strand whenReady().
+      this.ready.settle(cycle);
       return;
     }
 
@@ -449,4 +464,4 @@ export class CodeEditor extends HTMLElement implements EditorElement {
   }
 }
 
-customElements.define('code-editor', CodeEditor);
+defineElement('code-editor', CodeEditor);

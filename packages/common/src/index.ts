@@ -11,4 +11,5 @@ export type {
   ReadyElement,
 } from './contracts';
 export { createReadyGate, READY_ATTRIBUTE, READY_EVENT } from './ready';
+export { booleanAttribute, defineElement } from './elements';
 export type { ReadyGate, ReadyHost } from './ready';

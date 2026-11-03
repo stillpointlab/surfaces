@@ -1,5 +1,10 @@
 /// <reference lib="dom" />
-import { createReadyGate, reportError, type ReadyGate } from '@stillpointlab/common-format';
+import {
+  createReadyGate,
+  defineElement,
+  type ReadyGate,
+  reportError,
+} from '@stillpointlab/common-format';
 
 import { loadLanguage } from '../editor/language';
 import { codeEditorTheme } from '../editor/theme';
@@ -93,12 +98,15 @@ export class CodePreview extends HTMLElement implements PreviewElement {
         defaultHighlightStyle: languageModule.defaultHighlightStyle,
       };
 
+      // A newer connection owns the element now; it loads and settles itself.
+      if (!this.ready.isCurrent(cycle)) return;
       this._loading = false;
       this.render();
 
       setTimeout(() => this.initializeView(cycle), 0);
     } catch (err) {
       reportError('Failed to load code preview', err);
+      if (!this.ready.isCurrent(cycle)) return;
       this._loading = false;
       this.render();
       this.ready.settle(cycle);
@@ -106,12 +114,19 @@ export class CodePreview extends HTMLElement implements PreviewElement {
   }
 
   private initializeView(cycle: number) {
-    // Guard against double initialization (e.g. rapid connect/disconnect).
-    if (this.view || !this.modules) return;
+    // Only the live connection builds; a stale one (moved or reconnected since)
+    // stops here, and the live one settles even if a view is already in place.
+    if (!this.ready.isCurrent(cycle) || !this.modules) return;
+    if (this.view) {
+      this.ready.settle(cycle);
+      return;
+    }
 
     const mount = this._shadowRoot.querySelector('.code-preview-content') as HTMLElement | null;
     if (!mount) {
       reportError('Code preview mount element not found');
+      // Settle empty, as a failed import does, rather than strand whenReady().
+      this.ready.settle(cycle);
       return;
     }
 
@@ -184,4 +199,4 @@ export class CodePreview extends HTMLElement implements PreviewElement {
   }
 }
 
-customElements.define('code-preview', CodePreview);
+defineElement('code-preview', CodePreview);

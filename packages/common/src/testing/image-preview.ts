@@ -86,6 +86,22 @@ export function describeImagePreviewContract<T extends ImagePreviewElement = Ima
       expect(el.shadowRoot?.querySelector('img')?.getAttribute('alt')).toBe(alt);
     });
 
+    it('settles after a synchronous move right after mount', async () => {
+      // Appending a connected element elsewhere disconnects and reconnects it in
+      // one tick; work started for the first connection must not strand the second.
+      const el = create<T>(tag);
+      prepare?.(el);
+      el.setSource(src, alt);
+      const first = document.createElement('div');
+      const second = document.createElement('div');
+      document.body.append(first, second);
+      first.append(el);
+      second.append(el);
+      load(el);
+      await settled(el);
+      expect(el.shadowRoot?.querySelector('img')?.getAttribute('src')).toBe(src);
+    });
+
     it('is pending while disconnected and settles again on reconnect', async () => {
       const el = mount<T>(tag, prepare);
       el.setSource(src, alt);

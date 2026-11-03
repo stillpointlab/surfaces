@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 
-import { createReadyGate, type ReadyGate } from '@stillpointlab/common-format';
+import { createReadyGate, defineElement, type ReadyGate } from '@stillpointlab/common-format';
 
 import { parseSample } from '../core/parse';
 
@@ -42,6 +42,4 @@ export class SamplePreview extends HTMLElement implements PreviewElement {
   }
 }
 
-if (!customElements.get('sample-preview')) {
-  customElements.define('sample-preview', SamplePreview);
-}
+defineElement('sample-preview', SamplePreview);

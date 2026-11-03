@@ -1,5 +1,10 @@
 /// <reference lib="dom" />
-import { createReadyGate, reportError, type ReadyGate } from '@stillpointlab/common-format';
+import {
+  createReadyGate,
+  defineElement,
+  type ReadyGate,
+  reportError,
+} from '@stillpointlab/common-format';
 
 import { previewStyles } from './preview.styles';
 import { getPreviewRenderer } from './render';
@@ -97,4 +102,4 @@ export class MdPreview extends HTMLElement implements PreviewElement {
   }
 }
 
-customElements.define('md-preview', MdPreview);
+defineElement('md-preview', MdPreview);

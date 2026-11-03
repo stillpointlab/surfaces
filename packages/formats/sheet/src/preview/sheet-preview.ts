@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 
-import { createReadyGate, type ReadyGate } from '@stillpointlab/common-format';
+import { createReadyGate, defineElement, type ReadyGate } from '@stillpointlab/common-format';
 
 import { parseCsv, type CsvParseResult } from '../csv';
 import {
@@ -63,6 +63,4 @@ export class SheetPreview extends HTMLElement implements PreviewElement {
   }
 }
 
-if (!customElements.get('sheet-preview')) {
-  customElements.define('sheet-preview', SheetPreview);
-}
+defineElement('sheet-preview', SheetPreview);

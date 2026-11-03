@@ -1,6 +1,11 @@
 /// <reference lib="dom" />
 
-import { createReadyGate, reportError, type ReadyGate } from '@stillpointlab/common-format';
+import {
+  createReadyGate,
+  defineElement,
+  type ReadyGate,
+  reportError,
+} from '@stillpointlab/common-format';
 
 import { previewStyles } from './preview.styles';
 
@@ -159,6 +164,4 @@ function escapeAttribute(value: string): string {
     .replace(/>/g, '&gt;');
 }
 
-if (!customElements.get('image-preview')) {
-  customElements.define('image-preview', ImagePreview);
-}
+defineElement('image-preview', ImagePreview);

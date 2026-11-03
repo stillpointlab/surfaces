@@ -1,5 +1,11 @@
 /// <reference lib="dom" />
-import { createReadyGate, reportError, type ReadyGate } from '@stillpointlab/common-format';
+import {
+  booleanAttribute,
+  createReadyGate,
+  defineElement,
+  type ReadyGate,
+  reportError,
+} from '@stillpointlab/common-format';
 
 import { loadLanguage } from '../editor/language';
 import { codeEditorTheme } from '../editor/theme';
@@ -71,16 +77,6 @@ export class CodeDiff extends HTMLElement implements DiffElement {
     return ['language', 'wrap', 'show-whitespace', 'ignore-whitespace', 'collapse-unchanged'];
   }
 
-  /** A boolean attribute is "on" when present and not explicitly `"false"` (default off). */
-  private boolAttr(name: string): boolean {
-    return this.hasAttribute(name) && this.getAttribute(name) !== 'false';
-  }
-
-  /** Default-on boolean attribute: only an explicit `"false"` turns it off. */
-  private boolAttrDefaultOn(name: string): boolean {
-    return this.getAttribute(name) !== 'false';
-  }
-
   constructor() {
     super();
     this._shadowRoot = this.attachShadow({ mode: 'open' });
@@ -138,12 +134,15 @@ export class CodeDiff extends HTMLElement implements DiffElement {
         defaultHighlightStyle: languageModule.defaultHighlightStyle,
       };
 
+      // A newer connection owns the element now; it loads and settles itself.
+      if (!this.ready.isCurrent(cycle)) return;
       this._loading = false;
       this.render();
 
       setTimeout(() => this.initializeView(cycle), 0);
     } catch (err) {
       reportError('Failed to load code diff', err);
+      if (!this.ready.isCurrent(cycle)) return;
       this._loading = false;
       this.render();
       this.ready.settle(cycle);
@@ -151,12 +150,19 @@ export class CodeDiff extends HTMLElement implements DiffElement {
   }
 
   private initializeView(cycle: number) {
-    // Guard against double initialization (e.g. rapid connect/disconnect).
-    if (this.view || !this.modules) return;
+    // Only the live connection builds; a stale one (moved or reconnected since)
+    // stops here, and the live one settles even if a view is already in place.
+    if (!this.ready.isCurrent(cycle) || !this.modules) return;
+    if (this.view) {
+      this.ready.settle(cycle);
+      return;
+    }
 
     const mount = this._shadowRoot.querySelector('.code-diff-content') as HTMLElement | null;
     if (!mount) {
       reportError('Code diff mount element not found');
+      // Settle empty, as a failed import does, rather than strand whenReady().
+      this.ready.settle(cycle);
       return;
     }
 
@@ -183,9 +189,11 @@ export class CodeDiff extends HTMLElement implements DiffElement {
     // Soft-wrap is on by default (best for a side-by-side diff — no horizontal scroll,
     // nothing hidden off-screen); opt out with `wrap="false"`. Held in a compartment so
     // the attribute can toggle it live.
-    const wrapExtension = () => (this.boolAttrDefaultOn('wrap') ? EditorView.lineWrapping : []);
+    const wrapExtension = () =>
+      booleanAttribute(this, 'wrap', { defaultOn: true }) ? EditorView.lineWrapping : [];
     // Render whitespace as markers when `show-whitespace` is on (default off); live.
-    const wsExtension = () => (this.boolAttr('show-whitespace') ? highlightWhitespace() : []);
+    const wsExtension = () =>
+      booleanAttribute(this, 'show-whitespace') ? highlightWhitespace() : [];
 
     // Shared read-only extensions per pane; the language/wrap/whitespace compartments differ.
     const sideExtensions = (
@@ -207,7 +215,7 @@ export class CodeDiff extends HTMLElement implements DiffElement {
     // "Ignore whitespace": diff a whitespace-stripped copy of each side, then map the
     // offsets back onto the original text (MergeView has no native option for this, so
     // we go through its `diffConfig.override` hook). See whitespace.ts.
-    const diffConfig = this.boolAttr('ignore-whitespace')
+    const diffConfig = booleanAttribute(this, 'ignore-whitespace')
       ? {
           override: (a: string, b: string) => {
             const sa = stripInlineWhitespace(a);
@@ -247,7 +255,7 @@ export class CodeDiff extends HTMLElement implements DiffElement {
       gutter: true,
       // Collapse long unchanged regions by default; `collapse-unchanged="false"` shows
       // the full file. (A constructor option — toggling it rebuilds the view.)
-      collapseUnchanged: this.boolAttrDefaultOn('collapse-unchanged')
+      collapseUnchanged: booleanAttribute(this, 'collapse-unchanged', { defaultOn: true })
         ? { margin: 3, minSize: 4 }
         : undefined,
       diffConfig,
@@ -273,7 +281,9 @@ export class CodeDiff extends HTMLElement implements DiffElement {
   /** Toggle soft-wrapping on both panes (live, via the wrap compartments). */
   private updateWrap() {
     if (!this.view || !this.wrapCompartmentA || !this.wrapCompartmentB || !this.modules) return;
-    const extension = this.boolAttrDefaultOn('wrap') ? this.modules.EditorView.lineWrapping : [];
+    const extension = booleanAttribute(this, 'wrap', { defaultOn: true })
+      ? this.modules.EditorView.lineWrapping
+      : [];
     this.view.a.dispatch({ effects: this.wrapCompartmentA.reconfigure(extension) });
     this.view.b.dispatch({ effects: this.wrapCompartmentB.reconfigure(extension) });
   }
@@ -281,7 +291,9 @@ export class CodeDiff extends HTMLElement implements DiffElement {
   /** Toggle whitespace markers on both panes (live, via the whitespace compartments). */
   private updateShowWhitespace() {
     if (!this.view || !this.wsCompartmentA || !this.wsCompartmentB || !this.modules) return;
-    const extension = this.boolAttr('show-whitespace') ? this.modules.highlightWhitespace() : [];
+    const extension = booleanAttribute(this, 'show-whitespace')
+      ? this.modules.highlightWhitespace()
+      : [];
     this.view.a.dispatch({ effects: this.wsCompartmentA.reconfigure(extension) });
     this.view.b.dispatch({ effects: this.wsCompartmentB.reconfigure(extension) });
   }
@@ -334,4 +346,4 @@ export class CodeDiff extends HTMLElement implements DiffElement {
   }
 }
 
-customElements.define('code-diff', CodeDiff);
+defineElement('code-diff', CodeDiff);

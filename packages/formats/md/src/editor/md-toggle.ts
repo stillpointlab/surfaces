@@ -3,6 +3,8 @@
 // Minimal toggle switch for the editor toolbar (replaces the host's spl-toggle).
 // Emits `md-toggle` with `{ checked }` on change.
 
+import { defineElement } from '@stillpointlab/common-format';
+
 export class MdToggleEvent extends CustomEvent<{ checked: boolean }> {
   constructor(checked: boolean) {
     super('md-toggle', { detail: { checked }, bubbles: true, composed: true });
@@ -75,6 +77,4 @@ export class MdToggle extends HTMLElement {
   }
 }
 
-if (!customElements.get('md-toggle')) {
-  customElements.define('md-toggle', MdToggle);
-}
+defineElement('md-toggle', MdToggle);

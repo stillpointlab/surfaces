@@ -70,6 +70,17 @@ describe('createReadyGate', () => {
     expect(h.events).toEqual([READY_EVENT, READY_EVENT]);
   });
 
+  it('isCurrent is true only for the latest cycle', () => {
+    const gate = createReadyGate(host());
+    const first = gate.begin();
+    expect(gate.isCurrent(first)).toBe(true);
+    const second = gate.begin();
+    expect(gate.isCurrent(first)).toBe(false);
+    expect(gate.isCurrent(second)).toBe(true);
+    gate.settle(second);
+    expect(gate.isCurrent(second)).toBe(true);
+  });
+
   it('settling while settled is a no-op', () => {
     const h = host();
     const gate = createReadyGate(h);

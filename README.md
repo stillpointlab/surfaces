@@ -125,12 +125,31 @@ readiness before its first `setContent`: content set early is buffered and shows
 element can. Readiness is for what needs the engine, such as `focus()`, keymap modes, reading back
 normalised content, and tests.
 
+Cycles carry tokens: `begin()` returns one, `settle(token)` is ignored once a newer cycle has
+begun, and `isCurrent(token)` tells an asynchronous continuation whether its cycle is still the
+live one. An element that loads an engine checks `isCurrent` after every `await` and stops if a
+newer connection has taken over (a DOM move is a disconnect and a reconnect in one tick), and it
+settles the live cycle on every path: success, a failed load, and nothing left to do.
+
+### Registration and attributes
+
+Elements register with `defineElement(tag, constructor)` from `common`, which leaves a tag that is
+already registered alone (and warns if a different copy of the package registered it), so loading
+an element module twice never throws.
+
+Attributes follow one of two rules. Contract attributes compare to an explicit value:
+`readonly="true"` makes an editor read-only, and a bare `readonly` does not. Display options are on
+when present and not `"false"`, so `<code-diff wrap>` and `wrap="true"` wrap and `wrap="false"`
+does not; an option that defaults on is off only with `"false"`. `booleanAttribute(el, name,
+{ defaultOn })` from `common` reads the second kind.
+
 ### Conformance
 
 `@stillpointlab/common-format/testing` exports `describePreviewContract`, `describeEditorContract`,
 `describeImagePreviewContract` and `describeDiffContract`: vitest `describe` blocks a format runs
 in `src/contract.test.ts` for each element it ships. They prove readiness, set and read back,
 `content-change` on user edits and never on `setContent`, `readonly`, keymap modes and focus,
+settling after a DOM move and after a reconnect,
 and take hooks for what only the format knows (how to tell content reached the DOM, how to
 perform one edit). They use no fake timers, private fields or jsdom-specific stubs, so they run
 unchanged under vitest browser mode: a package that needs a real browser (media editors, clipboard)

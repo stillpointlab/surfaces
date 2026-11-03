@@ -2,7 +2,12 @@
 import './md-icon';
 import './md-toggle';
 
-import { createReadyGate, report, reportError, type ReadyGate } from '@stillpointlab/common-format';
+import {
+  createReadyGate,
+  defineElement,
+  type ReadyGate,
+  reportError,
+} from '@stillpointlab/common-format';
 
 import { editorStyles } from './editor.styles';
 import { MdToggleEvent } from './md-toggle';
@@ -213,6 +218,8 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
         frontmatterViewPlugin: modules[13].frontmatterViewPlugin,
       } as EditorModules;
 
+      // A newer connection owns the element now; it loads and settles itself.
+      if (!this.ready.isCurrent(cycle)) return;
       this._loading = false;
       this.render();
 
@@ -220,6 +227,7 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
       setTimeout(() => this.initializeEditor(cycle), 0);
     } catch (error) {
       reportError('Failed to load editor', error);
+      if (!this.ready.isCurrent(cycle)) return;
       this._loading = false;
       this.render();
       this.ready.settle(cycle);
@@ -227,9 +235,11 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
   }
 
   private initializeEditor(cycle: number) {
-    // Prevent double initialization
-    if (this.view || !this.editorModules) {
-      report('Editor already initialized or modules not loaded', { level: 'warn' });
+    // Only the live connection builds; a stale one (moved or reconnected since)
+    // stops here, and the live one settles even if a view is already in place.
+    if (!this.ready.isCurrent(cycle) || !this.editorModules) return;
+    if (this.view) {
+      this.ready.settle(cycle);
       return;
     }
 
@@ -238,6 +248,8 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
     ) as HTMLElement;
     if (!editorElement) {
       reportError('Editor element not found');
+      // Settle empty, as a failed import does, rather than strand whenReady().
+      this.ready.settle(cycle);
       return;
     }
 
@@ -346,7 +358,8 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
           this.handleContentChange();
         }
 
-        // Update toolbar state on any transaction
+        // Every transaction refreshes the toolbar, selection changes included
+        // (ProseMirror dispatches one for each, mouse selection too), so no polling.
         this.toolbar?.updateState();
       },
       handlePaste: (view: EditorView, event: ClipboardEvent) => {
@@ -373,9 +386,6 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
     for (const plugin of getEditorPlugins()) {
       plugin.onReady?.(this.view);
     }
-
-    // Listen for selection changes
-    setInterval(() => this.toolbar?.updateState(), 100);
 
     this.updateReadOnlyState(this.isReadonly);
     this.ready.settle(cycle);
@@ -945,4 +955,4 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
   }
 }
 
-customElements.define('md-editor', ProseMirrorEditor);
+defineElement('md-editor', ProseMirrorEditor);

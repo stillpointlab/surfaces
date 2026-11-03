@@ -1,6 +1,11 @@
 /// <reference lib="dom" />
 
-import { createReadyGate, reportError, type ReadyGate } from '@stillpointlab/common-format';
+import {
+  createReadyGate,
+  defineElement,
+  type ReadyGate,
+  reportError,
+} from '@stillpointlab/common-format';
 
 import { DEFAULT_CSV_LIMITS, utf8ByteLength } from '../csv';
 import {
@@ -2709,6 +2714,4 @@ function isUndoShortcut(event: KeyboardEvent): boolean {
   return key === 'z' || key === 'y';
 }
 
-if (!customElements.get('sheet-editor')) {
-  customElements.define('sheet-editor', SheetEditor);
-}
+defineElement('sheet-editor', SheetEditor);

@@ -1,4 +1,4 @@
-import { createReadyGate, type ReadyGate } from '@stillpointlab/common-format';
+import { createReadyGate, defineElement, type ReadyGate } from '@stillpointlab/common-format';
 
 import { parseXmdl } from '../parser/parse';
 import { renderXmdl } from '../render/render';
@@ -590,9 +590,7 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
   }
 }
 
-if (!customElements.get('xmdl-editor')) {
-  customElements.define('xmdl-editor', XmdlEditor);
-}
+defineElement('xmdl-editor', XmdlEditor);
 
 function button(label: string, onClick: () => void): HTMLButtonElement {
   const element = document.createElement('button');

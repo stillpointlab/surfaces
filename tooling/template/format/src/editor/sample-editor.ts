@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 
-import { createReadyGate, type ReadyGate } from '@stillpointlab/common-format';
+import { createReadyGate, defineElement, type ReadyGate } from '@stillpointlab/common-format';
 
 import { editorStyles } from './editor.styles';
 
@@ -64,6 +64,4 @@ export class SampleEditor extends HTMLElement implements EditorElement {
   }
 }
 
-if (!customElements.get('sample-editor')) {
-  customElements.define('sample-editor', SampleEditor);
-}
+defineElement('sample-editor', SampleEditor);

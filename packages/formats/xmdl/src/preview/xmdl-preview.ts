@@ -1,4 +1,4 @@
-import { createReadyGate, type ReadyGate } from '@stillpointlab/common-format';
+import { createReadyGate, defineElement, type ReadyGate } from '@stillpointlab/common-format';
 
 import { parseXmdl } from '../parser/parse';
 
@@ -239,9 +239,7 @@ function renderInvalidState(
   return fragment;
 }
 
-if (!customElements.get('xmdl-preview')) {
-  customElements.define('xmdl-preview', XmdlPreview);
-}
+defineElement('xmdl-preview', XmdlPreview);
 
 function appendMeta(list: HTMLDListElement, label: string, value: string): void {
   const term = document.createElement('dt');
