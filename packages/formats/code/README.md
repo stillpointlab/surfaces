@@ -33,7 +33,9 @@ The element matches `<md-editor>` so it drops into the same host machinery
 (autosave, publish, share):
 
 - `setContent(content: string): void` — replace the document.
-- `getContent(): string` — current text (works before the lazy view loads, too).
+- `getContent(): string` — current text (works before the lazy view loads, too). Text is
+  returned as set until an edit; an edit keeps the line break of the text as set (CRLF stays
+  CRLF), though CodeMirror itself joins lines with LF.
 - `focus(): void`.
 - `content-change` — `CustomEvent<{ content: string }>` fired on every edit.
 - `readonly` attribute — `"true"` makes the view non-editable.

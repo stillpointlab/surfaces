@@ -6,6 +6,7 @@ import {
   defineElement,
   hydrate,
   isReadonly,
+  lineBreakOf,
   moveToolbarFocus,
   type ReadyGate,
   reportError,
@@ -97,9 +98,11 @@ export class CodeEditor extends HTMLElement implements EditorElement {
   private readonly ready: ReadyGate = createReadyGate(this);
   // True while setContent replaces the doc, so the change is not reported as an edit.
   private applyingContent = false;
-  // Buffers content set before the lazy-loaded view exists, and mirrors the live
-  // doc afterwards, so getContent()/setContent() work at any point in the lifecycle.
+  // The text as set, or as last edited: what getContent() returns at any point in
+  // the lifecycle. Unedited text is returned verbatim; CodeMirror joins lines with
+  // "\n", so an edit is read back with the line break of the text as set.
   private _content = '';
+  private lineBreak = '\n';
   // Loading until the engine arrives; failed if it could not load.
   private phase: 'loading' | 'loaded' | 'failed' = 'loading';
   private _shadowRoot: ShadowRoot;
@@ -228,10 +231,10 @@ export class CodeEditor extends HTMLElement implements EditorElement {
   }
 
   private handleContentChange() {
-    if (!this.view) return;
-    const content = this.view.state.doc.toString();
+    if (!this.view || this.applyingContent) return; // a setContent, not an edit
+    const { doc } = this.view.state;
+    const content = doc.sliceString(0, doc.length, this.lineBreak);
     this._content = content;
-    if (this.applyingContent) return; // a setContent, not an edit
     this.dispatchEvent(new CustomEvent('content-change', { detail: { content } }));
   }
 
@@ -378,12 +381,12 @@ export class CodeEditor extends HTMLElement implements EditorElement {
   }
 
   getContent(): string {
-    if (this.view) return this.view.state.doc.toString();
     return this._content;
   }
 
   setContent(content: string) {
     this._content = content;
+    this.lineBreak = lineBreakOf(content);
     if (this.view) {
       this.applyingContent = true;
       try {

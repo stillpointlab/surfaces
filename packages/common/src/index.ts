@@ -16,6 +16,7 @@ export type {
 export { createReadyGate, READY_ATTRIBUTE, READY_EVENT } from './ready';
 export { booleanAttribute, defineElement } from './elements';
 export { createLazyLoader, hydrate } from './engine';
+export { lineBreakOf, withLineBreak } from './line-endings';
 export type { HydrateSteps } from './engine';
 export { createStatus, STATUS_MESSAGES } from './status';
 export {

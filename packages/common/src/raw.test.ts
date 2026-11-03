@@ -100,6 +100,29 @@ describe('createRawSource without <code-editor>', () => {
     expect(onInput).toHaveBeenCalledOnce();
   });
 
+  it('returns the text as set, CRLF included, until an edit', () => {
+    const source = createRawSource({ value: 'a\r\nb\r\n', label: 'Source', onInput: vi.fn() });
+    expect(source.getValue()).toBe('a\r\nb\r\n');
+    source.setValue('c\rd');
+    expect(source.getValue()).toBe('c\rd');
+  });
+
+  it("writes an edit back with the set text's line break", () => {
+    const onInput = vi.fn();
+    const source = createRawSource({ value: 'a\r\nb', label: 'Source', onInput });
+    const area = source.element as HTMLTextAreaElement;
+    // A textarea's value reports LF whatever was set.
+    area.value = 'a\nb\nc';
+    area.dispatchEvent(new Event('input'));
+    expect(onInput).toHaveBeenCalledWith('a\r\nb\r\nc');
+    expect(source.getValue()).toBe('a\r\nb\r\nc');
+
+    source.setValue('x\ny');
+    area.value = 'x\ny\nz';
+    area.dispatchEvent(new Event('input'));
+    expect(onInput).toHaveBeenLastCalledWith('x\ny\nz');
+  });
+
   it('ignores edits while read-only and keeps the input inside the surface', () => {
     const onInput = vi.fn();
     const source = createRawSource({ value: 'a', label: 'Source', readonly: true, onInput });

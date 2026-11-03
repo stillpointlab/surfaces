@@ -160,6 +160,34 @@ describe('CodeEditor content buffering (pre-view)', () => {
     expect(listener).toHaveBeenCalledTimes(2);
   });
 
+  it('returns CRLF text as set after hydration', async () => {
+    const { el } = await connect('a\r\nb\r\n');
+    expect(el.getContent()).toBe('a\r\nb\r\n');
+  });
+
+  it('keeps the line endings of the text as set through an edit', async () => {
+    const { el, editorContent } = await connect('a\r\nb\r\nc');
+    const listener = vi.fn();
+    el.addEventListener('content-change', listener);
+
+    press(editorContent, 'Tab');
+
+    expect(el.getContent()).toBe('  a\r\nb\r\nc');
+    expect(listener.mock.calls[0][0].detail).toEqual({ content: '  a\r\nb\r\nc' });
+
+    el.setContent('x\ny');
+    press(editorContent, 'Tab');
+    expect(el.getContent()).toBe('  x\ny');
+  });
+
+  it('returns mixed line endings as set, and the first one throughout after an edit', async () => {
+    const { el, editorContent } = await connect('a\r\nb\nc');
+    expect(el.getContent()).toBe('a\r\nb\nc');
+
+    press(editorContent, 'Tab');
+    expect(el.getContent()).toBe('  a\r\nb\r\nc');
+  });
+
   it('allows Escape then Tab to leave normal-mode indentation handling', async () => {
     const { el, editorContent } = await connect('const value = 1;');
 

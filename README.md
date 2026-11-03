@@ -167,6 +167,11 @@ The rules, which `describeRawViewContract` proves:
   fixing the text does not switch back by itself; a preview returns to the rich view when valid
   content arrives, since nobody can fix the text there.
 - **Read-only never changes the view.** Both views are uneditable, and the switch still works.
+- **Line endings are kept.** Text with CRLF (or CR) line endings reads back as set, and a raw edit
+  writes the whole text with the line break the text was set with: `<code-editor>` and the
+  textarea both report LF otherwise. Text with mixed line endings is returned as set until an
+  edit, and with its first line break throughout after one. `lineBreakOf` and `withLineBreak` are
+  the helpers.
 
 Editors put a "Raw Text" switch (`createSwitch` with `RAW_VIEW_LABEL`, checked in raw) last in their
 toolbar. Previews have no switch; the host decides whether to offer one. The pieces in `common`:

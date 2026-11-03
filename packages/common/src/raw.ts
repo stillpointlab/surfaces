@@ -3,6 +3,8 @@
 // cannot show the content. These are the pieces a format composes; the rules they
 // serve are in the README's "Raw view" section and in contracts.ts.
 
+import { lineBreakOf, withLineBreak } from './line-endings';
+
 import type { SurfaceView, ViewChangeDetail, ViewChangeReason } from './contracts';
 
 /** The switch's label in every editor that has a raw view. */
@@ -117,6 +119,7 @@ export interface RawSource {
  */
 export function createRawSource(options: RawSourceOptions): RawSource {
   let readonly = options.readonly ?? false;
+  // The text as set, or as last edited: what getValue() returns.
   let last = options.value;
 
   if (customElements.get('code-editor')) {
@@ -149,6 +152,9 @@ export function createRawSource(options: RawSourceOptions): RawSource {
     };
   }
 
+  // A textarea's value always reports LF; edits are written back with the line
+  // break of the text as set, and unedited text is returned as set.
+  let lineBreak = lineBreakOf(options.value);
   const area = document.createElement('textarea');
   area.className = 'spl-raw-source';
   area.dataset.splRaw = 'source';
@@ -163,14 +169,15 @@ export function createRawSource(options: RawSourceOptions): RawSource {
       area.value = last;
       return;
     }
-    last = area.value;
+    last = withLineBreak(area.value, lineBreak);
     options.onInput(last);
   });
   return {
     element: area,
-    getValue: () => area.value,
+    getValue: () => last,
     setValue: (text) => {
       last = text;
+      lineBreak = lineBreakOf(text);
       area.value = text;
     },
     setReadonly: (value) => {
