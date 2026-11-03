@@ -2,6 +2,7 @@
 
 import {
   createNotice,
+  createKeymapState,
   createRawSource,
   createReadyGate,
   createSwitch,
@@ -84,7 +85,11 @@ import {
   type SheetStructureOperation,
 } from './structure';
 
-import type { EditorElement } from '@stillpointlab/common-format';
+import type {
+  EditorElement,
+  EditorKeymapMode,
+  EditorKeymapModeResult,
+} from '@stillpointlab/common-format';
 
 export type SheetEditorMode = 'navigation' | 'quick-edit' | 'caret-edit';
 
@@ -235,8 +240,11 @@ export class SheetEditor extends HTMLElement implements EditorElement {
   // The options of the last load, so a raw edit reloads with the same presentation.
   private loadOptions: SheetContentOptions = {};
 
+  // The keyboard mode of the raw view's <code-editor>, which the host can set and store.
+  private readonly keymap = createKeymapState(this);
+
   static get observedAttributes(): string[] {
-    return ['readonly', 'view'];
+    return ['readonly', 'view', 'keymap-mode'];
   }
 
   constructor() {
@@ -261,6 +269,7 @@ export class SheetEditor extends HTMLElement implements EditorElement {
   }
 
   connectedCallback(): void {
+    this.keymap.connected();
     window.addEventListener('resize', this.handleOverlayGeometry);
     // A pointer outside the open flyout and its trigger closes it; Escape is
     // handled by the flyout itself, which also restores focus.
@@ -285,6 +294,10 @@ export class SheetEditor extends HTMLElement implements EditorElement {
   }
 
   attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
+    if (name === 'keymap-mode') {
+      this.keymap.attributeChanged(newValue, this.raw);
+      return;
+    }
     if (name === 'view') {
       if (!this.viewState.reflecting) this.requestView(parseView(newValue), 'host');
       return;
@@ -417,6 +430,19 @@ export class SheetEditor extends HTMLElement implements EditorElement {
     }
     const cycle = this.ready.begin();
     void surface.whenReady().then(() => this.ready.settle(cycle));
+  }
+
+  getSupportedKeymapModes(): readonly EditorKeymapMode[] {
+    return this.keymap.supportedModes();
+  }
+
+  /** The mode the raw view runs in (Normal while read-only); the rich view's keys never change. */
+  getKeymapMode(): EditorKeymapMode {
+    return this.keymap.mode;
+  }
+
+  setKeymapMode(mode: EditorKeymapMode): Promise<EditorKeymapModeResult> {
+    return this.keymap.set(mode, this.raw);
   }
 
   getContent(): string {
@@ -781,6 +807,16 @@ export class SheetEditor extends HTMLElement implements EditorElement {
 
   /** The raw view: the switch, why it shows (if not by choice), and the text. */
   private renderRaw(): void {
+    const shown = this.raw?.element.parentElement;
+    if (shown?.isConnected && shown.classList.contains('sheet-surface__raw')) {
+      // Raw already shows: rebuild what is around the text, never the text itself,
+      // so an embedded <code-editor> keeps its view, cursor and history.
+      for (const child of [...(shown.parentElement?.children ?? [])]) {
+        if (child !== shown) child.remove();
+      }
+      shown.before(this.createRawToolbar(true), ...(this.notice ? [this.notice] : []));
+      return;
+    }
     const style = document.createElement('style');
     style.textContent = tableStyles;
     const surface = document.createElement('div');
@@ -795,6 +831,7 @@ export class SheetEditor extends HTMLElement implements EditorElement {
       label: 'Sheet source',
       readonly: isReadonly(this),
       onInput: (text) => this.handleRawInput(text),
+      ...this.keymap.rawSourceOptions(),
     });
     const body = document.createElement('div');
     body.className = 'sheet-surface__raw';

@@ -1,5 +1,6 @@
 import {
   createNotice,
+  createKeymapState,
   createRawSource,
   createReadyGate,
   createSwitch,
@@ -28,7 +29,11 @@ import type {
   XmdlParam,
   XmdlParseError,
 } from '../parser/types';
-import type { EditorElement } from '@stillpointlab/common-format';
+import type {
+  EditorElement,
+  EditorKeymapMode,
+  EditorKeymapModeResult,
+} from '@stillpointlab/common-format';
 
 type EditorMode = 'apply' | 'raw';
 type DecisionState = 'pending' | 'applied' | 'skipped';
@@ -67,8 +72,11 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
   private paramTypes = new Map<string, XmdlParam['type']>();
   private activeParamName?: string;
 
+  // The keyboard mode of the raw view's <code-editor>, which the host can set and store.
+  private readonly keymap = createKeymapState(this);
+
   static get observedAttributes(): string[] {
-    return ['readonly', 'view'];
+    return ['readonly', 'view', 'keymap-mode'];
   }
 
   private get mode(): EditorMode {
@@ -77,6 +85,7 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
 
   connectedCallback(): void {
     if (!this.shadowRoot) this.attachShadow({ mode: 'open' });
+    this.keymap.connected();
     this.render();
   }
 
@@ -85,6 +94,10 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
   }
 
   attributeChangedCallback(name: string, _oldValue: string | null, newValue: string | null): void {
+    if (name === 'keymap-mode') {
+      this.keymap.attributeChanged(newValue, this.raw);
+      return;
+    }
     if (name === 'view') {
       if (!this.viewState.reflecting) this.requestView(parseView(newValue), 'host');
       return;
@@ -124,6 +137,19 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
 
   getContent(): string {
     return this.content;
+  }
+
+  getSupportedKeymapModes(): readonly EditorKeymapMode[] {
+    return this.keymap.supportedModes();
+  }
+
+  /** The mode the raw view runs in (Normal while read-only); the rich view's keys never change. */
+  getKeymapMode(): EditorKeymapMode {
+    return this.keymap.mode;
+  }
+
+  setKeymapMode(mode: EditorKeymapMode): Promise<EditorKeymapModeResult> {
+    return this.keymap.set(mode, this.raw);
   }
 
   focus(): void {
@@ -189,6 +215,21 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
 
   private render(): void {
     if (!this.shadowRoot) return;
+
+    const shown = this.raw?.element.parentElement;
+    const shownWrapper = shown?.parentElement;
+    if (this.mode === 'raw' && shown?.isConnected && shownWrapper) {
+      // Raw already shows: rebuild what is around the text, never the text itself,
+      // so an embedded <code-editor> keeps its view, cursor and history.
+      reflectReadonly(this, shownWrapper);
+      for (const child of [...shownWrapper.children]) {
+        if (child !== shown) child.remove();
+      }
+      shown.before(this.renderRawToolbar(), ...(this.notice ? [this.notice] : []));
+      this.focusActiveControl();
+      this.syncReady();
+      return;
+    }
 
     this.shadowRoot.innerHTML = '';
     const style = document.createElement('style');
@@ -355,6 +396,7 @@ export class XmdlEditor extends HTMLElement implements EditorElement {
       label: 'XMDL source',
       readonly: isReadonly(this),
       onInput: (text) => this.handleRawInput(text),
+      ...this.keymap.rawSourceOptions(),
     });
     container.append(this.raw.element);
     return container;

@@ -2,6 +2,7 @@
 import './md-icon';
 
 import {
+  createKeymapState,
   createLazyLoader,
   createNotice,
   createRawSource,
@@ -10,6 +11,8 @@ import {
   createSwitch,
   createViewState,
   defineElement,
+  type EditorKeymapMode,
+  type EditorKeymapModeResult,
   hydrate,
   isReadonly,
   moveToolbarFocus,
@@ -200,8 +203,11 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
   // A switch to rich that waits for a retried engine load, and its reason.
   private pendingRich: ViewChangeReason | null = null;
 
+  // The keyboard mode of the raw view's <code-editor>, which the host can set and store.
+  private readonly keymap = createKeymapState(this);
+
   static get observedAttributes() {
-    return ['readonly', 'view'];
+    return ['readonly', 'view', 'keymap-mode'];
   }
 
   constructor() {
@@ -210,6 +216,7 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
   }
 
   connectedCallback() {
+    this.keymap.connected();
     // A failed load is retried on the next connection.
     if (this.phase === 'failed') this.phase = 'loading';
     this.render();
@@ -260,6 +267,10 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
   }
 
   attributeChangedCallback(name: string, _oldValue: string | null, newValue: string | null) {
+    if (name === 'keymap-mode') {
+      this.keymap.attributeChanged(newValue, this.raw);
+      return;
+    }
     if (name === 'view') {
       if (!this.viewState.reflecting) this.requestView(parseView(newValue), 'host');
       return;
@@ -486,6 +497,19 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
     return 1;
   }
 
+  getSupportedKeymapModes(): readonly EditorKeymapMode[] {
+    return this.keymap.supportedModes();
+  }
+
+  /** The mode the raw view runs in (Normal while read-only); the rich view's keys never change. */
+  getKeymapMode(): EditorKeymapMode {
+    return this.keymap.mode;
+  }
+
+  setKeymapMode(mode: EditorKeymapMode): Promise<EditorKeymapModeResult> {
+    return this.keymap.set(mode, this.raw);
+  }
+
   getContent(): string {
     // The text as set, until the user edits in the rich view (see `_content`).
     if (!this.richEdited || !this.view || !this.editorModules) return this._content;
@@ -567,6 +591,7 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
       label: 'Markdown source',
       readonly: isReadonly(this),
       onInput: (text) => this.handleRawInput(text),
+      ...this.keymap.rawSourceOptions(),
     });
     if (this.raw.element.parentNode !== rawContainer)
       rawContainer.replaceChildren(this.raw.element);

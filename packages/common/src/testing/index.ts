@@ -19,4 +19,6 @@ export { describeDiffContract } from './diff';
 export type { DiffContractOptions } from './diff';
 export { describeRawViewContract, rawSurface, rawSwitch, rawText, viewChanges } from './raw-view';
 export type { RawViewContractOptions } from './raw-view';
+export { defineCodeEditorKeymapStub, describeKeymapModeContract } from './keymap';
+export type { CodeEditorKeymapStub, KeymapModeContractOptions } from './keymap';
 export { contentChanges, mount, pending, settledBy } from './support';

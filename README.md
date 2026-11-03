@@ -187,6 +187,16 @@ language, label })` is the read-only one: a `<code-preview>` or a `<pre>`. Both 
   `@use 'common/src/styles/notice';`. `announce: 'assertive'` makes it an alert, for errors the user
   just caused.
 
+An editor with a raw view also implements the contract's keymap-mode methods for its raw text,
+through `createKeymapState(el)`: the `keymap-mode` attribute (reflected), `keymap-mode-change`, and
+`getSupportedKeymapModes` / `getKeymapMode` / `setKeymapMode` (Normal, plus Vim while `<code-editor>`
+is defined and the element is editable). The mode is recorded while the rich view shows and the raw
+view opens in it; a choice made on the embedded `<code-editor>`'s toolbar comes back as the
+element's own event, so a host stores one preference for every editor. The rich view's keys never
+change. Read-only raw text runs in Normal without changing the recorded mode, and without an
+event. `describeKeymapModeContract` proves it, in a test file of its own since it defines a
+`<code-editor>` stand-in.
+
 The template's sample editor and preview implement all of it, so a new format starts with a raw
 view. The harness has a Raw control, logs `view-change`, and registers `<code-editor>` and
 `<code-preview>` (`?raw=plain` leaves them out).

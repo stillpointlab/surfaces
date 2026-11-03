@@ -196,6 +196,36 @@ export function describeRawViewContract<T extends PreviewElement = PreviewElemen
         expect(el.getContent()).toBe(crlfEdited);
       });
 
+      it('keeps one raw surface mounted while raw shows', async () => {
+        // Moving the surface reconnects an embedded <code-editor>, which rebuilds its
+        // view and loses the cursor, the undo history and any keymap change in flight.
+        const el = (await mounted(content, (e) => e.setAttribute('view', 'raw'))) as unknown as T &
+          EditorElement;
+        const surface = rawSurface(el);
+        const parent = surface?.parentNode;
+        expect(parent).toBeTruthy();
+        // A removal of the surface itself, even put back in the same place.
+        const records: MutationRecord[] = [];
+        const removals = new MutationObserver((batch) => records.push(...batch));
+        removals.observe(el.shadowRoot as ShadowRoot, { childList: true, subtree: true });
+        const removed = () =>
+          [...records, ...removals.takeRecords()].some((record) =>
+            [...record.removedNodes].includes(surface as Node)
+          );
+
+        el.setAttribute('readonly', 'true');
+        await settled(el);
+        el.removeAttribute('readonly');
+        await settled(el);
+        el.setContent(edited);
+        await settled(el);
+        expect(removed()).toBe(false);
+        removals.disconnect();
+        expect(rawSurface(el)).toBe(surface);
+        expect(surface?.parentNode).toBe(parent);
+        expect(parent?.isConnected).toBe(true);
+      });
+
       it('stays in raw when content is set there', async () => {
         const el = (await mounted(content, (e) => e.setAttribute('view', 'raw'))) as unknown as T &
           EditorElement;

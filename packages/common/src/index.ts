@@ -17,6 +17,13 @@ export { createReadyGate, READY_ATTRIBUTE, READY_EVENT } from './ready';
 export { booleanAttribute, defineElement } from './elements';
 export { createLazyLoader, hydrate } from './engine';
 export { lineBreakOf, withLineBreak } from './line-endings';
+export {
+  createKeymapState,
+  KEYMAP_MODE_ATTRIBUTE,
+  KEYMAP_MODE_CHANGE_EVENT,
+  parseKeymapMode,
+} from './keymap';
+export type { KeymapState } from './keymap';
 export type { HydrateSteps } from './engine';
 export { createStatus, STATUS_MESSAGES } from './status';
 export {
