@@ -29,6 +29,18 @@ two repositories, and names the contract apps are held to._
   components moves from Context Manager into `packages/components/`, so app elements (and formats)
   can render what they need without the host.
 
+The brief's own open questions (below) were answered the same day, all as recommended:
+
+- **Components:** `modal-dialog` and `spl-icon`; `options-menu` only if the board element needs a
+  menu of its own once the page-level relay is gone; `spl-toggle` stays in Context Manager.
+- **Packaging:** one package per component, `packages/components/<name>`.
+- **Shared helpers** go in a DOM-free subpath of `common`.
+- **The Context Manager prep spec lives here**, in phase 2, with its PR in Context Manager. Specs
+  here are public, so a spec about Context Manager code names what the change needs (paths,
+  module shapes, behaviour) and nothing else: no credentials, private URLs, customer data or
+  product plans beyond what the private repository's own public surfaces already say.
+- **ADR-0035 is amended** for components in phase 4's adoption PR.
+
 ## High-level goal
 
 Tasks and inventory live here as apps: a DOM-free core that Context Manager's server and the harness
