@@ -134,4 +134,16 @@ describe('md-preview', () => {
     // The render resolved after disconnect; the (now-detached) body stays empty.
     expect(body(el)?.innerHTML ?? '').toBe('');
   });
+
+  it('shows the source, frontmatter included, exactly as set in the raw view', async () => {
+    const source = '---\ntitle: x\n---\n# Heading\n\n__b__\n';
+    const el = document.createElement('md-preview') as MdPreview;
+    el.setAttribute('view', 'raw');
+    el.setContent(source);
+    document.body.append(el);
+    await el.whenReady();
+
+    expect(el.shadowRoot?.querySelector('[data-spl-raw]')?.textContent).toBe(source);
+    expect(el.shadowRoot?.querySelector<HTMLElement>('.md-preview-body')?.hidden).toBe(true);
+  });
 });

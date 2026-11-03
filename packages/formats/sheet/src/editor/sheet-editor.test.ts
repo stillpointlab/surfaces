@@ -218,6 +218,9 @@ describe('sheet-editor interaction foundation', () => {
     const element = create();
     element.setContent(source);
     document.body.append(element);
+    // It opens as raw text; the grid view shows the first rows read-only.
+    expect(element.getAttribute('view')).toBe('raw');
+    element.setAttribute('view', 'rich');
 
     expect(element.shadowRoot?.querySelector('[role="grid"]')).toBeNull();
     expect(element.shadowRoot?.querySelector('.sheet-surface__notice')?.textContent).toContain(
@@ -226,13 +229,17 @@ describe('sheet-editor interaction foundation', () => {
     expect(element.getContent()).toBe(source);
   });
 
-  it('keeps malformed input exact and focuses its accessible status', () => {
+  it('keeps malformed input exact and opens it as raw text with the error', () => {
     const element = create();
     element.setContent('"unclosed');
     document.body.append(element);
     element.focus();
 
-    expect(element.shadowRoot?.querySelector('[role="alert"]')).toBe(
+    expect(element.getAttribute('view')).toBe('raw');
+    expect(element.shadowRoot?.querySelector('.spl-notice')?.textContent).toContain(
+      'could not be read'
+    );
+    expect(element.shadowRoot?.querySelector('[data-spl-raw]')).toBe(
       element.shadowRoot?.activeElement
     );
     expect(element.getContent()).toBe('"unclosed');

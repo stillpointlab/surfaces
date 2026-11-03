@@ -1,14 +1,23 @@
 /// <reference lib="dom" />
 
 import {
+  createNotice,
+  createRawSource,
   createReadyGate,
+  createSwitch,
+  createViewState,
   defineElement,
   dismissOnOutside,
   isReadonly,
   moveToolbarFocus,
+  parseView,
+  RAW_VIEW_LABEL,
+  type RawSource,
   type ReadyGate,
   reflectReadonly,
   reportError,
+  type SurfaceView,
+  type ViewChangeReason,
 } from '@stillpointlab/common-format';
 
 import { DEFAULT_CSV_LIMITS, utf8ByteLength } from '../csv';
@@ -213,9 +222,21 @@ export class SheetEditor extends HTMLElement implements EditorElement {
   private dragPointerId: number | null = null;
   private dragAnchor: SheetCoordinate | null = null;
   private disposeFlyoutDismiss?: () => void;
+  // The raw view: the CSV, or a .sheet document's whole source, as text.
+  private readonly viewState = createViewState(this);
+  private raw: RawSource | null = null;
+  // The text while the raw view shows; null while the grid does.
+  private rawText: string | null = null;
+  // A raw edit not yet loaded into the grid.
+  private rawEdited = false;
+  // Why the raw view is showing, when it is not just the user's choice.
+  private notice: HTMLElement | null = null;
+  private rawSwitch: HTMLButtonElement | null = null;
+  // The options of the last load, so a raw edit reloads with the same presentation.
+  private loadOptions: SheetContentOptions = {};
 
   static get observedAttributes(): string[] {
-    return ['readonly'];
+    return ['readonly', 'view'];
   }
 
   constructor() {
@@ -249,7 +270,7 @@ export class SheetEditor extends HTMLElement implements EditorElement {
       escape: false,
     });
     this.render();
-    this.ready.settle();
+    this.settle();
   }
 
   disconnectedCallback(): void {
@@ -264,7 +285,12 @@ export class SheetEditor extends HTMLElement implements EditorElement {
   }
 
   attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
+    if (name === 'view') {
+      if (!this.viewState.reflecting) this.requestView(parseView(newValue), 'host');
+      return;
+    }
     if (name !== 'readonly' || oldValue === newValue) return;
+    this.raw?.setReadonly(newValue === 'true');
     if (newValue === 'true' && this.draft) {
       this.cancelDraft(true, false);
       return;
@@ -275,29 +301,135 @@ export class SheetEditor extends HTMLElement implements EditorElement {
   }
 
   setContent(content: string, options: SheetContentOptions = {}): void {
-    this.sourceSession = createCsvSourceSession(content, options);
-    this.prepareLoad();
-    if (this.isConnected) {
-      this.render();
-      this.ready.settle();
-    }
+    this.load(createCsvSourceSession(content, options), options);
   }
 
   setDocumentSource(source: string, options: SheetContentOptions = {}): void {
-    this.sourceSession = createDocumentSourceSession(source, options);
+    this.load(createDocumentSourceSession(source, options), options);
+  }
+
+  private load(session: SheetEditorSourceSession, options: SheetContentOptions): void {
+    this.sourceSession = session;
+    this.loadOptions = options;
     this.prepareLoad();
+    // A sheet the grid cannot edit opens as raw text the user can fix.
+    this.notice = this.unreadableNotice(session);
+    if (this.notice && this.viewState.current === 'rich') {
+      this.viewState.commit('raw', 'fallback');
+    }
+    if (this.viewState.current === 'raw') {
+      this.rawText = session.originalSource;
+      this.rawEdited = false;
+      this.raw?.setValue(this.rawText);
+    }
     if (this.isConnected) {
       this.render();
-      this.ready.settle();
+      this.settle();
     }
   }
 
+  /** Why the grid cannot edit this source (it does not parse, or exceeds the row limit). */
+  private unreadableNotice(
+    session: SheetEditorSourceSession,
+    announce: 'polite' | 'assertive' = 'polite'
+  ): HTMLElement | null {
+    const model = session.model;
+    if (!model.ok) {
+      return createNotice({
+        tone: 'error',
+        title:
+          announce === 'assertive'
+            ? 'The sheet still cannot be read.'
+            : 'This sheet could not be read; showing the raw text.',
+        items: [model.error.message],
+        announce,
+      });
+    }
+    if (model.truncated) {
+      return createNotice({
+        tone: 'warning',
+        title: 'This sheet has more rows than the grid can edit; showing the raw text.',
+      });
+    }
+    return null;
+  }
+
+  /**
+   * Move to `view`. Leaving raw loads an edited text into the grid, or stays raw
+   * with the error while it does not parse. A sheet over the row limit may still
+   * leave raw: the grid shows it read-only.
+   */
+  private requestView(view: SurfaceView, reason: ViewChangeReason): void {
+    if (view === this.viewState.current) {
+      this.viewState.reflect();
+      return;
+    }
+    if (view === 'raw') {
+      if (this.draft) this.commitDraft(null, false);
+      this.closeToolbarFlyout(false);
+      this.rawText = this.getContent();
+      this.rawEdited = false;
+      this.viewState.commit('raw', reason);
+    } else {
+      const session = this.rawEdited ? this.sessionFor(this.rawText ?? '') : this.sourceSession;
+      if (!session.model.ok) {
+        this.notice = this.unreadableNotice(session, 'assertive');
+        this.viewState.reflect();
+        this.render();
+        this.settle();
+        return;
+      }
+      if (this.rawEdited) {
+        // The edited text becomes the sheet; the undo history starts afresh.
+        this.sourceSession = session;
+        this.prepareLoad();
+      }
+      this.rawText = null;
+      this.rawEdited = false;
+      this.raw = null;
+      this.notice = null;
+      this.viewState.commit('rich', reason);
+    }
+    this.render();
+    this.settle();
+  }
+
+  /** A source session of the current kind (CSV or document) for `text`. */
+  private sessionFor(text: string): SheetEditorSourceSession {
+    return this.sourceSession.kind === 'document'
+      ? createDocumentSourceSession(text, this.loadOptions)
+      : createCsvSourceSession(text, this.loadOptions);
+  }
+
+  private handleRawInput(text: string): void {
+    this.rawText = text;
+    this.rawEdited = true;
+    this.dispatchEvent(new CustomEvent('content-change', { detail: { content: text } }));
+  }
+
+  /** Settle now, or once the raw surface is ready (a lazy <code-editor>). */
+  private settle(): void {
+    if (!this.isConnected) return;
+    const surface = this.viewState.current === 'raw' ? this.raw : null;
+    if (!surface) {
+      this.ready.settle();
+      return;
+    }
+    const cycle = this.ready.begin();
+    void surface.whenReady().then(() => this.ready.settle(cycle));
+  }
+
   getContent(): string {
+    if (this.rawText !== null) return this.rawText;
     if (!this.isInteractive()) return this.sourceSession.originalSource;
     return this.serializeRows(this.rowsWithDraft());
   }
 
   override focus(options?: FocusOptions): void {
+    if (this.raw) {
+      this.raw.focus();
+      return;
+    }
     const textarea = this.editControl();
     if (textarea) {
       textarea.focus(options);
@@ -396,6 +528,11 @@ export class SheetEditor extends HTMLElement implements EditorElement {
 
   private render(): void {
     this.openToolbarMenu = null;
+    this.rawSwitch = null;
+    if (this.viewState.current === 'raw') {
+      this.renderRaw();
+      return;
+    }
     const model = this.sourceSession.model;
     if (!model.ok || model.truncated) {
       renderTable(this.root, model, {
@@ -414,6 +551,12 @@ export class SheetEditor extends HTMLElement implements EditorElement {
         if (notice) {
           notice.textContent = `${notice.textContent ?? ''} Editing is unavailable because not all rows were loaded.`;
         }
+      }
+      // The read-only grid keeps the switch back to the raw text.
+      const surface = this.root.querySelector<HTMLElement>('.sheet-surface');
+      if (surface) {
+        surface.classList.add('sheet-surface--editor');
+        surface.prepend(this.createRawToolbar(false));
       }
       return;
     }
@@ -599,7 +742,65 @@ export class SheetEditor extends HTMLElement implements EditorElement {
       }
       toolbar.append(group);
     }
+    toolbar.append(this.createRawSwitchGroup(false));
     return toolbar;
+  }
+
+  /** The "Raw Text" switch with its label, as the toolbar's last group. */
+  private createRawSwitchGroup(raw: boolean): HTMLElement {
+    const group = document.createElement('div');
+    group.className = 'sheet-editor__toolbar-group sheet-editor__raw-group';
+    const label = document.createElement('span');
+    label.className = 'sheet-editor__raw-label';
+    label.textContent = RAW_VIEW_LABEL;
+    // On in raw. The switch follows the view, which a refused switch back leaves raw.
+    const toggle = createSwitch({
+      label: RAW_VIEW_LABEL,
+      checked: raw,
+      onToggle: (on) => {
+        this.requestView(on ? 'raw' : 'rich', 'user');
+        return false;
+      },
+    });
+    toggle.element.tabIndex = -1;
+    this.rawSwitch = toggle.element;
+    group.append(label, toggle.element);
+    return group;
+  }
+
+  /** A toolbar holding only the switch (the raw view, and the read-only grid). */
+  private createRawToolbar(raw: boolean): HTMLElement {
+    const toolbar = document.createElement('div');
+    toolbar.className = 'sheet-editor__toolbar';
+    toolbar.setAttribute('role', 'toolbar');
+    toolbar.setAttribute('aria-label', 'Sheet tools');
+    toolbar.append(this.createRawSwitchGroup(raw));
+    if (this.rawSwitch) this.rawSwitch.tabIndex = 0;
+    return toolbar;
+  }
+
+  /** The raw view: the switch, why it shows (if not by choice), and the text. */
+  private renderRaw(): void {
+    const style = document.createElement('style');
+    style.textContent = tableStyles;
+    const surface = document.createElement('div');
+    surface.className = 'sheet-surface sheet-surface--raw';
+    // The grid listens on the whole shadow root; keep the raw view's typing,
+    // clipboard and pointer events away from it.
+    for (const type of RAW_VIEW_CONTAINED_EVENTS) {
+      surface.addEventListener(type, (event) => event.stopPropagation());
+    }
+    this.raw ??= createRawSource({
+      value: this.rawText ?? '',
+      label: 'Sheet source',
+      readonly: isReadonly(this),
+      onInput: (text) => this.handleRawInput(text),
+    });
+    const body = document.createElement('div');
+    body.className = 'sheet-surface__raw';
+    body.append(this.raw.element);
+    surface.append(this.createRawToolbar(true), ...(this.notice ? [this.notice] : []), body);
+    this.root.replaceChildren(style, surface);
   }
 
   private createToolbarButton(command: SheetToolbarCommand, label: string): HTMLButtonElement {
@@ -686,6 +887,10 @@ export class SheetEditor extends HTMLElement implements EditorElement {
     for (const button of buttons) {
       button.tabIndex =
         !button.disabled && button.dataset.sheetToolbarCommand === this.toolbarTabCommand ? 0 : -1;
+    }
+    // The raw switch is always enabled; it holds the tab stop when nothing else can.
+    if (this.rawSwitch && this.rawSwitch.tabIndex !== 0) {
+      this.rawSwitch.tabIndex = buttons.some((button) => button.tabIndex === 0) ? -1 : 0;
     }
     for (const axis of ['horizontal', 'vertical'] as const) this.syncAlignmentMenuState(axis);
     this.syncValueFormatMenuState();
@@ -778,9 +983,12 @@ export class SheetEditor extends HTMLElement implements EditorElement {
       return;
     }
     const buttons = [
-      ...this.root.querySelectorAll<HTMLButtonElement>('.sheet-editor__toolbar-button'),
+      ...this.root.querySelectorAll<HTMLButtonElement>(
+        '.sheet-editor__toolbar-button, .sheet-editor__toolbar .spl-switch'
+      ),
     ];
     const next = moveToolbarFocus(event, buttons);
+    // The raw switch has no command; moveToolbarFocus already gave it the tab stop.
     const command = next ? toolbarCommandFromButton(next as HTMLButtonElement) : null;
     if (!command) return;
     this.toolbarTabCommand = command;
@@ -1695,7 +1903,9 @@ export class SheetEditor extends HTMLElement implements EditorElement {
     const target = keyboardEvent.target;
     const toolbarButton =
       target instanceof Element
-        ? target.closest<HTMLButtonElement>('button[data-sheet-toolbar-command]')
+        ? target.closest<HTMLButtonElement>(
+            'button[data-sheet-toolbar-command], .sheet-editor__toolbar .spl-switch'
+          )
         : null;
     const menuItem =
       target instanceof Element
@@ -2455,6 +2665,24 @@ function valueFormatKindFromButton(button: HTMLButtonElement): SheetValueFormatK
     ? (kind as SheetValueFormatKind)
     : null;
 }
+
+/** Events the raw view keeps from the grid's shadow-root listeners. */
+const RAW_VIEW_CONTAINED_EVENTS = [
+  'keydown',
+  'copy',
+  'paste',
+  'beforeinput',
+  'input',
+  'compositionstart',
+  'compositionend',
+  'focusout',
+  'dblclick',
+  'pointerdown',
+  'pointermove',
+  'pointerup',
+  'pointercancel',
+  'click',
+] as const;
 
 function createToolbarSeparator(): HTMLElement {
   const separator = document.createElement('span');

@@ -101,7 +101,9 @@ describe('xmdl-editor', () => {
     expect(text(el)).toContain('0 of 5 Applied');
     expect(text(el)).toContain('Incomplete');
     expect(button(el, 'Apply Template').disabled).toBe(true);
-    expect(modeSwitch(el).getAttribute('aria-checked')).toBe('true');
+    // "Raw Text" is off in the apply view.
+    expect(modeSwitch(el).getAttribute('aria-checked')).toBe('false');
+    expect(modeSwitch(el).getAttribute('aria-label')).toBe('Raw Text');
     expect(text(el)).toContain('title');
     expect(text(el)).toContain('The document title');
   });
@@ -227,8 +229,8 @@ A{{#if show}}B{{/if}}C`;
     });
 
     modeSwitch(el).click();
-    expect(modeSwitch(el).getAttribute('aria-checked')).toBe('false');
-    const source = el.shadowRoot?.querySelector<HTMLTextAreaElement>('.xmdl-editor__source');
+    expect(modeSwitch(el).getAttribute('aria-checked')).toBe('true');
+    const source = el.shadowRoot?.querySelector<HTMLTextAreaElement>('textarea[data-spl-raw]');
     if (!source) throw new Error('Raw source textarea not found');
     source.value = TEMPLATE.replace('Brief Template', 'Edited Template');
     source.dispatchEvent(new Event('input', { bubbles: true }));
@@ -239,7 +241,7 @@ A{{#if show}}B{{/if}}C`;
     modeSwitch(el).click();
     expect(text(el)).toContain('Edited Template');
     expect(text(el)).toContain('0 of 5 Applied');
-    expect(modeSwitch(el).getAttribute('aria-checked')).toBe('true');
+    expect(modeSwitch(el).getAttribute('aria-checked')).toBe('false');
   });
 
   it('preserves applied, skipped, pending, and active state across an unchanged mode round trip', () => {
@@ -269,7 +271,7 @@ A{{#if show}}B{{/if}}C`;
     button(el, 'Apply').click();
 
     modeSwitch(el).click();
-    const source = el.shadowRoot?.querySelector<HTMLTextAreaElement>('.xmdl-editor__source');
+    const source = el.shadowRoot?.querySelector<HTMLTextAreaElement>('textarea[data-spl-raw]');
     if (!source) throw new Error('Raw source textarea not found');
     source.value = TEMPLATE.replace('Brief Template', 'Edited Template');
     source.dispatchEvent(new Event('input', { bubbles: true }));
@@ -301,7 +303,7 @@ A{{#if show}}B{{/if}}C`;
     button(el, 'Apply').click();
 
     modeSwitch(el).click();
-    const source = el.shadowRoot?.querySelector<HTMLTextAreaElement>('.xmdl-editor__source');
+    const source = el.shadowRoot?.querySelector<HTMLTextAreaElement>('textarea[data-spl-raw]');
     if (!source) throw new Error('Raw source textarea not found');
     source.value = TEMPLATE.replace(
       'name: title\n    type: string',
@@ -310,41 +312,53 @@ A{{#if show}}B{{/if}}C`;
     source.dispatchEvent(new Event('input', { bubbles: true }));
 
     modeSwitch(el).click();
-    expect(modeSwitch(el).getAttribute('aria-checked')).toBe('false');
+    // Declined: the editor stays in raw.
+    expect(modeSwitch(el).getAttribute('aria-checked')).toBe('true');
+    expect(el.getAttribute('view')).toBe('raw');
     expect(confirm).toHaveBeenCalledWith(expect.stringContaining('“title”'));
 
     modeSwitch(el).click();
-    expect(modeSwitch(el).getAttribute('aria-checked')).toBe('true');
+    expect(modeSwitch(el).getAttribute('aria-checked')).toBe('false');
     expect(text(el)).toContain('0 of 5 Applied');
     expect(input(el).value).toBe('');
   });
 
-  it('retains Apply state while invalid raw source is repaired', () => {
+  it('stays in raw with the current errors while the source does not parse, keeping Apply state', () => {
     const el = mount();
     setInputValue(el, 'Market Brief');
     button(el, 'Apply').click();
 
     modeSwitch(el).click();
-    let source = el.shadowRoot?.querySelector<HTMLTextAreaElement>('.xmdl-editor__source');
-    if (!source) throw new Error('Raw source textarea not found');
-    source.value = 'not xmdl';
-    source.dispatchEvent(new Event('input', { bubbles: true }));
-    modeSwitch(el).click();
-    expect(text(el)).toContain('Invalid XMDL');
-
-    modeSwitch(el).click();
-    source = el.shadowRoot?.querySelector<HTMLTextAreaElement>('.xmdl-editor__source');
-    if (!source) throw new Error('Raw source textarea not found');
-    source.value = TEMPLATE;
-    source.dispatchEvent(new Event('input', { bubbles: true }));
+    const source = () => {
+      const match = el.shadowRoot?.querySelector<HTMLTextAreaElement>('textarea[data-spl-raw]');
+      if (!match) throw new Error('Raw source textarea not found');
+      return match;
+    };
+    source().value = 'not xmdl';
+    source().dispatchEvent(new Event('input', { bubbles: true }));
     modeSwitch(el).click();
 
+    const notice = el.shadowRoot?.querySelector('.spl-notice');
+    expect(el.getAttribute('view')).toBe('raw');
+    expect(notice?.textContent).toContain('The template still has errors.');
+    expect(notice?.getAttribute('role')).toBe('alert');
+    expect(source().value).toBe('not xmdl');
+
+    source().value = TEMPLATE;
+    source().dispatchEvent(new Event('input', { bubbles: true }));
+    modeSwitch(el).click();
+
+    expect(el.shadowRoot?.querySelector('.spl-notice')).toBeNull();
     expect(text(el)).toContain('1 of 5 Applied');
     expect(input(el).value).toBe('Market Brief');
   });
 
-  it('renders parse errors in apply mode', () => {
-    const el = mount(`---
+  it('opens a template it cannot read in raw, listing the errors', () => {
+    const views: unknown[] = [];
+    const el = document.createElement('xmdl-editor') as XmdlEditor;
+    el.addEventListener('view-change', (event) => views.push((event as CustomEvent).detail));
+    document.body.append(el);
+    el.setContent(`---
 title: Broken
 version: 0.1.0
 outputFileType: markdown
@@ -355,9 +369,12 @@ params:
 # {{missing}}
 `);
 
-    expect(text(el)).toContain('Invalid XMDL');
-    expect(text(el)).toContain('Template body references undeclared param "missing".');
-    expect(button(el, 'Apply Template').disabled).toBe(true);
+    expect(el.getAttribute('view')).toBe('raw');
+    expect(views).toEqual([{ view: 'raw', reason: 'fallback' }]);
+    const notice = el.shadowRoot?.querySelector('.spl-notice');
+    expect(notice?.textContent).toContain('could not be read');
+    expect(notice?.textContent).toContain('Template body references undeclared param "missing".');
+    expect(notice?.getAttribute('role')).toBe('status');
   });
 
   it('disables every edit control while readonly and restores them when it is removed', () => {
@@ -370,15 +387,14 @@ params:
     expect(button(el, 'Apply').disabled).toBe(true);
     expect(button(el, 'Apply Template').disabled).toBe(true);
     expect(button(el, 'Next').disabled).toBe(false);
-    expect(modeSwitch(el).disabled).toBe(true);
-    modeSwitch(el).click();
-    expect(modeSwitch(el).getAttribute('aria-checked')).toBe('true');
+    // Read-only keeps the apply view; the raw text stays viewable.
+    expect(el.getAttribute('view')).toBeNull();
+    expect(modeSwitch(el).disabled).toBe(false);
     expect(el.getContent()).toBe(TEMPLATE);
 
     el.removeAttribute('readonly');
     expect(root()?.getAttribute('aria-readonly')).toBe('false');
     expect(input(el).disabled).toBe(false);
-    expect(modeSwitch(el).disabled).toBe(false);
     setInputValue(el, 'Market Brief');
     button(el, 'Apply').click();
     expect(text(el)).toContain('1 of 5 Applied');
@@ -391,7 +407,7 @@ params:
       changes += 1;
     });
     const source = () => {
-      const match = el.shadowRoot?.querySelector<HTMLTextAreaElement>('.xmdl-editor__source');
+      const match = el.shadowRoot?.querySelector<HTMLTextAreaElement>('textarea[data-spl-raw]');
       if (!match) throw new Error('Raw source textarea not found');
       return match;
     };
@@ -402,9 +418,9 @@ params:
 
     modeSwitch(el).click();
     el.setAttribute('readonly', 'true');
-    expect(modeSwitch(el).getAttribute('aria-checked')).toBe('false');
+    expect(modeSwitch(el).getAttribute('aria-checked')).toBe('true');
     expect(source().readOnly).toBe(true);
-    expect(modeSwitch(el).disabled).toBe(true);
+    expect(modeSwitch(el).disabled).toBe(false);
     // A read-only textarea never changes its value on keystrokes; an input
     // event that still reaches the element must not count as an edit.
     source().dispatchEvent(new Event('input', { bubbles: true }));

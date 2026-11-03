@@ -131,7 +131,8 @@ describe('md-editor toolbar', () => {
     expect(surface.getAttribute('aria-readonly')).toBe('false');
     el.setAttribute('readonly', 'true');
     expect(surface.getAttribute('aria-readonly')).toBe('true');
-    expect($<HTMLButtonElement>(el, '.markdown-toggle').disabled).toBe(true);
+    // The raw switch stays usable: viewing the source is not an edit.
+    expect($<HTMLButtonElement>(el, '.markdown-toggle').disabled).toBe(false);
     el.removeAttribute('readonly');
     expect(surface.getAttribute('aria-readonly')).toBe('false');
   });

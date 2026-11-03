@@ -139,12 +139,12 @@ params:
 # {{missing}}
 `);
 
-    expect(text(el)).toContain('Invalid XMDL');
-    expect(text(el)).toContain('Template body references undeclared param "missing".');
-    expect(el.shadowRoot?.querySelector('.xmdl-preview__messages--error')).not.toBeNull();
-    expect(el.shadowRoot?.querySelector('.xmdl-preview__body')?.textContent).toContain(
-      '# {{missing}}'
-    );
+    // The raw view (the convention in common) shows the source and the errors.
+    expect(el.getAttribute('view')).toBe('raw');
+    const notice = el.shadowRoot?.querySelector('.spl-notice');
+    expect(notice?.textContent).toContain('could not be read');
+    expect(notice?.textContent).toContain('Template body references undeclared param "missing".');
+    expect(el.shadowRoot?.querySelector('[data-spl-raw]')?.textContent).toContain('# {{missing}}');
   });
 
   it('buffers content set before connect', () => {

@@ -2,6 +2,7 @@
 import {
   describeEditorContract,
   describePreviewContract,
+  describeRawViewContract,
 } from '@stillpointlab/common-format/testing';
 import { beforeAll, expect, vi } from 'vitest';
 
@@ -41,9 +42,15 @@ describeEditorContract<ProseMirrorEditor>('md-editor', {
   },
 });
 
+// Markdown always parses, so md has no invalid content: its only fallback is a
+// failed engine load (see prosemirror-editor-engine-failure.test.ts).
+describeRawViewContract<ProseMirrorEditor>('md-editor', { kind: 'editor', content });
+
 describePreviewContract<MdPreview>('md-preview', {
   content,
   rendered: (el) => {
     expect(el.shadowRoot?.querySelector('.md-preview-body')?.innerHTML).toContain('<h1>Title</h1>');
   },
 });
+
+describeRawViewContract<MdPreview>('md-preview', { kind: 'preview', content });

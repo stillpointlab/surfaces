@@ -2,6 +2,7 @@
 import {
   describeEditorContract,
   describePreviewContract,
+  describeRawViewContract,
 } from '@stillpointlab/common-format/testing';
 import { expect } from 'vitest';
 
@@ -40,6 +41,14 @@ describeEditorContract<SheetEditor>('sheet-editor', {
   },
 });
 
+describeRawViewContract<SheetEditor>('sheet-editor', {
+  kind: 'editor',
+  content,
+  // Unclosed quotes, reported at different places.
+  invalidContent: '"unclosed',
+  otherInvalidContent: 'Name,Value\n"open',
+});
+
 describePreviewContract<SheetPreview>('sheet-preview', {
   content,
   rendered: (el) => expect(cells(el)).toContain('Coffee'),
@@ -48,4 +57,10 @@ describePreviewContract<SheetPreview>('sheet-preview', {
 describePreviewContract<SheetGrid>('sheet-grid', {
   content,
   rendered: (el) => expect(cells(el)).toContain('Coffee'),
+});
+
+describeRawViewContract<SheetPreview>('sheet-preview', {
+  kind: 'preview',
+  content,
+  invalidContent: '"unclosed',
 });

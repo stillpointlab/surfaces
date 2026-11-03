@@ -316,11 +316,10 @@ describe('sheet-editor cell clipboard and clear commands', () => {
       ).join('\n'),
     ];
     for (const source of sources) {
+      // Both open as raw text, whose clipboard and keys stay native.
       const element = createCsv(source);
-      const target = element.shadowRoot?.querySelector<HTMLElement>(
-        '.sheet-surface__message, .sheet-surface__scroll'
-      );
-      if (!target) throw new Error('expected a non-interactive status surface');
+      const target = element.shadowRoot?.querySelector<HTMLElement>('[data-spl-raw]');
+      if (!target) throw new Error('expected the raw view');
       const copy = clipboardEvent('copy', new ClipboardTransfer());
       const pasteEvent = clipboardEvent(
         'paste',

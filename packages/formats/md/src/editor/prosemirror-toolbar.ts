@@ -4,6 +4,7 @@ import {
   createSwitch,
   dismissOnOutside,
   moveToolbarFocus,
+  RAW_VIEW_LABEL,
   setToolbarTabStop,
   type SwitchHandle,
 } from '@stillpointlab/common-format';
@@ -89,7 +90,6 @@ export class ProseMirrorToolbar {
       btn.disabled = this.isReadOnly || (command?.isEnabled ? !command.isEnabled() : false);
     });
 
-    this.rawSwitch?.setDisabled(this.isReadOnly);
     this.syncTabStop();
 
     this.updateHeadingLabel();
@@ -304,7 +304,7 @@ export class ProseMirrorToolbar {
   private generateViewGroup(): string {
     return `
       <div class="toolbar-group">
-        <label class="toggle-label">Raw</label>
+        <label class="toggle-label">${RAW_VIEW_LABEL}</label>
         <span class="raw-switch-slot"></span>
       </div>
     `;
@@ -434,15 +434,17 @@ export class ProseMirrorToolbar {
   }
 
   /** The raw toggle: on while editing rich text (label and sense unchanged for now). */
+  /** The "Raw Text" switch: off in the rich view, usable even while read-only. */
   private mountRawSwitch(): void {
     const slot = this.container.querySelector('.raw-switch-slot');
     if (!slot) return;
     this.rawSwitch = createSwitch({
-      label: 'Raw',
-      checked: true,
-      disabled: this.isReadOnly,
-      onToggle: (checked) => {
-        if (!checked) this.commands.get('viewMarkdown')?.execute();
+      label: RAW_VIEW_LABEL,
+      checked: false,
+      onToggle: () => {
+        this.commands.get('viewMarkdown')?.execute();
+        // The editor switches views and replaces this toolbar.
+        return false;
       },
     });
     this.rawSwitch.element.classList.add('markdown-toggle');

@@ -1,4 +1,6 @@
 @use 'common/src/styles/tokens' as *;
+@use 'common/src/styles/notice';
+@use 'common/src/styles/raw';
 @use 'common/src/styles/switch';
 @use 'common/src/styles/toolbar';
 
@@ -140,8 +142,7 @@
 }
 
 .xmdl-editor__slot-panel,
-.xmdl-editor__output,
-.xmdl-editor__errors {
+.xmdl-editor__output {
   display: grid;
   gap: 0.75rem;
   min-width: 0;
@@ -149,12 +150,6 @@
   border-radius: 6px;
   padding: 0.75rem;
   background: $background-primary;
-}
-
-.xmdl-editor__errors {
-  border-color: $error-border;
-  background: $error-bg;
-  color: $error-color;
 }
 
 .xmdl-editor__slot-header {
@@ -165,8 +160,7 @@
 }
 
 .xmdl-editor__slot-header h2,
-.xmdl-editor__output h2,
-.xmdl-editor__errors h2 {
+.xmdl-editor__output h2 {
   margin: 0;
   font-size: 1rem;
   line-height: 1.3;
@@ -192,8 +186,7 @@
 
 .xmdl-editor__slot-control textarea,
 .xmdl-editor__slot-control input,
-.xmdl-editor__slot-control select,
-.xmdl-editor__source {
+.xmdl-editor__slot-control select {
   box-sizing: border-box;
   border: 1px solid $border-color;
   border-radius: 6px;
@@ -214,20 +207,12 @@
   min-width: min(100%, 16rem);
 }
 
-.xmdl-editor__source {
-  min-height: 24rem;
-  width: 100%;
-  resize: vertical;
-  font:
-    13px/1.5 ui-monospace,
-    SFMono-Regular,
-    Menlo,
-    Consolas,
-    monospace;
-}
-
 .xmdl-editor__raw {
   min-width: 0;
+  min-height: 24rem;
+}
+
+.xmdl-editor__raw .spl-raw-source {
   min-height: 24rem;
 }
 

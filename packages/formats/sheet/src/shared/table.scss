@@ -1,4 +1,7 @@
 @use 'common/src/styles/tokens' as *;
+@use 'common/src/styles/notice';
+@use 'common/src/styles/raw';
+@use 'common/src/styles/switch';
 @use 'common/src/styles/toolbar';
 
 :host {
@@ -406,4 +409,45 @@
 
 .sheet-surface__message--error {
   color: var(--spl-sheet-danger, $error-color);
+}
+
+// The raw view: the switch, an optional notice, and the source text filling the rest.
+// A column: the toolbar (editors only), the notice (if any), then the text filling the rest.
+.sheet-surface--raw {
+  display: flex;
+  flex-direction: column;
+
+  > .spl-notice {
+    margin: $spacing-sm $spacing-sm 0;
+  }
+}
+
+.sheet-surface__raw {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  padding: $spacing-sm;
+
+  > .spl-raw-source,
+  > code-editor {
+    flex: 1;
+    min-height: 12rem;
+  }
+
+  > code-editor {
+    display: block;
+  }
+}
+
+// The "Raw Text" switch sits at the end of the toolbar.
+.sheet-editor__raw-group {
+  gap: $spacing-sm;
+  margin-left: auto;
+  padding-left: $spacing-sm;
+}
+
+.sheet-editor__raw-label {
+  color: var(--spl-sheet-muted, #{$text-muted});
+  font-size: 0.75rem;
+  white-space: nowrap;
 }

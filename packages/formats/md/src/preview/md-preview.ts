@@ -1,7 +1,11 @@
 /// <reference lib="dom" />
 import {
+  createRawView,
   createReadyGate,
+  createViewState,
   defineElement,
+  parseView,
+  type RawView,
   type ReadyGate,
   reportError,
 } from '@stillpointlab/common-format';
@@ -27,6 +31,9 @@ import type { PreviewElement } from '@stillpointlab/common-format';
  * omitted/anything else → hidden (body only); `frontmatter="panel"` → a small
  * metadata panel above the body. The mode is passed to the renderer; injected
  * renderers must forward it to `renderMarkdown` for it to take effect.
+ *
+ * `view="raw"` shows the Markdown source instead, exactly as set (the raw view
+ * convention in common). Markdown always renders, so there is no fallback.
  */
 export class MdPreview extends HTMLElement implements PreviewElement {
   private _content = '';
@@ -35,9 +42,11 @@ export class MdPreview extends HTMLElement implements PreviewElement {
   private renderToken = 0;
   // Settled once the latest render has landed (see the contract in common).
   private readonly ready: ReadyGate = createReadyGate(this);
+  private readonly viewState = createViewState(this);
+  private raw: RawView | null = null;
 
   static get observedAttributes(): string[] {
-    return ['frontmatter'];
+    return ['frontmatter', 'view'];
   }
 
   constructor() {
@@ -50,7 +59,11 @@ export class MdPreview extends HTMLElement implements PreviewElement {
     void this.renderContent();
   }
 
-  attributeChangedCallback(): void {
+  attributeChangedCallback(name: string, _oldValue: string | null, newValue: string | null): void {
+    if (name === 'view') {
+      if (this.viewState.reflecting) return;
+      this.viewState.commit(parseView(newValue), 'host');
+    }
     if (this.isConnected) void this.renderContent();
   }
 
@@ -68,6 +81,7 @@ export class MdPreview extends HTMLElement implements PreviewElement {
   /** Set the markdown source to preview. Renders asynchronously; latest call wins. */
   setContent(content: string): void {
     this._content = content;
+    this.raw?.setValue(content);
     void this.renderContent();
   }
 
@@ -75,8 +89,28 @@ export class MdPreview extends HTMLElement implements PreviewElement {
     const token = ++this.renderToken;
     const cycle = this.ready.begin();
     if (!this.isConnected) return; // buffered until connected
-    const body = this._shadowRoot.querySelector('.md-preview-body');
-    if (!body) return;
+    const body = this._shadowRoot.querySelector<HTMLElement>('.md-preview-body');
+    const rawContainer = this._shadowRoot.querySelector<HTMLElement>('.md-preview-raw');
+    if (!body || !rawContainer) return;
+
+    const raw = this.viewState.current === 'raw';
+    body.hidden = raw;
+    rawContainer.hidden = !raw;
+    if (raw) {
+      this.raw ??= createRawView({
+        value: this._content,
+        language: 'markdown',
+        label: 'Markdown source',
+      });
+      if (this.raw.element.parentNode !== rawContainer)
+        rawContainer.replaceChildren(this.raw.element);
+      const surface = this.raw;
+      await surface.whenReady();
+      if (token === this.renderToken) this.ready.settle(cycle);
+      return;
+    }
+    this.raw = null;
+    rawContainer.replaceChildren();
     try {
       const frontmatter = this.getAttribute('frontmatter') === 'panel' ? 'panel' : 'hidden';
       const html = await getPreviewRenderer()(this._content, { frontmatter });
@@ -98,7 +132,7 @@ export class MdPreview extends HTMLElement implements PreviewElement {
   }
 
   private renderShell(): void {
-    this._shadowRoot.innerHTML = `<style>${previewStyles}</style><div class="md-preview-body"></div>`;
+    this._shadowRoot.innerHTML = `<style>${previewStyles}</style><div class="md-preview-body"></div><div class="md-preview-raw" hidden></div>`;
   }
 }
 
