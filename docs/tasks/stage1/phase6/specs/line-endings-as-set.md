@@ -1,10 +1,17 @@
 ---
-column: todo
+column: done
+pr: 29
+completed: 2026-11-03
 created: 2026-11-03T00:05:12-07:00
 tags: [formats, common, host-contract]
 ---
 
 # Spec: raw text keeps its line endings
+
+_Landed 2026-11-03 in [#29](https://github.com/stillpointlab/surfaces/pull/29). The helpers are
+`lineBreakOf` and `withLineBreak` in `common`. The suite's CRLF case fails for md, xmdl and sheet
+with the textarea fix reverted. Context Manager removed its hydrated baseline in
+context-manager#1013._
 
 _From the Context Manager adoption of the raw view (context-manager#1009, stage 5 WAL). Touches
 `common/src/raw.ts` like [raw-source-keymap-mode](raw-source-keymap-mode.md); whichever lands
@@ -69,13 +76,13 @@ text to loading and editing.
 
 ## Acceptance / completion checklist
 
-- [ ] `<code-editor>` returns CRLF text byte-identical after hydration, and an edit keeps CRLF on
+- [x] `<code-editor>` returns CRLF text byte-identical after hydration, and an edit keeps CRLF on
       every untouched line.
-- [ ] `createRawSource` returns the text as set with no edit, on both paths, and keeps its line
+- [x] `createRawSource` returns the text as set with no edit, on both paths, and keeps its line
       ending after an edit.
-- [ ] The raw view suite's CRLF case passes for md, xmdl, sheet and the template's sample editor.
-- [ ] The README states the rule and the mixed-ending behaviour.
-- [ ] `npm run check` is green.
+- [x] The raw view suite's CRLF case passes for md, xmdl, sheet and the template's sample editor.
+- [x] The README states the rule and the mixed-ending behaviour.
+- [x] `npm run check` is green.
 
 ## Context Manager follow-up (with the next pin move)
 

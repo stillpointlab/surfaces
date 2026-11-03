@@ -1,10 +1,17 @@
 ---
-column: todo
+column: done
+pr: 28
+completed: 2026-11-03
 created: 2026-11-02T23:46:29-07:00
 tags: [formats, host-contract]
 ---
 
 # Spec: `<sheet-preview>` takes a `.sheet` source
+
+_Landed 2026-11-03 in [#28](https://github.com/stillpointlab/surfaces/pull/28), as specified;
+`setContent`, `setDocument` and `setDocumentSource` all leave the fallback. In the harness, the two
+invalid `.sheet` fixtures now show source and error in the preview where it was empty. Context
+Manager's `sheetPreview.ts` stopped parsing documents in context-manager#1013._
 
 _From the Context Manager adoption of the raw view (context-manager#1009, stage 5 WAL). Independent
 of the other phase 6 spec._
@@ -60,14 +67,14 @@ view shows the document re-serialised, which can differ from the stored file.
 
 ## Acceptance / completion checklist
 
-- [ ] `setDocumentSource` renders a valid document like `setDocument`, with the override applied.
-- [ ] Its raw view equals the source byte for byte, CRLF included.
-- [ ] An invalid envelope opens raw with the parse error, and valid content afterwards returns to
+- [x] `setDocumentSource` renders a valid document like `setDocument`, with the override applied.
+- [x] Its raw view equals the source byte for byte, CRLF included.
+- [x] An invalid envelope opens raw with the parse error, and valid content afterwards returns to
       the grid.
-- [ ] The raw view suite still passes for `sheet-preview`; new unit tests cover the three cases
+- [x] The raw view suite still passes for `sheet-preview`; new unit tests cover the three cases
       above.
-- [ ] The harness's invalid document fixture shows source and error in the preview.
-- [ ] `npm run check` is green.
+- [x] The harness's invalid document fixture shows source and error in the preview.
+- [x] `npm run check` is green.
 
 ## Context Manager follow-up (with the next pin move)
 

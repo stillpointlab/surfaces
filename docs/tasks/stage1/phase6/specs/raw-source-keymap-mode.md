@@ -1,10 +1,20 @@
 ---
-column: todo
+column: done
+pr: 30
+completed: 2026-11-03
 created: 2026-11-03T00:05:12-07:00
 tags: [formats, common, host-contract]
 ---
 
 # Spec: editors with a raw view take a keymap mode
+
+_Landed 2026-11-03 in [#30](https://github.com/stillpointlab/surfaces/pull/30), with the embedded
+toolbar kept. The check is `describeKeymapModeContract`, run from a `keymap.test.ts` of its own in
+each format, since it defines a `<code-editor>` stand-in. Read-only raises no event, so a host never
+stores the forced Normal. Found on the way and fixed in the same PR: xmdl's `render()` and sheet's
+`renderRaw()` remounted the raw surface on every render, which rebuilt the embedded editor (cursor
+and undo lost) and fired a stray Normal event in Chromium. The raw view suite gained "keeps one raw
+surface mounted while raw shows", which the old code fails._
 
 _From the Context Manager adoption of the raw view (context-manager#1009, stage 5 WAL). Touches
 `common/src/raw.ts` like [line-endings-as-set](line-endings-as-set.md); whichever lands second
@@ -73,14 +83,14 @@ bubble out of the format's shadow root.
 
 ## Acceptance / completion checklist
 
-- [ ] md, xmdl and sheet editors pass a keymap check: `setKeymapMode('vim')` in rich, then
+- [x] md, xmdl and sheet editors pass a keymap check: `setKeymapMode('vim')` in rich, then
       entering raw, gives an embedded editor in Vim. A toolbar choice in raw fires the format's
       `keymap-mode-change` and updates its attribute. With `?raw=plain`, only Normal is supported.
-- [ ] The check lives in `common/src/testing` so the template's sample editor runs it too.
-- [ ] Read-only raw is Normal with no toolbar, and the mode returns after `readonly` is removed.
-- [ ] Checked by hand in the harness in Chromium, which already logs `keymap-mode-change`, with and
+- [x] The check lives in `common/src/testing` so the template's sample editor runs it too.
+- [x] Read-only raw is Normal with no toolbar, and the mode returns after `readonly` is removed.
+- [x] Checked by hand in the harness in Chromium, which already logs `keymap-mode-change`, with and
       without `<code-editor>` registered.
-- [ ] `npm run check` is green.
+- [x] `npm run check` is green.
 
 ## Context Manager follow-up (with the next pin move)
 
