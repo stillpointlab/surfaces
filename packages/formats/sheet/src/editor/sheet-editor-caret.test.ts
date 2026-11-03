@@ -240,16 +240,19 @@ describe('sheet-editor caret editing', () => {
     const readonly = create('value');
     readonly.setAttribute('readonly', 'true');
     activeCell(readonly).dispatchEvent(key('F2'));
-    expect(readonly.shadowRoot?.querySelector('textarea')).toBeNull();
+    expect(readonly.shadowRoot?.querySelector('.sheet-editor__input')).toBeNull();
 
+    // Malformed input opens as raw text; F2 there never reaches the grid.
     const malformed = create('"unclosed');
-    malformed.shadowRoot?.querySelector('[role="alert"]')?.dispatchEvent(key('F2'));
-    expect(malformed.shadowRoot?.querySelector('textarea')).toBeNull();
+    malformed.shadowRoot?.querySelector('[data-spl-raw]')?.dispatchEvent(key('F2'));
+    expect(malformed.shadowRoot?.querySelector('.sheet-editor__input')).toBeNull();
 
+    // Truncated input opens raw too; its read-only grid never edits.
     const source = Array.from({ length: 1001 }, (_, index) => String(index)).join('\n');
     const truncated = create(source);
+    truncated.setAttribute('view', 'rich');
     truncated.shadowRoot?.querySelector('.sheet-surface__scroll')?.dispatchEvent(key('F2'));
-    expect(truncated.shadowRoot?.querySelector('textarea')).toBeNull();
+    expect(truncated.shadowRoot?.querySelector('.sheet-editor__input')).toBeNull();
   });
 });
 

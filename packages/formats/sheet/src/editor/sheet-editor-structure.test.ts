@@ -117,11 +117,18 @@ describe('sheet-editor structure toolbar', () => {
     expect(element.shadowRoot?.activeElement).toBe(buttons[1]);
     expect(buttons[1]?.tabIndex).toBe(0);
 
+    // The "Raw Text" switch is the toolbar's last control.
+    const rawSwitch = element.shadowRoot?.querySelector<HTMLButtonElement>(
+      '.spl-switch[aria-label="Raw Text"]'
+    );
     buttons[1]?.dispatchEvent(key('End'));
-    expect(element.shadowRoot?.activeElement).toBe(buttons[5]);
-    buttons[5]?.dispatchEvent(key('Home'));
+    expect(element.shadowRoot?.activeElement).toBe(rawSwitch);
+    expect(rawSwitch?.tabIndex).toBe(0);
+    rawSwitch?.dispatchEvent(key('Home'));
     expect(element.shadowRoot?.activeElement).toBe(buttons[0]);
     buttons[0]?.dispatchEvent(key('ArrowLeft'));
+    expect(element.shadowRoot?.activeElement).toBe(rawSwitch);
+    rawSwitch?.dispatchEvent(key('ArrowLeft'));
     expect(element.shadowRoot?.activeElement).toBe(buttons[5]);
 
     buttons[5]?.dispatchEvent(key('Escape'));
@@ -140,6 +147,8 @@ describe('sheet-editor structure toolbar', () => {
     expect(deleteColumn.disabled).toBe(true);
     first.focus();
     first.dispatchEvent(key('End'));
+    expect((element.shadowRoot?.activeElement as HTMLElement | null)?.ariaLabel).toBe('Raw Text');
+    (element.shadowRoot?.activeElement as HTMLElement).dispatchEvent(key('ArrowLeft'));
     expect((element.shadowRoot?.activeElement as HTMLElement | null)?.ariaLabel).toBe(
       'Insert column after'
     );
@@ -148,15 +157,19 @@ describe('sheet-editor structure toolbar', () => {
     expect(toolbarButtons(element).every((item) => item.disabled && item.tabIndex === -1)).toBe(
       true
     );
+    // Viewing the source is not an edit: the switch stays usable, and is the tab stop.
+    const rawSwitch = element.shadowRoot?.querySelector<HTMLButtonElement>('.spl-switch');
+    expect(rawSwitch?.disabled).toBe(false);
+    expect(rawSwitch?.tabIndex).toBe(0);
     expect(element.shadowRoot?.querySelector('[role="toolbar"]')).not.toBeNull();
 
     element.setAttribute('readonly', 'false');
     expect(button(element, 'Insert row above').disabled).toBe(false);
+    // A failure opens the raw view, whose toolbar holds only the switch.
     element.setContent('"unclosed');
-    expect(element.shadowRoot?.querySelector('[role="toolbar"]')).toBeNull();
-
-    element.setContent(Array.from({ length: 1001 }, (_, index) => String(index)).join('\n'));
-    expect(element.shadowRoot?.querySelector('[role="toolbar"]')).toBeNull();
+    expect(element.getAttribute('view')).toBe('raw');
+    expect(toolbarButtons(element)).toEqual([]);
+    expect(element.shadowRoot?.querySelector('[role="toolbar"] .spl-switch')).not.toBeNull();
   });
 
   it('keeps invalid embedded presentation non-editable but permits an invalid view override', () => {

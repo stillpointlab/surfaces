@@ -235,11 +235,16 @@ describe('sheet-editor document source adapter', () => {
     input(editControl(element), 'committed');
     editControl(element).dispatchEvent(key('Enter'));
     element.setDocumentSource('not a document');
-    expect(element.shadowRoot?.querySelector('[role="alert"]')).not.toBeNull();
+    // Unreadable: the raw view opens with the error, and nothing of the grid leaks.
+    expect(element.getAttribute('view')).toBe('raw');
+    expect(element.shadowRoot?.querySelector('.spl-notice')).not.toBeNull();
     expect(element.shadowRoot?.querySelector('tbody td')).toBeNull();
     expect(element.getContent()).toBe('not a document');
 
     element.setDocumentSource('---\nsheet: stillpoint/v1\n---\nnew,value');
+    // The fallback is sticky in an editor: the user or host switches back.
+    expect(element.getAttribute('view')).toBe('raw');
+    element.setAttribute('view', 'rich');
     activeCell(element).dispatchEvent(key('z', { ctrlKey: true }));
     expect(element.getContent()).toBe('---\nsheet: stillpoint/v1\n---\nnew,value');
   });
@@ -256,12 +261,16 @@ describe('sheet-editor document source adapter', () => {
     ],
   ])('keeps a %s exact and non-mutating', (_label, source) => {
     const element = createDocument(source);
-    const status = element.shadowRoot?.querySelector<HTMLElement>('[role="alert"]');
 
-    expect(status).not.toBeNull();
-    status?.dispatchEvent(key('Enter'));
-    expect(element.shadowRoot?.querySelector('textarea')).toBeNull();
+    // It opens as raw text with the error; keys there never reach the grid.
+    expect(element.getAttribute('view')).toBe('raw');
+    expect(element.shadowRoot?.querySelector('.spl-notice')).not.toBeNull();
+    element.shadowRoot?.querySelector<HTMLElement>('[data-spl-raw]')?.dispatchEvent(key('Enter'));
+    expect(element.shadowRoot?.querySelector('.sheet-editor__input')).toBeNull();
     expect(element.getContent()).toBe(source);
+    // The grid cannot take it, so a request for the rich view is refused.
+    element.setAttribute('view', 'rich');
+    expect(element.getAttribute('view')).toBe('raw');
   });
 
   it('renders a truncated body safely while retaining the complete source', () => {
@@ -270,6 +279,8 @@ describe('sheet-editor document source adapter', () => {
       (_, index) => index
     ).join('\n')}`;
     const element = createDocument(source);
+    expect(element.getAttribute('view')).toBe('raw');
+    element.setAttribute('view', 'rich');
 
     expect(element.shadowRoot?.querySelector('[role="grid"]')).toBeNull();
     expect(element.shadowRoot?.querySelector('.sheet-surface__notice')?.textContent).toContain(

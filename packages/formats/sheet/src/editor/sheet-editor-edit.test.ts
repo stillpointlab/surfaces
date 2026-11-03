@@ -210,10 +210,13 @@ describe('sheet-editor CSV quick editing', () => {
   it('locks truncated loads against editing while retaining exact source', () => {
     const source = Array.from({ length: 1001 }, (_, index) => String(index)).join('\n');
     const element = create(source);
+    // It opens as raw text; the grid view shows it read-only.
+    expect(element.getAttribute('view')).toBe('raw');
+    element.setAttribute('view', 'rich');
     const scroll = element.shadowRoot?.querySelector<HTMLElement>('.sheet-surface__scroll');
     scroll?.dispatchEvent(key('Enter'));
 
-    expect(element.shadowRoot?.querySelector('textarea')).toBeNull();
+    expect(element.shadowRoot?.querySelector('.sheet-editor__input')).toBeNull();
     expect(element.getContent()).toBe(source);
     expect(element.shadowRoot?.querySelector('.sheet-surface__notice')?.textContent).toContain(
       'Editing is unavailable because not all rows were loaded'
