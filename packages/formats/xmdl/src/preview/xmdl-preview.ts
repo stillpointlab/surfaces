@@ -1,4 +1,13 @@
-import { createReadyGate, defineElement, type ReadyGate } from '@stillpointlab/common-format';
+import {
+  createNotice,
+  createRawView,
+  createReadyGate,
+  createViewState,
+  defineElement,
+  parseView,
+  type RawView,
+  type ReadyGate,
+} from '@stillpointlab/common-format';
 
 import { parseXmdl } from '../parser/parse';
 
@@ -13,10 +22,37 @@ import type {
 } from '../parser/types';
 import type { PreviewElement } from '@stillpointlab/common-format';
 
+/**
+ * A read-only view of an XMDL template. Implements PreviewElement and the raw view
+ * convention: `view="raw"` shows the template source, and a template that does not
+ * parse shows its source with the errors until a valid one arrives.
+ */
 export class XmdlPreview extends HTMLElement implements PreviewElement {
   private content = '';
-  // Rendering is synchronous: settled whenever connected and rendered.
+  // Rendering is synchronous: settled whenever connected and rendered; in raw,
+  // once the raw view (a lazy <code-preview> when registered) is ready.
   private readonly ready: ReadyGate = createReadyGate(this);
+  private readonly viewState = createViewState(this);
+  // True while showing raw only because the template does not parse.
+  private fallback = false;
+  private raw: RawView | null = null;
+
+  static get observedAttributes(): string[] {
+    return ['view'];
+  }
+
+  attributeChangedCallback(_name: string, _oldValue: string | null, newValue: string | null): void {
+    if (this.viewState.reflecting) return;
+    const view = parseView(newValue);
+    // The rendered view cannot show an invalid template; refuse and keep the source.
+    if (view === 'rich' && !parseXmdl(this.content).ok) {
+      this.viewState.reflect();
+      return;
+    }
+    this.fallback = false;
+    this.viewState.commit(view, 'host');
+    this.render();
+  }
 
   connectedCallback(): void {
     if (!this.shadowRoot) this.attachShadow({ mode: 'open' });
@@ -33,6 +69,16 @@ export class XmdlPreview extends HTMLElement implements PreviewElement {
 
   setContent(content: string): void {
     this.content = content;
+    const valid = parseXmdl(content).ok;
+    if (!valid && this.viewState.current === 'rich') {
+      this.fallback = true;
+      this.viewState.commit('raw', 'fallback');
+    } else if (valid && this.fallback) {
+      // A preview's fallback is not sticky: nobody can fix the text here.
+      this.fallback = false;
+      this.viewState.commit('rich', 'fallback');
+    }
+    this.raw?.setValue(content);
     this.render();
   }
 
@@ -49,7 +95,20 @@ export class XmdlPreview extends HTMLElement implements PreviewElement {
     wrapper.className = 'xmdl-preview';
     wrapper.setAttribute('aria-label', 'XMDL template preview');
 
-    if (result.ok) {
+    if (this.viewState.current === 'raw') {
+      if (!result.ok) {
+        wrapper.append(
+          createNotice({
+            tone: 'error',
+            title: 'This template could not be read; showing the raw text.',
+            items: result.errors.map(formatDiagnostic),
+          })
+        );
+      }
+      this.raw ??= createRawView({ value: this.content, language: 'yaml', label: 'XMDL source' });
+      wrapper.append(this.raw.element);
+    } else if (result.ok) {
+      this.raw = null;
       wrapper.append(
         renderHeader(result.document),
         renderWarnings(result.warnings),
@@ -57,12 +116,17 @@ export class XmdlPreview extends HTMLElement implements PreviewElement {
         renderValidation(result.document),
         renderBodyPreview(result.document)
       );
-    } else {
-      wrapper.append(renderInvalidState(result.errors, result.warnings, this.content));
     }
 
     this.shadowRoot.append(style, wrapper);
-    if (this.isConnected) this.ready.settle();
+    if (!this.isConnected) return;
+    const surface = this.raw;
+    if (!surface) {
+      this.ready.settle();
+      return;
+    }
+    const cycle = this.ready.begin();
+    void surface.whenReady().then(() => this.ready.settle(cycle));
   }
 }
 
@@ -205,38 +269,6 @@ function renderBodyPreview(xmdl: ParsedXmdlDocument): HTMLElement {
 
   section.append(heading, body);
   return section;
-}
-
-function renderInvalidState(
-  errors: XmdlParseError[],
-  warnings: XmdlWarning[],
-  source: string
-): HTMLElement {
-  const fragment = document.createElement('div');
-  fragment.className = 'xmdl-preview__invalid';
-
-  const title = document.createElement('h2');
-  title.className = 'xmdl-preview__title';
-  title.textContent = 'Invalid XMDL';
-
-  const message = document.createElement('section');
-  message.className = 'xmdl-preview__messages xmdl-preview__messages--error';
-  const heading = document.createElement('h3');
-  heading.textContent = 'Errors';
-  const list = document.createElement('ul');
-  for (const error of errors) {
-    const item = document.createElement('li');
-    item.textContent = formatDiagnostic(error);
-    list.append(item);
-  }
-  message.append(heading, list);
-
-  const raw = document.createElement('pre');
-  raw.className = 'xmdl-preview__body';
-  raw.textContent = source;
-
-  fragment.append(title, message, renderWarnings(warnings), raw);
-  return fragment;
 }
 
 defineElement('xmdl-preview', XmdlPreview);

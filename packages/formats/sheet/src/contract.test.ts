@@ -58,3 +58,9 @@ describePreviewContract<SheetGrid>('sheet-grid', {
   content,
   rendered: (el) => expect(cells(el)).toContain('Coffee'),
 });
+
+describeRawViewContract<SheetPreview>('sheet-preview', {
+  kind: 'preview',
+  content,
+  invalidContent: '"unclosed',
+});

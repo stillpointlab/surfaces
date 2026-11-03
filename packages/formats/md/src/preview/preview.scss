@@ -1,4 +1,5 @@
 @use 'common/src/styles/tokens' as *;
+@use 'common/src/styles/raw';
 @use '../styles/markdown' as markdown;
 
 // Content-sized by default so the consumer owns layout (height, scrolling,
@@ -67,4 +68,9 @@
   &.md-frontmatter-panel-empty .md-frontmatter-panel-label {
     margin-bottom: 0;
   }
+}
+
+// The raw view (view="raw"): the source, exactly as set.
+.md-preview-raw[hidden] {
+  display: none;
 }

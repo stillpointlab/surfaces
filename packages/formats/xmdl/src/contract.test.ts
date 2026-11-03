@@ -54,3 +54,9 @@ describePreviewContract<XmdlPreview>('xmdl-preview', {
   content,
   rendered: (el) => expect(el.shadowRoot?.textContent).toContain('Brief Template'),
 });
+
+describeRawViewContract<XmdlPreview>('xmdl-preview', {
+  kind: 'preview',
+  content,
+  invalidContent: '---\ntitle: [unclosed\n---\n# {{title}}\n',
+});

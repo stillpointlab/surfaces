@@ -52,3 +52,5 @@ describePreviewContract<MdPreview>('md-preview', {
     expect(el.shadowRoot?.querySelector('.md-preview-body')?.innerHTML).toContain('<h1>Title</h1>');
   },
 });
+
+describeRawViewContract<MdPreview>('md-preview', { kind: 'preview', content });

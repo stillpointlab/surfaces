@@ -55,14 +55,16 @@ describe('sheet-preview', () => {
     ).toEqual(['---', 'sheet: stillpoint/v1', '---']);
   });
 
-  it('shows a compact user-content error for malformed CSV', () => {
+  it('shows malformed CSV as its source with the error', () => {
     const element = create();
     element.setContent('"unclosed');
     document.body.append(element);
 
-    expect(element.shadowRoot?.querySelector('[role="alert"]')?.textContent).toContain(
+    expect(element.getAttribute('view')).toBe('raw');
+    expect(element.shadowRoot?.querySelector('.spl-notice')?.textContent).toContain(
       'Unclosed quoted field'
     );
+    expect(element.shadowRoot?.querySelector('[data-spl-raw]')?.textContent).toBe('"unclosed');
     expect(element.shadowRoot?.querySelector('table')).toBeNull();
   });
 
