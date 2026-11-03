@@ -160,4 +160,74 @@ describe('sheet-preview', () => {
     expect(element.shadowRoot?.querySelector('tbody td')?.textContent).toBe('2026-08-10T14:05:06');
     expect(parsed.document.data.rows).toEqual([['2026-08-10T14:05:06']]);
   });
+
+  describe('setDocumentSource', () => {
+    const MERGED =
+      '---\nsheet: stillpoint/v1\npresentation:\n  merges:\n    - range: A1:B1\n---\nanchor,\n,';
+
+    it('renders a document like setDocument, with the call-site presentation over its own', () => {
+      const element = create();
+      document.body.append(element);
+
+      element.setDocumentSource(MERGED);
+      expect(element.getAttribute('view')).not.toBe('raw');
+      expect(element.shadowRoot?.querySelector<HTMLTableCellElement>('tbody td')?.colSpan).toBe(2);
+
+      element.setDocumentSource(MERGED, { presentation: null });
+      expect(element.shadowRoot?.querySelectorAll('tbody td')).toHaveLength(4);
+    });
+
+    it('shows the source byte for byte in the raw view, CRLF and frontmatter included', () => {
+      const source = '---\r\nsheet: stillpoint/v1\r\n---\r\nName,  Value\r\n"A, b",1\r\n';
+      const element = create();
+      element.setAttribute('view', 'raw');
+      element.setDocumentSource(source);
+      document.body.append(element);
+
+      expect(element.shadowRoot?.querySelector('[data-spl-raw]')?.textContent).toBe(source);
+      expect(element.shadowRoot?.querySelector('.spl-notice')).toBeNull();
+    });
+
+    it('shows an envelope that does not parse as its source with the error, until valid content', () => {
+      const invalid = '---\nsheet: stillpoint/v1\nformat: [unclosed\n---\nA,1';
+      const element = create();
+      const changes: string[] = [];
+      element.addEventListener('view-change', (event) => {
+        const { view, reason } = (event as CustomEvent<{ view: string; reason: string }>).detail;
+        changes.push(`${view}:${reason}`);
+      });
+      document.body.append(element);
+
+      element.setDocumentSource(invalid);
+      expect(element.getAttribute('view')).toBe('raw');
+      expect(element.shadowRoot?.querySelector('.spl-notice')?.textContent).toContain(
+        'could not be read'
+      );
+      expect(element.shadowRoot?.querySelector('[data-spl-raw]')?.textContent).toBe(invalid);
+      expect(element.shadowRoot?.querySelector('table')).toBeNull();
+
+      element.setDocumentSource(MERGED);
+      expect(element.getAttribute('view')).toBe('rich');
+      expect(element.shadowRoot?.querySelector('table')).not.toBeNull();
+      expect(changes).toEqual(['raw:fallback', 'rich:fallback']);
+    });
+
+    it('leaves the fallback for valid content from setContent and setDocument too', () => {
+      const invalid = '---\nsheet: nope\n---\nA,1';
+      const parsed = parseSheetDocument(MERGED);
+      if (!parsed.ok) throw new Error('expected document parse to succeed');
+      const element = create();
+      document.body.append(element);
+
+      element.setDocumentSource(invalid);
+      expect(element.getAttribute('view')).toBe('raw');
+      element.setContent('A,1');
+      expect(element.getAttribute('view')).toBe('rich');
+
+      element.setDocumentSource(invalid);
+      expect(element.getAttribute('view')).toBe('raw');
+      element.setDocument(parsed.document);
+      expect(element.getAttribute('view')).toBe('rich');
+    });
+  });
 });

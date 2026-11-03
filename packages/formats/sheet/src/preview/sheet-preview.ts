@@ -12,7 +12,7 @@ import {
 } from '@stillpointlab/common-format';
 
 import { parseCsv, type CsvParseResult } from '../csv';
-import { serializeSheetDocument } from '../document';
+import { parseSheetDocument, serializeSheetDocument } from '../document';
 import {
   resolveSheetPresentation,
   snapshotSheetPresentation,
@@ -28,10 +28,12 @@ import type { PreviewElement } from '@stillpointlab/common-format';
 
 /**
  * A read-only grid of one sheet. Implements PreviewElement and the raw view
- * convention: `view="raw"` shows the source, and CSV that does not parse shows its
- * source with the error until valid content arrives. A document given through
- * `setDocument` has no source text of its own, so its raw view is the document
- * serialised.
+ * convention: `view="raw"` shows the source, and a sheet that does not parse shows
+ * its source with the error until valid content arrives. CSV comes through
+ * `setContent` and a `.sheet` document's text through `setDocumentSource`; both
+ * keep the text as given for the raw view. A document given already parsed,
+ * through `setDocument`, has no source text of its own, so its raw view is the
+ * document serialised.
  */
 export class SheetPreview extends HTMLElement implements PreviewElement {
   private readonly root: ShadowRoot;
@@ -86,9 +88,24 @@ export class SheetPreview extends HTMLElement implements PreviewElement {
     this.loaded(content);
   }
 
+  /**
+   * Show a `.sheet` document from its text. `options.presentation` applies over the
+   * document's own, as in `setDocument`. An envelope that does not parse shows the
+   * source with the error. Prefer this to `setDocument` whenever the host has the text.
+   */
+  setDocumentSource(source: string, options: SheetContentOptions = {}): void {
+    const parsed = parseSheetDocument(source);
+    if (parsed.ok) {
+      this.showDocument(parsed.document, options);
+    } else {
+      this.model = { ok: false, error: { code: 'invalid_csv', message: parsed.error.message } };
+      this.presentation = snapshotSheetPresentation(options.presentation);
+    }
+    this.loaded(source);
+  }
+
   setDocument(document: ParsedSheetDocument, options: SheetContentOptions = {}): void {
-    this.model = snapshotSuccessfulModel(document.data);
-    this.presentation = resolveSheetPresentation(document.presentation, options.presentation);
+    this.showDocument(document, options);
     this.loaded(
       serializeSheetDocument({
         format: document.format,
@@ -96,6 +113,11 @@ export class SheetPreview extends HTMLElement implements PreviewElement {
         presentation: document.presentation,
       })
     );
+  }
+
+  private showDocument(document: ParsedSheetDocument, options: SheetContentOptions): void {
+    this.model = snapshotSuccessfulModel(document.data);
+    this.presentation = resolveSheetPresentation(document.presentation, options.presentation);
   }
 
   private loaded(source: string): void {
