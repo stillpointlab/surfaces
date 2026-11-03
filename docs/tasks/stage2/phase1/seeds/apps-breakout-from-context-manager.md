@@ -1,5 +1,5 @@
 ---
-column: todo
+column: done
 created: 2026-11-01T15:32:34-07:00
 tags: [apps, host-contract, major-feature]
 ---
@@ -12,8 +12,8 @@ contract extracted for them is the same one MCP binds to. Sheet is the stress te
 contract at good granularity; if it can live with propose-whole-good plus its own cell-level diff,
 the contract is right.
 
-_Moved from the backlog on 2026-11-03 to open stage 2: this breakout is the stage. A spike comes
-next and sizes the work into phases._
+_Moved from the backlog on 2026-11-03 to open stage 2: this breakout is the stage. Grown into the
+[apps breakout spike](../spikes/apps-breakout.md) the same day._
 
 ## Where the apps live today
 
