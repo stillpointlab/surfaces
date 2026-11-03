@@ -43,3 +43,13 @@ export function formatTest(options: FormatTestOptions = {}) {
     };
   });
 }
+
+/**
+ * Shared test settings for one app package: the same files as `formatTest`, run
+ * in Node, since an app's root entry is its DOM-free core. A test of the app's
+ * element (later) opts into jsdom on its own first line:
+ * `// @vitest-environment jsdom`.
+ */
+export function appTest(options: Omit<TestConfig, 'browser'> = {}) {
+  return defineConfig({ test: { environment: 'node', include, ...options } });
+}

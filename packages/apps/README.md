@@ -14,6 +14,25 @@ A format, by contrast, edits **one good** and is selected by its content type. S
 - Does the user work on a tree of goods under a manifest, with a model of its own? → an **app**.
 - Grey case? Prefer a container format (the `.sheet` envelope precedent) and keep it a format. Apps
   are for when the unit of work is a folder, not a file.
+- A UI element with no good and no mount of its own, rendered by formats, apps or the host? → a
+  **component** (`packages/components/<name>`).
 
 Both are the same kind of citizen to the host: a stateless client of the `get` / `list` / `put`
 contract (`put` is a proposal), so both share `packages/common` and the scaffold.
+
+## The package convention
+
+- **Name:** `@stillpointlab/<name>-app`, in `packages/apps/<name>`.
+- **`.` is the core.** The root entry is DOM-free and runs in Node and the browser: Context
+  Manager's server runs it, and so does its client. It imports only `yaml`, `zod`,
+  `@stillpointlab/common-format` (including `./yaml`) and the formats' DOM-free entries.
+- **`./element` is reserved** for the app's element, which comes in a later phase.
+- **Shared types** (the app's file model, its path rules) are exported from the root, so a host
+  imports them from the package and keeps no copy.
+- **The README is the file-format reference**: what the manifest and the files in scope hold, for
+  someone editing them by hand.
+- **Build and test** with the shared tooling: `formatPackage` from `tooling/tsup.ts`, and
+  `appTest()` from `tooling/vitest.ts` (Node; an element test opts into jsdom per file with
+  `// @vitest-environment jsdom`).
+- **Conformance:** the core runs `describeAppCore` from `@stillpointlab/common-format/testing/app`
+  over fixture folders of its own.
