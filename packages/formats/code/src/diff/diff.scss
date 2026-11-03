@@ -4,6 +4,8 @@
 // the side-by-side layout, the center divider, and the loading placeholder.
 // Mirrors preview.scss without any editor chrome.
 
+@use 'common/src/styles/tokens' as *;
+
 :host {
   display: block;
   width: 100%;
@@ -14,8 +16,8 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: var(--spl-background-primary, #ffffff);
-  border: 1px solid var(--spl-border-color, #d0d7de);
+  background-color: $background-primary;
+  border: 1px solid $border-color;
   border-radius: 6px;
   overflow: hidden;
   box-sizing: border-box;
@@ -27,7 +29,7 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: var(--spl-text-muted, #57606a);
+  color: $text-muted;
   font-size: 0.875rem;
 }
 
@@ -45,18 +47,18 @@
 // overflow instead of scrolling.
 .cm-mergeView {
   height: 100%;
-  background-color: var(--spl-background-primary, #ffffff);
+  background-color: $background-primary;
 }
 
 .cm-mergeViewEditor {
   flex: 1 1 0;
   min-width: 0;
-  background-color: var(--spl-background-primary, #ffffff);
+  background-color: $background-primary;
 }
 
 // Divider between the two panes, echoing the app's `.resize-handle` look.
 .cm-mergeViewEditor + .cm-mergeViewEditor {
-  border-left: 1px solid var(--spl-border-color, #d0d7de);
+  border-left: 1px solid $border-color;
 }
 
 .cm-editor.cm-focused {
@@ -71,31 +73,31 @@
 }
 
 .cm-mergeViewEditors {
-  background-color: var(--spl-background-primary, #ffffff) !important;
+  background-color: $background-primary !important;
 }
 
 .cm-merge-revert {
-  background-color: var(--spl-background-secondary, #f6f8fa) !important;
-  border-inline: 1px solid var(--spl-border-color, #d0d7de);
+  background-color: $background-secondary !important;
+  border-inline: 1px solid $border-color;
 }
 
 .cm-merge-revert button {
-  color: var(--spl-text-muted, #57606a) !important;
+  color: $text-muted !important;
 
   &:hover,
   &:focus-visible {
-    background-color: var(--spl-background-hover, #eaeef2) !important;
-    color: var(--spl-text-primary, #24292f) !important;
+    background-color: $background-hover !important;
+    color: $text-primary !important;
   }
 }
 
 .cm-collapsedLines {
-  color: var(--spl-text-muted, #57606a) !important;
+  color: $text-muted !important;
   background: linear-gradient(
     to bottom,
     transparent 0,
-    var(--spl-background-secondary, #f6f8fa) 30%,
-    var(--spl-background-secondary, #f6f8fa) 70%,
+    $background-secondary 30%,
+    $background-secondary 70%,
     transparent 100%
   ) !important;
 }

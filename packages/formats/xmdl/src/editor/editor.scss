@@ -1,3 +1,5 @@
+@use 'common/src/styles/tokens' as *;
+
 :host {
   display: block;
   height: 100%;
@@ -5,7 +7,7 @@
   font:
     14px/1.5 system-ui,
     sans-serif;
-  color: var(--spl-text-primary, #1f2933);
+  color: $text-primary;
 }
 
 .xmdl-editor {
@@ -33,9 +35,9 @@
   min-height: 30px;
   height: 30px;
   padding: 0.25rem;
-  border: 1px solid var(--spl-border-color, #d0d7de);
+  border: 1px solid $border-color;
   border-radius: 6px;
-  background: var(--spl-background-secondary, #f8fafc);
+  background: $background-secondary;
   flex-wrap: nowrap;
   min-width: 0;
 }
@@ -47,11 +49,11 @@
   box-sizing: border-box;
   min-width: 24px;
   height: 24px;
-  border: 1px solid var(--spl-border-color, #d0d7de);
+  border: 1px solid $border-color;
   border-radius: 4px;
   padding: 2px 0.5rem;
-  background: var(--spl-background-primary, #ffffff);
-  color: var(--spl-text-primary, #1f2933);
+  background: $background-primary;
+  color: $text-primary;
   font: inherit;
   font-size: 0.875rem;
   line-height: 1;
@@ -60,11 +62,11 @@
 
 .xmdl-editor__slot-control button {
   min-height: 2rem;
-  border: 1px solid var(--spl-border-color, #d0d7de);
+  border: 1px solid $border-color;
   border-radius: 6px;
   padding: 0.25rem 0.75rem;
-  background: var(--spl-background-primary, #ffffff);
-  color: var(--spl-text-primary, #1f2933);
+  background: $background-primary;
+  color: $text-primary;
   font: inherit;
   cursor: pointer;
 }
@@ -76,27 +78,27 @@
 }
 
 .xmdl-editor__apply-button:not(:disabled) {
-  border-color: var(--spl-action-border, #2563eb);
-  background: var(--spl-action-background, #2563eb);
-  color: var(--spl-action-text, #ffffff);
+  border-color: $button-bg;
+  background: $button-bg;
+  color: $button-text;
 }
 
 .xmdl-editor__progress,
 .xmdl-editor__status {
   font-size: 0.875rem;
-  color: var(--spl-text-secondary, #475569);
+  color: $text-secondary;
 }
 
 .xmdl-editor__status {
   border-radius: 999px;
   padding: 0.125rem 0.5rem;
-  background: var(--spl-status-incomplete-background, #fff7ed);
-  color: var(--spl-status-incomplete-text, #9a3412);
+  background: $warning-bg;
+  color: $warning-color;
 }
 
 .xmdl-editor__status[data-complete='true'] {
-  background: var(--spl-status-complete-background, #dcfce7);
-  color: var(--spl-status-complete-text, #166534);
+  background: $success-bg;
+  color: $success-color;
 }
 
 .xmdl-editor__toolbar-spacer {
@@ -114,7 +116,7 @@
   display: flex;
   align-items: center;
   margin-right: 0.25rem;
-  color: var(--spl-text-secondary, #475569);
+  color: $text-secondary;
   font-size: 0.875rem;
   line-height: 1;
 }
@@ -130,12 +132,12 @@
   border: none;
   border-radius: 999px;
   padding: 0;
-  background: var(--spl-border-dark, #94a3b8);
+  background: $border-dark;
   cursor: pointer;
 }
 
 .xmdl-editor__mode-toggle[aria-checked='true'] {
-  background: var(--spl-primary-blue, #2563eb);
+  background: $primary-blue;
 }
 
 .xmdl-editor__mode-toggle-knob {
@@ -145,7 +147,7 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: var(--spl-background-primary, #ffffff);
+  background: $background-primary;
   transition: transform 0.2s ease;
 }
 
@@ -166,7 +168,7 @@
 
 .xmdl-editor__template-header p {
   margin: 0;
-  color: var(--spl-text-secondary, #475569);
+  color: $text-secondary;
 }
 
 .xmdl-editor__slot-panel,
@@ -175,16 +177,16 @@
   display: grid;
   gap: 0.75rem;
   min-width: 0;
-  border: 1px solid var(--spl-border-color, #d0d7de);
+  border: 1px solid $border-color;
   border-radius: 6px;
   padding: 0.75rem;
-  background: var(--spl-background-primary, #ffffff);
+  background: $background-primary;
 }
 
 .xmdl-editor__errors {
-  border-color: var(--spl-error-border, #f2a7a7);
-  background: var(--spl-error-background, #fff1f1);
-  color: var(--spl-error-text, #991b1b);
+  border-color: $error-border;
+  background: $error-bg;
+  color: $error-color;
 }
 
 .xmdl-editor__slot-header {
@@ -203,14 +205,14 @@
 }
 
 .xmdl-editor__slot-meta {
-  color: var(--spl-text-muted, #64748b);
+  color: $text-muted;
   font-size: 0.8125rem;
 }
 
 .xmdl-editor__description,
 .xmdl-editor__empty {
   margin: 0;
-  color: var(--spl-text-secondary, #475569);
+  color: $text-secondary;
 }
 
 .xmdl-editor__slot-control {
@@ -225,11 +227,11 @@
 .xmdl-editor__slot-control select,
 .xmdl-editor__source {
   box-sizing: border-box;
-  border: 1px solid var(--spl-border-color, #d0d7de);
+  border: 1px solid $border-color;
   border-radius: 6px;
   padding: 0.5rem;
-  background: var(--spl-background-primary, #ffffff);
-  color: var(--spl-text-primary, #1f2933);
+  background: $background-primary;
+  color: $text-primary;
   font: inherit;
 }
 
@@ -271,10 +273,10 @@
   overflow: auto;
   max-height: 24rem;
   margin: 0;
-  border: 1px solid var(--spl-border-color, #d0d7de);
+  border: 1px solid $border-color;
   border-radius: 6px;
   padding: 0.75rem;
-  background: var(--spl-background-secondary, #f8fafc);
+  background: $background-secondary;
   font:
     13px/1.5 ui-monospace,
     SFMono-Regular,

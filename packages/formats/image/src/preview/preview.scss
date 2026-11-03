@@ -1,10 +1,14 @@
-export const previewStyles = `
+// Styles for the <image-preview> shadow root: a centred, contained image with
+// loading, empty and error messages over it.
+
+@use 'common/src/styles/tokens' as *;
+
 :host {
   display: block;
   min-height: 0;
   height: 100%;
-  color: var(--color-text, #1f2933);
-  background: var(--color-surface, #ffffff);
+  color: $text-primary;
+  background: $background-primary;
 }
 
 .image-preview {
@@ -52,13 +56,18 @@ export const previewStyles = `
 }
 
 .image-preview__message {
-  color: var(--color-text-muted, #667085);
-  font: 14px/1.4 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: $text-muted;
+  font:
+    14px/1.4 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
   text-align: center;
 }
 
 .image-preview__message--error {
-  color: var(--color-danger, #b42318);
+  color: $error-color;
 }
 
 .image-preview__loading {
@@ -67,6 +76,5 @@ export const previewStyles = `
   display: grid;
   place-items: center;
   pointer-events: none;
-  background: color-mix(in srgb, var(--color-surface, #ffffff) 78%, transparent);
+  background: color-mix(in srgb, #{$background-primary} 78%, transparent);
 }
-`;

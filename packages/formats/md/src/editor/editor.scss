@@ -87,7 +87,7 @@
 
   &.is-active {
     background-color: $primary-blue;
-    color: #ffffff;
+    color: $button-text;
 
     &:hover {
       background-color: $primary-blue-hover;
@@ -280,7 +280,7 @@
   .link-submit {
     padding: $spacing-xs $spacing-sm;
     background: $primary-blue;
-    color: #ffffff;
+    color: $button-text;
     border: none;
     border-radius: $border-radius-sm;
     cursor: pointer;
