@@ -18,8 +18,7 @@ Context Manager's server and client import the core from the submodule, and user
 
 ## Related context
 
-- Context Manager decisions: ADR-0022 (the inventory view and its format), ADR-0028 (mounts and
-  stewardship), ADR-0035 (apps live in `packages/apps/`).
+- Context Manager decisions: ADR-0022 (the inventory view and its format), ADR-0028 (mounts), ADR-0035 (apps live in `packages/apps/`).
 - Spike: [apps breakout](../../phase1/spikes/apps-breakout.md), finding 3.
 - Convention: `packages/apps/README.md` as [app-core-groundwork](app-core-groundwork.md) leaves it.
 - Main files: Context Manager's `src/services/inventory/`, `src/shared/interfaces/inventory.types.ts`,
@@ -61,10 +60,10 @@ size? }` exported from `types.ts`. Context Manager's type stays assignable to it
      `roomWriter`.
    - `mount` wraps `parseInventoryManifest` plus `detectInventoryAt`, the way Context Manager's
      inventory `lifecycle.ts` derives the scope.
-   - Inventory reports no unrecognised files today: a stray `notes.md` beside `inventory.yaml`, or a
-     non-YAML file in `rooms/`, is silently ignored. That is ADR-0028 decision 4's unpaid debt. The
-     suite runs with `stewardship: false`, the gap goes in the stage 2 WAL, and fixing it is a later
-     spec. That keeps behaviour unchanged here.
+   - Inventory ignores files it does not recognise (a `notes.md` beside `inventory.yaml`, a non-YAML
+     file in `rooms/`). ADR-0028 decision 4 asks for a warning, but Jamie expects to relax that rule
+     (agent-made helper files make it noise), so nothing changes here and the suite does not check
+     it.
 5. **The Context Manager adoption** (one PR there, after this merges):
    - Move the submodule pin, and delete the moved files and their tests.
    - Import from `@stillpointlab/inventory-app` in `inventory.service.ts`,
@@ -95,7 +94,7 @@ size? }` exported from `types.ts`. Context Manager's type stays assignable to it
 ## Non-goals
 
 - Any element, harness or component work (phases 4 and 6).
-- Changing a function's signature or behaviour, including the stewardship gap.
+- Changing a function's signature or behaviour.
 - The tasks core (phase 3).
 
 ## Acceptance / completion checklist
@@ -103,8 +102,7 @@ size? }` exported from `types.ts`. Context Manager's type stays assignable to it
 - [ ] `packages/apps/inventory` builds, typechecks and passes its moved tests (`csv`, `detection`,
       `manifest`, `manifestSeed`, `room`, `roomWriter`, plus whatever tests the prep gave `fields`
       and `totals`) under Node.
-- [ ] `describeAppCore` passes with `stewardship: false`, and the stewardship gap is in the stage 2
-      WAL.
+- [ ] `describeAppCore` passes over the inventory fixtures.
 - [ ] README = the format guide.
 - [ ] Context Manager adoption PR is green, with the pin on the merge commit.
 - [ ] The inventory e2e walks were run against the scratch repository after the adoption, or the PR

@@ -90,7 +90,9 @@ Users see no change: every route, job and response behaves as before.
 
 - **Why an owned error class and not a result type.** The brief's wording was "typed failures". A
   thrown error class owned by the module keeps every signature as it is, which is the brief's
-  move-as-is decision. Changing to result types belongs to the contract step.
+  move-as-is decision. Result types are Jamie's preferred pattern; moving the cores to them is the
+  [result types seed](../../../unassigned/seeds/result-types-for-app-cores.md), for the contract
+  step.
 - **What stays.** Both `lifecycle.ts` adapter objects implement the host's `RepoViewAdapter`, so they
   stay host-side and call into the cores. The same goes for `prState.ts` (Redis) and
   `tasks-nav.shared.ts` (element phase).

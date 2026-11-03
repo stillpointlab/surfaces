@@ -72,7 +72,7 @@ Each phase below ends with Context Manager on a new pin and nothing changed for 
    the validation and totals carved out of `inventory.service.ts`, the shared types and path utils,
    their tests, and the inventory format guide as its README. Context Manager imports from it and
    re-exports the types. A `common/testing` suite holds an app core to ADR-0028: parse, project,
-   rewrite and re-parse round-trip byte for byte, and unrecognised files in scope are reported.
+   rewrite and re-parse round-trip byte for byte, and unrecognised files in scope are reported (dropped on PR 36: Jamie expects to relax that rule).
 3. **Tasks core.** `packages/apps/tasks` the same way, including the rewrites and the pure seed.
 4. **Components.** `packages/components/` with the limited set the app elements render inside
    themselves (below), restyled on `common`'s `--spl-*` tokens with Context Manager's current values

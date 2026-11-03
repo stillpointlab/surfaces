@@ -21,7 +21,9 @@ that runs in Node, and the package convention written down.
 - Context Manager ADR-0028 (manifest mounts): an app is the sole executor over its scope.
   - Hand edits are first-class, so manifest and data writes are byte-preserving rewrites (decision
     1).
-  - An app owes a warning for every file in scope it cannot map (decision 4).
+  - Decision 4 (a warning for every file in scope the app cannot map) is not checked: Jamie expects
+    to relax it, since agents routinely leave READMEs and helper files beside cards and the warnings
+    are noise (2026-11-03, on PR 36).
 - Precedent: the element conformance suites in `packages/common/src/testing/`, with opt-outs for
   recorded gaps (stage 1's `readonly: false`).
 - Main files: `packages/common/` (new `./yaml` and `./testing/app` entries), `tooling/vitest.ts`,
@@ -52,15 +54,11 @@ that runs in Node, and the package convention written down.
      /** Rewrites to check, each over one fixture file. */
      rewrites: [{ name: 'edit an item', fixture: 'minimal', path: 'rooms/kitchen.yaml',
                   apply: (text) => …, reparses: (text) => boolean }],
-     /** Opt-out for a recorded gap, as the element suites have. */
-     stewardship: false,
    });
    ```
 
    It checks:
    - every fixture mounts;
-   - **stewardship:** every fixture file is in the scope or named in a warning, unless
-     `stewardship: false`;
    - for each rewrite:
      - the output re-parses;
      - every `#` comment line in the input survives verbatim;
@@ -104,7 +102,8 @@ that runs in Node, and the package convention written down.
 - [ ] `./yaml` exported, built and tested under Node; the copied cases pass.
 - [ ] `./testing/app` exported. The suite runs against a sample core in `common`'s own tests: a
       tiny line-based `key: value` app. It passes there, and each check fails when the sample breaks
-      it (an unmapped file, a dropped comment, LF output on CRLF input, a lost final newline).
+      it (a fixture that fails to mount, a dropped comment, LF output on CRLF input, a lost final
+      newline).
 - [ ] `appTest()` in `tooling/vitest.ts`; the root `vitest.config.ts` already includes
       `packages/apps/*`.
 - [ ] `packages/apps/README.md` carries the convention and the components line.
