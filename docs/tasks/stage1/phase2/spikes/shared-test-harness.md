@@ -208,4 +208,4 @@ need to clarify user/agent facing changes." The spec is
   (the contract), [ADR-0035](https://github.com/stillpointlab/context-manager/blob/main/docs/adr/0035-surfaces-monorepo.md)
   (this repository), the phase 1 [convention spec](../../phase1/specs/format-package-convention.md).
 - Seeds this touches: [one scaffold for formats and apps](../../../unassigned/seeds/one-scaffold-for-formats-and-apps.md),
-  [apps breakout](../../../unassigned/seeds/apps-breakout-from-context-manager.md).
+  [apps breakout](../../../stage2/phase1/seeds/apps-breakout-from-context-manager.md).
