@@ -1,5 +1,6 @@
 ---
-column: todo
+column: done
+completed: 2026-11-02
 created: 2026-11-02T20:02:17-07:00
 tags: [formats, host-contract, common, major-feature]
 ---
@@ -14,6 +15,22 @@ _Drafted by the claude agent from Jamie's direction and the phase 4 spike
 [shared-element-patterns](../../phase4/spikes/shared-element-patterns.md) (finding 4, with the eight
 open decisions). A brief rather than a straight spec because the work splits into several specs and
 changes what users see and what a host or agent can ask for._
+
+## Decisions (Jamie, 2026-11-02, on PR 19)
+
+- **Label: "Raw Text"**, on means raw, the same switch in every editor. xmdl's "Apply Mode" switch
+  was the same toggle under another name with the sense inverted (on meant the apply view); it
+  becomes "Raw Text".
+- **Host handle: the `view` attribute and the `view-change` event**, as recommended.
+- **Fallback: yes**, on parse failure, engine failure and the sheet row limit. And when the user
+  edits raw text and tries to switch back while it still does not parse, the element stays in raw
+  and shows the updated parse errors.
+- **Read-only does not force raw.** A read-only editor behaves like a preview: the rich view by
+  default, the switch still usable to view the raw text, and neither view editable.
+- **Switching never changes the text.** md has bugs here (it normalises Markdown on load, before any
+  edit); the principle stands and the md spec fixes them.
+
+The open questions below are kept as asked; the specs in `../specs/` carry the answers.
 
 ## High-level goal
 
