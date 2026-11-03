@@ -232,6 +232,9 @@ into changesets, MCP app vocabularies, and the one-scaffold generalisation.
 
 ### Open questions for the brief
 
+_Answered by Jamie on PR 35 (2026-11-03): all five defaults taken, and a third category added,
+shared components. The [brief](../briefs/apps_breakout.md) records the decisions._
+
 1. **Publish the cores and elements as MIT here?** Default yes, per ADR-0035 and the platform
    architecture; the host services stay private.
 2. **Inventory first?** Default yes (above). The case for tasks first: it is the app both
