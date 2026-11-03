@@ -1,10 +1,17 @@
 ---
-column: todo
+column: done
+pr: 14
+completed: 2026-11-02
 created: 2026-11-02T19:05:48-07:00
 tags: [formats, common, host-contract, quick-win]
 ---
 
 # Spec: element lifecycle fixes
+
+_Landed 2026-11-02 in [#14](https://github.com/stillpointlab/surfaces/pull/14), the first of the
+phase 4 stack. The existing reconnect suite case already covered the second scenario, so the suites
+gained one new case (the synchronous move). Context Manager picked the fix up with the pin move in
+context-manager#1002._
 
 _From the phase 4 spike [shared-element-patterns](../spikes/shared-element-patterns.md). These are
 the defects the sweep found. They go first because one of them hangs `whenReady()`, and the
@@ -88,16 +95,16 @@ throws.
 
 ## Acceptance / completion checklist
 
-- [ ] The two new suite cases pass for every element in every format, and fail on `main` for the
+- [x] The two new suite cases pass for every element in every format, and fail on `main` for the
       four lazy elements (verified once before the fix).
-- [ ] No lazy element builds a view while disconnected.
-- [ ] md-editor runs no timer after disconnect.
-- [ ] Every `customElements.define` in the repository goes through `defineElement`; loading an
+- [x] No lazy element builds a view while disconnected.
+- [x] md-editor runs no timer after disconnect.
+- [x] Every `customElements.define` in the repository goes through `defineElement`; loading an
       element module twice in one test does not throw.
-- [ ] `isCurrent` and `booleanAttribute` have unit tests in `common`; the README documents both
+- [x] `isCurrent` and `booleanAttribute` have unit tests in `common`; the README documents both
       and the attribute rule.
-- [ ] `npm run check` is green.
-- [ ] Context Manager: nothing to change; the fix arrives with the next pin move. Note it in the
+- [x] `npm run check` is green.
+- [x] Context Manager: nothing to change; the fix arrives with the next pin move. Note it in the
       stage 5 WAL then.
 
 ## Implementation plan

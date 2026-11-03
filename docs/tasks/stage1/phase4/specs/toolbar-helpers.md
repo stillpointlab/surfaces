@@ -1,10 +1,19 @@
 ---
-column: todo
+column: done
+pr: 17
+completed: 2026-11-02
 created: 2026-11-02T19:05:48-07:00
 tags: [formats, common, polish]
 ---
 
 # Spec: toolbar helpers and the shared switch
+
+_Landed 2026-11-02 in [#17](https://github.com/stillpointlab/surfaces/pull/17). Two deviations:
+`_toolbar.scss` carries only the shared states (focus ring, disabled), since unifying geometry would
+be a redesign; and disabled opacity is unified at 0.5. `dismissOnOutside` takes an element or a
+function returning several, which sheet (menu plus trigger) needs. code-editor leaves
+`aria-readonly` to CodeMirror, which already manages it. md's switch now announces "Raw, checked"
+in rich mode, the existing inverted sense; the raw-mode brief settles it._
 
 _From the phase 4 spike [shared-element-patterns](../spikes/shared-element-patterns.md), findings 3
 and 5. Jamie, 2026-11-02: helper functions and interfaces, not a toolbar component._
@@ -88,16 +97,16 @@ owns its own commands. The behaviour comes from a few small functions and one st
 
 ## Acceptance / completion checklist
 
-- [ ] The helpers, the switch and `_toolbar.scss` are in `common`, unit-tested, and listed in the
+- [x] The helpers, the switch and `_toolbar.scss` are in `common`, unit-tested, and listed in the
       README.
-- [ ] md, code and xmdl toolbars have `role="toolbar"` and a label; every icon-only button has an
+- [x] md, code and xmdl toolbars have `role="toolbar"` and a label; every icon-only button has an
       accessible name; md's popover triggers expose `aria-haspopup` and `aria-expanded`.
-- [ ] Arrow keys, Home and End move focus in all four toolbars; each toolbar is one tab stop.
-- [ ] All four editors read `readonly` through `isReadonly` and reflect `aria-readonly`.
-- [ ] `<md-toggle>` is gone; md and xmdl use `createSwitch` with unchanged labels and behaviour.
-- [ ] Every format's toolbar stylesheet uses the partial; the harness shows no unintended visual
+- [x] Arrow keys, Home and End move focus in all four toolbars; each toolbar is one tab stop.
+- [x] All four editors read `readonly` through `isReadonly` and reflect `aria-readonly`.
+- [x] `<md-toggle>` is gone; md and xmdl use `createSwitch` with unchanged labels and behaviour.
+- [x] Every format's toolbar stylesheet uses the partial; the harness shows no unintended visual
       change in light or dark.
-- [ ] `npm run check` is green.
+- [x] `npm run check` is green.
 
 ## Implementation plan
 
