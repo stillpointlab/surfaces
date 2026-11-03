@@ -167,6 +167,11 @@ The rules, which `describeRawViewContract` proves:
   fixing the text does not switch back by itself; a preview returns to the rich view when valid
   content arrives, since nobody can fix the text there.
 - **Read-only never changes the view.** Both views are uneditable, and the switch still works.
+- **Line endings are kept.** Text with CRLF (or CR) line endings reads back as set, and a raw edit
+  writes the whole text with the line break the text was set with: `<code-editor>` and the
+  textarea both report LF otherwise. Text with mixed line endings is returned as set until an
+  edit, and with its first line break throughout after one. `lineBreakOf` and `withLineBreak` are
+  the helpers.
 
 Editors put a "Raw Text" switch (`createSwitch` with `RAW_VIEW_LABEL`, checked in raw) last in their
 toolbar. Previews have no switch; the host decides whether to offer one. The pieces in `common`:
@@ -181,6 +186,16 @@ language, label })` is the read-only one: a `<code-preview>` or a `<pre>`. Both 
 - `createNotice({ tone, title, items, announce })` is the banner that says why, styled by
   `@use 'common/src/styles/notice';`. `announce: 'assertive'` makes it an alert, for errors the user
   just caused.
+
+An editor with a raw view also implements the contract's keymap-mode methods for its raw text,
+through `createKeymapState(el)`: the `keymap-mode` attribute (reflected), `keymap-mode-change`, and
+`getSupportedKeymapModes` / `getKeymapMode` / `setKeymapMode` (Normal, plus Vim while `<code-editor>`
+is defined and the element is editable). The mode is recorded while the rich view shows and the raw
+view opens in it; a choice made on the embedded `<code-editor>`'s toolbar comes back as the
+element's own event, so a host stores one preference for every editor. The rich view's keys never
+change. Read-only raw text runs in Normal without changing the recorded mode, and without an
+event. `describeKeymapModeContract` proves it, in a test file of its own since it defines a
+`<code-editor>` stand-in.
 
 The template's sample editor and preview implement all of it, so a new format starts with a raw
 view. The harness has a Raw control, logs `view-change`, and registers `<code-editor>` and

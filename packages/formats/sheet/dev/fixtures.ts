@@ -239,16 +239,14 @@ function applySheet(elements: HarnessElements, fixture: SheetFixture): void {
   grid?.setAttribute('header-row', '');
 
   if (fixture.documentSource !== undefined) {
-    const parsed = parseSheetDocument(fixture.documentSource);
     const options = { presentation: fixture.documentOverride };
-    if (parsed.ok) {
-      preview?.setDocument(parsed.document, options);
-      grid?.setDocument(parsed.document, options);
-    } else {
-      preview?.setContent('');
-      grid?.setContent('');
-    }
+    // The preview and editor take the text, so an invalid envelope shows its source
+    // and error; the grid has no raw view and takes the parsed document.
+    preview?.setDocumentSource(fixture.documentSource, options);
     editor?.setDocumentSource(fixture.documentSource, options);
+    const parsed = parseSheetDocument(fixture.documentSource);
+    if (parsed.ok) grid?.setDocument(parsed.document, options);
+    else grid?.setContent('');
     return;
   }
   const options = { presentation: fixture.presentation };

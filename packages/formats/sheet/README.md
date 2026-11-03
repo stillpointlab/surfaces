@@ -233,20 +233,23 @@ Quarter,Revenue,Cost
 Q1,1200,800
 ```
 
-Select document handling explicitly. Preview/grid callers parse once and pass the structured result;
-the editor accepts the original source so it can preserve an unchanged document byte-for-byte. Plain
-CSV remains plain CSV and is never sniffed for an envelope.
+Select document handling explicitly. The editor and the preview accept the original source through
+`setDocumentSource`: the editor preserves an unchanged document byte-for-byte, and both show the
+source as given in their raw view, or with the error when the envelope does not parse. Prefer it
+whenever the host has the text. A host that already holds a parsed document can pass it to the
+preview or the grid with `setDocument`; the preview's raw view is then the document serialised.
+Plain CSV remains plain CSV and is never sniffed for an envelope.
 
 ```ts
-import { parseSheetDocument } from '@stillpointlab/sheet-editor/document';
-import '@stillpointlab/sheet-editor/editor';
-import '@stillpointlab/sheet-editor/preview';
+import { parseSheetDocument } from '@stillpointlab/sheet-format/document';
+import '@stillpointlab/sheet-format/editor';
+import '@stillpointlab/sheet-format/preview';
+
+preview.setDocumentSource(source);
+editor.setDocumentSource(source);
 
 const parsed = parseSheetDocument(source);
-if (parsed.ok) preview.setDocument(parsed.document);
-
-const editor = document.createElement('sheet-editor');
-editor.setDocumentSource(source);
+if (parsed.ok) grid.setDocument(parsed.document);
 ```
 
 An optional call-site presentation resolves `merges`, `formats`, `alignments`, and `valueFormats`

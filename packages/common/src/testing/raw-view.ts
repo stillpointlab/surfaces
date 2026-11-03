@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { withLineBreak } from '../line-endings';
 import { RAW_VIEW_LABEL, VIEW_CHANGE_EVENT } from '../raw';
 
 import { contentChanges, mount, settled } from './support';
@@ -19,6 +20,12 @@ export interface RawViewContractOptions<T extends PreviewElement = PreviewElemen
    * is something else (a registered `<code-editor>`).
    */
   editRaw?: (el: T, text: string) => void | Promise<void>;
+  /**
+   * `content` with CRLF line endings, which an editor must return as set and keep
+   * through the switch and a raw edit. Default: `content` with every line break
+   * written as CRLF.
+   */
+  crlfContent?: string;
   /** Content the rich view cannot show; omit for a format whose content always parses. */
   invalidContent?: string;
   /** A second invalid text with different errors, to prove the notice follows the text. */
@@ -86,6 +93,8 @@ export function describeRawViewContract<T extends PreviewElement = PreviewElemen
 ): void {
   const { kind, content, prepare, invalidContent, otherInvalidContent } = options;
   const edited = options.editedContent ?? `${content}\n`;
+  const crlf = options.crlfContent ?? withLineBreak(content, '\r\n');
+  const crlfEdited = withLineBreak(edited, '\r\n');
   const editRaw = options.editRaw ?? ((el: T, text: string) => defaultEditRaw(el, text));
 
   async function mounted(text = content, setup?: (el: T) => void): Promise<T> {
@@ -165,6 +174,56 @@ export function describeRawViewContract<T extends PreviewElement = PreviewElemen
         expect(isRaw(el)).toBe(false);
         expect(changes.details).toHaveLength(1);
         expect(el.getContent()).toBe(edited);
+      });
+
+      it('keeps CRLF line endings through load, the switch and a raw edit', async () => {
+        const el = (await mounted(crlf)) as unknown as T & EditorElement;
+        expect(el.getContent()).toBe(crlf);
+
+        rawSwitch(el).click();
+        await settled(el);
+        expect(el.getContent()).toBe(crlf);
+
+        // The edit replaces the text with LF line breaks, as a textarea reports it.
+        const changes = contentChanges(el);
+        await editRaw(el, withLineBreak(crlfEdited, '\n'));
+        expect(changes.details).toEqual([{ content: crlfEdited }]);
+        expect(el.getContent()).toBe(crlfEdited);
+
+        rawSwitch(el).click();
+        await settled(el);
+        expect(isRaw(el)).toBe(false);
+        expect(el.getContent()).toBe(crlfEdited);
+      });
+
+      it('keeps one raw surface mounted while raw shows', async () => {
+        // Moving the surface reconnects an embedded <code-editor>, which rebuilds its
+        // view and loses the cursor, the undo history and any keymap change in flight.
+        const el = (await mounted(content, (e) => e.setAttribute('view', 'raw'))) as unknown as T &
+          EditorElement;
+        const surface = rawSurface(el);
+        const parent = surface?.parentNode;
+        expect(parent).toBeTruthy();
+        // A removal of the surface itself, even put back in the same place.
+        const records: MutationRecord[] = [];
+        const removals = new MutationObserver((batch) => records.push(...batch));
+        removals.observe(el.shadowRoot as ShadowRoot, { childList: true, subtree: true });
+        const removed = () =>
+          [...records, ...removals.takeRecords()].some((record) =>
+            [...record.removedNodes].includes(surface as Node)
+          );
+
+        el.setAttribute('readonly', 'true');
+        await settled(el);
+        el.removeAttribute('readonly');
+        await settled(el);
+        el.setContent(edited);
+        await settled(el);
+        expect(removed()).toBe(false);
+        removals.disconnect();
+        expect(rawSurface(el)).toBe(surface);
+        expect(surface?.parentNode).toBe(parent);
+        expect(parent?.isConnected).toBe(true);
       });
 
       it('stays in raw when content is set there', async () => {

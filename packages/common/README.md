@@ -14,8 +14,9 @@ What every surface shares. No elements of its own.
   (ignored if a newer cycle began), `settle()` with no token is for synchronous work, and `begin()`
   on disconnect makes the element pending until it is connected and rendered again.
 - **Conformance suites** (`@stillpointlab/common-format/testing`). `describePreviewContract`,
-  `describeEditorContract`, `describeImagePreviewContract`, `describeDiffContract`: vitest suites a
-  format runs for each element it ships, asserting what the contracts promise and nothing more.
+  `describeEditorContract`, `describeImagePreviewContract`, `describeDiffContract`, and for the raw
+  view `describeRawViewContract` and `describeKeymapModeContract`: vitest suites a format runs for
+  each element it ships, asserting what the contracts promise and nothing more.
   They import `vitest`, so they live in their own entry and never reach a runtime bundle.
 - **Tokens.** `src/styles/_tokens.scss`: the `--spl-*` color custom properties with defaults, plus
   spacing and radius scales. Formats pull them in with `@use 'common/src/styles/tokens' as *;`

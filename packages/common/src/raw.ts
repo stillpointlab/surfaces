@@ -3,7 +3,15 @@
 // cannot show the content. These are the pieces a format composes; the rules they
 // serve are in the README's "Raw view" section and in contracts.ts.
 
-import type { SurfaceView, ViewChangeDetail, ViewChangeReason } from './contracts';
+import { lineBreakOf, withLineBreak } from './line-endings';
+
+import type {
+  EditorKeymapMode,
+  EditorKeymapModeResult,
+  SurfaceView,
+  ViewChangeDetail,
+  ViewChangeReason,
+} from './contracts';
 
 /** The switch's label in every editor that has a raw view. */
 export const RAW_VIEW_LABEL = 'Raw Text';
@@ -78,6 +86,7 @@ interface EmbeddedEditor extends HTMLElement {
   setContent(content: string): void;
   getContent(): string;
   whenReady?(): Promise<void>;
+  setKeymapMode?(mode: EditorKeymapMode): EditorKeymapModeResult | Promise<EditorKeymapModeResult>;
 }
 
 /** What `createRawView` mounts when the host registered `<code-preview>`. */
@@ -96,6 +105,13 @@ export interface RawSourceOptions {
   label: string;
   /** Called with the whole text after every user edit (never for `setValue`). */
   onInput: (text: string) => void;
+  /** The keymap mode an embedded `<code-editor>` opens in (default Normal). */
+  keymapMode?: EditorKeymapMode;
+  /**
+   * Called when the person picks a mode on the embedded editor's toolbar. Not
+   * called for the drop to Normal that read-only forces.
+   */
+  onKeymapModeChange?: (detail: EditorKeymapModeResult) => void;
 }
 
 /** An editable raw text surface. */
@@ -108,6 +124,8 @@ export interface RawSource {
   focus(): void;
   /** Resolves once the surface shows its text (an embedded `<code-editor>` loads lazily). */
   whenReady(): Promise<void>;
+  /** Apply a keymap mode: an embedded `<code-editor>`'s result, or Normal only for a textarea. */
+  setKeymapMode(mode: EditorKeymapMode): Promise<EditorKeymapModeResult>;
 }
 
 /**
@@ -117,6 +135,7 @@ export interface RawSource {
  */
 export function createRawSource(options: RawSourceOptions): RawSource {
   let readonly = options.readonly ?? false;
+  // The text as set, or as last edited: what getValue() returns.
   let last = options.value;
 
   if (customElements.get('code-editor')) {
@@ -125,12 +144,23 @@ export function createRawSource(options: RawSourceOptions): RawSource {
     editor.setAttribute('aria-label', options.label);
     if (options.language) editor.setAttribute('language', options.language);
     if (readonly) editor.setAttribute('readonly', 'true');
+    // The mode the person chose, which read-only suspends but does not change.
+    let keymapMode: EditorKeymapMode = options.keymapMode ?? 'normal';
+    if (keymapMode !== 'normal') editor.setAttribute('keymap-mode', keymapMode);
     editor.setContent(options.value);
     editor.addEventListener('content-change', (event) => {
       event.stopPropagation();
       if (readonly) return;
       last = editor.getContent();
       options.onInput(last);
+    });
+    editor.addEventListener('keymap-mode-change', (event) => {
+      event.stopPropagation();
+      // A read-only editor drops to Normal by itself; that is not the person's choice.
+      if (readonly) return;
+      const detail = (event as CustomEvent<EditorKeymapModeResult>).detail;
+      keymapMode = detail.activeMode;
+      options.onKeymapModeChange?.(detail);
     });
     return {
       element: editor,
@@ -141,14 +171,29 @@ export function createRawSource(options: RawSourceOptions): RawSource {
       },
       setReadonly: (value) => {
         readonly = value;
-        if (value) editor.setAttribute('readonly', 'true');
-        else editor.removeAttribute('readonly');
+        if (value) {
+          editor.setAttribute('readonly', 'true');
+          return;
+        }
+        editor.removeAttribute('readonly');
+        // Back to the chosen mode once editable again.
+        if (keymapMode !== 'normal') void editor.setKeymapMode?.(keymapMode);
       },
       focus: () => editor.focus(),
       whenReady: () => editor.whenReady?.() ?? Promise.resolve(),
+      setKeymapMode: async (mode) => {
+        const result: EditorKeymapModeResult = editor.setKeymapMode
+          ? await editor.setKeymapMode(mode)
+          : unsupportedKeymapMode(mode, 'normal');
+        if (result.status === 'applied') keymapMode = result.activeMode;
+        return result;
+      },
     };
   }
 
+  // A textarea's value always reports LF; edits are written back with the line
+  // break of the text as set, and unedited text is returned as set.
+  let lineBreak = lineBreakOf(options.value);
   const area = document.createElement('textarea');
   area.className = 'spl-raw-source';
   area.dataset.splRaw = 'source';
@@ -163,14 +208,15 @@ export function createRawSource(options: RawSourceOptions): RawSource {
       area.value = last;
       return;
     }
-    last = area.value;
+    last = withLineBreak(area.value, lineBreak);
     options.onInput(last);
   });
   return {
     element: area,
-    getValue: () => area.value,
+    getValue: () => last,
     setValue: (text) => {
       last = text;
+      lineBreak = lineBreakOf(text);
       area.value = text;
     },
     setReadonly: (value) => {
@@ -179,7 +225,21 @@ export function createRawSource(options: RawSourceOptions): RawSource {
     },
     focus: () => area.focus(),
     whenReady: () => Promise.resolve(),
+    // A textarea has Normal keys only.
+    setKeymapMode: (mode) =>
+      Promise.resolve(
+        mode === 'normal'
+          ? { requestedMode: mode, activeMode: mode, status: 'applied' }
+          : unsupportedKeymapMode(mode, 'normal')
+      ),
   };
+}
+
+function unsupportedKeymapMode(
+  requestedMode: EditorKeymapMode,
+  activeMode: EditorKeymapMode
+): EditorKeymapModeResult {
+  return { requestedMode, activeMode, status: 'unsupported', reason: 'not-supported' };
 }
 
 export interface RawViewOptions {

@@ -33,7 +33,9 @@ The element matches `<md-editor>` so it drops into the same host machinery
 (autosave, publish, share):
 
 - `setContent(content: string): void` — replace the document.
-- `getContent(): string` — current text (works before the lazy view loads, too).
+- `getContent(): string` — current text (works before the lazy view loads, too). Text is
+  returned as set until an edit; an edit keeps the line break of the text as set (CRLF stays
+  CRLF), though CodeMirror itself joins lines with LF.
 - `focus(): void`.
 - `content-change` — `CustomEvent<{ content: string }>` fired on every edit.
 - `readonly` attribute — `"true"` makes the view non-editable.
@@ -41,8 +43,12 @@ The element matches `<md-editor>` so it drops into the same host machinery
   `json`); unknown/absent values render as plain text (line numbers only).
 - `keymap-mode` attribute — keyboard mode selector. `normal` and `vim` are supported.
 
-CodeMirror is loaded lazily on connect, so importing the package is cheap until an
-editor is actually mounted.
+Importing an entry (`.`, `./editor`, `./preview` or `./diff`) defines its element and
+loads no CodeMirror: the engine loads when an element first connects, and a language's
+grammar when it is first used. A host can therefore define `<code-editor>` on any page
+that might need it (such as a raw view) and pay only for the element module, a few KB.
+`src/entries.test.ts` keeps it so. `findLanguage(name)` resolves asynchronously for the
+same reason.
 
 ## Keyboard modes
 

@@ -2,6 +2,7 @@
 
 import {
   createNotice,
+  createKeymapState,
   createRawSource,
   createReadyGate,
   createSwitch,
@@ -22,7 +23,11 @@ import { formatSampleIssue, validateSample } from '../core/parse';
 
 import { editorStyles } from './editor.styles';
 
-import type { EditorElement } from '@stillpointlab/common-format';
+import type {
+  EditorElement,
+  EditorKeymapMode,
+  EditorKeymapModeResult,
+} from '@stillpointlab/common-format';
 
 /**
  * Interactive editor over one good's content. Implements the host's EditorElement
@@ -42,9 +47,11 @@ export class SampleEditor extends HTMLElement implements EditorElement {
   private text = '';
   private raw: RawSource | null = null;
   private notice: HTMLElement | null = null;
+  // The keyboard mode of the raw view's <code-editor>, which the host can set and store.
+  private readonly keymap = createKeymapState(this);
 
   static get observedAttributes(): string[] {
-    return ['readonly', 'view'];
+    return ['readonly', 'view', 'keymap-mode'];
   }
 
   constructor() {
@@ -85,6 +92,7 @@ export class SampleEditor extends HTMLElement implements EditorElement {
   }
 
   connectedCallback(): void {
+    this.keymap.connected();
     this.render();
   }
 
@@ -98,6 +106,8 @@ export class SampleEditor extends HTMLElement implements EditorElement {
       this.raw?.setReadonly(isReadonly(this));
     } else if (name === 'view' && !this.viewState.reflecting) {
       this.requestView(parseView(newValue), 'host');
+    } else if (name === 'keymap-mode') {
+      this.keymap.attributeChanged(newValue, this.raw);
     }
   }
 
@@ -125,6 +135,19 @@ export class SampleEditor extends HTMLElement implements EditorElement {
 
   getContent(): string {
     return this.text;
+  }
+
+  getSupportedKeymapModes(): readonly EditorKeymapMode[] {
+    return this.keymap.supportedModes();
+  }
+
+  /** The mode the raw view runs in (Normal while read-only); the rich view's keys never change. */
+  getKeymapMode(): EditorKeymapMode {
+    return this.keymap.mode;
+  }
+
+  setKeymapMode(mode: EditorKeymapMode): Promise<EditorKeymapModeResult> {
+    return this.keymap.set(mode, this.raw);
   }
 
   focus(): void {
@@ -166,8 +189,18 @@ export class SampleEditor extends HTMLElement implements EditorElement {
         label: 'Sample source',
         readonly: isReadonly(this),
         onInput: (text) => this.edited(text),
+        ...this.keymap.rawSourceOptions(),
       });
-      this.body.replaceChildren(...(this.notice ? [this.notice] : []), this.raw.element);
+      if (this.raw.element.parentNode === this.body) {
+        // Raw already shows: replace what is around the text, never the text itself,
+        // so an embedded <code-editor> keeps its view, cursor and history.
+        for (const child of [...this.body.children]) {
+          if (child !== this.raw.element) child.remove();
+        }
+        if (this.notice) this.raw.element.before(this.notice);
+      } else {
+        this.body.replaceChildren(...(this.notice ? [this.notice] : []), this.raw.element);
+      }
     } else {
       this.raw = null;
       this.area.value = this.text;
