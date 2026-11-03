@@ -1,5 +1,7 @@
 ---
-column: todo
+column: done
+completed: 2026-11-03
+pr: 35
 created: 2026-11-03T12:18:56-07:00
 tags: [apps, host-contract, common, major-feature]
 ---
