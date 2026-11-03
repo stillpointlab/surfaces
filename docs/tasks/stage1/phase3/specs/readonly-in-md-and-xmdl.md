@@ -74,8 +74,9 @@ content or emits `content-change`. The two contract tests that opt out today run
 - [x] `<md-editor readonly="true">`: typing, every toolbar command and the raw toggle are inert;
       removing the attribute restores them.
 - [x] One element test per format for the restore path (three for xmdl, three for md).
-- [ ] Context Manager: no change needed (it already sets the attribute); note in the WAL entry that
-      the gaps are closed, with the surfaces PR, when the pin next moves.
+- [x] Context Manager: no change needed (it already sets the attribute); note in the WAL entry that
+      the gaps are closed, with the surfaces PR, when the pin next moves. Done with the pin move to
+      `ba83322`: Context Manager's stage 5 WAL records both gaps closed by #11.
 
 ## Implementation plan
 
