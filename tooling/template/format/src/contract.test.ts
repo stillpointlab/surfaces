@@ -3,6 +3,7 @@
 import {
   describeEditorContract,
   describePreviewContract,
+  describeRawViewContract,
 } from '@stillpointlab/common-format/testing';
 import { expect } from 'vitest';
 
@@ -32,4 +33,17 @@ describePreviewContract<SamplePreview>('sample-preview', {
   content,
   rendered: (el, expected) =>
     expect(el.shadowRoot?.querySelector('pre')?.textContent).toBe(expected),
+});
+
+describeRawViewContract<SampleEditor>('sample-editor', {
+  kind: 'editor',
+  content,
+  invalidContent: '!bad',
+  otherInvalidContent: 'fine\n!worse',
+});
+
+describeRawViewContract<SamplePreview>('sample-preview', {
+  kind: 'preview',
+  content,
+  invalidContent: '!bad',
 });

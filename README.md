@@ -141,7 +141,50 @@ Attributes follow one of two rules. Contract attributes compare to an explicit v
 `readonly="true"` makes an editor read-only, and a bare `readonly` does not. Display options are on
 when present and not `"false"`, so `<code-diff wrap>` and `wrap="true"` wrap and `wrap="false"`
 does not; an option that defaults on is off only with `"false"`. `booleanAttribute(el, name,
-{ defaultOn })` from `common` reads the second kind.
+{ defaultOn })` from `common` reads the second kind. The raw view's `view` attribute is an enumerated
+contract attribute: `"raw"` asks for the raw view, and absent or any other value means the rich one.
+
+### Raw view
+
+A surface over a text format can show its source as text: its _raw view_, beside its rendered
+_rich view_. It is an optional capability of the contracts, like the keymap modes. An element that
+supports it observes a `view` attribute (`"rich"` or `"raw"`), reflects its current view there, and
+dispatches a non-bubbling `view-change` event with `{ view, reason }`. The reason is `user` (the
+element's switch), `host` (the host set `view`) or `fallback` (the element switched by itself).
+There is no `view` property.
+
+The rules, which `describeRawViewContract` proves:
+
+- **Switching never changes the text.** `getContent()` is byte-identical before and after a switch
+  with no edit in between.
+- **Raw is the text.** In raw, `getContent()` returns the raw text verbatim. Each raw edit emits
+  `content-change` with `{ content }`, and leaving raw emits nothing more. `setContent` replaces the
+  text and stays in raw.
+- **Leaving raw re-parses.** If the text does not parse, the element stays in raw and announces the
+  current errors in its notice. A host that set `view="rich"` sees the attribute reflected back.
+- **Fallback.** Content the rich view cannot show (it does not parse, its engine failed to load, or
+  a format's limit) opens in raw with a notice saying why, with reason `fallback`. In an editor,
+  fixing the text does not switch back by itself; a preview returns to the rich view when valid
+  content arrives, since nobody can fix the text there.
+- **Read-only never changes the view.** Both views are uneditable, and the switch still works.
+
+Editors put a "Raw Text" switch (`createSwitch` with `RAW_VIEW_LABEL`, checked in raw) last in their
+toolbar. Previews have no switch; the host decides whether to offer one. The pieces in `common`:
+
+- `createViewState(el)` keeps the current view in step with the attribute: `commit(view, reason)`
+  reflects it and dispatches `view-change` when it changed, `reflect()` writes it back after a
+  refused request, and `reflecting` lets `attributeChangedCallback` ignore the element's own writes.
+- `createRawSource({ value, language, readonly, label, onInput })` is the editable raw surface: a
+  `<code-editor>` when the host registered one, else a `<textarea>`. `createRawView({ value,
+language, label })` is the read-only one: a `<code-preview>` or a `<pre>`. Both are marked
+  `data-spl-raw` and styled by `@use 'common/src/styles/raw';`.
+- `createNotice({ tone, title, items, announce })` is the banner that says why, styled by
+  `@use 'common/src/styles/notice';`. `announce: 'assertive'` makes it an alert, for errors the user
+  just caused.
+
+The template's sample editor and preview implement all of it, so a new format starts with a raw
+view. The harness has a Raw control, logs `view-change`, and registers `<code-editor>` and
+`<code-preview>` (`?raw=plain` leaves them out).
 
 ### Lazy engines
 

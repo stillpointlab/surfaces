@@ -18,6 +18,9 @@
         <select id="fixture"></select
       ></label>
       <label><input id="readonly" type="checkbox" /> Read-only</label>
+      <label title='Sets view="raw" on the editor and preview'
+        ><input id="raw" type="checkbox" /> Raw</label
+      >
       <label><input id="narrow" type="checkbox" /> Narrow panes</label>
       <label><input id="dark" type="checkbox" /> Dark</label>
       <span id="controls" class="controls"></span>
@@ -49,7 +52,9 @@
     <p class="help">
       Each format contributes <code>dev/fixtures.ts</code>; this page mounts its elements by role,
       applies the chosen fixture, mirrors edits into the preview and reads the source back. The
-      badges follow each element's <code>ready</code> attribute.
+      badges follow each element's <code>ready</code> attribute. Raw views use
+      <code>&lt;code-editor&gt;</code> and <code>&lt;code-preview&gt;</code>; add
+      <code>?raw=plain</code> to see the textarea and <code>&lt;pre&gt;</code> fallbacks.
     </p>
 
     <script type="module" src="./main.ts"></script>

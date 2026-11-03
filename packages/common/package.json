@@ -22,7 +22,9 @@
     "./styles/tokens": "./src/styles/_tokens.scss",
     "./styles/status": "./src/styles/_status.scss",
     "./styles/switch": "./src/styles/_switch.scss",
-    "./styles/toolbar": "./src/styles/_toolbar.scss"
+    "./styles/toolbar": "./src/styles/_toolbar.scss",
+    "./styles/notice": "./src/styles/_notice.scss",
+    "./styles/raw": "./src/styles/_raw.scss"
   },
   "files": [
     "dist",

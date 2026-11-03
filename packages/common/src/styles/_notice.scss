@@ -1,0 +1,42 @@
+// Styles for createNotice(): a banner above a surface saying why it shows its
+// raw text, or why it could not switch back. An element's stylesheet includes
+// them with `@use 'common/src/styles/notice';`.
+
+@use 'tokens' as *;
+
+.spl-notice {
+  box-sizing: border-box;
+  margin: 0 0 $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid $border-color;
+  border-radius: $border-radius-md;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.spl-notice__title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.spl-notice__items {
+  margin: $spacing-xs 0 0;
+  padding-left: 1.25rem;
+}
+
+.spl-notice--error {
+  border-color: $error-border;
+  color: $error-color;
+  background: $error-bg;
+}
+
+.spl-notice--warning {
+  border-color: $warning-border;
+  color: $warning-color;
+  background: $warning-bg;
+}
+
+.spl-notice--info {
+  color: $info-color;
+  background: $info-bg;
+}

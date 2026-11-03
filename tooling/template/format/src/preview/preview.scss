@@ -1,4 +1,6 @@
 @use 'common/src/styles/tokens' as *;
+@use 'common/src/styles/notice';
+@use 'common/src/styles/raw';
 
 :host {
   display: block;

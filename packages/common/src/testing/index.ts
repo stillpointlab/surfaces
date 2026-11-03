@@ -17,4 +17,6 @@ export { describeImagePreviewContract } from './image-preview';
 export type { ImagePreviewContractOptions } from './image-preview';
 export { describeDiffContract } from './diff';
 export type { DiffContractOptions } from './diff';
+export { describeRawViewContract, rawSurface, rawSwitch, rawText, viewChanges } from './raw-view';
+export type { RawViewContractOptions } from './raw-view';
 export { contentChanges, mount, pending, settledBy } from './support';

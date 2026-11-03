@@ -9,12 +9,33 @@ export type {
   ImagePreviewElement,
   PreviewElement,
   ReadyElement,
+  SurfaceView,
+  ViewChangeDetail,
+  ViewChangeReason,
 } from './contracts';
 export { createReadyGate, READY_ATTRIBUTE, READY_EVENT } from './ready';
 export { booleanAttribute, defineElement } from './elements';
 export { createLazyLoader, hydrate } from './engine';
 export type { HydrateSteps } from './engine';
 export { createStatus, STATUS_MESSAGES } from './status';
+export {
+  createNotice,
+  createRawSource,
+  createRawView,
+  createViewState,
+  parseView,
+  RAW_VIEW_LABEL,
+  VIEW_ATTRIBUTE,
+  VIEW_CHANGE_EVENT,
+} from './raw';
+export type {
+  NoticeOptions,
+  RawSource,
+  RawSourceOptions,
+  RawView,
+  RawViewOptions,
+  ViewState,
+} from './raw';
 export { createSwitch } from './switch';
 export type { SwitchHandle, SwitchOptions } from './switch';
 export {
