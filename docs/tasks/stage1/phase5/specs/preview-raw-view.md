@@ -1,10 +1,17 @@
 ---
-column: todo
+column: done
+pr: 24
+completed: 2026-11-02
 created: 2026-11-02T20:14:50-07:00
 tags: [formats, host-contract]
 ---
 
 # Spec: md, xmdl and sheet previews adopt the raw view
+
+_Landed 2026-11-02 in [#24](https://github.com/stillpointlab/surfaces/pull/24). A document given
+through `<sheet-preview>`'s `setDocument` has no source text, so its raw view is the document
+serialised; [phase 6](../../phase6/specs/sheet-preview-document-source.md) adds
+`setDocumentSource`._
 
 _From the phase 5 brief [raw_mode](../briefs/raw_mode.md). Depends on
 [raw-view-convention](raw-view-convention.md)._
@@ -49,9 +56,9 @@ whenever its content does not parse, so a host never needs its own source fallba
 
 ## Acceptance / completion checklist
 
-- [ ] The raw view suite passes for `md-preview`, `xmdl-preview` and `sheet-preview`.
-- [ ] Invalid xmdl and CSV show the source and errors in the standard notice.
-- [ ] `npm run check` is green; the harness's Raw control drives each preview.
+- [x] The raw view suite passes for `md-preview`, `xmdl-preview` and `sheet-preview`.
+- [x] Invalid xmdl and CSV show the source and errors in the standard notice.
+- [x] `npm run check` is green; the harness's Raw control drives each preview.
 
 ## Implementation plan
 

@@ -1,10 +1,17 @@
 ---
-column: todo
+column: done
+pr: 23
+completed: 2026-11-02
 created: 2026-11-02T20:14:50-07:00
 tags: [formats, host-contract, major-feature]
 ---
 
 # Spec: `<sheet-editor>` gains a raw view
+
+_Landed 2026-11-02 in [#23](https://github.com/stillpointlab/surfaces/pull/23). The raw surface
+stops the key, clipboard and pointer events the grid listens for at its root. Fifteen existing tests
+changed with the new layout: truncated cases ask for `view="rich"`, malformed cases assert the
+fallback, and End in the toolbar now lands on the switch._
 
 _From the phase 5 brief [raw_mode](../briefs/raw_mode.md). Depends on
 [raw-view-convention](raw-view-convention.md). The largest of the phase 5 specs: sheet has no raw
@@ -69,11 +76,11 @@ fix instead of an error message.
 
 ## Acceptance / completion checklist
 
-- [ ] The raw view suite passes for `sheet-editor`.
-- [ ] Invalid and over-limit sheets open in raw with a notice; a failed switch back shows the errors.
-- [ ] CSV and `.sheet` sources round-trip byte-identically through raw with no edit.
-- [ ] The presentation override and the document's frontmatter survive raw edits.
-- [ ] `npm run check` is green; the harness's invalid and limit fixtures behave as above.
+- [x] The raw view suite passes for `sheet-editor`.
+- [x] Invalid and over-limit sheets open in raw with a notice; a failed switch back shows the errors.
+- [x] CSV and `.sheet` sources round-trip byte-identically through raw with no edit.
+- [x] The presentation override and the document's frontmatter survive raw edits.
+- [x] `npm run check` is green; the harness's invalid and limit fixtures behave as above.
 
 ## Implementation plan
 
