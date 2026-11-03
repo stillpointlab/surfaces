@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 13
+completed: 2026-11-02
 created: 2026-11-02T18:50:35-07:00
 tags: [formats, common, host-contract, dev-tooling]
 ---
@@ -9,6 +11,12 @@ tags: [formats, common, host-contract, dev-tooling]
 _Working notes, written by the claude agent on 2026-11-02 from Jamie's question. Everything below
 comes from reading the elements, a throwaway test (deleted, not committed) and a read of Context
 Manager's host code. Nothing was built._
+
+_Specs written from it in the same PR (Jamie, 2026-11-02: specs for the bug fixes and the first
+three candidates now; raw mode gets its brief after those land):
+[element-lifecycle-fixes](../specs/element-lifecycle-fixes.md),
+[design-tokens](../specs/design-tokens.md), [lazy-engine-helper](../specs/lazy-engine-helper.md)
+and [toolbar-helpers](../specs/toolbar-helpers.md). The small helpers are folded into those._
 
 ## Question
 
