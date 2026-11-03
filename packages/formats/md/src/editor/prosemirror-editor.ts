@@ -3,17 +3,25 @@ import './md-icon';
 
 import {
   createLazyLoader,
+  createNotice,
+  createRawSource,
   createReadyGate,
   createStatus,
   createSwitch,
+  createViewState,
   defineElement,
   hydrate,
   isReadonly,
   moveToolbarFocus,
+  parseView,
+  RAW_VIEW_LABEL,
+  type RawSource,
   type ReadyGate,
   reflectReadonly,
   reportError,
   STATUS_MESSAGES,
+  type SurfaceView,
+  type ViewChangeReason,
 } from '@stillpointlab/common-format';
 
 import { editorStyles } from './editor.styles';
@@ -177,11 +185,23 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
   private _shadowRoot!: ShadowRoot;
   private editorModules: EditorModules | null = null;
   private toolbar: ProseMirrorToolbar | null = null;
-  private isRawMode = false;
-  private rawTextarea: HTMLTextAreaElement | null = null;
+  // The raw view: its state, its surface while it shows, and why it shows when
+  // that is not just the user's choice.
+  private readonly viewState = createViewState(this);
+  private raw: RawSource | null = null;
+  private notice: HTMLElement | null = null;
+  // `_content` is the text as set (by setContent or a raw edit). It is what
+  // getContent() returns until the user edits in the rich view, so loading and
+  // switching views never rewrite the Markdown; after a rich edit the serialiser's
+  // output is the content.
+  private richEdited = false;
+  // A raw edit not yet applied to the ProseMirror document.
+  private rawEdited = false;
+  // A switch to rich that waits for a retried engine load, and its reason.
+  private pendingRich: ViewChangeReason | null = null;
 
   static get observedAttributes() {
-    return ['readonly'];
+    return ['readonly', 'view'];
   }
 
   constructor() {
@@ -204,6 +224,17 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
       fail: (error) => {
         reportError('Failed to load editor', error);
         this.phase = 'failed';
+        // The text is still here: fall back to the raw view.
+        if (this.viewState.current === 'rich') this.viewState.commit('raw', 'fallback');
+        this.notice = createNotice({
+          tone: 'warning',
+          title: this.pendingRich
+            ? 'The rich editor still could not load; showing the raw text.'
+            : 'The rich editor could not load; showing the raw text.',
+          announce: this.pendingRich ? 'assertive' : 'polite',
+        });
+        this.pendingRich = null;
+        this.viewState.reflect();
         this.render();
       },
     });
@@ -213,12 +244,14 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
     // Keep the latest text so a reconnect rebuilds the view from it, and tear
     // the view down so the rebuild is allowed; raw mode does not survive either.
     this._content = this.getContent();
+    this.richEdited = false;
+    this.rawEdited = false;
     this.view?.destroy();
     this.view = null;
     this.toolbar?.destroy();
     this.toolbar = null;
-    this.isRawMode = false;
-    this.rawTextarea = null;
+    // The view itself (the attribute) survives; its surface is rebuilt on connect.
+    this.raw = null;
     this.ready.begin();
   }
 
@@ -227,9 +260,14 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
   }
 
   attributeChangedCallback(name: string, _oldValue: string | null, newValue: string | null) {
+    if (name === 'view') {
+      if (!this.viewState.reflecting) this.requestView(parseView(newValue), 'host');
+      return;
+    }
     // Before the view exists the attribute is read once the engine loads.
-    if (name === 'readonly' && this.view) {
-      this.updateReadOnlyState(newValue === 'true');
+    if (name === 'readonly') {
+      this.raw?.setReadonly(newValue === 'true');
+      if (this.view) this.updateReadOnlyState(newValue === 'true');
     }
   }
 
@@ -382,11 +420,21 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
     }
 
     this.updateReadOnlyState(isReadonly(this));
+
+    // A switch to rich that waited for this load completes now.
+    if (this.pendingRich) {
+      const reason = this.pendingRich;
+      this.pendingRich = null;
+      this.notice = null;
+      this.viewState.commit('rich', reason);
+    }
+    this.syncView();
   }
 
   private handleContentChange() {
     if (!this.view || !this.editorModules) return;
     if (this.applyingContent) return; // a setContent, not an edit
+    this.richEdited = true;
 
     const { markdownSerializer } = this.editorModules;
     const markdown = markdownSerializer.serialize(this.view.state.doc);
@@ -415,15 +463,14 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
 
   // Read-only means no user action inside the element changes the content:
   // the editing surface, the toolbar and the raw textarea all go inert.
+  // Read-only never changes the view: the editing surface and the toolbar go
+  // inert, and so does the raw text; the raw switch keeps working.
   private updateReadOnlyState(readonly: boolean) {
     if (!this.view) return;
-    if (readonly && this.isRawMode) this.toggleRawMode();
     this.view.setProps({ editable: () => !readonly });
     reflectReadonly(this, this.view.dom, readonly);
     this.toolbar?.setReadOnly(readonly);
-    const rawTextarea =
-      this._shadowRoot.querySelector<HTMLTextAreaElement>('.prosemirror-editor-raw');
-    if (rawTextarea) rawTextarea.readOnly = readonly;
+    this.raw?.setReadonly(readonly);
   }
 
   // Get current heading level for toolbar display
@@ -440,28 +487,94 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
   }
 
   getContent(): string {
-    // If in raw mode, return the textarea content
-    if (this.isRawMode && this.rawTextarea) {
-      return this.rawTextarea.value;
-    }
-
-    // Otherwise return the editor content
-    if (!this.view || !this.editorModules) {
-      return this._content;
-    }
+    // The text as set, until the user edits in the rich view (see `_content`).
+    if (!this.richEdited || !this.view || !this.editorModules) return this._content;
     const { markdownSerializer } = this.editorModules;
     return markdownSerializer.serialize(this.view.state.doc);
   }
 
   setContent(content: string) {
     this._content = content;
+    this.richEdited = false;
+    this.rawEdited = false;
     if (this.view) {
       this.setEditorContent(content);
     }
+    this.raw?.setValue(content);
   }
 
   override focus() {
-    this.view?.focus();
+    if (this.raw) this.raw.focus();
+    else this.view?.focus();
+  }
+
+  /** Move to `view`. Markdown always parses, so only a failed engine keeps raw. */
+  private requestView(view: SurfaceView, reason: ViewChangeReason): void {
+    if (view === this.viewState.current) {
+      this.viewState.reflect();
+      return;
+    }
+    if (view === 'rich' && this.phase === 'failed') {
+      // Try the engine again; the view switches once it has loaded.
+      this.pendingRich = reason;
+      this.viewState.reflect();
+      this.phase = 'loading';
+      this.render();
+      this.hydrateView();
+      return;
+    }
+    if (view === 'raw') {
+      // The raw view shows exactly what getContent() returns.
+      this._content = this.getContent();
+      this.richEdited = false;
+      this.rawEdited = false;
+    } else if (this.rawEdited) {
+      this.setEditorContent(this._content);
+      this.rawEdited = false;
+    }
+    this.notice = null;
+    this.viewState.commit(view, reason);
+    this.syncView();
+  }
+
+  /** Show the current view: the ProseMirror view or the raw text, and its toolbar. */
+  private syncView(): void {
+    if (this.phase === 'loading') return;
+    const container = this._shadowRoot.querySelector<HTMLElement>('.prosemirror-editor-container');
+    const editorContent = this._shadowRoot.querySelector<HTMLElement>(
+      '.prosemirror-editor-content'
+    );
+    const rawContainer = this._shadowRoot.querySelector<HTMLElement>('.prosemirror-editor-raw');
+    const noticeSlot = this._shadowRoot.querySelector<HTMLElement>('.prosemirror-editor-notice');
+    if (!container || !editorContent || !rawContainer || !noticeSlot) return;
+
+    const raw = this.viewState.current === 'raw';
+    container.classList.toggle('is-raw', raw);
+    editorContent.hidden = raw;
+    rawContainer.hidden = !raw;
+    noticeSlot.replaceChildren(...(this.notice ? [this.notice] : []));
+
+    if (!raw) {
+      this.raw = null;
+      rawContainer.replaceChildren();
+      if (!this.toolbar) this.setupToolbar();
+      return;
+    }
+
+    this.raw ??= createRawSource({
+      value: this._content,
+      language: 'markdown',
+      label: 'Markdown source',
+      readonly: isReadonly(this),
+      onInput: (text) => this.handleRawInput(text),
+    });
+    if (this.raw.element.parentNode !== rawContainer)
+      rawContainer.replaceChildren(this.raw.element);
+    this.renderRawModeToolbar();
+    if (!this.isConnected) return;
+    const surface = this.raw;
+    const cycle = this.ready.begin();
+    void surface.whenReady().then(() => this.ready.settle(cycle));
   }
 
   private isMarkdown(content: string): boolean {
@@ -499,7 +612,7 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
   }
 
   private render() {
-    if (this.phase !== 'loaded') {
+    if (this.phase === 'loading') {
       this._shadowRoot.innerHTML = `
         <style>${this.getStyles()}</style>
         <div class="prosemirror-editor-container"></div>
@@ -512,10 +625,13 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
       <style>${this.getStyles()}</style>
       <div class="prosemirror-editor-container">
         <div class="prosemirror-editor-toolbar-container"></div>
+        <div class="prosemirror-editor-notice"></div>
         <div class="prosemirror-editor-content"></div>
-        <textarea class="prosemirror-editor-raw" style="display: none;"></textarea>
+        <div class="prosemirror-editor-raw" hidden></div>
       </div>
     `;
+    // Without an engine (it failed to load) only the raw view can show.
+    if (this.phase === 'failed') this.syncView();
   }
 
   private setupToolbar() {
@@ -611,7 +727,7 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
     });
 
     this.toolbar.registerCommand('viewMarkdown', {
-      execute: () => this.toggleRawMode(),
+      execute: () => this.requestView('raw', 'user'),
     });
 
     // Parameterized actions that don't fit the parameterless command registry.
@@ -825,116 +941,38 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
     return null;
   }
 
-  private toggleRawMode() {
-    if (isReadonly(this) && !this.isRawMode) return;
-    this.isRawMode = !this.isRawMode;
-    this.updateViewMode();
+  private handleRawInput(text: string): void {
+    this._content = text;
+    this.rawEdited = true;
+    this.richEdited = false;
+    this.dispatchEvent(new CustomEvent('content-change', { detail: { content: text } }));
   }
-
-  private updateViewMode() {
-    const editorContent = this._shadowRoot.querySelector(
-      '.prosemirror-editor-content'
-    ) as HTMLElement;
-    const rawTextarea = this._shadowRoot.querySelector(
-      '.prosemirror-editor-raw'
-    ) as HTMLTextAreaElement;
-    const toolbarContainer = this._shadowRoot.querySelector(
-      '.prosemirror-editor-toolbar-container'
-    ) as HTMLElement;
-
-    if (!editorContent || !rawTextarea || !toolbarContainer) return;
-
-    this.rawTextarea = rawTextarea;
-
-    if (this.isRawMode) {
-      // Switch to raw mode
-      editorContent.style.display = 'none';
-      rawTextarea.style.display = 'block';
-      // Get content from editor before switching
-      if (this.view && this.editorModules) {
-        const { markdownSerializer } = this.editorModules;
-        rawTextarea.value = markdownSerializer.serialize(this.view.state.doc);
-      } else {
-        rawTextarea.value = this._content;
-      }
-
-      // Update toolbar to show only toggle
-      this.renderRawModeToolbar();
-
-      // Focus textarea
-      rawTextarea.focus();
-
-      // Add textarea event listener
-      rawTextarea.addEventListener('input', this.handleRawInput);
-    } else {
-      // Switch back to editor mode
-      if (this.rawTextarea) {
-        // Get the current editor content before updating
-        let currentEditorContent = this._content;
-        if (this.view && this.editorModules) {
-          const { markdownSerializer } = this.editorModules;
-          currentEditorContent = markdownSerializer.serialize(this.view.state.doc);
-        }
-
-        // Update content from raw textarea
-        const newContent = this.rawTextarea.value;
-        if (newContent !== currentEditorContent) {
-          this.setContent(newContent);
-          // Trigger content change event when switching back if content changed
-          this.dispatchEvent(
-            new CustomEvent('content-change', {
-              detail: { content: newContent },
-            })
-          );
-        }
-        this.rawTextarea.removeEventListener('input', this.handleRawInput);
-      }
-
-      editorContent.style.display = 'block';
-      rawTextarea.style.display = 'none';
-
-      // Restore full toolbar
-      this.setupToolbar();
-
-      // Focus editor
-      this.view?.focus();
-    }
-  }
-
-  private handleRawInput = () => {
-    if (isReadonly(this)) return;
-    // Store the raw content but don't update the editor until switching back
-    this._content = this.rawTextarea?.value || '';
-
-    // Dispatch content-change event to trigger save indicators
-    this.dispatchEvent(
-      new CustomEvent('content-change', {
-        detail: { content: this._content },
-      })
-    );
-  };
 
   private renderRawModeToolbar() {
     const toolbarContainer = this._shadowRoot.querySelector(
       '.prosemirror-editor-toolbar-container'
     ) as HTMLElement;
     if (!toolbarContainer) return;
+    // The rich toolbar is gone while raw shows; it is rebuilt on the way back.
+    this.toolbar?.destroy();
+    this.toolbar = null;
 
     toolbarContainer.innerHTML = `
       <div class="prosemirror-editor-toolbar raw-mode" role="toolbar" aria-label="Markdown source">
         <div class="toolbar-spacer"></div>
         <div class="toolbar-group">
-          <label class="toggle-label">Markdown</label>
+          <label class="toggle-label">${RAW_VIEW_LABEL}</label>
         </div>
       </div>
     `;
 
-    // The switch is off in raw mode; turning it on returns to the rich editor.
+    // On in raw. The switch follows the view, so it never flips itself.
     const toggle = createSwitch({
-      label: 'Markdown',
-      checked: false,
-      onToggle: (checked) => {
-        if (checked) this.toggleRawMode();
+      label: RAW_VIEW_LABEL,
+      checked: true,
+      onToggle: () => {
+        this.requestView('rich', 'user');
+        return false;
       },
     });
     toggle.element.classList.add('markdown-toggle');
@@ -951,11 +989,9 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
     return editorStyles;
   }
 
-  /** The placeholder shown while loading, or after the engine failed to load. */
+  /** The placeholder shown while the engine loads (a failed load falls back to raw). */
   private status(): HTMLElement {
-    return this.phase === 'failed'
-      ? createStatus('error', STATUS_MESSAGES.editorFailed)
-      : createStatus('loading', STATUS_MESSAGES.loading);
+    return createStatus('loading', STATUS_MESSAGES.loading);
   }
 }
 

@@ -32,7 +32,7 @@ describe('ProseMirrorEditor readonly', () => {
     query<HTMLButtonElement>(el, '.toolbar-button[data-command="toggleBlockquote"]');
   const rawToggle = (el: ProseMirrorEditor) => query<HTMLButtonElement>(el, '.markdown-toggle');
   const rawTextarea = (el: ProseMirrorEditor) =>
-    query<HTMLTextAreaElement>(el, '.prosemirror-editor-raw');
+    query<HTMLTextAreaElement>(el, 'textarea[data-spl-raw]');
 
   function contentChanges(el: ProseMirrorEditor): string[] {
     const seen: string[] = [];
@@ -51,12 +51,11 @@ describe('ProseMirrorEditor readonly', () => {
     return el;
   }
 
-  it('disables the toolbar and raw toggle when readonly is set before load', async () => {
+  it('disables the toolbar but not the raw switch when readonly is set before load', async () => {
     const el = await mount(true);
 
     expect(blockquote(el).disabled).toBe(true);
-    expect(rawToggle(el).disabled).toBe(true);
-    expect(rawTextarea(el).readOnly).toBe(true);
+    expect(rawToggle(el).disabled).toBe(false);
     expect(query<HTMLElement>(el, '.ProseMirror').getAttribute('contenteditable')).toBe('false');
   });
 
@@ -70,8 +69,6 @@ describe('ProseMirrorEditor readonly', () => {
 
     el.removeAttribute('readonly');
     expect(blockquote(el).disabled).toBe(false);
-    expect(rawToggle(el).disabled).toBe(false);
-    expect(rawTextarea(el).readOnly).toBe(false);
     expect(query<HTMLElement>(el, '.ProseMirror').getAttribute('contenteditable')).toBe('true');
 
     blockquote(el).click();
@@ -80,25 +77,30 @@ describe('ProseMirrorEditor readonly', () => {
     expect(el.getContent()).toContain('> ');
   });
 
-  it('leaves raw mode when readonly is set and keeps the raw edit', async () => {
+  it('keeps the raw view when readonly is set, with the raw text read-only', async () => {
     const el = await mount(false);
     const seen = contentChanges(el);
 
     rawToggle(el).click();
-    expect(rawTextarea(el).style.display).toBe('block');
+    await el.whenReady();
+    expect(el.getAttribute('view')).toBe('raw');
     rawTextarea(el).value = '# Edited\n\nSome text.';
     rawTextarea(el).dispatchEvent(new Event('input', { bubbles: true }));
     expect(seen).toHaveLength(1);
 
     el.setAttribute('readonly', 'true');
-    expect(rawTextarea(el).style.display).toBe('none');
+    expect(el.getAttribute('view')).toBe('raw');
     expect(rawTextarea(el).readOnly).toBe(true);
-    expect(el.getContent()).toContain('# Edited');
-    expect(blockquote(el).disabled).toBe(true);
-    expect(rawToggle(el).disabled).toBe(true);
+    rawTextarea(el).value = 'ignored';
+    rawTextarea(el).dispatchEvent(new Event('input', { bubbles: true }));
+    expect(seen).toHaveLength(1);
+    expect(el.getContent()).toBe('# Edited\n\nSome text.');
 
-    // The raw toggle is inert while readonly, even when clicked.
+    // The switch still works: back to the (read-only) rich view, edit applied.
+    expect(rawToggle(el).disabled).toBe(false);
     rawToggle(el).click();
-    expect(rawTextarea(el).style.display).toBe('none');
+    expect(el.getAttribute('view')).toBe('rich');
+    expect(query<HTMLElement>(el, '.ProseMirror').textContent).toContain('Edited');
+    expect(blockquote(el).disabled).toBe(true);
   });
 });

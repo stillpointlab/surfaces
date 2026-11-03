@@ -1,4 +1,6 @@
 @use 'common/src/styles/tokens' as *;
+@use 'common/src/styles/notice';
+@use 'common/src/styles/raw';
 @use 'common/src/styles/status';
 @use 'common/src/styles/switch';
 @use 'common/src/styles/toolbar';
@@ -322,23 +324,43 @@
 }
 
 // Raw markdown textarea
+// The raw view: common's raw surface (a textarea, or a <code-editor> when the host
+// registered one) filling the editor.
 .prosemirror-editor-raw {
-  width: 100%;
-  min-height: 400px;
-  padding: $spacing-md;
-  border: none;
-  font-family: monospace;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  resize: vertical;
-  background: $background-primary;
-  color: $text-secondary;
+  display: flex;
   flex: 1;
-  overflow-y: auto;
+  flex-direction: column;
+  min-height: 400px;
+  overflow: auto;
   box-sizing: border-box;
 
-  &:focus {
-    outline: none;
+  &[hidden] {
+    display: none;
+  }
+
+  > .spl-raw-source {
+    flex: 1;
+    min-height: 400px;
+    border: none;
+    border-radius: 0;
+  }
+
+  > code-editor {
+    display: block;
+    flex: 1;
+    min-height: 400px;
+  }
+}
+
+.prosemirror-editor-notice {
+  padding: $spacing-sm $spacing-md 0;
+
+  &:empty {
+    display: none;
+  }
+
+  > .spl-notice {
+    margin: 0;
   }
 }
 
