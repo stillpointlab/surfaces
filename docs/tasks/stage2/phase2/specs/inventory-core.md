@@ -126,6 +126,10 @@ size? }` exported from `types.ts`. Context Manager's type stays assignable to it
 - `sheet-format` is the first workspace a package here depends on besides `common`, so the root
   `typecheck` and `test` now build both first (`build:deps`).
 - The package's `tsconfig.json` drops the DOM lib, so the core's DOM-freeness is typechecked.
+- A second entry, `./paths`, carries the path rules alone. The adoption's client build showed `.`
+  pulling the manifest's zod schemas (built at module scope, so not tree-shaken) and the shared
+  zod chunk into the inventory and project pages, which before loaded only the path rules. Context
+  Manager's `inventoryPath.utils.ts` re-exports from `./paths`.
 - "Add a zone" is not a rewrite of an existing file: a new zone is a new file
   (`roomSeedContent`). The suite covers it as a seeded zone in the configured fixture, which must
   mount, and a rewrite that adds that zone's first item.

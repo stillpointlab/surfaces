@@ -1,7 +1,7 @@
 # @stillpointlab/inventory-app
 
-The inventory app's core: DOM-free, so a host runs it on its server and in its client alike. One
-entry (`.`) exports:
+The inventory app's core: DOM-free, so a host runs it on its server and in its client alike. The
+root entry (`.`) exports:
 
 - the file model's types (`SharedInventory*`, `TreeNode`) and path rules (`slugifyInventoryName`,
   the field-id and currency patterns);
@@ -11,6 +11,10 @@ entry (`.`) exports:
 - byte-preserving rewrites: `appendItem`, `patchItem`, `deleteItem` (`roomWriter.ts`);
 - seeds: `manifestSeedContent`, `roomSeedContent`;
 - CSV: `serializeRoom`, `serializeSpace`, `exportWarnings`.
+
+A second entry, `./paths`, exports the path rules alone (`slugifyInventoryName`, the folder and
+currency defaults, the field-id and currency patterns). A client that needs only those imports it
+there: `.` builds the manifest's zod schemas at module scope, which a bundler cannot drop.
 
 It was moved as-is from Context Manager (source commit `373a20ae`), where the host side stays:
 drafts, check-in, routes and the inventory page. The rest of this README is the file format.
