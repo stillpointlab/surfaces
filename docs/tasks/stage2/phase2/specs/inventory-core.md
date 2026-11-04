@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 38
+completed: 2026-11-04
 created: 2026-11-03T12:29:49-07:00
 tags: [apps, host-contract, code]
 ---
@@ -104,8 +106,8 @@ size? }` exported from `types.ts`. Context Manager's type stays assignable to it
       and `totals`) under Node.
 - [x] `describeAppCore` passes over the inventory fixtures.
 - [x] README = the format guide.
-- [ ] Context Manager adoption PR is green, with the pin on the merge commit.
-- [ ] The inventory e2e walks were run against the scratch repository after the adoption, or the PR
+- [x] Context Manager adoption PR is green, with the pin on the merge commit.
+- [x] The inventory e2e walks were run against the scratch repository after the adoption, or the PR
       says which ones were not run and why.
 - [x] `npm run check` green here.
 
@@ -135,3 +137,6 @@ size? }` exported from `types.ts`. Context Manager's type stays assignable to it
   mount, and a rewrite that adds that zone's first item.
 - `appendItem` at the end of a file without a final newline adds one, by design in Context Manager.
   `describeAppCore` gained a per-rewrite `addsFinalNewline` gap for it (stage 2 follow-ups).
+- The Context Manager adoption is #1022 (merged 2026-11-04), pinned on `93cfde4`. All 38 inventory
+  walk steps passed from a dedicated checkout and agent slot; the client's inventory page stayed the
+  size it was at the phase 6 pin.
