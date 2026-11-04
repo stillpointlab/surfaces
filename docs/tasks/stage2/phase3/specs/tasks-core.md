@@ -1,5 +1,5 @@
 ---
-column: todo
+column: in-progress
 created: 2026-11-04T01:02:42-07:00
 tags: [apps, host-contract, code]
 ---
@@ -138,17 +138,17 @@ Manager's server and client import the core from the submodule, and users see no
 
 ## Acceptance / completion checklist
 
-- [ ] `common-format/frontmatter` exported. md re-exports it, and md's tests pass unchanged.
-- [ ] `packages/apps/tasks` builds, typechecks without the DOM lib, and passes its 192 moved tests
+- [x] `common-format/frontmatter` exported. md re-exports it, and md's tests pass unchanged.
+- [x] `packages/apps/tasks` builds, typechecks without the DOM lib, and passes its 192 moved tests
       under Node.
-- [ ] `./types` and `./paths` import nothing.
-- [ ] `describeAppCore` passes over the tasks fixtures, with any gaps recorded.
-- [ ] The README is the tasks format reference.
+- [x] `./types` and `./paths` import nothing.
+- [x] `describeAppCore` passes over the tasks fixtures, with any gaps recorded.
+- [x] The README is the tasks format reference.
 - [ ] Context Manager adoption PR is green, with the pin on the merge commit, and no client page
       gains the zod chunk.
 - [ ] The tasks and inventory walks were run after the adoption, or the PR says which were not and
       why.
-- [ ] `npm run check` green here.
+- [x] `npm run check` green here.
 
 ## Implementation plan
 
@@ -156,3 +156,14 @@ Manager's server and client import the core from the submodule, and users see no
    README, and the suite fixtures.
 2. Context Manager PR, from `context-manager-surfaces`: the adoption above, walked.
 3. Phase close: this card done, WAL entries, changelog section.
+
+## Implementation notes
+
+- Copied from Context Manager `30428c3c`. Each file differs from its source only in its import
+  lines and `RepoTreeNode` renamed to `TreeNode`. The 192 moved tests pass unchanged.
+- `describeAppCore` runs 12 rewrites over the three fixtures (51 checks), and none needs a gap. The
+  `remove a column` rewrite removes `in-progress`, not `done`, because the configured fixture's
+  `doneColumn` names `done`, and removing a referenced column is an invalid manifest, not a rewrite
+  failure.
+- Where an ADR and the code differ, the README follows the code. ADR-0021 says a kind's folder has
+  no override, but ADR-0027 later added `dir`.
