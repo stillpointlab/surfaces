@@ -19,6 +19,11 @@
       "import": "./dist/yaml.js",
       "require": "./dist/yaml.cjs"
     },
+    "./frontmatter": {
+      "types": "./dist/frontmatter.d.ts",
+      "import": "./dist/frontmatter.js",
+      "require": "./dist/frontmatter.cjs"
+    },
     "./testing": {
       "types": "./dist/testing.d.ts",
       "import": "./dist/testing.js",

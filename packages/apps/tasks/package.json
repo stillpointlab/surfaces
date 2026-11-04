@@ -1,0 +1,41 @@
+{
+  "name": "@stillpointlab/tasks-app",
+  "version": "0.1.0",
+  "description": "The tasks app's DOM-free core: the tasks.yaml manifest, board and pool detection, card frontmatter and projections, and byte-preserving rewrites of the manifest and cards.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js",
+      "require": "./dist/types.cjs"
+    },
+    "./paths": {
+      "types": "./dist/paths.d.ts",
+      "import": "./dist/paths.js",
+      "require": "./dist/paths.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@stillpointlab/common-format": "*",
+    "yaml": "^2.9.0",
+    "zod": "^4.6.7"
+  }
+}

@@ -1,27 +1,11 @@
 import type { MarkdownIt } from 'markdown-it';
 
-/**
- * Raw YAML-frontmatter block splitting — no YAML parsing, byte-exact. This is
- * the shared delimiter contract with the Context Manager app (its
- * `src/shared/utils/frontmatterBlock.ts` and server-side task frontmatter
- * services use the same pattern), so the two must not drift.
- *
- * Opening `---` line at byte 0, lazy content, then the first line that is
- * exactly `---` (trailing spaces tolerated, then newline or EOF). The content
- * group is optional so an empty block (`---\n---\n`) matches.
- */
-export const FRONTMATTER_BLOCK_PATTERN = /^---[ \t]*\r?\n(?:([\s\S]*?)\r?\n)?---[ \t]*(?:\r?\n|$)/;
-
-/**
- * Split a document into its raw frontmatter block (delimiters included, ''
- * when absent) and the body. `raw + body` is always byte-identical to the
- * input — the guarantee byte-stable round-trips are built on.
- */
-export function splitFrontmatterBlock(md: string): { raw: string; body: string } {
-  const match = FRONTMATTER_BLOCK_PATTERN.exec(md);
-  if (!match) return { raw: '', body: md };
-  return { raw: match[0], body: md.slice(match[0].length) };
-}
+// Raw block splitting lives in common (`@stillpointlab/common-format/frontmatter`),
+// shared with the tasks app; md re-exports it so its own exports do not change.
+export {
+  FRONTMATTER_BLOCK_PATTERN,
+  splitFrontmatterBlock,
+} from '@stillpointlab/common-format/frontmatter';
 
 const DELIMITER_LINE = /^---[ \t]*$/;
 
