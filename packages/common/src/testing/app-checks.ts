@@ -68,16 +68,18 @@ export function assertCrlfKept(rewrite: AppCoreRewrite, input: string): void {
 
 /**
  * The output ends with a line break exactly when the input does, for the input
- * as given and for its variant with the final newline toggled.
+ * as given and for its variant with the final newline toggled. A rewrite with
+ * the `addsFinalNewline` gap must end with one either way.
  */
 export function assertFinalNewlineKept(rewrite: AppCoreRewrite, input: string): void {
   for (const text of [input, toggleFinalNewline(input)]) {
     const endsWithBreak = /(\r\n|\r|\n)$/.test(text);
+    const expected = endsWithBreak || rewrite.addsFinalNewline === true;
     const output = rewrite.apply(text);
     expect(
       /(\r\n|\r|\n)$/.test(output),
-      `"${rewrite.name}" ${endsWithBreak ? 'lost' : 'added'} the final newline`
-    ).toBe(endsWithBreak);
+      `"${rewrite.name}" ${expected ? 'lost' : 'added'} the final newline`
+    ).toBe(expected);
   }
 }
 

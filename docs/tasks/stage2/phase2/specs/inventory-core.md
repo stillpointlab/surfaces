@@ -1,5 +1,5 @@
 ---
-column: todo
+column: in-progress
 created: 2026-11-03T12:29:49-07:00
 tags: [apps, host-contract, code]
 ---
@@ -99,15 +99,15 @@ size? }` exported from `types.ts`. Context Manager's type stays assignable to it
 
 ## Acceptance / completion checklist
 
-- [ ] `packages/apps/inventory` builds, typechecks and passes its moved tests (`csv`, `detection`,
+- [x] `packages/apps/inventory` builds, typechecks and passes its moved tests (`csv`, `detection`,
       `manifest`, `manifestSeed`, `room`, `roomWriter`, plus whatever tests the prep gave `fields`
       and `totals`) under Node.
-- [ ] `describeAppCore` passes over the inventory fixtures.
-- [ ] README = the format guide.
+- [x] `describeAppCore` passes over the inventory fixtures.
+- [x] README = the format guide.
 - [ ] Context Manager adoption PR is green, with the pin on the merge commit.
 - [ ] The inventory e2e walks were run against the scratch repository after the adoption, or the PR
       says which ones were not run and why.
-- [ ] `npm run check` green here.
+- [x] `npm run check` green here.
 
 ## Implementation plan
 
@@ -116,3 +116,22 @@ size? }` exported from `types.ts`. Context Manager's type stays assignable to it
    fixtures.
 2. Context Manager PR (worktree): the adoption above.
 3. Phase close: this card done, WAL entry, changelog section.
+
+## Implementation notes
+
+- The surfaces PR copies from Context Manager `373a20ae` (the merge of #1019). Each file differs from
+  its source only in import lines, plus `RepoTreeNode` renamed to `TreeNode` in `detection.ts` and
+  its test. The prep gave `fields.ts` and `totals.ts` no tests of their own, so the moved tests are
+  the six files' 131.
+- `sheet-format` is the first workspace a package here depends on besides `common`, so the root
+  `typecheck` and `test` now build both first (`build:deps`).
+- The package's `tsconfig.json` drops the DOM lib, so the core's DOM-freeness is typechecked.
+- A second entry, `./paths`, carries the path rules alone. The adoption's client build showed `.`
+  pulling the manifest's zod schemas (built at module scope, so not tree-shaken) and the shared
+  zod chunk into the inventory and project pages, which before loaded only the path rules. Context
+  Manager's `inventoryPath.utils.ts` re-exports from `./paths`.
+- "Add a zone" is not a rewrite of an existing file: a new zone is a new file
+  (`roomSeedContent`). The suite covers it as a seeded zone in the configured fixture, which must
+  mount, and a rewrite that adds that zone's first item.
+- `appendItem` at the end of a file without a final newline adds one, by design in Context Manager.
+  `describeAppCore` gained a per-rewrite `addsFinalNewline` gap for it (stage 2 follow-ups).

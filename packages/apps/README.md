@@ -27,6 +27,9 @@ contract (`put` is a proposal), so both share `packages/common` and the scaffold
   Manager's server runs it, and so does its client. It imports only `yaml`, `zod`,
   `@stillpointlab/common-format` (including `./yaml`) and the formats' DOM-free entries.
 - **`./element` is reserved** for the app's element, which comes in a later phase.
+- **More DOM-free entries when a client needs a slice.** A bundler keeps a module's top-level
+  calls (a zod schema, say), so a client that needs only constants or a helper gets an entry with
+  just those (inventory's `./paths`).
 - **Shared types** (the app's file model, its path rules) are exported from the root, so a host
   imports them from the package and keeps no copy.
 - **The README is the file-format reference**: what the manifest and the files in scope hold, for
