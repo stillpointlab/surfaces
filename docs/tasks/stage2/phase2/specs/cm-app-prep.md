@@ -1,5 +1,6 @@
 ---
-column: todo
+column: done
+completed: 2026-11-03
 created: 2026-11-03T12:29:49-07:00
 tags: [apps, host-contract, code]
 ---
@@ -105,16 +106,23 @@ Users see no change: every route, job and response behaves as before.
 
 ## Acceptance / completion checklist
 
-- [ ] Steps 1–7 done. `npm run check` is green, and the API, web route and service tests pass with
+- [x] Steps 1–7 done. `npm run check` is green, and the API, web route and service tests pass with
       no change to their expectations.
-- [ ] `appBoundary.test.ts` passes, and it fails when a forbidden import is added back (shown in the
+- [x] `appBoundary.test.ts` passes, and it fails when a forbidden import is added back (shown in the
       PR).
-- [ ] The tasks and inventory e2e walks were run against the scratch repository, or the PR says
+- [x] The tasks and inventory e2e walks were run against the scratch repository, or the PR says
       which ones were not run and why (brief constraint).
-- [ ] An entry in Context Manager's current WAL points at this spec and the PR.
+- [x] An entry in Context Manager's current WAL points at this spec and the PR.
 
 ## Implementation plan
 
 Do it in one PR in a Context Manager worktree, never Jamie's checkout. Commit in the order of the
 steps above, so a reviewer can read each tie as it is cut. Write the boundary test last, and show in
 the PR that it fails on the commit before step 1.
+
+## Landed
+
+Context Manager #1019 (merged 2026-11-03), one commit per step. CM has no `npm run check`; lint,
+typecheck, test and the server build stood in. The walks were not run for #1019 (no agent slot
+yet); the inventory walks then passed on the adoption, #1022, and the tasks walks wait for the
+tasks core adoption.

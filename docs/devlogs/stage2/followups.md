@@ -17,6 +17,12 @@ during this stage's setup, each entry struck with where it went.
   keeps the behaviour, and `describeAppCore` records it per rewrite with the new `addsFinalNewline`
   gap. Whether an append should keep a missing final newline is Jamie's call; changing it is a
   behaviour change in the inventory core, after the adoption.
+  - Closed 2026-11-04 (Jamie): intended. Every file should end with a newline, and a probe of 100
+    appends mixed with edits and deletes showed none accumulate (a file keeps one, three blank
+    lines stay three).
 - 2026-11-03 (cm-app-prep, Context Manager #1019): the tasks and inventory e2e walks were not run.
   They need a provisioned agent slot, the shared `.env`, the dev S3 bucket and a GitHub token for
   the scratch repository. Run them at the inventory adoption (brief constraint).
+  - Inventory half closed 2026-11-04: the 38 inventory walk steps passed on the adoption (Context
+    Manager #1022), from a dedicated checkout and agent slot. The tasks walks remain, for the tasks
+    core adoption.
