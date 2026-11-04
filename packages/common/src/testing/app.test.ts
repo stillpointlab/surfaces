@@ -63,7 +63,21 @@ function rewrite(name: string, apply: (text: string) => string): AppCoreRewrite 
 const editB = rewrite('edit b', (text) => setValue(text, 'b', 'twenty'));
 const addC = rewrite('add c', (text) => setValue(text, 'c', '3'));
 
-const options: AppCoreOptions = { manifest: 'kv.app', fixtures, mount, rewrites: [editB, addC] };
+// Appends always end with a line break: the recorded-gap shape.
+const appendD: AppCoreRewrite = {
+  ...rewrite(
+    'append d',
+    (text) => `${text.replace(/(\r\n|\r|\n)?$/, lineBreakOf(text))}d: 4${lineBreakOf(text)}`
+  ),
+  addsFinalNewline: true,
+};
+
+const options: AppCoreOptions = {
+  manifest: 'kv.app',
+  fixtures,
+  mount,
+  rewrites: [editB, addC, appendD],
+};
 
 describeAppCore('sample', options);
 
@@ -114,6 +128,14 @@ describe('describeAppCore checks fail on a broken core', () => {
 
   it('a lost final newline', () => {
     const broken = rewrite('trim', (text) => setValue(text, 'b', 'twenty').trimEnd());
+    expect(() => assertFinalNewlineKept(broken, input)).toThrow(/lost the final newline/);
+  });
+
+  it('a rewrite with the addsFinalNewline gap that loses it', () => {
+    const broken = {
+      ...rewrite('trim', (text: string) => setValue(text, 'b', 'twenty').trimEnd()),
+      addsFinalNewline: true,
+    };
     expect(() => assertFinalNewlineKept(broken, input)).toThrow(/lost the final newline/);
   });
 

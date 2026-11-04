@@ -43,6 +43,12 @@ export interface AppCoreRewrite {
   apply: (text: string) => string;
   /** Whether the app reads `text` (an output of `apply`) back without error. */
   reparses: (text: string) => boolean;
+  /**
+   * A recorded gap: the rewrite ends its output with a line break even when the
+   * input had none (it appends at the end of the file). The final-newline check
+   * then asserts exactly that. Record the gap in the follow-ups when setting it.
+   */
+  addsFinalNewline?: boolean;
 }
 
 export interface AppCoreOptions {

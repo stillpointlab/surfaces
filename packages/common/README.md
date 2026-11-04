@@ -22,7 +22,8 @@ What every surface shares. No elements of its own.
   suite an app core runs over fixture folders. Every fixture mounts, and each rewrite re-parses and
   keeps comment lines, CRLF line breaks and the final newline (or its absence), the parts of a
   byte-preserving rewrite that can be checked without knowing the format. Its hooks wrap the core's
-  own functions; it names no contract. A separate entry, so it never loads the element suites.
+  own functions; it names no contract. A rewrite that always ends with a line break (an append at
+  the end of the file) sets the `addsFinalNewline` gap, recorded in the follow-ups. A separate entry, so it never loads the element suites.
 - **YAML helpers** (`@stillpointlab/common-format/yaml`). `formatYamlScalar`: a scalar written plain
   when YAML reads it back as the same value, otherwise JSON-quoted. DOM-free, for the app cores.
 - **Tokens.** `src/styles/_tokens.scss`: the `--spl-*` color custom properties with defaults, plus
