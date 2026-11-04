@@ -26,6 +26,8 @@ during this stage's setup, each entry struck with where it went.
   - Inventory half closed 2026-11-04: the 38 inventory walk steps passed on the adoption (Context
     Manager #1022), from a dedicated checkout and agent slot. The tasks walks remain, for the tasks
     core adoption.
+  - Tasks half closed 2026-11-04: the tasks walks passed on the tasks adoption (Context Manager
+    #1025), every step 01-29 apart from 28, an alternative drift setup.
 - 2026-11-04 (tasks core; Jamie: fine as a follow-up): the pool's `order.yaml` is regenerated
   whole by `formatOrderFile` when the app reorders the pool, so comments added by hand are lost.
   This repository's own order file carries grouping comments that a reorder in the app would drop.

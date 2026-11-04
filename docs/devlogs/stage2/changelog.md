@@ -100,3 +100,47 @@ Range: `stage2-phase1-complete..stage2-phase2-complete` (`2d01ec9..93cfde4`), 20
   dedicated Context Manager checkout got its own slot, and all 38 inventory walk steps passed: the
   first pin move this stage walked in the app, as the brief's constraint asks.
 - After the tag: the phase 2 close-out, which opens phase 3 (the tasks core) empty.
+
+---
+
+## Phase 3: The tasks core moves (`stage2-phase3-complete`)
+
+Range: `stage2-phase2-complete..stage2-phase3-complete` (`93cfde4..d81d7c3`), 2026-11-04: three
+merges, 40 files, +5,173/−36. One Context Manager PR carried the host side; no prep was needed,
+since #1019 had already cut the tasks ties.
+
+### Shipped
+
+- Phase 2 closed and phase 3 opened empty
+  ([#39](https://github.com/stillpointlab/surfaces/pull/39)), then got one spec, modelled on
+  inventory's ([#40](https://github.com/stillpointlab/surfaces/pull/40)).
+- `@stillpointlab/common-format/frontmatter`: the frontmatter block pattern md and Context Manager
+  had held byte for byte, now once; md re-exports it
+  ([#41](https://github.com/stillpointlab/surfaces/pull/41)).
+- `@stillpointlab/tasks-app` in `packages/apps/tasks`, copied from Context Manager `30428c3c` with
+  its 192 tests, with three entries (`.`, and the import-free `./types` and `./paths`), and a README
+  written as the tasks format reference from Context Manager's ADRs 0014, 0020, 0021 and 0027, which
+  had no guide ([#41](https://github.com/stillpointlab/surfaces/pull/41);
+  [spec](../../tasks/stage2/phase3/specs/tasks-core.md)). Context Manager adopted it in
+  context-manager#1025 and retired its boundary test: with both cores here, the package boundary
+  holds the line.
+
+### Decisions
+
+- The pool's `order.yaml` losing hand-written comments on a reorder (it is regenerated, not
+  rewritten) is a follow-up, not part of the move (Jamie, on #40).
+- Where an ADR and the code differ, the tasks README follows the code.
+
+### Testing & review
+
+- 1,084 → 1,331 tests: 4 for the frontmatter entry, and the tasks package's 243 (192 moved, 51 from
+  `describeAppCore` over minimal, configured and surfaces-shaped fixtures, with no gaps).
+- No client page gained the zod chunk: the task board and dialogs read the light entries, and the
+  same two pages import it as at the phase 6 pin.
+- The adoption was walked in full for the first time this stage: the inventory walks (38/38) and
+  the tasks walks, steps 01-29 apart from an alternative setup, from the dedicated slot. The tasks
+  walks' levers (a baseline reset of the scratch repository, upstream edits, merging and closing
+  check-in PRs) were replayed from that repository's own history of the 2026-08-29 run, after Jamie
+  allowed pushes to it. The few failures on the way were walk-script drift, recorded in Context
+  Manager's WAL.
+- After the tag: the phase 3 close-out, which opens phase 4 (components) empty.

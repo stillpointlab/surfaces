@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 41
+completed: 2026-11-04
 created: 2026-11-04T01:02:42-07:00
 tags: [apps, host-contract, code]
 ---
@@ -144,9 +146,9 @@ Manager's server and client import the core from the submodule, and users see no
 - [x] `./types` and `./paths` import nothing.
 - [x] `describeAppCore` passes over the tasks fixtures, with any gaps recorded.
 - [x] The README is the tasks format reference.
-- [ ] Context Manager adoption PR is green, with the pin on the merge commit, and no client page
+- [x] Context Manager adoption PR is green, with the pin on the merge commit, and no client page
       gains the zod chunk.
-- [ ] The tasks and inventory walks were run after the adoption, or the PR says which were not and
+- [x] The tasks and inventory walks were run after the adoption, or the PR says which were not and
       why.
 - [x] `npm run check` green here.
 
@@ -167,3 +169,7 @@ Manager's server and client import the core from the submodule, and users see no
   failure.
 - Where an ADR and the code differ, the README follows the code. ADR-0021 says a kind's folder has
   no override, but ADR-0027 later added `dir`.
+- The Context Manager adoption is #1025 (merged 2026-11-04), pinned on `d81d7c3`. Two importers the
+  spec did not list moved too: `projectExportImport.service.ts` and `scripts/check-doc-links.ts`.
+  The inventory walks passed (38/38), and the tasks walks passed 01-29 apart from 28 (an alternative
+  drift setup), with their levers replayed from the scratch repository's history.
