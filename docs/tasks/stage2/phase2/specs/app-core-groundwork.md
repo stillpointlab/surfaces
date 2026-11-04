@@ -1,5 +1,7 @@
 ---
-column: todo
+column: done
+pr: 37
+completed: 2026-11-03
 created: 2026-11-03T12:29:49-07:00
 tags: [apps, common, dev-tooling, host-contract]
 ---
@@ -99,17 +101,27 @@ that runs in Node, and the package convention written down.
 
 ## Acceptance / completion checklist
 
-- [ ] `./yaml` exported, built and tested under Node; the copied cases pass.
-- [ ] `./testing/app` exported. The suite runs against a sample core in `common`'s own tests: a
+- [x] `./yaml` exported, built and tested under Node; the copied cases pass.
+- [x] `./testing/app` exported. The suite runs against a sample core in `common`'s own tests: a
       tiny line-based `key: value` app. It passes there, and each check fails when the sample breaks
       it (a fixture that fails to mount, a dropped comment, LF output on CRLF input, a lost final
       newline).
-- [ ] `appTest()` in `tooling/vitest.ts`; the root `vitest.config.ts` already includes
+- [x] `appTest()` in `tooling/vitest.ts`; the root `vitest.config.ts` already includes
       `packages/apps/*`.
-- [ ] `packages/apps/README.md` carries the convention and the components line.
-- [ ] `npm run check` green.
+- [x] `packages/apps/README.md` carries the convention and the components line.
+- [x] `npm run check` green.
 
 ## Implementation plan
 
 One surfaces PR. It can merge before or after [cm-app-prep](cm-app-prep.md), and Context Manager
 needs nothing from it until the inventory core adoption.
+
+## Implementation notes
+
+- `describeAppCore` takes one more option than the sketch: `manifest`, the manifest's path in every
+  fixture, which is what `mount` receives as `manifestPath`.
+- Each check is a function in `src/testing/app-checks.ts` that the suite's `it` calls. `common`'s
+  own tests call the same functions on broken rewrites of the sample core and expect them to throw,
+  so every check is shown failing without running a failing suite. That module is not exported.
+- The CRLF check also requires the CRLF output to re-parse. The final-newline check runs on the
+  fixture file as given and on its variant with the final newline toggled.

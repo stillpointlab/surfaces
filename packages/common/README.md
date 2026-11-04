@@ -18,6 +18,13 @@ What every surface shares. No elements of its own.
   view `describeRawViewContract` and `describeKeymapModeContract`: vitest suites a format runs for
   each element it ships, asserting what the contracts promise and nothing more.
   They import `vitest`, so they live in their own entry and never reach a runtime bundle.
+- **App core suite** (`@stillpointlab/common-format/testing/app`). `describeAppCore`: a vitest
+  suite an app core runs over fixture folders. Every fixture mounts, and each rewrite re-parses and
+  keeps comment lines, CRLF line breaks and the final newline (or its absence), the parts of a
+  byte-preserving rewrite that can be checked without knowing the format. Its hooks wrap the core's
+  own functions; it names no contract. A separate entry, so it never loads the element suites.
+- **YAML helpers** (`@stillpointlab/common-format/yaml`). `formatYamlScalar`: a scalar written plain
+  when YAML reads it back as the same value, otherwise JSON-quoted. DOM-free, for the app cores.
 - **Tokens.** `src/styles/_tokens.scss`: the `--spl-*` color custom properties with defaults, plus
   spacing and radius scales. Formats pull them in with `@use 'common/src/styles/tokens' as *;`
   (the style generator adds `packages/` to the Sass load path).

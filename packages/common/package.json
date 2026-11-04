@@ -14,10 +14,20 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
+    "./yaml": {
+      "types": "./dist/yaml.d.ts",
+      "import": "./dist/yaml.js",
+      "require": "./dist/yaml.cjs"
+    },
     "./testing": {
       "types": "./dist/testing.d.ts",
       "import": "./dist/testing.js",
       "require": "./dist/testing.cjs"
+    },
+    "./testing/app": {
+      "types": "./dist/testing/app.d.ts",
+      "import": "./dist/testing/app.js",
+      "require": "./dist/testing/app.cjs"
     },
     "./styles/tokens": "./src/styles/_tokens.scss",
     "./styles/status": "./src/styles/_status.scss",
@@ -34,6 +44,9 @@
     "build": "tsup",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
+  },
+  "dependencies": {
+    "yaml": "^2.9.0"
   },
   "peerDependencies": {
     "vitest": "*"
