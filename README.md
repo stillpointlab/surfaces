@@ -309,9 +309,11 @@ Styles: write SCSS next to the component. `gen:styles` compiles every non-partia
 are ignored by git, lint and prettier, and every build, test and typecheck script regenerates them
 first.
 
-Build order: the formats resolve `@stillpointlab/common-format` through its built `dist/`, so the
-root `typecheck` and `test` scripts build `common` first (`npm run build:common`). Inside one
-package, run that once from the root before `npm test` or `npm run typecheck` there.
+Build order: packages resolve each other through their built `dist/`. The formats depend on
+`common`, and the inventory app also on `sheet-format`, so the root `typecheck` and `test` scripts
+build those two first (`npm run build:deps`). Inside one package, run that once from the root before
+`npm test` or `npm run typecheck` there. A package that starts depending on another workspace adds
+it to `build:deps`.
 
 Dependencies: there is one `package-lock.json`. Refresh with `npm outdated` → update → `npm run
 check`. The `glob` and `minimatch` overrides and the `eslint-plugin-import-x/rules/order` import
