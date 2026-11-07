@@ -7,6 +7,7 @@ import {
   kindPathsOf,
 } from './boardDetection.js';
 import { parseFrontmatter, rewriteFrontmatter } from './frontmatter.js';
+import { tasksLifecycle } from './lifecycle.js';
 import { rewriteRelativeLinks } from './linkRewrite.js';
 import { parseTasksManifest, validateManifestAgainstTree } from './manifest.js';
 import {
@@ -165,6 +166,7 @@ const exists = (path: string): boolean => path in configured;
 
 describeAppCore('tasks', {
   manifest: 'tasks.yaml',
+  lifecycle: tasksLifecycle,
   fixtures: { minimal, configured, 'surfaces-shaped': surfacesShaped },
   mount,
   rewrites: [

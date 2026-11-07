@@ -3,14 +3,15 @@
 The inventory app's core: DOM-free, so a host runs it on its server and in its client alike. The
 root entry (`.`) exports:
 
-- the file model's types (`SharedInventory*`, `TreeNode`) and path rules (`slugifyInventoryName`,
+- the file model's types (`SharedInventory*`, and `TreeNode`, `common`'s `FolderNode`) and path rules (`slugifyInventoryName`,
   the field-id and currency patterns);
 - reading: `parseInventoryManifest`, `parseRoomFile`, `detectInventoryAt`;
 - the rules: field validation (`fields.ts`), totals and duplicate-id demotion (`totals.ts`), each
   rejection an `InventoryRuleError { code, message }` the host maps to its own errors;
 - byte-preserving rewrites: `appendItem`, `patchItem`, `deleteItem` (`roomWriter.ts`);
 - seeds: `manifestSeedContent`, `roomSeedContent`;
-- CSV: `serializeRoom`, `serializeSpace`, `exportWarnings`.
+- CSV: `serializeRoom`, `serializeSpace`, `exportWarnings`;
+- the lifecycle: `inventoryLifecycle`, the `AppLifecycle` a host mounts an inventory folder with.
 
 A second entry, `./paths`, exports the path rules alone (`slugifyInventoryName`, the folder and
 currency defaults, the field-id and currency patterns). A client that needs only those imports it

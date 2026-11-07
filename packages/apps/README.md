@@ -26,7 +26,12 @@ contract (`put` is a proposal), so both share `packages/common` and the scaffold
 - **`.` is the core.** The root entry is DOM-free and runs in Node and the browser: Context
   Manager's server runs it, and so does its client. It imports only `yaml`, `zod`,
   `@stillpointlab/common-format` (including `./yaml`) and the formats' DOM-free entries.
-- **`./element` is reserved** for the app's element, which comes in a later phase.
+- **The lifecycle** is exported from the root as `<name>Lifecycle`, an `AppLifecycle` from
+  `@stillpointlab/common-format/app`: the manifest's name, the paths an instance owns, and what the
+  host's tree shows. The host adds its own policy (its error codes, adoption budgets) beside it.
+- **`./element` is reserved** for the app's element: an `AppElement` that takes state through
+  `setState` and asks its host for ops with `requestOp`, by path. It imports the core's light
+  entries and `common-format/app`, never the core's root.
 - **More DOM-free entries when a client needs a slice.** A bundler keeps a module's top-level
   calls (a zod schema, say), so a client that needs only constants or a helper gets an entry with
   just those (inventory's `./paths`).
@@ -38,4 +43,4 @@ contract (`put` is a proposal), so both share `packages/common` and the scaffold
   `appTest()` from `tooling/vitest.ts` (Node; an element test opts into jsdom per file with
   `// @vitest-environment jsdom`).
 - **Conformance:** the core runs `describeAppCore` from `@stillpointlab/common-format/testing/app`
-  over fixture folders of its own.
+  over fixture folders of its own, with its lifecycle; an element runs `describeAppElementContract`.

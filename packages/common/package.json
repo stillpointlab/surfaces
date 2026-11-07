@@ -19,6 +19,11 @@
       "import": "./dist/elements.js",
       "require": "./dist/elements.cjs"
     },
+    "./app": {
+      "types": "./dist/app.d.ts",
+      "import": "./dist/app.js",
+      "require": "./dist/app.cjs"
+    },
     "./yaml": {
       "types": "./dist/yaml.d.ts",
       "import": "./dist/yaml.js",

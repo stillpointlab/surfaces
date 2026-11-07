@@ -13,3 +13,4 @@ export * from './csv.js';
 export * from './errors.js';
 export * from './manifestSeed.js';
 export * from './roomSeed.js';
+export * from './lifecycle.js';

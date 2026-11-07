@@ -13,16 +13,31 @@ What every surface shares. No elements of its own.
   token before asynchronous work, `settle(token)` marks the element ready when that cycle lands
   (ignored if a newer cycle began), `settle()` with no token is for synchronous work, and `begin()`
   on disconnect makes the element pending until it is connected and rendered again.
+- **The app contract** (`@stillpointlab/common-format/app`), a light entry for apps and the host
+  pages that mount them:
+  - `Result`, `ok()` and `fail()`: an answer is `{ ok: true, …fields }` or
+    `{ ok: false, code, message, details? }`, and nothing throws for a rule.
+  - The lifecycle half, `AppLifecycle` over `FolderNode`s: an app's manifest name,
+    `validateAndScope` (the paths an instance owns, or every error in its manifest) and
+    `describeInstance` (what the host's tree shows).
+  - The element half, `AppElement<State>`: the host calls `setState`, and the element asks for ops
+    with `requestOp(element, op)`, a cancelable `app-op` event the host claims and answers through
+    `respond`. Nothing claiming it resolves to `OP_UNHANDLED`, and a host that throws to
+    `OP_FAILED`. `answerOps(element, handler)` is the host's side. Ops carry paths, never a host's
+    ids.
+  - It also re-exports `createReadyGate` and the logging functions, so an app element needs nothing
+    else from `common`.
 - **Conformance suites** (`@stillpointlab/common-format/testing`). `describePreviewContract`,
   `describeEditorContract`, `describeImagePreviewContract`, `describeDiffContract`, and for the raw
-  view `describeRawViewContract` and `describeKeymapModeContract`: vitest suites a format runs for
-  each element it ships, asserting what the contracts promise and nothing more.
+  view `describeRawViewContract` and `describeKeymapModeContract`, and for app elements
+  `describeAppElementContract`: vitest suites a format or app runs for each element it ships, asserting what the contracts promise and nothing more.
   They import `vitest`, so they live in their own entry and never reach a runtime bundle.
 - **App core suite** (`@stillpointlab/common-format/testing/app`). `describeAppCore`: a vitest
   suite an app core runs over fixture folders. Every fixture mounts, and each rewrite re-parses and
   keeps comment lines, CRLF line breaks and the final newline (or its absence), the parts of a
   byte-preserving rewrite that can be checked without knowing the format. Its hooks wrap the core's
-  own functions; it names no contract. A rewrite that always ends with a line break (an append at
+  own functions, and an optional `lifecycle` hook checks the core's `AppLifecycle` over the same
+  fixtures. A rewrite that always ends with a line break (an append at
   the end of the file) sets the `addsFinalNewline` gap, recorded in the follow-ups. A separate entry, so it never loads the element suites.
 - **YAML helpers** (`@stillpointlab/common-format/yaml`). `formatYamlScalar`: a scalar written plain
   when YAML reads it back as the same value, otherwise JSON-quoted. DOM-free, for the app cores.

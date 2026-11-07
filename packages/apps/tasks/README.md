@@ -10,6 +10,8 @@ entry (`.`) exports:
   `patchManifestTopLevelScalar` and `appendManifestTag` for the manifest; `rewriteRelativeLinks`
   for a moved card's links;
 - seeds: `tasksManifestSeedContent`; and the pool's `formatOrderFile`;
+- the lifecycle: `tasksLifecycle`, the `AppLifecycle` a host mounts a tasks folder with (its scope,
+  and the boards its tree shows);
 - `TasksRuleError { code, message, details }`, for every rejection, which the host maps to its own
   errors.
 

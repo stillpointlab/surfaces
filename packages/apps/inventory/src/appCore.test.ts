@@ -1,6 +1,7 @@
 import { describeAppCore } from '@stillpointlab/common-format/testing/app';
 
 import { detectInventoryAt } from './detection.js';
+import { inventoryLifecycle } from './lifecycle.js';
 import { parseInventoryManifest } from './manifest.js';
 import { parseRoomFile } from './room.js';
 import { roomSeedContent } from './roomSeed.js';
@@ -135,6 +136,7 @@ const lamp: NewItemBlock = {
 
 describeAppCore('inventory', {
   manifest: 'inventory.yaml',
+  lifecycle: inventoryLifecycle,
   fixtures: { 'v2 minimal': v2Minimal, 'v2 configured': v2Configured, v1 },
   mount,
   rewrites: [

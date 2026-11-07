@@ -1,7 +1,8 @@
 import { formatPackage } from '../../tooling/tsup';
 
-// Six entries: the runtime (logging, contracts, the ready gate); `elements`,
-// `defineElement` alone for a component on every page of a host; `yaml` and
+// Seven entries: the runtime (logging, contracts, the ready gate); `elements`,
+// `defineElement` alone for a component on every page of a host; `app`, the app
+// contract (results, the lifecycle and element halves) for apps and host pages; `yaml` and
 // `frontmatter`, DOM-free text helpers the formats and app cores share;
 // `testing` (the element conformance suites); and `testing/app` (the app core
 // suite). Both suites import vitest and so stay out of the runtime bundles. The
@@ -16,6 +17,7 @@ export default formatPackage({
   entry: {
     index: 'src/index.ts',
     elements: 'src/elements.ts',
+    app: 'src/app.ts',
     yaml: 'src/yaml.ts',
     frontmatter: 'src/frontmatter.ts',
     testing: 'src/testing/index.ts',
