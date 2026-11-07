@@ -9,8 +9,10 @@ the host. See the placement test in [`../apps/README.md`](../apps/README.md).
 
 - **Name:** `@stillpointlab/<name>-component`, in `packages/components/<name>`, where `<name>` is the
   tag.
-- **One entry, `.`.** It registers the element through `defineElement` from `common` and exports its
-  class. `sideEffects` lists the entry's source and `dist` files, so a bare
+- **One entry, `.`.** It registers the element through `defineElement` from
+  `@stillpointlab/common-format/elements` and exports its class. Not from `common`'s root: a bundler
+  cannot divide one module between chunks, so a component on every page would carry the whole runtime
+  the formats use onto every page. `sideEffects` lists the entry's source and `dist` files, so a bare
   `import '@stillpointlab/<name>-component'` survives tree shaking.
 - **Styles** use `common`'s tokens and pass `tooling/check-tokens.mjs`. The stylesheet's name has no
   hyphen, because `tooling/gen-styles.mjs` turns `<name>.scss` into an export called `<name>Styles`

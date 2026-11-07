@@ -3,7 +3,7 @@
 // An icon button: one glyph from `icon.scss`, chosen by `icon-name`, drawn as a mask
 // over `currentColor`. Moved from Context Manager.
 
-import { defineElement } from '@stillpointlab/common-format';
+import { defineElement } from '@stillpointlab/common-format/elements';
 
 import { iconStyles } from './icon.styles';
 
