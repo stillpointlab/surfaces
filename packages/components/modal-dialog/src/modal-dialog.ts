@@ -4,7 +4,7 @@
 // slots. Moved from Context Manager, which is why it has `open()`/`close()` and
 // `is-open` rather than a native <dialog>.
 
-import { defineElement } from '@stillpointlab/common-format';
+import { defineElement } from '@stillpointlab/common-format/elements';
 
 import { modalStyles } from './modal.styles';
 

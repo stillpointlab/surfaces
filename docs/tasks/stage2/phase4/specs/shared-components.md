@@ -185,3 +185,9 @@ see no change, apart from the one fix named in requirement 3.
   sat on "pending". The badge now needs `whenReady`, and the formats' extras keep theirs.
 - Checked in the harness with Chromium, driven by Context Manager's Playwright since this repository
   has none: all four modal fixtures in both themes, Escape, all 33 masks, and the sizes and paddings.
+- The first adoption build failed the page-growth check: every page grew by 7.9 KB raw (2.7 KB
+  gzipped). `defineElement` came from `common`'s root entry, a single module, so the shared chunk
+  took all of the runtime the formats use, including the raw view and keymap code. `common` now has
+  an `./elements` entry for components, and builds with splitting on so its entries share one `log`
+  instance. Growth is then about 770 bytes raw (370 gzipped) on most pages. App elements bound for
+  every page in phases 5 and 6 should watch for the same thing.
