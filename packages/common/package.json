@@ -24,6 +24,11 @@
       "import": "./dist/app.js",
       "require": "./dist/app.cjs"
     },
+    "./pointer-drag": {
+      "types": "./dist/pointer-drag.d.ts",
+      "import": "./dist/pointer-drag.js",
+      "require": "./dist/pointer-drag.cjs"
+    },
     "./yaml": {
       "types": "./dist/yaml.d.ts",
       "import": "./dist/yaml.js",

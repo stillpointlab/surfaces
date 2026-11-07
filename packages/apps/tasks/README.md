@@ -28,6 +28,47 @@ It was moved as-is from Context Manager (source commit `30428c3c`), where the ho
 drafts, check-in, the pool and board services, routes and the task board. The rest of this README
 is the file format, drawn from Context Manager's ADR-0014, ADR-0020, ADR-0021 and ADR-0027.
 
+## Element
+
+`@stillpointlab/tasks-app/element` registers `<spl-task-board>`: the Kanban board over one phase
+folder, or (with `variant="stage"`) every phase of a stage as swimlanes, with the backlog pool beside
+it. It imports `./types`, `common-format/app`, `common-format/elements` and
+`common-format/pointer-drag`, never the core's root.
+
+- **State in.** `setState(board)` or `setStageState(stage)`: a host's projection of the folder with
+  its own overlay (which cards are linked, changed, checked in or drifted). The board settles
+  (`whenReady()`, the `ready` attribute) once it has rendered one. `boardState` reads it back.
+- **Attributes.** `variant` (`board` or `stage`, read when the board connects) and `storage-key`
+  (where the pool's collapsed state is remembered).
+- **Ops out**, each asked through `requestOp` and naming its card by repo path:
+
+  | Op                | Fields                                   | Reply                   |
+  | ----------------- | ---------------------------------------- | ----------------------- |
+  | `move`            | `path`, `column`                         | `{ card }`              |
+  | `move-file`       | `path`, `target` (`{ pool }` or a board) | `{ card }` at its path  |
+  | `reorder-pool`    | `paths`                                  | `{ pool }`              |
+  | `resolve`         | `path`, `mode`                           | `{ card }`              |
+  | `scan-references` | `path`                                   | `{ references: paths }` |
+  | `fix-references`  | `path`, `referencingPaths`               | `{ fixed }`             |
+  | `read-file`       | `path`                                   | `{ content }`           |
+  | `refresh-stage`   | `stage`                                  | `{ stage }`             |
+
+  A move renders at once and settles on the reply, or rolls back on a failure (whose `message` the
+  board shows). A host that keeps ids maps paths to them, and links a tracked card before answering.
+
+- **Requests**, plain bubbling events the host answers with its own UI: `open-card { path }`,
+  `brief-request`, `set-title-request { path, … }`, `set-tags-request { path, … }`,
+  `checkin-request` (the changed cards, the pool's order file by path, housekeeping files),
+  `open-options-menu` (a card's ⋯ menu; answer with `options-menu-select` on the board) and
+  `notification { message, type }`. `markCheckinInFlight(paths)` and `clearCheckinInFlight()` show a
+  check-in in progress.
+- **Styles** live in the board's light DOM and read the `--spl-*` tokens, including
+  `--spl-pool-surface`, `--spl-alert-color`, `--spl-gold-color`, `--spl-primary-color` and the
+  board's shadows.
+
+In the harness (`npm run dev`, "tasks"), fixtures cover every card state, the stage view, an empty
+board, and this repository's own `docs/tasks/` as files alone; an in-memory host answers the ops.
+
 ## The tasks folder
 
 A `tasks.yaml` manifest marks a folder as a tasks app. Everything else is derived from the files

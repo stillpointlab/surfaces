@@ -8,14 +8,15 @@ declare const __HARNESS_DEFAULT_FORMAT__: string;
 
 type FormatModule = { default: HarnessFormat };
 
-// Every format and component with a fixtures module, loaded only when selected.
+// Every format, component and app with a fixtures module, loaded only when selected.
 const modules = import.meta.glob<FormatModule>([
   '../../packages/formats/*/dev/fixtures.ts',
   '../../packages/components/*/dev/fixtures.ts',
+  '../../packages/apps/*/dev/fixtures.ts',
 ]);
 const formats = new Map<string, () => Promise<FormatModule>>();
 for (const [path, load] of Object.entries(modules)) {
-  const name = /packages\/(?:formats|components)\/([^/]+)\/dev\/fixtures\.ts$/.exec(path)?.[1];
+  const name = /packages\/(?:formats|components|apps)\/([^/]+)\/dev\/fixtures\.ts$/.exec(path)?.[1];
   if (name) formats.set(name, load);
 }
 
@@ -45,6 +46,15 @@ const WATCHED_EVENTS = [
   'md-preview-rendered',
   'xmdl-apply',
   'view-change',
+  // App elements: the ops they ask and the requests they raise.
+  'app-op',
+  'open-card',
+  'checkin-request',
+  'set-title-request',
+  'set-tags-request',
+  'brief-request',
+  'open-options-menu',
+  'notification',
 ] as const;
 
 let current: { name: string; format: HarnessFormat; elements: HarnessElements } | null = null;
@@ -77,6 +87,11 @@ function wire(el: HTMLElement, tag: string): void {
       let summary = '';
       if (detail && typeof detail === 'object' && 'content' in detail) {
         summary = ` (${String((detail as { content: unknown }).content).length} chars)`;
+      } else if (detail && typeof detail === 'object' && 'op' in detail) {
+        const { op } = detail as { op: { type?: string; path?: string } };
+        summary = ` (${op.type ?? '?'}${op.path ? ` ${op.path}` : ''})`;
+      } else if (detail && typeof detail === 'object' && 'message' in detail) {
+        summary = ` (${String((detail as { message: unknown }).message)})`;
       } else if (detail && typeof detail === 'object' && 'reason' in detail) {
         const { view, reason } = detail as { view: string; reason: string };
         summary = ` (${view}, ${reason})`;
