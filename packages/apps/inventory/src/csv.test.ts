@@ -9,9 +9,15 @@ import {
   toCsvCell,
   toCsvRow,
 } from './csv.js';
-import { InventoryRuleError } from './errors.js';
 
 import type { SharedInventoryItem, SharedInventoryRoom, SharedInventorySchema } from './types.js';
+import type { Result } from '@stillpointlab/common-format/app';
+
+/** An export's CSV text, failing the test when the export refuses. */
+function csvOf(result: Result<{ content: string }>): string {
+  if (!result.ok) throw new Error(`the export refused: ${result.code} ${result.message}`);
+  return result.content;
+}
 
 const item = (
   overrides: Partial<SharedInventoryItem> & { id: string; title: string }
@@ -109,7 +115,7 @@ describe('serializeRoom', () => {
       ],
     });
 
-    const csv = serializeRoom(kitchen, FIELDS);
+    const csv = csvOf(serializeRoom(kitchen, FIELDS));
     expect(csv.startsWith(CSV_BOM)).toBe(true);
     const lines = csv.slice(CSV_BOM.length).split('\r\n');
     expect(lines[0]).toBe(
@@ -126,20 +132,26 @@ describe('serializeRoom', () => {
   });
 
   it('neutralizes a formula-injection title in context', () => {
-    const csv = serializeRoom(
-      room({ slug: 'r', items: [item({ id: 'a', title: '=HYPERLINK("http://evil")' })] }),
-      []
+    const csv = csvOf(
+      serializeRoom(
+        room({ slug: 'r', items: [item({ id: 'a', title: '=HYPERLINK("http://evil")' })] }),
+        []
+      )
     );
     expect(csv).toContain(`'=HYPERLINK`);
   });
 
   it('keeps v1 formula protection for negative numeric Other data', () => {
-    const csv = serializeRoom(
-      room({
-        slug: 'r',
-        items: [item({ id: 'a', title: 'A', extraFields: [{ key: 'temperature', value: -12.5 }] })],
-      }),
-      []
+    const csv = csvOf(
+      serializeRoom(
+        room({
+          slug: 'r',
+          items: [
+            item({ id: 'a', title: 'A', extraFields: [{ key: 'temperature', value: -12.5 }] }),
+          ],
+        }),
+        []
+      )
     );
 
     expect(csv).toContain(",'-12.5\r\n");
@@ -163,7 +175,7 @@ describe('serializeRoom', () => {
         }),
       ],
     });
-    const lines = serializeRoom(configured, CONFIGURED).slice(CSV_BOM.length).split('\r\n');
+    const lines = csvOf(serializeRoom(configured, CONFIGURED)).slice(CSV_BOM.length).split('\r\n');
     expect(lines[0]).toBe('id,title,Amount,owner');
     expect(lines[1]).toBe("meter,'=Meter,-12.345,'+Jamie");
     expect(lines.join('\n')).not.toContain('Secret');
@@ -172,23 +184,21 @@ describe('serializeRoom', () => {
 });
 
 describe('invalid schema', () => {
-  it("refuses to export with the inventory core's own error, not a host error", () => {
+  it('refuses to export an invalid schema with a failure, not a host error', () => {
     const invalid: SharedInventorySchema = {
       mode: 'invalid',
       declaredVersion: 2,
       errors: ['fields: invalid'],
     };
-    for (const serialize of [
-      () => serializeRoom(room({ slug: 'kitchen' }), invalid),
-      () => serializeSpace([room({ slug: 'kitchen' })], invalid),
+    for (const result of [
+      serializeRoom(room({ slug: 'kitchen' }), invalid),
+      serializeSpace([room({ slug: 'kitchen' })], invalid),
     ]) {
-      expect(serialize).toThrow(InventoryRuleError);
-      expect(serialize).toThrow(
-        expect.objectContaining({
-          code: 'INVENTORY_SCHEMA_INVALID',
-          message: 'Repair inventory.yaml before exporting',
-        })
-      );
+      expect(result).toEqual({
+        ok: false,
+        code: 'INVENTORY_SCHEMA_INVALID',
+        message: 'Repair inventory.yaml before exporting',
+      });
     }
   });
 });
@@ -207,7 +217,7 @@ describe('serializeSpace', () => {
         items: [item({ id: 'b', title: 'B', extraFields: [{ key: 'y', value: '2' }] })],
       }),
     ];
-    const csv = serializeSpace(rooms, []);
+    const csv = csvOf(serializeSpace(rooms, []));
     const lines = csv.slice(CSV_BOM.length).split('\r\n');
     expect(lines[0]).toBe(
       'room,id,title,description,value,quantity,serial,acquired,container,tags,x,y'
@@ -243,7 +253,7 @@ describe('serializeSpace', () => {
         ],
       }),
     ];
-    const lines = serializeSpace(rooms, CONFIGURED).slice(CSV_BOM.length).split('\r\n');
+    const lines = csvOf(serializeSpace(rooms, CONFIGURED)).slice(CSV_BOM.length).split('\r\n');
     expect(lines[0]).toBe('zone,id,title,Amount,first,second');
     expect(lines[1]).toBe('One,a,A,1,true,');
     expect(lines[2]).toBe('Two,b,B,2,,"x, y"');

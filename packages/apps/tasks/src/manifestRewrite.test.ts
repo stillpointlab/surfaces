@@ -10,6 +10,21 @@ import {
   rewriteManifestCurrent,
 } from './manifestRewrite.js';
 
+import type { Result } from '@stillpointlab/common-format/app';
+
+/** A rewrite's text, failing the test when the rewrite refuses. */
+function written(result: Result<{ content: string }>): string {
+  if (!result.ok) throw new Error(`the rewrite refused: ${result.code} ${result.message}`);
+  return result.content;
+}
+
+/** What a refusal with this code and message looks like. */
+const refused = (code: string, message: RegExp) => ({
+  ok: false,
+  code,
+  message: expect.stringMatching(message),
+});
+
 const MANIFEST = `# Tasks View manifest (ADR-0014).
 # Hand-edited; comments and ordering must survive app writes.
 version: 1
@@ -76,47 +91,51 @@ describe('rewriteManifestCurrent', () => {
 
 describe('appendManifestTag', () => {
   it('creates the registry when missing', () => {
-    const result = appendManifestTag(MANIFEST, 'infra');
+    const result = written(appendManifestTag(MANIFEST, 'infra'));
     expect(result).toBe(`${MANIFEST}tags:\n  - infra\n`);
   });
 
   it('appends to a block list matching its indentation', () => {
     const before = `${MANIFEST}tags:\n  - infra\n  - ui\n`;
-    const result = appendManifestTag(before, 'payments');
+    const result = written(appendManifestTag(before, 'payments'));
     expect(result).toBe(`${MANIFEST}tags:\n  - infra\n  - ui\n  - payments\n`);
   });
 
   it('appends inside a single-line flow list', () => {
     const before = `${MANIFEST}tags: [infra, ui]\n`;
-    const result = appendManifestTag(before, 'payments');
+    const result = written(appendManifestTag(before, 'payments'));
     expect(result).toBe(`${MANIFEST}tags: [infra, ui, payments]\n`);
   });
 
   it('fills an empty flow list', () => {
     const before = `${MANIFEST}tags: []\n`;
-    const result = appendManifestTag(before, 'infra');
+    const result = written(appendManifestTag(before, 'infra'));
     expect(result).toBe(`${MANIFEST}tags: [infra]\n`);
   });
 
   it('is idempotent, case-insensitively', () => {
     const before = `${MANIFEST}tags:\n  - Infra\n`;
-    expect(appendManifestTag(before, 'infra')).toBe(before);
-    expect(appendManifestTag(before, 'INFRA')).toBe(before);
+    expect(written(appendManifestTag(before, 'infra'))).toBe(before);
+    expect(written(appendManifestTag(before, 'INFRA'))).toBe(before);
   });
 
   it('quotes non-slug tags', () => {
-    const result = appendManifestTag(MANIFEST, 'needs review');
+    const result = written(appendManifestTag(MANIFEST, 'needs review'));
     expect(result).toContain('- "needs review"');
     const parsed = parseTasksManifest(result);
     expect(parsed.ok && parsed.manifest.tags).toEqual(['needs review']);
   });
 
   it('rejects an empty tag', () => {
-    expect(() => appendManifestTag(MANIFEST, '  ')).toThrow('non-empty');
+    expect(appendManifestTag(MANIFEST, '  ')).toMatchObject(
+      refused('TASKS_TAG_EMPTY', /non-empty/)
+    );
   });
 
   it('result still parses as a valid manifest', () => {
-    const result = appendManifestTag(rewriteManifestCurrent(MANIFEST, { stage: 3, phase: 5 }), 'x');
+    const result = written(
+      appendManifestTag(rewriteManifestCurrent(MANIFEST, { stage: 3, phase: 5 }), 'x')
+    );
     const parsed = parseTasksManifest(result);
     expect(parsed.ok).toBe(true);
   });
@@ -125,27 +144,31 @@ describe('appendManifestTag', () => {
 describe('rewriter hardening (review H9/M6/M8/L3)', () => {
   it('quotes YAML-keyword and numeric tags so they round-trip as strings', () => {
     const base = 'version: 1\ntags:\n  - infra\n';
-    expect(appendManifestTag(base, '123')).toContain('- "123"');
-    expect(appendManifestTag(base, 'true')).toContain('- "true"');
-    expect(appendManifestTag(base, 'null')).toContain('- "null"');
+    expect(written(appendManifestTag(base, '123'))).toContain('- "123"');
+    expect(written(appendManifestTag(base, 'true'))).toContain('- "true"');
+    expect(written(appendManifestTag(base, 'null'))).toContain('- "null"');
   });
 
   it('refuses a flow list spanning multiple lines instead of corrupting it', () => {
     const content = 'version: 1\ntags: [infra,\n  ui]\n';
-    expect(() => appendManifestTag(content, 'payments')).toThrow(/cannot patch/);
+    expect(appendManifestTag(content, 'payments')).toMatchObject(
+      refused('TASKS_MANIFEST_UNPATCHABLE', /cannot patch/)
+    );
   });
 
   it('refuses a ] hidden in a trailing comment instead of writing into it', () => {
     const content = 'version: 1\ntags: [infra] # keep ] here\n';
-    expect(() => appendManifestTag(content, 'ui')).toThrow(/cannot patch/);
+    expect(appendManifestTag(content, 'ui')).toMatchObject(
+      refused('TASKS_MANIFEST_UNPATCHABLE', /cannot patch/)
+    );
   });
 
   it('sees past a blank line inside a block list (idempotency + append point)', () => {
     const content = 'tags:\n  - infra\n\n  - payments\nversion: 1\n';
     // Already present after the blank: no duplicate appended.
-    expect(appendManifestTag(content, 'payments')).toBe(content);
+    expect(written(appendManifestTag(content, 'payments'))).toBe(content);
     // A new tag lands after the LAST item, keeping the block one block.
-    const added = appendManifestTag(content, 'ui');
+    const added = written(appendManifestTag(content, 'ui'));
     expect(added).toBe('tags:\n  - infra\n\n  - payments\n  - ui\nversion: 1\n');
   });
 
@@ -187,13 +210,15 @@ kinds:
 
 describe('appendManifestListEntry', () => {
   it('appends a column entry at the section end, matching indentation', () => {
-    const result = appendManifestListEntry(SETTINGS_MANIFEST, 'columns', {
-      id: 'review',
-      fields: [
-        ['label', 'In review'],
-        ['description', 'PR open.'],
-      ],
-    });
+    const result = written(
+      appendManifestListEntry(SETTINGS_MANIFEST, 'columns', {
+        id: 'review',
+        fields: [
+          ['label', 'In review'],
+          ['description', 'PR open.'],
+        ],
+      })
+    );
 
     expect(result).toContain(
       '  - id: done\n    label: Done\n  - id: review\n    label: In review\n    description: PR open.\n\ndefaultColumn: todo'
@@ -211,10 +236,12 @@ describe('appendManifestListEntry', () => {
   });
 
   it('appends a kind entry and quotes values YAML would reinterpret', () => {
-    const result = appendManifestListEntry(SETTINGS_MANIFEST, 'kinds', {
-      id: 'memo',
-      fields: [['label', 'Memo: quick']],
-    });
+    const result = written(
+      appendManifestListEntry(SETTINGS_MANIFEST, 'kinds', {
+        id: 'memo',
+        fields: [['label', 'Memo: quick']],
+      })
+    );
 
     expect(result).toContain(
       '  - id: spec\n    creatable: false\n  - id: memo\n    label: "Memo: quick"\n'
@@ -224,36 +251,34 @@ describe('appendManifestListEntry', () => {
   });
 
   it('fails loudly on a missing section or a flow list', () => {
-    expect(() =>
+    expect(
       appendManifestListEntry('version: 1\ncolumns:\n  - id: a\n    label: A\n', 'kinds', {
         id: 'memo',
         fields: [],
       })
-    ).toThrowError(/kinds: section .* not declared/);
-    expect(() =>
+    ).toMatchObject(refused('TASKS_MANIFEST_UNPATCHABLE', /kinds: section .* not declared/));
+    expect(
       appendManifestListEntry('version: 1\ncolumns: [{ id: a, label: A }]\n', 'columns', {
         id: 'b',
         fields: [['label', 'B']],
       })
-    ).toThrowError(/flow list/);
+    ).toMatchObject(refused('TASKS_MANIFEST_UNPATCHABLE', /flow list/));
   });
 });
 
 describe('patchManifestEntryKey', () => {
   it('replaces a value in place, keeping the line comment', () => {
-    const result = patchManifestEntryKey(SETTINGS_MANIFEST, 'kinds', 'spike', 'badge', 'sk');
+    const result = written(
+      patchManifestEntryKey(SETTINGS_MANIFEST, 'kinds', 'spike', 'badge', 'sk')
+    );
 
     expect(result).toContain('    badge: sk # keep distinct from spec');
     expectOnlyDiff(SETTINGS_MANIFEST, result, (line) => line.includes('badge:'));
   });
 
   it('adds an absent key directly after the dash line', () => {
-    const result = patchManifestEntryKey(
-      SETTINGS_MANIFEST,
-      'columns',
-      'todo',
-      'description',
-      'Queued.'
+    const result = written(
+      patchManifestEntryKey(SETTINGS_MANIFEST, 'columns', 'todo', 'description', 'Queued.')
     );
 
     expect(result).toContain('  - id: todo\n    description: Queued.\n    label: Todo\n');
@@ -262,42 +287,40 @@ describe('patchManifestEntryKey', () => {
   });
 
   it('null removes the key line; removing an absent key is a no-op', () => {
-    const removed = patchManifestEntryKey(
-      SETTINGS_MANIFEST,
-      'columns',
-      'doing',
-      'description',
-      null
+    const removed = written(
+      patchManifestEntryKey(SETTINGS_MANIFEST, 'columns', 'doing', 'description', null)
     );
     expect(removed).not.toContain('Underway.');
     expectOnlyDiff(SETTINGS_MANIFEST, removed, (line) => line.includes('Underway.'));
 
-    expect(patchManifestEntryKey(SETTINGS_MANIFEST, 'columns', 'todo', 'description', null)).toBe(
-      SETTINGS_MANIFEST
-    );
+    expect(
+      written(patchManifestEntryKey(SETTINGS_MANIFEST, 'columns', 'todo', 'description', null))
+    ).toBe(SETTINGS_MANIFEST);
   });
 
   it('writes booleans bare and never touches the id line', () => {
-    const result = patchManifestEntryKey(SETTINGS_MANIFEST, 'kinds', 'spike', 'creatable', false);
+    const result = written(
+      patchManifestEntryKey(SETTINGS_MANIFEST, 'kinds', 'spike', 'creatable', false)
+    );
     expect(result).toContain(
       '  - id: spike\n    creatable: false\n    badge: s # keep distinct from spec'
     );
 
-    expect(() =>
-      patchManifestEntryKey(SETTINGS_MANIFEST, 'kinds', 'spike', 'id', 'other')
-    ).toThrowError(/immutable/);
+    expect(patchManifestEntryKey(SETTINGS_MANIFEST, 'kinds', 'spike', 'id', 'other')).toMatchObject(
+      refused('TASKS_ID_IMMUTABLE', /immutable/)
+    );
   });
 
   it('404-shaped failure for an id the section does not declare', () => {
-    expect(() =>
-      patchManifestEntryKey(SETTINGS_MANIFEST, 'columns', 'nope', 'label', 'X')
-    ).toThrowError(/no columns entry with id 'nope'/);
+    expect(patchManifestEntryKey(SETTINGS_MANIFEST, 'columns', 'nope', 'label', 'X')).toMatchObject(
+      refused('TASKS_MANIFEST_UNPATCHABLE', /no columns entry with id 'nope'/)
+    );
   });
 });
 
 describe('removeManifestListEntry', () => {
   it('removes exactly the entry block, leaving comments above it', () => {
-    const result = removeManifestListEntry(SETTINGS_MANIFEST, 'columns', 'doing');
+    const result = written(removeManifestListEntry(SETTINGS_MANIFEST, 'columns', 'doing'));
 
     expect(result).toContain(
       '  # workflow lanes, in order\n  - id: todo\n    label: Todo\n  - id: done\n'
@@ -308,7 +331,7 @@ describe('removeManifestListEntry', () => {
   });
 
   it('removing the LAST entry of the section keeps the following blank line and key', () => {
-    const result = removeManifestListEntry(SETTINGS_MANIFEST, 'kinds', 'spec');
+    const result = written(removeManifestListEntry(SETTINGS_MANIFEST, 'kinds', 'spec'));
 
     expect(result).toContain('  - id: spike\n    badge: s # keep distinct from spec\n');
     expect(result).not.toContain('creatable: false');
@@ -317,14 +340,16 @@ describe('removeManifestListEntry', () => {
 
 describe('patchManifestTopLevelScalar', () => {
   it('replaces an existing key in place', () => {
-    const result = patchManifestTopLevelScalar(SETTINGS_MANIFEST, 'defaultColumn', 'doing');
+    const result = written(
+      patchManifestTopLevelScalar(SETTINGS_MANIFEST, 'defaultColumn', 'doing')
+    );
 
     expect(result).toContain('\ndefaultColumn: doing\n');
     expectOnlyDiff(SETTINGS_MANIFEST, result, (line) => line.startsWith('defaultColumn:'));
   });
 
   it('inserts a missing key directly after the columns block', () => {
-    const result = patchManifestTopLevelScalar(SETTINGS_MANIFEST, 'doneColumn', 'done');
+    const result = written(patchManifestTopLevelScalar(SETTINGS_MANIFEST, 'doneColumn', 'done'));
 
     expect(result).toContain('    label: Done\ndoneColumn: done\n\ndefaultColumn: todo');
     const parsed = parseTasksManifest(result);

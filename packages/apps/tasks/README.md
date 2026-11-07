@@ -12,8 +12,9 @@ entry (`.`) exports:
 - seeds: `tasksManifestSeedContent`; and the pool's `formatOrderFile`;
 - the lifecycle: `tasksLifecycle`, the `AppLifecycle` a host mounts a tasks folder with (its scope,
   and the boards its tree shows);
-- `TasksRuleError { code, message, details }`, for every rejection, which the host maps to its own
-  errors.
+- no exceptions for rules: the manifest patches answer `Result<{ content }>` from
+  `@stillpointlab/common-format/app`, and a refusal carries a `code`, a `message` and, where there
+  are some, zod `details`, which the host maps to its own errors.
 
 Two more entries import nothing, for a client that needs them without the core (`.` builds the
 manifest's zod schemas at module scope, which a bundler cannot drop):

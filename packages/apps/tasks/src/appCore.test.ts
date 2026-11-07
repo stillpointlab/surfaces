@@ -19,7 +19,13 @@ import {
 } from './manifestRewrite.js';
 
 import type { TreeNode } from './types.js';
+import type { Result } from '@stillpointlab/common-format/app';
 import type { AppFixture, AppMountResult } from '@stillpointlab/common-format/testing/app';
+
+function written(result: Result<{ content: string }>): string {
+  if (!result.ok) throw new Error(`the rewrite refused: ${result.code} ${result.message}`);
+  return result.content;
+}
 
 // The tasks core held to the app core suite (ADR-0028 decision 1: a rewrite
 // keeps what a hand-edited file holds). Fixture folders hold the manifest at
@@ -218,28 +224,30 @@ describeAppCore('tasks', {
       fixture: 'configured',
       path: 'tasks.yaml',
       apply: (text) =>
-        appendManifestListEntry(text, 'columns', { id: 'review', fields: [['label', 'Review']] }),
+        written(
+          appendManifestListEntry(text, 'columns', { id: 'review', fields: [['label', 'Review']] })
+        ),
       reparses: manifestParses,
     },
     {
       name: 'relabel a column',
       fixture: 'configured',
       path: 'tasks.yaml',
-      apply: (text) => patchManifestEntryKey(text, 'columns', 'todo', 'label', 'To do'),
+      apply: (text) => written(patchManifestEntryKey(text, 'columns', 'todo', 'label', 'To do')),
       reparses: manifestParses,
     },
     {
       name: 'remove a column',
       fixture: 'configured',
       path: 'tasks.yaml',
-      apply: (text) => removeManifestListEntry(text, 'columns', 'in-progress'),
+      apply: (text) => written(removeManifestListEntry(text, 'columns', 'in-progress')),
       reparses: manifestParses,
     },
     {
       name: 'add a tag',
       fixture: 'configured',
       path: 'tasks.yaml',
-      apply: (text) => appendManifestTag(text, 'infra'),
+      apply: (text) => written(appendManifestTag(text, 'infra')),
       reparses: manifestParses,
     },
     {
@@ -254,7 +262,9 @@ describeAppCore('tasks', {
       fixture: 'minimal',
       path: 'tasks.yaml',
       apply: (text) =>
-        appendManifestListEntry(text, 'columns', { id: 'doing', fields: [['label', 'Doing']] }),
+        written(
+          appendManifestListEntry(text, 'columns', { id: 'doing', fields: [['label', 'Doing']] })
+        ),
       reparses: manifestParses,
     },
   ],

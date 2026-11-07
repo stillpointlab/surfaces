@@ -7,10 +7,11 @@ root entry (`.`) exports:
   the field-id and currency patterns);
 - reading: `parseInventoryManifest`, `parseRoomFile`, `detectInventoryAt`;
 - the rules: field validation (`fields.ts`), totals and duplicate-id demotion (`totals.ts`), each
-  rejection an `InventoryRuleError { code, message }` the host maps to its own errors;
+  answering a `Result` from `@stillpointlab/common-format/app` whose refusal (`code`, `message`)
+  the host maps to its own errors;
 - byte-preserving rewrites: `appendItem`, `patchItem`, `deleteItem` (`roomWriter.ts`);
 - seeds: `manifestSeedContent`, `roomSeedContent`;
-- CSV: `serializeRoom`, `serializeSpace`, `exportWarnings`;
+- CSV: `serializeRoom` and `serializeSpace` (each a `Result<{ content }>`), `exportWarnings`;
 - the lifecycle: `inventoryLifecycle`, the `AppLifecycle` a host mounts an inventory folder with.
 
 A second entry, `./paths`, exports the path rules alone (`slugifyInventoryName`, the folder and

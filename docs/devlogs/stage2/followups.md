@@ -45,3 +45,8 @@ during this stage's setup, each entry struck with where it went.
 - 2026-11-07 (shared components): `md-icon` holds 18 of `<spl-icon>`'s names as inline SVG. md could
   use the component now that it lives here, but the two differ (`md-icon` is not a button, and its
   sizes differ).
+- 2026-11-07 (result types for app cores): only the functions that threw now answer a `Result`. The
+  cores' older results keep shapes of their own: `parseInventoryManifest` and the tasks manifest
+  parse (`{ ok: false, errors }`), the room writer (`reason`, `notFound`), and the lifecycles'
+  `validateAndScope` (`errors`, kept on purpose since a manifest can be wrong in several ways at
+  once). Converging them changes their callers in Context Manager, so it is its own step.

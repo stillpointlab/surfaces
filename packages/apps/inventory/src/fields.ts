@@ -1,10 +1,11 @@
 /**
  * Inventory item field rules (ADR-0022): the frozen v1 declared-field checks,
  * the configured (v2) field checks, and the Other-data key rules. Pure — the
- * inventory service calls them before it writes a room, and maps an
- * `InventoryRuleError` back to the 400 `ApiError` with the same code.
+ * inventory service calls them before it writes a room, and maps a failure's
+ * code back to the 400 `ApiError` it has always sent.
  */
-import { InventoryRuleError } from './errors.js';
+import { fail, ok } from '@stillpointlab/common-format/app';
+
 import {
   INVENTORY_FIELD_ID_MAX_LENGTH,
   INVENTORY_FIELD_ID_PATTERN,
@@ -16,6 +17,7 @@ import type {
   SharedInventoryManifestV1,
   SharedInventoryScalar,
 } from './types.js';
+import type { Result } from '@stillpointlab/common-format/app';
 
 /** The v1 core fields a v2 (configured) manifest does not accept. */
 const LEGACY_CORE_FIELDS = [
@@ -36,72 +38,66 @@ export function validateLegacyDeclaredField(
   manifest: SharedInventoryManifestV1,
   key: string,
   value: SharedInventoryScalar
-): void {
+): Result {
   const field = manifest.fields.find((candidate) => candidate.id === key);
   if (!field) {
-    throw new InventoryRuleError(
-      'INVENTORY_UNKNOWN_FIELD',
-      `'${key}' is not a field declared in inventory.yaml`
-    );
+    return fail('INVENTORY_UNKNOWN_FIELD', `'${key}' is not a field declared in inventory.yaml`);
   }
   if (field.type === 'number' && typeof value !== 'number') {
-    throw new InventoryRuleError('INVENTORY_FIELD_TYPE', `'${key}' must be a number`);
+    return fail('INVENTORY_FIELD_TYPE', `'${key}' must be a number`);
   }
   if (field.type !== 'number' && typeof value !== 'string') {
-    throw new InventoryRuleError('INVENTORY_FIELD_TYPE', `'${key}' must be text`);
+    return fail('INVENTORY_FIELD_TYPE', `'${key}' must be text`);
   }
+  return ok();
 }
 
-/** Configured (v2) field validation; returns the declared field. */
+/** Configured (v2) field validation; answers with the declared field. */
 export function validateConfiguredField(
   fields: readonly SharedInventoryFieldV2[],
   key: string,
   value: SharedInventoryScalar
-): SharedInventoryFieldV2 {
+): Result<{ field: SharedInventoryFieldV2 }> {
   const field = fields.find((candidate) => candidate.id === key);
   if (!field) {
-    throw new InventoryRuleError(
-      'INVENTORY_UNKNOWN_FIELD',
-      `'${key}' is not a field declared in inventory.yaml`
-    );
+    return fail('INVENTORY_UNKNOWN_FIELD', `'${key}' is not a field declared in inventory.yaml`);
   }
   if (field.type === 'number' && (typeof value !== 'number' || !Number.isFinite(value))) {
-    throw new InventoryRuleError('INVENTORY_FIELD_TYPE', `'${key}' must be a finite number`);
+    return fail('INVENTORY_FIELD_TYPE', `'${key}' must be a finite number`);
   }
   if (field.type === 'text' && typeof value !== 'string') {
-    throw new InventoryRuleError('INVENTORY_FIELD_TYPE', `'${key}' must be text`);
+    return fail('INVENTORY_FIELD_TYPE', `'${key}' must be text`);
   }
   if (field.required && field.type === 'text' && typeof value === 'string' && value.trim() === '') {
-    throw new InventoryRuleError('INVENTORY_REQUIRED_FIELD', `'${key}' must not be blank`);
+    return fail('INVENTORY_REQUIRED_FIELD', `'${key}' must not be blank`);
   }
-  return field;
+  return ok({ field });
 }
 
 /** A v2 manifest refuses the v1 core fields outright. */
-export function rejectConfiguredLegacyInput(input: LegacyCoreFieldInput): void {
+export function rejectConfiguredLegacyInput(input: LegacyCoreFieldInput): Result {
   for (const key of LEGACY_CORE_FIELDS) {
     if (input[key] !== undefined) {
-      throw new InventoryRuleError(
+      return fail(
         'INVENTORY_LEGACY_FIELD',
         `'${key}' is a legacy field and is not accepted by inventory.yaml version 2`
       );
     }
   }
+  return ok();
 }
 
 /** An Other-data key must be a safe field id that no configured field claims. */
-export function validateExtraKey(fields: readonly SharedInventoryFieldV2[], key: string): void {
+export function validateExtraKey(fields: readonly SharedInventoryFieldV2[], key: string): Result {
   if (
     key.length > INVENTORY_FIELD_ID_MAX_LENGTH ||
     !INVENTORY_FIELD_ID_PATTERN.test(key) ||
     INVENTORY_RESERVED_FIELD_IDS.has(key)
   ) {
-    throw new InventoryRuleError('INVENTORY_EXTRA_KEY', `'${key}' is not a safe Other data key`);
+    return fail('INVENTORY_EXTRA_KEY', `'${key}' is not a safe Other data key`);
   }
   if (fields.some((field) => field.id === key)) {
-    throw new InventoryRuleError(
-      'INVENTORY_EXTRA_COLLISION',
-      `'${key}' is a configured field, not Other data`
-    );
+    return fail('INVENTORY_EXTRA_COLLISION', `'${key}' is a configured field, not Other data`);
   }
+  return ok();
 }

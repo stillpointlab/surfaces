@@ -1,8 +1,10 @@
+import { fail, ok } from '@stillpointlab/common-format/app';
 import { formatYamlScalar } from '@stillpointlab/common-format/yaml';
 import { parse as parseYaml } from 'yaml';
 
-import { TasksRuleError } from './errors.js';
 import { formatScalar } from './frontmatter.js';
+
+import type { Failure, Result } from '@stillpointlab/common-format/app';
 
 /**
  * Minimal-diff edits to `tasks.yaml` (ADR-0020).
@@ -13,7 +15,8 @@ import { formatScalar } from './frontmatter.js';
  * textually, never parse-and-re-emit: comments, key order, quoting style,
  * unknown keys, and line-ending style all survive untouched. Shapes the
  * rewriter cannot patch conservatively (a flow list spanning lines, a bracket
- * hidden in a comment) fail loudly instead of corrupting the file.
+ * hidden in a comment) answer a `TASKS_MANIFEST_UNPATCHABLE` failure instead
+ * of corrupting the file.
  */
 
 function detectEol(content: string): string {
@@ -143,22 +146,24 @@ export type ManifestListSection = 'columns' | 'kinds';
 function sectionItems(
   lines: string[],
   section: ManifestListSection
-): {
-  keyIndex: number;
-  end: number;
-  itemIndent: string;
-  items: { start: number; end: number; id: string | null }[];
-} {
-  const unpatchable = (why: string): TasksRuleError =>
-    new TasksRuleError(
+):
+  | {
+      keyIndex: number;
+      end: number;
+      itemIndent: string;
+      items: { start: number; end: number; id: string | null }[];
+    }
+  | Failure {
+  const unpatchable = (why: string): Failure =>
+    fail(
       'TASKS_MANIFEST_UNPATCHABLE',
       `the ${section}: section in tasks.yaml ${why} — make this change by editing the file`
     );
   const keyIndex = findTopLevelKey(lines, section);
-  if (keyIndex === -1) throw unpatchable('is not declared');
+  if (keyIndex === -1) return unpatchable('is not declared');
   const inlineValue = textOf(lines[keyIndex]).slice(`${section}:`.length).trim();
   if (inlineValue !== '' && !inlineValue.startsWith('#')) {
-    throw unpatchable('is a single-line flow list the app cannot patch safely');
+    return unpatchable('is a single-line flow list the app cannot patch safely');
   }
 
   const end = blockEnd(lines, keyIndex);
@@ -192,11 +197,13 @@ function findItem(
   lines: string[],
   section: ManifestListSection,
   id: string
-): { start: number; end: number; itemIndent: string } {
-  const { items, itemIndent } = sectionItems(lines, section);
+): { start: number; end: number; itemIndent: string } | Failure {
+  const found = sectionItems(lines, section);
+  if ('ok' in found) return found;
+  const { items, itemIndent } = found;
   const item = items.find((entry) => entry.id === id);
   if (!item) {
-    throw new TasksRuleError(
+    return fail(
       'TASKS_MANIFEST_UNPATCHABLE',
       `no ${section} entry with id '${id}' has the '- id: ${id}' shape the app can patch — make this change by editing the file`
     );
@@ -214,10 +221,12 @@ export function appendManifestListEntry(
   content: string,
   section: ManifestListSection,
   entry: { id: string; fields: [string, string | boolean][] }
-): string {
+): Result<{ content: string }> {
   const eol = detectEol(content);
   const lines = splitLines(content);
-  const { end, itemIndent } = sectionItems(lines, section);
+  const found = sectionItems(lines, section);
+  if ('ok' in found) return found;
+  const { end, itemIndent } = found;
 
   const subIndent = `${itemIndent}  `;
   // The lenient scalar rule (the seed writer's): quote only what YAML would
@@ -243,7 +252,7 @@ export function appendManifestListEntry(
     return insertAtEnd && !hadTrailingNewline && isLast ? text : text + neighborEol;
   });
   lines.splice(end, 0, ...withEol);
-  return lines.join('');
+  return ok({ content: lines.join('') });
 }
 
 /**
@@ -258,16 +267,14 @@ export function patchManifestEntryKey(
   id: string,
   key: string,
   value: string | boolean | null
-): string {
+): Result<{ content: string }> {
   if (key === 'id') {
-    throw new TasksRuleError(
-      'TASKS_ID_IMMUTABLE',
-      'ids are immutable through app surfaces (ADR-0028)'
-    );
+    return fail('TASKS_ID_IMMUTABLE', 'ids are immutable through app surfaces (ADR-0028)');
   }
   const eol = detectEol(content);
   const lines = splitLines(content);
   const item = findItem(lines, section, id);
+  if ('ok' in item) return item;
 
   const keyPattern = new RegExp(`^(\\s*)${key}:\\s*([^#]*?)(\\s*#.*)?$`);
   let keyLine = -1;
@@ -284,20 +291,20 @@ export function patchManifestEntryKey(
     value === null ? '' : typeof value === 'boolean' ? String(value) : formatYamlScalar(value);
 
   if (keyLine === -1) {
-    if (value === null) return content; // removing an absent key is a no-op
+    if (value === null) return ok({ content }); // removing an absent key is a no-op
     const subIndent = `${item.itemIndent}  `;
     const neighborEol = eolOf(lines[item.start], eol);
     lines.splice(item.start + 1, 0, `${subIndent}${key}: ${formatted}${neighborEol}`);
-    return lines.join('');
+    return ok({ content: lines.join('') });
   }
 
   if (value === null) {
     lines.splice(keyLine, 1);
-    return lines.join('');
+    return ok({ content: lines.join('') });
   }
   const comment = match![3] ?? '';
   lines[keyLine] = `${match![1]}${key}: ${formatted}${comment}${eolOf(lines[keyLine], eol)}`;
-  return lines.join('');
+  return ok({ content: lines.join('') });
 }
 
 /**
@@ -309,9 +316,10 @@ export function removeManifestListEntry(
   content: string,
   section: ManifestListSection,
   id: string
-): string {
+): Result<{ content: string }> {
   const lines = splitLines(content);
   const item = findItem(lines, section, id);
+  if ('ok' in item) return item;
   // Trailing comment/blank lines inside the span belong to the NEXT entry's
   // reading context as much as this one's — leave any line that is not
   // indented deeper than the dash or is a comment at item depth… simpler and
@@ -324,7 +332,7 @@ export function removeManifestListEntry(
     else break;
   }
   lines.splice(item.start, end - item.start);
-  return lines.join('');
+  return ok({ content: lines.join('') });
 }
 
 /**
@@ -336,18 +344,18 @@ export function patchManifestTopLevelScalar(
   content: string,
   key: 'defaultColumn' | 'doneColumn',
   value: string
-): string {
+): Result<{ content: string }> {
   const eol = detectEol(content);
   const lines = splitLines(content);
   const index = findTopLevelKey(lines, key);
   if (index !== -1) {
     const match = /^([^#:]*:\s*)([^#]*?)(\s*#.*)?$/.exec(textOf(lines[index]))!;
     lines[index] = `${key}: ${formatYamlScalar(value)}${match[3] ?? ''}${eolOf(lines[index], eol)}`;
-    return lines.join('');
+    return ok({ content: lines.join('') });
   }
   const columnsIndex = findTopLevelKey(lines, 'columns');
   if (columnsIndex === -1) {
-    throw new TasksRuleError(
+    return fail(
       'TASKS_MANIFEST_UNPATCHABLE',
       `tasks.yaml has no columns: section to anchor ${key} to — make this change by editing the file`
     );
@@ -361,7 +369,7 @@ export function patchManifestTopLevelScalar(
   }
   const itemEol = insertAtEnd && !hadTrailingNewline ? '' : neighborEol;
   lines.splice(end, 0, `${key}: ${formatYamlScalar(value)}${itemEol}`);
-  return lines.join('');
+  return ok({ content: lines.join('') });
 }
 
 /** The `tags:` value a single line parses to, or null when it does not parse. */
@@ -382,10 +390,10 @@ function tagsOfLine(lineText: string): string[] | null {
  * shapes — block list, single-line flow list (including `[]`), and a missing
  * key — always preserving the file's existing style where one exists.
  */
-export function appendManifestTag(content: string, tag: string): string {
+export function appendManifestTag(content: string, tag: string): Result<{ content: string }> {
   const trimmed = tag.trim();
   if (trimmed === '') {
-    throw new TasksRuleError('TASKS_TAG_EMPTY', 'tag must be non-empty');
+    return fail('TASKS_TAG_EMPTY', 'tag must be non-empty');
   }
 
   const eol = detectEol(content);
@@ -394,7 +402,7 @@ export function appendManifestTag(content: string, tag: string): string {
   const formatted = formatScalar(trimmed);
 
   if (index === -1) {
-    return appendLines(content, ['tags:', `  - ${formatted}`], eol);
+    return ok({ content: appendLines(content, ['tags:', `  - ${formatted}`], eol) });
   }
 
   const end = blockEnd(lines, index);
@@ -403,14 +411,11 @@ export function appendManifestTag(content: string, tag: string): string {
   try {
     existing = (parseYaml(existingYaml) as Record<string, unknown>)?.tags;
   } catch {
-    throw new TasksRuleError(
-      'TASKS_TAGS_UNPARSEABLE',
-      'tags registry in tasks.yaml is not parseable YAML'
-    );
+    return fail('TASKS_TAGS_UNPARSEABLE', 'tags registry in tasks.yaml is not parseable YAML');
   }
   const existingTags = Array.isArray(existing) ? existing.map(String) : [];
   if (existingTags.some((t) => t.toLowerCase() === trimmed.toLowerCase())) {
-    return content;
+    return ok({ content });
   }
 
   const keyLineText = textOf(lines[index]);
@@ -434,13 +439,13 @@ export function appendManifestTag(content: string, tag: string): string {
       parsedTags.length !== existingTags.length + 1 ||
       parsedTags[parsedTags.length - 1] !== trimmed
     ) {
-      throw new TasksRuleError(
+      return fail(
         'TASKS_MANIFEST_UNPATCHABLE',
         'the tags: list in tasks.yaml has a shape the app cannot patch safely — add the tag by editing the file'
       );
     }
     lines[index] = candidate + eolOf(lines[index], eol);
-    return lines.join('');
+    return ok({ content: lines.join('') });
   }
 
   // Block list (or bare `tags:` with no items): append an item line matching
@@ -463,5 +468,5 @@ export function appendManifestTag(content: string, tag: string): string {
   }
   const itemEol = insertAtEnd && !hadTrailingNewline ? '' : neighborEol;
   lines.splice(end, 0, `${indent}- ${formatted}${itemEol}`);
-  return lines.join('');
+  return ok({ content: lines.join('') });
 }
