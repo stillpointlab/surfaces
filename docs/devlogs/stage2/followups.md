@@ -33,3 +33,15 @@ during this stage's setup, each entry struck with where it went.
   This repository's own order file carries grouping comments that a reorder in the app would drop.
   It breaks ADR-0028 decision 1 for that one file; the move keeps the behaviour, and a rewrite that
   keeps comments comes after the tasks adoption.
+- 2026-11-07 (shared components; kept as they are by the spec): the `spinner` icon does not exist.
+  Two Context Manager dashboard pages ask for `icon-name="spinner"`, which has no mask, so it draws
+  a filled square.
+- 2026-11-07 (shared components): `<spl-icon>` always renders `role="button"` and `tabindex="0"`,
+  even when it is decorative, so decorative icons are keyboard stops announced as buttons.
+- 2026-11-07 (shared components): `<spl-icon>` interpolates its attributes into `innerHTML`. Its
+  callers pass fixed names and labels, apart from Context Manager's `conversation-indicator`, whose
+  label comes from admin-configured provider and model names. `<modal-dialog>`'s title got this fix;
+  the icon did not.
+- 2026-11-07 (shared components): `md-icon` holds 18 of `<spl-icon>`'s names as inline SVG. md could
+  use the component now that it lives here, but the two differ (`md-icon` is not a button, and its
+  sizes differ).

@@ -6,6 +6,7 @@
   "type": "module",
   "workspaces": [
     "packages/common",
+    "packages/components/*",
     "packages/formats/*",
     "packages/apps/*"
   ],

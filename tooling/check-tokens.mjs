@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const scanned = [
+  join(root, 'packages/components'),
   join(root, 'packages/formats'),
   join(root, 'packages/apps'),
   join(root, 'tooling/template'),

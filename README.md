@@ -1,19 +1,21 @@
 # Stillpoint Lab surfaces
 
 The human surfaces over [Context Manager](https://stillpointlab.com): **formats**, each a preview
-and optionally an editor over one good, and **apps**, each a manifest-mounted scope of goods. Both
+and optionally an editor over one good, **apps**, each a manifest-mounted scope of goods, and the
+few **components** they share. Formats and apps
 are stateless clients of the same host contract (`get` / `list` / `put`, where `put` is a proposal),
 so they share one toolchain, one `common` package and, in time, one scaffold.
 
-| Package                  | npm name                       | Ships                                                       |
-| ------------------------ | ------------------------------ | ----------------------------------------------------------- |
-| `packages/common`        | `@stillpointlab/common-format` | logging, contracts, ready gate, tokens, conformance suites  |
-| `packages/formats/md`    | `@stillpointlab/md-format`     | core + `<md-preview>` + `<md-editor>`                       |
-| `packages/formats/code`  | `@stillpointlab/code-format`   | core + `<code-preview>` + `<code-editor>`, `<code-diff>`    |
-| `packages/formats/sheet` | `@stillpointlab/sheet-format`  | core + `<sheet-preview>` + `<sheet-editor>`, `<sheet-grid>` |
-| `packages/formats/xmdl`  | `@stillpointlab/xmdl-format`   | core + `<xmdl-preview>` + `<xmdl-editor>`                   |
-| `packages/formats/image` | `@stillpointlab/image-format`  | `<image-preview>` only                                      |
-| `packages/apps/`         |                                | tasks and inventory arrive with the apps breakout           |
+| Package                  | npm name                          | Ships                                                       |
+| ------------------------ | --------------------------------- | ----------------------------------------------------------- |
+| `packages/common`        | `@stillpointlab/common-format`    | logging, contracts, ready gate, tokens, conformance suites  |
+| `packages/formats/md`    | `@stillpointlab/md-format`        | core + `<md-preview>` + `<md-editor>`                       |
+| `packages/formats/code`  | `@stillpointlab/code-format`      | core + `<code-preview>` + `<code-editor>`, `<code-diff>`    |
+| `packages/formats/sheet` | `@stillpointlab/sheet-format`     | core + `<sheet-preview>` + `<sheet-editor>`, `<sheet-grid>` |
+| `packages/formats/xmdl`  | `@stillpointlab/xmdl-format`      | core + `<xmdl-preview>` + `<xmdl-editor>`                   |
+| `packages/formats/image` | `@stillpointlab/image-format`     | `<image-preview>` only                                      |
+| `packages/apps/`         |                                   | tasks and inventory arrive with the apps breakout           |
+| `packages/components/`   | `@stillpointlab/<name>-component` | shared UI elements: `<modal-dialog>`, `<spl-icon>`          |
 
 Every format opens in the one harness (`npm run dev`, <http://localhost:5180>); see
 [the harness](#the-harness) below.
@@ -49,6 +51,7 @@ packages/
   common/            what every surface shares: logging, element contracts, SCSS tokens
   formats/<name>/    one good; core + preview + optional editor
   apps/<name>/       a scope; manifest mount
+  components/<name>/ one shared UI element, with no good and no mount
     package.json     name, entries, runtime dependencies, and five one-line scripts
     tsconfig.json    extends the base; overrides only what the package needs
     tsup.config.ts   entries and externals through `formatPackage()`
@@ -75,7 +78,8 @@ npm run new-format -- video # a new format from the template; then npm install a
 
 ## The harness
 
-`tooling/harness/` is the one playground. It finds every `packages/formats/*/dev/fixtures.ts`,
+`tooling/harness/` is the one playground. It finds every `dev/fixtures.ts` under `packages/formats/*`
+and `packages/components/*`,
 mounts the chosen format's elements by role (editor beside preview, extras below), applies a
 fixture, mirrors edits into the preview, reads the source back, and shows each element's `ready`
 state and events. Read-only, narrow panes and light/dark (with the shared `--spl-*` tokens) are
@@ -283,6 +287,8 @@ ship light defaults only and carry no `prefers-color-scheme` rules of their own.
 | `--spl-code-active-line-bg`  | `rgba(88, 166, 255, 0.12)` | CodeMirror's active line                 |
 | `--spl-code-selection-bg`    | `rgba(88, 166, 255, 0.38)` | CodeMirror's selection                   |
 | `--spl-shadow-color`         | `rgba(0, 0, 0, 0.18)`      | popover and menu shadows                 |
+| `--spl-overlay-scrim`        | `rgba(0, 0, 0, 0.5)`       | the backdrop behind a modal dialog       |
+| `--spl-overlay-shadow`       | two soft black layers      | a modal dialog's whole `box-shadow`      |
 
 A format stylesheet starts with `@use 'common/src/styles/tokens' as *;` and uses the variables
 (`$text-primary`, `$error-bg`, …) for every colour. A format may add properties of its own
