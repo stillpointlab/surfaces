@@ -257,6 +257,8 @@ ship light defaults only and carry no `prefers-color-scheme` rules of their own.
 | `--spl-background-secondary` | `#f5f5f5`                  | toolbars, gutters, secondary panels      |
 | `--spl-background-muted`     | `#f8f8f8`                  | quiet panels (frontmatter, chips)        |
 | `--spl-background-hover`     | `#e8e8e8`                  | hovered controls and menu items          |
+| `--spl-hover-gray`           | `#d9f0e3`                  | the board's hovered drop targets         |
+| `--spl-pool-surface`         | `#e7e4da`                  | the task board's Unassigned pool         |
 | `--spl-surface-overlay`      | `#ffffff`                  | popovers and menus                       |
 | `--spl-header-bg`            | `#f6f8fa`                  | table headers, sheet toolbar and notices |
 | `--spl-code-bg`              | `#f0f0f0`                  | inline code and code blocks              |
@@ -264,10 +266,12 @@ ship light defaults only and carry no `prefers-color-scheme` rules of their own.
 | `--spl-text-secondary`       | `#333`                     | secondary text, labels                   |
 | `--spl-text-color`           | `#444`                     | toolbar icons and controls               |
 | `--spl-text-muted`           | `#666`                     | hints, metadata, line numbers            |
+| `--spl-text-faint`           | `#888`                     | quiet notes (the pool order warning)     |
 | `--spl-border-color`         | `#eee`                     | element frames and dividers              |
 | `--spl-border-light`         | `#ddd`                     | light rules, table borders               |
 | `--spl-border-dark`          | `#ccc`                     | inputs, menu outlines                    |
 | `--spl-border-strong`        | `#b0b0b0`                  | table cell borders                       |
+| `--spl-primary-color`        | `#33312a`                  | the board's drag and kind accents        |
 | `--spl-primary-blue`         | `#0066cc`                  | accent: links, active states, selection  |
 | `--spl-primary-blue-hover`   | `#0052a3`                  | accent on hover                          |
 | `--spl-focus-ring`           | `#0969da`                  | focus outlines                           |
@@ -284,10 +288,15 @@ ship light defaults only and carry no `prefers-color-scheme` rules of their own.
 | `--spl-success-bg`           | `#dcfce7`                  | success badges, conditional markers      |
 | `--spl-info-color`           | `#1d4ed8`                  | informational text, template slots       |
 | `--spl-info-bg`              | `#dbeafe`                  | informational badges, template slots     |
+| `--spl-alert-color`          | `#d9662b`                  | the board's check-in chips               |
+| `--spl-gold-color`           | `#b98a24`                  | the board's selected card                |
+| `--spl-chip-hover-bg`        | `rgba(139, 92, 246, 0.1)`  | hovered outlined chips                   |
 | `--spl-code-active-line-bg`  | `rgba(88, 166, 255, 0.12)` | CodeMirror's active line                 |
 | `--spl-code-selection-bg`    | `rgba(88, 166, 255, 0.38)` | CodeMirror's selection                   |
 | `--spl-shadow-color`         | `rgba(0, 0, 0, 0.18)`      | popover and menu shadows                 |
 | `--spl-overlay-scrim`        | `rgba(0, 0, 0, 0.5)`       | the backdrop behind a modal dialog       |
+| `--spl-drag-shadow`          | one soft black layer       | a dragged card's ghost                   |
+| `--spl-popover-shadow`       | one soft black layer       | the board's tracked-file preview         |
 | `--spl-overlay-shadow`       | two soft black layers      | a modal dialog's whole `box-shadow`      |
 
 A format stylesheet starts with `@use 'common/src/styles/tokens' as *;` and uses the variables

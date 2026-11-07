@@ -1,3 +1,5 @@
+import type { FolderNode } from '@stillpointlab/common-format/app';
+
 /**
  * Tasks View shared types (ADR-0014). All YAML parsing happens server-side;
  * the client only ever receives these structured shapes.
@@ -335,12 +337,7 @@ export interface SharedTaskCard {
 }
 
 /**
- * One node of a synced repository tree, as detection reads it. Structural, so
- * a host's own tree type (with a required `sha`) is assignable to it.
+ * One node of a synced repository tree, as detection reads it: `common`'s
+ * `FolderNode`, kept under this name for the core's callers.
  */
-export interface TreeNode {
-  path: string;
-  type: 'blob' | 'tree';
-  sha?: string;
-  size?: number;
-}
+export type TreeNode = FolderNode;

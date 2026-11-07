@@ -3,6 +3,7 @@ import { expect } from 'vitest';
 import { withLineBreak } from '../line-endings';
 
 import type { AppCoreOptions, AppCoreRewrite, AppFixture } from './app';
+import type { AppLifecycle, FolderNode } from '../app';
 
 // The checks describeAppCore runs, one function per `it`, so common's own tests
 // can show each one failing against a broken sample core.
@@ -26,6 +27,42 @@ export function assertMounts(options: AppCoreOptions, name: string): void {
     result.ok,
     `fixture "${name}" did not mount: ${JSON.stringify(result.ok ? [] : result.errors)}`
   ).toBe(true);
+}
+
+/** A fixture's tree: a blob per file and a tree per folder above one. */
+export function fixtureNodes(files: AppFixture): FolderNode[] {
+  const folders = new Set<string>();
+  for (const path of Object.keys(files)) {
+    const parts = path.split('/');
+    for (let i = 1; i < parts.length; i++) folders.add(parts.slice(0, i).join('/'));
+  }
+  return [
+    ...[...folders].sort().map((path) => ({ path, type: 'tree' as const })),
+    ...Object.keys(files).map((path) => ({ path, type: 'blob' as const })),
+  ];
+}
+
+/** The lifecycle accepts the fixture, its scope holds the manifest, and it has a label. */
+export function assertLifecycle(
+  options: AppCoreOptions,
+  lifecycle: AppLifecycle<{ label: string }>,
+  name: string
+): void {
+  const files = fixtureFiles(options, name);
+  const nodes = fixtureNodes(files);
+  const result = lifecycle.validateAndScope(files[options.manifest], nodes, options.manifest);
+  expect(
+    result.ok,
+    `fixture "${name}" did not validate: ${JSON.stringify(result.ok ? [] : result.errors)}`
+  ).toBe(true);
+  if (result.ok) {
+    expect(result.scope.has(options.manifest), 'the scope must hold the manifest').toBe(true);
+  }
+  const detail = lifecycle.describeInstance(files[options.manifest], nodes, options.manifest, []);
+  expect(typeof detail.label, 'describeInstance must give a label').toBe('string');
+  expect(lifecycle.manifestName, 'manifestName must name the manifest file').toBe(
+    options.manifest.split('/').pop()
+  );
 }
 
 /** The text a rewrite starts from: its fixture file. */

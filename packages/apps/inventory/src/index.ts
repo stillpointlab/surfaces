@@ -10,6 +10,6 @@ export * from './roomWriter.js';
 export * from './fields.js';
 export * from './totals.js';
 export * from './csv.js';
-export * from './errors.js';
 export * from './manifestSeed.js';
 export * from './roomSeed.js';
+export * from './lifecycle.js';

@@ -19,10 +19,13 @@ import {
   assertCommentsKept,
   assertCrlfKept,
   assertFinalNewlineKept,
+  assertLifecycle,
   assertMounts,
   assertReparses,
   rewriteInput,
 } from './app-checks';
+
+import type { AppLifecycle } from '../app';
 
 /** A fixture folder: path (relative to the folder) → text. */
 export type AppFixture = Readonly<Record<string, string>>;
@@ -60,6 +63,12 @@ export interface AppCoreOptions {
   mount: (files: AppFixture, manifestPath: string) => AppMountResult;
   /** Rewrites to check. The suite derives CRLF and final-newline variants itself. */
   rewrites: readonly AppCoreRewrite[];
+  /**
+   * The core's lifecycle, when it exports one. The suite then checks that every
+   * fixture validates, that its scope holds the manifest, and that the instance
+   * is described with a label.
+   */
+  lifecycle?: AppLifecycle<{ label: string }>;
 }
 
 /** Run the app core suite for `app` over the given fixtures and rewrites. */
@@ -70,6 +79,16 @@ export function describeAppCore(app: string, options: AppCoreOptions): void {
         it(`mounts the "${name}" fixture`, () => assertMounts(options, name));
       }
     });
+
+    const { lifecycle } = options;
+    if (lifecycle) {
+      describe('lifecycle', () => {
+        for (const name of Object.keys(options.fixtures)) {
+          it(`scopes the "${name}" fixture and describes it`, () =>
+            assertLifecycle(options, lifecycle, name));
+        }
+      });
+    }
 
     for (const rewrite of options.rewrites) {
       describe(`rewrite: ${rewrite.name} (${rewrite.fixture}/${rewrite.path})`, () => {

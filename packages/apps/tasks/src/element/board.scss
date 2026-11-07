@@ -1,0 +1,648 @@
+@use 'common/src/styles/tokens' as *;
+
+// The pool sidebar lives OUTSIDE .task-board (a sibling grid item — spec
+// board_pool_sidebar), so every shared card/badge/column rule in this block
+// carries both scopes.
+.task-board,
+.board-pool-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  min-height: 0;
+  height: 100%;
+
+  .board-toolbar {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    min-height: 24px;
+  }
+
+  .board-toolbar-spacer {
+    flex: 1;
+  }
+
+  .board-new-card,
+  .board-pool-toggle {
+    border: 1px solid $border-color;
+    background: none;
+    color: $text-secondary;
+    font-size: 0.8rem;
+    padding: 2px 10px;
+    border-radius: $border-radius-sm;
+    cursor: pointer;
+
+    &:hover {
+      background-color: $background-hover;
+    }
+  }
+
+  // The collapsed pool's reopen affordance sits on the pool surface so the
+  // toolbar still hints at the different kind of place it reopens.
+  .board-pool-toggle {
+    background-color: $pool-surface;
+  }
+
+  .board-dirty-summary {
+    font-size: 0.8rem;
+    color: $warning-color;
+  }
+
+  .board-checkin {
+    border: 1px solid $primary-color;
+    background: none;
+    color: $primary-color;
+    font-size: 0.8rem;
+    padding: 2px 10px;
+    border-radius: $border-radius-sm;
+    cursor: pointer;
+
+    &:hover {
+      background-color: $background-hover;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  // A check-in job is running for this card: the previous PR chip would be
+  // stale, so a muted pending chip stands in until the job settles.
+  .card-badge--checkin-pending {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: $text-secondary;
+    border: 1px dashed $text-secondary;
+    padding: 0 6px;
+    border-radius: $border-radius-sm;
+  }
+
+  // Link to the check-in pull request (board-level chip + per-card badge).
+  .board-pr,
+  .card-badge--pr {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-decoration: none;
+    color: $alert-color;
+    border: 1px solid $alert-color;
+    padding: 0 6px;
+    border-radius: $border-radius-sm;
+
+    &:hover {
+      background-color: $chip-hover-bg;
+    }
+  }
+
+  .board-columns {
+    display: flex;
+    gap: $spacing-md;
+    align-items: flex-start;
+    overflow-x: auto;
+    padding-bottom: $spacing-sm;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .board-column {
+    flex: 0 0 240px;
+    display: flex;
+    flex-direction: column;
+    max-height: 100%;
+    background-color: $hover-gray;
+    border: 1px solid $border-color;
+    border-radius: $border-radius-md;
+
+    &.drag-over {
+      border-color: $primary-color;
+      background-color: $background-hover;
+    }
+  }
+
+  .column-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-sm $spacing-md;
+    border-bottom: 1px solid $border-color;
+  }
+
+  .column-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: $text-secondary;
+  }
+
+  .column-count {
+    font-size: 0.75rem;
+    color: $text-muted;
+  }
+
+  .column-cards {
+    list-style: none;
+    margin: 0;
+    padding: $spacing-sm;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    overflow-y: auto;
+    min-height: 40px;
+  }
+
+  .board-card {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: $spacing-sm $spacing-md;
+    background-color: $background-primary;
+    border: 1px solid $border-color;
+    border-radius: $border-radius-sm;
+    cursor: grab;
+    // Pointer-based dragging (pointerDrag util): stop touch scrolling from
+    // hijacking a card drag.
+    touch-action: none;
+
+    &:hover {
+      border-color: $text-muted;
+    }
+
+    &.selected {
+      border-color: $primary-color;
+    }
+
+    &.drag-source {
+      opacity: 0.4;
+    }
+
+    // Kind accent: subtle left stripe keyed by the kind's REGISTRY INDEX
+    // (its position in the manifest's resolved kind list), not its id — any
+    // registry gets the same treatment, indexes beyond the palette get no
+    // stripe. Today that reproduces exactly the old brief/spec pair (built-in
+    // registry positions 1 and 2). An inset box-shadow rather than
+    // border-left, so the hover/selected border-color changes (all four
+    // sides) can't clobber it.
+    &[data-kind-index='1'] {
+      box-shadow: inset 3px 0 0 $gold-color;
+    }
+
+    &[data-kind-index='2'] {
+      box-shadow: inset 3px 0 0 $border-dark;
+    }
+  }
+
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-xs;
+  }
+
+  .card-title {
+    flex: 1;
+    font-size: 0.85rem;
+    color: $text-color;
+    overflow-wrap: anywhere;
+  }
+
+  .card-menu-btn {
+    flex-shrink: 0;
+    border: none;
+    background: none;
+    color: $text-muted;
+    cursor: pointer;
+    padding: 0 2px;
+    line-height: 1;
+
+    &:hover {
+      color: $text-color;
+    }
+  }
+
+  .card-meta {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    min-width: 0;
+  }
+
+  .card-path {
+    font-size: 0.7rem;
+    color: $text-muted;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .card-badge {
+    flex-shrink: 0;
+    font-size: 0.65rem;
+    border-radius: $border-radius-sm;
+    padding: 0 4px;
+
+    // The full kind-name badge board cards wear (pool cards use the
+    // condensed `--kind` letter below).
+    &--kind-name {
+      border: 1px solid $border-color;
+      color: $text-secondary;
+    }
+
+    &--kind {
+      border: 1px solid $border-color;
+      color: $text-secondary;
+      text-transform: uppercase;
+    }
+
+    &--warn {
+      color: $alert-color;
+    }
+
+    &--blocked {
+      border: 1px solid $alert-color;
+      color: $alert-color;
+    }
+
+    &--completed {
+      color: $text-secondary;
+    }
+
+    &--diverged {
+      color: $alert-color;
+    }
+
+    &--meta-pr {
+      border: 1px solid $border-color;
+      color: $text-secondary;
+      text-decoration: none;
+    }
+
+    // Live pr: chip states (spec task_board_refresh). Open keeps the neutral
+    // base; merged borrows the done/✓ color language; closed reads muted.
+    &--meta-pr-merged {
+      border-color: $success-color;
+      color: $success-color;
+    }
+
+    &--meta-pr-closed {
+      color: $text-muted;
+    }
+
+    &--dirty {
+      color: $warning-color;
+    }
+
+    &--error {
+      color: $error-color;
+      font-weight: 700;
+    }
+
+    // Tracked cards (ADR-0023): rendered from the repo, nothing imported.
+    &--tracked {
+      border: 1px dashed $border-color;
+      color: $text-muted;
+      text-transform: uppercase;
+    }
+  }
+
+  // A tracked card (ADR-0023) keeps the normal card surface — under lazy
+  // import EVERY card starts tracked, so a "quieter" transparent background
+  // just reads as a broken board. The dashed border + repo badge carry the
+  // tracked signal; the pointer cursor says "opens a preview", not "drags"
+  // (it does drag — dropping links the file — but preview is the primary).
+  .board-card--tracked {
+    cursor: pointer;
+    border-style: dashed;
+  }
+}
+
+// The drag util stamps `dragging` on the component host (which spans the
+// sidebar and the board), not on .task-board.
+spl-task-board.dragging .board-card {
+  cursor: grabbing;
+}
+
+// The drag ghost is appended to <body> (outside .task-board), so it needs its
+// own card look. The pointerDrag util sets position/size/z-index inline.
+.drag-ghost.board-card {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: $spacing-sm $spacing-md;
+  background-color: $background-primary;
+  border: 1px solid $primary-color;
+  border-radius: $border-radius-sm;
+  box-shadow: $drag-shadow;
+  opacity: 0.95;
+  font-size: 0.85rem;
+}
+
+.board-empty {
+  color: $text-muted;
+  padding: $spacing-lg;
+}
+
+// The Unassigned pool as a sidebar (ADR-0020, spec board_pool_sidebar): the
+// board-independent backlog flanking the whole stage section — tabs row
+// included — on its way to becoming a backlog view of its own. One-line
+// collapsed cards; the neutral-grey surface token is themed in _base.scss
+// (tracking the app's data-theme toggle — media queries would not). It keeps
+// the .board-column classes for the drag-target contract but carries its own
+// panel chrome; the page grid places it.
+.board-pool-sidebar {
+  display: flex;
+  flex-direction: column;
+  width: 240px;
+  min-height: 120px;
+  background-color: $pool-surface;
+  border: 1px solid $border-color;
+  border-radius: $border-radius-md;
+
+  // Drop affordance stays on the neutral pool surface — the seafoam hover
+  // wash is the stage columns' signal, not the backlog's.
+  &.drag-over {
+    border-color: $primary-color;
+  }
+
+  // Three header children (label, count, collapse) — gap layout, not the
+  // stage columns' space-between pair.
+  .column-header {
+    justify-content: flex-start;
+    gap: $spacing-xs;
+
+    .column-label {
+      flex: 1;
+    }
+  }
+
+  .pool-collapse {
+    border: none;
+    background: none;
+    color: $text-muted;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0 2px;
+
+    &:hover {
+      color: $text-color;
+    }
+  }
+
+  .pool-order-warning {
+    margin: 0 0 6px;
+    font-size: 0.75rem;
+    color: $text-faint;
+  }
+
+  .board-card--pool {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 6px;
+
+    .card-title {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 0.8rem;
+    }
+
+    .card-pool-badges {
+      display: inline-flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+  }
+}
+
+// Continuation of .task-board: attention strip, tags/filter, stage rows.
+.task-board {
+  // Board cards with corrupt frontmatter or an undeclared column id: shown in
+  // their own strip (never mixed into the pool — ADR-0020) until fixed.
+  .board-attention {
+    margin-top: 10px;
+    border: 1px dashed $alert-color;
+    border-radius: $border-radius-sm;
+    padding: 8px;
+
+    .board-attention-label {
+      display: block;
+      font-size: 0.75rem;
+      color: $alert-color;
+      margin-bottom: 6px;
+    }
+
+    .board-attention-cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+
+      .board-card {
+        max-width: 240px;
+      }
+    }
+  }
+
+  // Tag chips (board cards) + the show/hide filter bar (ADR-0020).
+  //
+  // One pill treatment for both. They had drifted into two near-identical sets
+  // of values, and both relied on a $border-color outline with no fill — about
+  // 1.05:1 against the card, so two chips read as one run of text and the
+  // filter's on/off states were indistinguishable. The fill is what makes a
+  // chip a chip; $border-dark gives the edge something to do.
+  @mixin tag-pill {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.7rem;
+    line-height: 1.5;
+    padding: 1px 8px;
+    border: 1px solid $border-dark;
+    border-radius: 999px;
+    background-color: $background-secondary;
+    color: $text-secondary;
+  }
+
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+  }
+
+  .card-tag {
+    @include tag-pill;
+  }
+
+  .board-filter {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 6px 0 2px;
+
+    .board-filter-label {
+      font-size: 0.75rem;
+      color: $text-secondary;
+    }
+
+    // Inclusion filter: every tag starts included (aria-pressed="true"), and
+    // clicking one excludes it. Included reads as a filled pill, excluded as a
+    // hollow outline — a state difference you can see, rather than the old
+    // opacity-plus-strikethrough on an invisible border.
+    .board-filter-tag {
+      @include tag-pill;
+      color: $text-primary;
+      cursor: pointer;
+
+      &.is-hidden {
+        background-color: transparent;
+        border-style: dashed;
+        color: $text-muted;
+      }
+
+      &:hover {
+        background-color: $background-hover;
+      }
+
+      &:focus-visible {
+        outline: 2px solid $primary-blue;
+        outline-offset: 1px;
+      }
+    }
+  }
+
+  // Stage view (ADR-0020): swimlane rows, compact columns (the pool sidebar
+  // sits outside, at the page-grid level).
+  .stage-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+  }
+
+  .stage-row {
+    border: 1px solid $border-color;
+    border-radius: $border-radius-sm;
+    padding: 8px;
+
+    .stage-row-header {
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    &.stage-row--empty {
+      opacity: 0.6;
+      padding: 4px 8px;
+
+      .stage-row-header {
+        margin-bottom: 0;
+        font-weight: 400;
+      }
+    }
+  }
+
+  .board-columns--compact {
+    .board-card {
+      padding: 3px 6px;
+
+      .card-title {
+        font-size: 0.8rem;
+      }
+    }
+  }
+}
+
+// Read-only preview of a tracked file (ADR-0023). Rendered by the board
+// component itself (outside `.task-board`), so it carries its own overlay
+// look rather than reusing the page-level modal element.
+.tracked-preview-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: $overlay-scrim;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.tracked-preview {
+  background: $surface-overlay;
+  color: $text-primary;
+  border-radius: $border-radius-md;
+  box-shadow: $popover-shadow;
+  width: 90%;
+  max-width: 800px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  .tracked-preview-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    border-bottom: 1px solid $border-color;
+  }
+
+  .tracked-preview-path {
+    flex: 1;
+    font-size: 0.85rem;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tracked-preview-note {
+    font-size: 0.7rem;
+    color: $text-muted;
+  }
+
+  .tracked-preview-edit {
+    border: 1px solid $border-color;
+    border-radius: 4px;
+    background: none;
+    color: $text-color;
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 2px $spacing-sm;
+    white-space: nowrap;
+
+    &:hover {
+      border-color: $primary-color;
+      color: $primary-color;
+    }
+  }
+
+  .tracked-preview-close {
+    border: none;
+    background: none;
+    color: $text-muted;
+    cursor: pointer;
+    font-size: 1.2rem;
+    line-height: 1;
+
+    &:hover {
+      color: $text-color;
+    }
+  }
+
+  .tracked-preview-content,
+  .tracked-preview-loading {
+    margin: 0;
+    padding: $spacing-md;
+    overflow: auto;
+    font-size: 0.8rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .tracked-preview-loading {
+    color: $text-muted;
+  }
+}

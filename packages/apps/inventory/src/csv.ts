@@ -1,6 +1,5 @@
+import { fail, ok } from '@stillpointlab/common-format/app';
 import { escapeCsvFormulaValue, serializeCsv } from '@stillpointlab/sheet-format/csv';
-
-import { InventoryRuleError } from './errors.js';
 
 import type {
   SharedInventoryFieldDef,
@@ -8,6 +7,7 @@ import type {
   SharedInventoryRoom,
   SharedInventorySchema,
 } from './types.js';
+import type { Result } from '@stillpointlab/common-format/app';
 
 export const CSV_BOM = '\uFEFF';
 const CRLF = '\r\n';
@@ -181,46 +181,56 @@ function columnsFor(
     : configuredColumns(schema, items);
 }
 
-function assertExportable(
+function exportableSchema(
   input: SchemaOrLegacyFields
-): Exclude<SharedInventorySchema, { mode: 'invalid' }> {
+): Result<{ schema: Exclude<SharedInventorySchema, { mode: 'invalid' }> }> {
   const schema = resolvedSchema(input);
   if (schema.mode === 'invalid') {
-    throw new InventoryRuleError(
-      'INVENTORY_SCHEMA_INVALID',
-      'Repair inventory.yaml before exporting'
-    );
+    return fail('INVENTORY_SCHEMA_INVALID', 'Repair inventory.yaml before exporting');
   }
-  return schema;
+  return ok({ schema });
 }
 
 /** One zone as a CSV file. */
-export function serializeRoom(room: SharedInventoryRoom, input: SchemaOrLegacyFields): string {
-  const schema = assertExportable(input);
-  const columns = columnsFor(schema, room.items);
-  return serializeTypedRows([
-    columns.map((column) => textCell(column.header)),
-    ...room.items.map((item) => columns.map((column) => column.cell(item))),
-  ]);
+export function serializeRoom(
+  room: SharedInventoryRoom,
+  input: SchemaOrLegacyFields
+): Result<{ content: string }> {
+  const exportable = exportableSchema(input);
+  if (!exportable.ok) return exportable;
+  const columns = columnsFor(exportable.schema, room.items);
+  return ok({
+    content: serializeTypedRows([
+      columns.map((column) => textCell(column.header)),
+      ...room.items.map((item) => columns.map((column) => column.cell(item))),
+    ]),
+  });
 }
 
 /** The full inventory as one flat CSV. V2 leads with `zone`; v1 keeps `room`. */
-export function serializeSpace(rooms: SharedInventoryRoom[], input: SchemaOrLegacyFields): string {
-  const schema = assertExportable(input);
+export function serializeSpace(
+  rooms: SharedInventoryRoom[],
+  input: SchemaOrLegacyFields
+): Result<{ content: string }> {
+  const exportable = exportableSchema(input);
+  if (!exportable.ok) return exportable;
+  const { schema } = exportable;
   const allItems = rooms.flatMap((room) => room.items);
   const columns = columnsFor(schema, allItems);
-  return serializeTypedRows([
-    [
-      textCell(schema.mode === 'configured' ? 'zone' : 'room'),
-      ...columns.map((c) => textCell(c.header)),
-    ],
-    ...rooms.flatMap((room) =>
-      room.items.map((item) => [
-        textCell(room.label),
-        ...columns.map((column) => column.cell(item)),
-      ])
-    ),
-  ]);
+  return ok({
+    content: serializeTypedRows([
+      [
+        textCell(schema.mode === 'configured' ? 'zone' : 'room'),
+        ...columns.map((c) => textCell(c.header)),
+      ],
+      ...rooms.flatMap((room) =>
+        room.items.map((item) => [
+          textCell(room.label),
+          ...columns.map((column) => column.cell(item)),
+        ])
+      ),
+    ]),
+  });
 }
 
 /** WARNINGS.txt body for skipped rooms/items and v2 structured cells. */

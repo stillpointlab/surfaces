@@ -15,6 +15,8 @@ $background-primary: var(--spl-background-primary, #ffffff);
 $background-secondary: var(--spl-background-secondary, #f5f5f5);
 $background-muted: var(--spl-background-muted, #f8f8f8);
 $background-hover: var(--spl-background-hover, #e8e8e8);
+$hover-gray: var(--spl-hover-gray, #d9f0e3);
+$pool-surface: var(--spl-pool-surface, #e7e4da);
 $surface-overlay: var(--spl-surface-overlay, #ffffff);
 $header-bg: var(--spl-header-bg, #f6f8fa);
 $code-bg: var(--spl-code-bg, #f0f0f0);
@@ -24,6 +26,7 @@ $text-primary: var(--spl-text-primary, #000);
 $text-secondary: var(--spl-text-secondary, #333);
 $text-color: var(--spl-text-color, #444);
 $text-muted: var(--spl-text-muted, #666);
+$text-faint: var(--spl-text-faint, #888);
 
 // Borders
 $border-color: var(--spl-border-color, #eee);
@@ -32,6 +35,7 @@ $border-dark: var(--spl-border-dark, #ccc);
 $border-strong: var(--spl-border-strong, #b0b0b0);
 
 // Accent and focus
+$primary-color: var(--spl-primary-color, #33312a);
 $primary-blue: var(--spl-primary-blue, #0066cc);
 $primary-blue-hover: var(--spl-primary-blue-hover, #0052a3);
 $focus-ring: var(--spl-focus-ring, #0969da);
@@ -52,6 +56,9 @@ $success-color: var(--spl-success-color, #166534);
 $success-bg: var(--spl-success-bg, #dcfce7);
 $info-color: var(--spl-info-color, #1d4ed8);
 $info-bg: var(--spl-info-bg, #dbeafe);
+$alert-color: var(--spl-alert-color, #d9662b);
+$gold-color: var(--spl-gold-color, #b98a24);
+$chip-hover-bg: var(--spl-chip-hover-bg, rgba(139, 92, 246, 0.1));
 
 // Code (the CodeMirror theme in code's theme.ts uses these properties too)
 $code-active-line-bg: var(--spl-code-active-line-bg, rgba(88, 166, 255, 0.12));
@@ -60,6 +67,8 @@ $code-selection-bg: var(--spl-code-selection-bg, rgba(88, 166, 255, 0.38));
 // Overlay
 $shadow-color: var(--spl-shadow-color, rgba(0, 0, 0, 0.18));
 $overlay-scrim: var(--spl-overlay-scrim, rgba(0, 0, 0, 0.5));
+$drag-shadow: var(--spl-drag-shadow, 0 4px 12px rgba(0, 0, 0, 0.15));
+$popover-shadow: var(--spl-popover-shadow, 0 4px 12px rgba(0, 0, 0, 0.2));
 $overlay-shadow: var(
   --spl-overlay-shadow,
   0 4px 6px rgba(0, 0, 0, 0.1),

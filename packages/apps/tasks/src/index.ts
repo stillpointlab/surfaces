@@ -12,4 +12,4 @@ export * from './pool.js';
 export * from './linkRewrite.js';
 export * from './manifestRewrite.js';
 export * from './manifestSeed.js';
-export * from './errors.js';
+export * from './lifecycle.js';
