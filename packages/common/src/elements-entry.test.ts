@@ -2,8 +2,11 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { defineElement as rootDefineElement, setReporter } from '@stillpointlab/common-format';
-import { defineElement } from '@stillpointlab/common-format/elements';
+// The package imports itself, which import-x/order classifies differently with and
+// without `dist` built (CI lints before building), so the entries load dynamically.
+const { defineElement: rootDefineElement, setReporter } =
+  await import('@stillpointlab/common-format');
+const { defineElement } = await import('@stillpointlab/common-format/elements');
 
 // Through the built entries, not the source: what matters is that the bundle gives
 // them one `log` instance, so a host configuring the root also hears `./elements`.
