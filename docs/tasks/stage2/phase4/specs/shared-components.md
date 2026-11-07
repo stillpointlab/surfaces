@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 44
+completed: 2026-11-07
 created: 2026-11-07T13:27:40-07:00
 tags: [apps, common, code]
 ---
@@ -160,10 +162,10 @@ see no change, apart from the one fix named in requirement 3.
 - [x] A bare import of each package registers its tag in a production build.
 - [x] Both components checked in the harness, light and dark.
 - [x] `--spl-overlay-scrim` and `--spl-overlay-shadow` are in `_tokens.scss` and the Theming table.
-- [ ] Context Manager adoption PR is green, with the pin on the merge commit, its copies deleted, and
+- [x] Context Manager adoption PR is green, with the pin on the merge commit, its copies deleted, and
       ADR-0035 amended.
-- [ ] The client build shows no page growth beyond `defineElement`.
-- [ ] The tasks and inventory walks were run after the adoption, or the PR says which were not and why.
+- [x] The client build shows no page growth beyond `defineElement`.
+- [x] The tasks and inventory walks were run after the adoption, or the PR says which were not and why.
 - [x] `npm run check` green here.
 
 ## Implementation plan
@@ -191,3 +193,9 @@ see no change, apart from the one fix named in requirement 3.
   an `./elements` entry for components, and builds with splitting on so its entries share one `log`
   instance. Growth is then about 770 bytes raw (370 gzipped) on most pages. App elements bound for
   every page in phases 5 and 6 should watch for the same thing.
+- The Context Manager adoption is #1039 (merged 2026-11-07), pinned on `2f51b4c`, the merge of #45.
+  58 files changed their imports. The client build grew by 772 bytes raw on most pages and 1,152 on
+  `project`. The inventory walks passed (38/38), and the tasks walks passed 01-29 apart from 28 (an
+  alternative drift setup) and 09's last assertion. That assertion expects the unlink dialog on a
+  file the page unlinks directly; the same dialog opened and was confirmed earlier in the step, so
+  it is walk-script drift, recorded in Context Manager's WAL.

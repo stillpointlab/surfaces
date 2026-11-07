@@ -144,3 +144,55 @@ since #1019 had already cut the tasks ties.
   allowed pushes to it. The few failures on the way were walk-script drift, recorded in Context
   Manager's WAL.
 - After the tag: the phase 3 close-out, which opens phase 4 (components) empty.
+
+---
+
+## Phase 4: The shared components (`stage2-phase4-complete`)
+
+Range: `stage2-phase3-complete..stage2-phase4-complete` (`d81d7c3..2f51b4c`), 2026-11-07: four
+merges, 40 files, +1,693/−31. One Context Manager PR carried the host side.
+
+### Shipped
+
+- Phase 3 closed and phase 4 opened empty
+  ([#42](https://github.com/stillpointlab/surfaces/pull/42)), then got one spec for both components
+  and their adoption ([#43](https://github.com/stillpointlab/surfaces/pull/43);
+  [spec](../../tasks/stage2/phase4/specs/shared-components.md)).
+- `packages/components/`, the third category beside formats and apps, wired into the workspaces,
+  style generation, token check, lint, tests and harness, with its convention in a README.
+  `@stillpointlab/modal-dialog-component` and `@stillpointlab/spl-icon-component` were copied from
+  Context Manager `e8e8450b`, each with a README and harness fixtures. Two tokens,
+  `--spl-overlay-scrim` and `--spl-overlay-shadow`, carry the modal's literal colours with today's
+  values as defaults. The harness badges only elements with a ready signal
+  ([#44](https://github.com/stillpointlab/surfaces/pull/44)).
+- `@stillpointlab/common-format/elements`, `defineElement` alone, with `common` built with splitting
+  so its entries share one `log`. The components import it
+  ([#45](https://github.com/stillpointlab/surfaces/pull/45)). Context Manager adopted both
+  components in context-manager#1039 and deleted its copies.
+
+### Decisions
+
+- One spec, not one per component: the two are small and share one adoption.
+- The modal's default title is set as text, the phase's one behaviour change. Its fix in Context
+  Manager waited for the adoption rather than shipping separately (Jamie, 2026-11-07).
+- `spl-icon` moved as the brief decided, although no app element renders it yet: on the two app
+  pages it appears only in the host's EJS shells.
+- The brief expected a token conversion. Context Manager's variables for the modal were already
+  `var(--spl-*)`, so the work was three literal colours and two new tokens.
+
+### Testing & review
+
+- 1,331 → 1,347 tests: the 8 moved modal tests unchanged, 2 for the title, 4 for `spl-icon`, and 2
+  that hold the shared `log` through the built `common` entries.
+- Compiled against Context Manager's stylesheets, `icon.scss` is identical and `modal.scss` differs
+  only in token fallbacks and the two new tokens. Both components were checked in the harness with
+  Chromium in light and dark, and a bare import of each registers its tag in a production build.
+- The adoption's first build failed the spec's page-growth check: through `common`'s root entry, one
+  module, every Context Manager page took the formats' whole runtime (+7.9 KB raw). #45 is the fix;
+  the app elements in phases 5 and 6 will meet the same rule.
+- CI caught what the local check did not: `import-x/order` classifies a package's import of itself
+  differently with and without `dist` built, and CI lints before building.
+- The adoption was walked as phase 3's was: the inventory walks (38/38) and the tasks walks, with
+  the same levers replayed against the scratch repository. The one failure was walk-script drift.
+- After the tag: the phase 4 close-out, which opens phase 5 (the contract and the task board)
+  empty.
