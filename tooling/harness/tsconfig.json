@@ -3,5 +3,10 @@
   "compilerOptions": {
     "types": ["vite/client"]
   },
-  "include": ["main.ts", "types.ts", "../../packages/formats/*/dev/fixtures.ts"]
+  "include": [
+    "main.ts",
+    "types.ts",
+    "../../packages/formats/*/dev/fixtures.ts",
+    "../../packages/components/*/dev/fixtures.ts"
+  ]
 }

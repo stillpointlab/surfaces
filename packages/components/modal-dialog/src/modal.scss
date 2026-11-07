@@ -1,0 +1,139 @@
+@use 'common/src/styles/tokens' as *;
+
+$mobile-breakpoint: 768px;
+
+:host {
+  position: absolute;
+  display: block;
+  width: 0;
+  height: 0;
+  overflow: visible;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: $overlay-scrim;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  opacity: 0;
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+// Modal container
+.modal {
+  background: $surface-overlay;
+  color: $text-primary;
+  border-radius: $border-radius-xl;
+  box-shadow: $overlay-shadow;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  margin: $spacing-lg;
+  opacity: 0;
+  transform: translateY(-20px);
+  animation: slideIn 0.2s ease-out forwards;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+// Modal header
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-lg $spacing-xl;
+
+  .modal-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: $text-primary;
+  }
+}
+
+// Modal body
+.modal-body {
+  padding: $spacing-xl;
+  overflow-y: auto;
+  flex: 1;
+}
+
+// Modal footer
+.modal-footer {
+  padding: $spacing-lg $spacing-xl;
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-md;
+}
+
+// Close button
+.modal-close-button {
+  background: none;
+  border: none;
+  padding: $spacing-xs;
+  cursor: pointer;
+  color: $text-muted;
+  border-radius: $border-radius-md;
+  transition: all 0.2s;
+  font-size: 1.5rem;
+  line-height: 1;
+  position: relative;
+  right: -$spacing-sm;
+  top: -$spacing-md;
+
+  &:hover {
+    background-color: $background-hover;
+    color: $text-primary;
+  }
+
+  &:focus {
+    outline: 2px solid $primary-blue;
+    outline-offset: 2px;
+  }
+}
+
+// Animations
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Responsive adjustments
+@media (max-width: $mobile-breakpoint) {
+  .modal {
+    width: 95%;
+    margin: $spacing-sm;
+  }
+
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: $spacing-lg;
+  }
+}

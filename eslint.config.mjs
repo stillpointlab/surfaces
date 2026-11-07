@@ -20,10 +20,10 @@ export default [
   {
     files: [
       'packages/common/src/**/*.ts',
-      'packages/{formats,apps}/*/{src,dev}/**/*.ts',
+      'packages/{components,formats,apps}/*/{src,dev}/**/*.ts',
       'tooling/**/*.ts',
       '*.config.ts',
-      'packages/{formats,apps}/*/*.config.ts',
+      'packages/{components,formats,apps}/*/*.config.ts',
     ],
     languageOptions: {
       parser: tsparser,

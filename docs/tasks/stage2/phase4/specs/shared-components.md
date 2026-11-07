@@ -1,5 +1,5 @@
 ---
-column: todo
+column: in-progress
 created: 2026-11-07T13:27:40-07:00
 tags: [apps, common, code]
 ---
@@ -153,18 +153,18 @@ see no change, apart from the one fix named in requirement 3.
 
 ## Acceptance / completion checklist
 
-- [ ] `packages/components/` is in the workspaces, `gen-styles`, `check-tokens`, test projects and
+- [x] `packages/components/` is in the workspaces, `gen-styles`, `check-tokens`, test projects and
       harness, with its README.
-- [ ] Both packages build, typecheck and pass their tests, including the 8 moved modal tests unchanged.
-- [ ] A test proves markup in a modal title renders as text.
-- [ ] A bare import of each package registers its tag in a production build.
-- [ ] Both components checked in the harness, light and dark.
-- [ ] `--spl-overlay-scrim` and `--spl-overlay-shadow` are in `_tokens.scss` and the Theming table.
+- [x] Both packages build, typecheck and pass their tests, including the 8 moved modal tests unchanged.
+- [x] A test proves markup in a modal title renders as text.
+- [x] A bare import of each package registers its tag in a production build.
+- [x] Both components checked in the harness, light and dark.
+- [x] `--spl-overlay-scrim` and `--spl-overlay-shadow` are in `_tokens.scss` and the Theming table.
 - [ ] Context Manager adoption PR is green, with the pin on the merge commit, its copies deleted, and
       ADR-0035 amended.
 - [ ] The client build shows no page growth beyond `defineElement`.
 - [ ] The tasks and inventory walks were run after the adoption, or the PR says which were not and why.
-- [ ] `npm run check` green here.
+- [x] `npm run check` green here.
 
 ## Implementation plan
 
@@ -172,3 +172,16 @@ see no change, apart from the one fix named in requirement 3.
    `e8e8450b`, their fixtures.
 2. Context Manager PR, from `context-manager-surfaces`: the adoption above, walked.
 3. Phase close: this card done, WAL entries, changelog section, `current` moved to 2/5.
+
+## Implementation notes
+
+- Copied from Context Manager `e8e8450b`. The 8 moved modal tests are unchanged; 2 new title tests and
+  4 `spl-icon` tests join them.
+- Compiled against Context Manager's stylesheets, `icon.scss` is identical. `modal.scss` differs only
+  in the token fallbacks and the two new tokens, and the browser computes today's scrim and shadow
+  from them.
+- `eslint.config.mjs` also needed the new category, which the spec did not list.
+- The harness gave an extra element a ready badge whether it had a ready signal or not, so components
+  sat on "pending". The badge now needs `whenReady`, and the formats' extras keep theirs.
+- Checked in the harness with Chromium, driven by Context Manager's Playwright since this repository
+  has none: all four modal fixtures in both themes, Escape, all 33 masks, and the sizes and paddings.

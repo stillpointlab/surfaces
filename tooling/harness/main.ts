@@ -8,11 +8,14 @@ declare const __HARNESS_DEFAULT_FORMAT__: string;
 
 type FormatModule = { default: HarnessFormat };
 
-// Every format with a fixtures module, loaded only when selected.
-const modules = import.meta.glob<FormatModule>('../../packages/formats/*/dev/fixtures.ts');
+// Every format and component with a fixtures module, loaded only when selected.
+const modules = import.meta.glob<FormatModule>([
+  '../../packages/formats/*/dev/fixtures.ts',
+  '../../packages/components/*/dev/fixtures.ts',
+]);
 const formats = new Map<string, () => Promise<FormatModule>>();
 for (const [path, load] of Object.entries(modules)) {
-  const name = /packages\/formats\/([^/]+)\/dev\/fixtures\.ts$/.exec(path)?.[1];
+  const name = /packages\/(?:formats|components)\/([^/]+)\/dev\/fixtures\.ts$/.exec(path)?.[1];
   if (name) formats.set(name, load);
 }
 
@@ -140,14 +143,17 @@ function mountExtra(tag: string): HTMLElement {
   block.className = 'extra';
   const heading = document.createElement('h3');
   heading.textContent = `<${tag}> `;
-  const badge = document.createElement('span');
-  badge.className = 'status';
-  heading.append(badge);
   const pane = document.createElement('div');
   pane.className = 'pane';
   const el = document.createElement(tag);
-  // Listen before connecting: a synchronous element settles on connect.
-  watchReady(el, badge);
+  // A component has no ready signal, so only an element with one gets the badge.
+  if ('whenReady' in el) {
+    const badge = document.createElement('span');
+    badge.className = 'status';
+    heading.append(badge);
+    // Listen before connecting: a synchronous element settles on connect.
+    watchReady(el, badge);
+  }
   wire(el, tag);
   pane.append(el);
   block.append(heading, pane);
