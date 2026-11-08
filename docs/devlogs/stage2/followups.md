@@ -79,3 +79,8 @@ during this stage's setup, each entry struck with where it went.
   room"). The rename left them alone because it changes no behaviour, and each is commented. Saying
   zone is a wording change that the inventory walks would need to check, so it is its own step. The
   `rooms/` folder rename is still the seed-sized question the spec records.
+- 2026-11-08 (phase 6 close): repositories still keep their zones in a `rooms/` folder beside
+  `inventory.yaml`, and Context Manager's routes and API paths say room. Renaming the folder means a
+  migration across existing repositories: detection would read both folders, and a check-in or a
+  one-off pull request would move the files. The routes would need redirects. The question is
+  seed-sized and has no card yet.

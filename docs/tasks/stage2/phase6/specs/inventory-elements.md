@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 55
+completed: 2026-11-08
 created: 2026-11-08T00:43:23-07:00
 tags: [apps, host-contract, code]
 ---
@@ -108,20 +110,39 @@ imports them from the submodule, and users see no change.
 
 ## Acceptance / completion checklist
 
-- [ ] `@stillpointlab/inventory-app/element` builds and registers both tags from a bare import in a
+- [x] `@stillpointlab/inventory-app/element` builds and registers both tags from a bare import in a
       production build, and imports neither the core's root nor `common`'s runtime.
-- [ ] `./types` exists, and Context Manager's client imports inventory types from it.
-- [ ] The moved tests pass unchanged apart from imports, both elements pass
+- [x] `./types` exists, and Context Manager's client imports inventory types from it.
+- [x] The moved tests pass unchanged apart from imports, both elements pass
       `describeAppElementContract`, and the hostile fixture passes `expectNoHostileMarkup`.
-- [ ] `check-tokens` passes on `inventory.scss`, and the Theming table lists the two new tokens.
-- [ ] The harness mounts every fixture in light and dark, the in-memory host answers ops, and both
+- [x] `check-tokens` passes on `inventory.scss`, and the Theming table lists the two new tokens.
+- [x] The harness mounts every fixture in light and dark, the in-memory host answers ops, and both
       failure controls behave as the page does today.
-- [ ] The Context Manager adoption is green: the build check holds, ADR-0038 is amended, and the
+- [x] The Context Manager adoption is green: the build check holds, ADR-0038 is amended, and the
       inventory walks were run.
-- [ ] `npm run check` green here.
+- [x] `npm run check` green here.
 
 ## Implementation plan
 
 1. Surfaces PR: `./types`, the elements, their tests and styles, the tokens, the fixtures, example
    inventory and in-memory host, and the README.
 2. Context Manager PR: the adoption above, walked.
+
+## Implementation notes
+
+- Landed in #55, merged 2026-11-08 as `da6e357`, copied from Context Manager `b73e3c59` with only the
+  imports and the tests' jsdom header changed. The new `./types` entry imports nothing at runtime.
+- A bare import builds to 67 KB minified (16 KB gzipped) with no zod and nothing from the core's
+  root. It is bigger than the board's 44 KB because it carries the dialog component, sheet's number
+  formatting and its own ~12 KB stylesheet.
+- The two new tokens use the names Context Manager already set (`--spl-alert-bg`,
+  `--spl-alert-text`), so the host changed nothing. The elements keep the host's `button`,
+  `form-input` and `sr-only` classes; the harness gives them stand-in styles in `dev/host.css`.
+- `build:deps` also builds the dialog component now, which the element tests load before the
+  workspace build.
+- The harness has 17 fixtures, including an example inventory in `dev/example/` parsed by the core
+  and a hostile-strings fixture, and an in-memory host that answers all five ops, with controls to
+  turn it off or refuse the next op. Every fixture was checked in Chromium in light and dark.
+- Tests went from 1,496 to 1,546. The Context Manager adoption is context-manager#1058, merged
+  2026-11-08 and pinned on `da6e357`: it deleted `components/inventory/`, amended ADR-0038, and
+  grew the inventory page by 0.7 kB raw (0.17 kB gzipped). The inventory walks passed 38/38.
