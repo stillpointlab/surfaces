@@ -1,5 +1,7 @@
 ---
-column: todo
+column: done
+completed: 2026-11-08
+pr: 58
 created: 2026-11-08T14:21:10-07:00
 tags: [apps, host-contract, common, major-feature]
 ---
@@ -14,11 +16,26 @@ _Drafted by the claude agent from a sweep of what Context Manager still holds af
 2026-11-08: "put the moveable items including rules into phase 7 as a brief"). A brief because the
 work names the rest of the app contract and runs across two repositories._
 
+## Decisions (Jamie, 2026-11-08, on PR 58)
+
+- **Inventory first**, then the contract's other half, then tasks.
+- **A core receives plain data:** paths and contents with drafts already laid over, plus the few
+  host facts a rule reads.
+- **Draft rebase splits:** the frontmatter comparison (`metadataDelta`) moves to the tasks core;
+  deciding when to rebase stays with Context Manager.
+- **One phase.** Everything here is phase 7, landed as several PRs.
+- **The create-tasks and create-inventory dialogs stay** in Context Manager for now.
+- **The direction:** inventory and tasks should run in a harness in surfaces, as the foundation for
+  stand-alone versions of both apps. That may in time mean re-implementing or moving the GitHub
+  work. This phase does not do that, but nothing in it should assume Context Manager is the only
+  host.
+
 ## High-level goal
 
 What each app does with its files lives in its core: given the files, the state to render; given an
 op, the file changes or a refusal. Context Manager's services keep only the host's work around it.
-The app UI that waited on those rules then moves into the elements.
+The app UI that waited on those rules then moves into the elements, and the harness runs both apps
+on their cores alone: the first step towards stand-alone apps.
 
 ## Background
 
@@ -30,7 +47,7 @@ deferred pass that extracts the services' rules". This is that pass.
 
 The sweep found four kinds of code in Context Manager:
 
-- **Host work, staying:** check-in and refresh (jobs, GitHub, PR state), the generic view lifecycle,
+- **Host work, staying for now:** check-in and refresh (jobs, GitHub, PR state), the generic view lifecycle,
   seeding app-only goods, routes and schemas, flags, walks and ADRs.
 - **Glue, staying:** `boardOps.ts` and `inventoryOps.ts` answering ops, and the lifecycle adapters'
   host policy.
@@ -61,6 +78,9 @@ Each step ends with Context Manager on a new pin, its walks run, and nothing cha
 4. **The board's dialogs in the element.** Settings, new card, title, tags and the close-phase
    selection render inside `<spl-task-board>` and raise ops. Check-in and refresh stay with the page.
 5. **The tab strip**, as an element or part of the board, rendered from the core's nav projection.
+6. **Both apps run in the harness on their cores.** The in-memory hosts answer ops with the core's
+   `apply` over the fixture folder and re-project, instead of hand-written op handling (the August
+   spike's "slim harness proof"). Edits live in memory; there are no drafts, check-in or GitHub.
 
 ## Constraints
 
@@ -69,23 +89,15 @@ Each step ends with Context Manager on a new pin, its walks run, and nothing cha
 - **Cores stay DOM-free and host-free.** They see paths and file contents, never goods, users,
   drafts or GitHub. Linking, draft bases, dirty state and editor links are the host's, laid over
   the core's state.
+- **Nothing assumes Context Manager is the host.** The snapshot, the changes and the host facts are
+  plain data a second host could supply: the harness now, a stand-alone host later. Host facts
+  that are Context Manager's own (goods, editor links) stay out of the cores' types.
 - **Moved rules keep their behaviour and their tests.** A service test that becomes a core test
   says so in its PR; the service keeps tests for what it still does.
-- **Out of scope:** MCP app vocabularies, a standalone folder host beyond the harness, the `rooms/`
-  folder rename, and the wording of messages users see.
+- **Out of scope:** a stand-alone host beyond the harness, the GitHub work (check-in, refresh, PR
+  state), persistence in the harness, MCP app vocabularies, the `rooms/` folder rename, and the
+  wording of messages users see.
 
 ## Open questions
 
-1. **Order.** Recommended: inventory first, then name the contract, then tasks, as phases 2–6 did.
-   Naming `project`/`apply` after one app's functions exist keeps the names honest.
-2. **What a core receives.** Recommended: a snapshot of paths and contents (drafts already laid
-   over), plus the few host facts a rule reads, passed as plain data (such as which paths are linked
-   or read-only). The alternative, a snapshot interface the core queries, is closer to the August
-   design but adds an indirection neither app needs yet.
-3. **Draft rebase.** `metadataDelta` is a tasks rule (frontmatter keys the manifest tracks);
-   deciding when to auto-rebase a draft is the host's. Recommended: the delta moves, the decision
-   stays.
-4. **One phase or several.** Recommended: phase 7 holds the inventory rules and the contract;
-   tasks' rules and the board's UI open phase 8, so each phase stays a size a close can review.
-5. **The create-tasks and create-inventory dialogs** on the project page. Recommended: they stay.
-   Creating a view is the host's act, and their naming rules already come from the cores' `./paths`.
+All five of the draft's questions are answered above. Specs may raise their own.
