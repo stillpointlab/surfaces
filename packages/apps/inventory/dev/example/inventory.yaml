@@ -1,0 +1,21 @@
+# The harness's example inventory: a small workshop, parsed by the core.
+version: 2
+label: Workshop assets
+fields:
+  - id: owner
+    label: Owner
+    type: text
+    required: true
+  - id: replacement-value
+    label: Replacement value
+    type: number
+    format:
+      kind: currency
+      currency: CAD
+      decimalPlaces: 2
+  - id: quantity
+    label: Quantity
+    type: number
+total:
+  field: replacement-value
+  multiplyBy: quantity

@@ -66,6 +66,8 @@ body.dark {
   --spl-hover-gray: #253730;
   --spl-pool-surface: #24221c;
   --spl-alert-color: #f0883e;
+  --spl-alert-bg: #3a2211;
+  --spl-alert-text: #ffb77d;
   --spl-gold-color: #e0b54c;
   --spl-text-faint: #8b949e;
   --spl-chip-hover-bg: rgba(139, 92, 246, 0.2);

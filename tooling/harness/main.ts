@@ -55,6 +55,7 @@ const WATCHED_EVENTS = [
   'brief-request',
   'open-options-menu',
   'notification',
+  'reload-request',
 ] as const;
 
 let current: { name: string; format: HarnessFormat; elements: HarnessElements } | null = null;

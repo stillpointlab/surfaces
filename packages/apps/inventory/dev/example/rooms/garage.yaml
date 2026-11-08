@@ -1,0 +1,16 @@
+label: Garage
+items:
+  - id: cordless-drill
+    title: Cordless drill
+    owner: Sam
+    replacement-value: 129.95
+    quantity: 2
+  - id: shop-vac
+    title: Shop vacuum
+    owner: Sam
+    replacement-value: 89
+  - id: ladder
+    title: Extension ladder
+    owner: Robin
+    replacement-value: twenty
+    colour: aluminium

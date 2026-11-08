@@ -1,0 +1,42 @@
+/* Stand-ins for the classes a host page styles (Context Manager's buttons and
+   form inputs): the inventory elements render them and bring no rules of their
+   own. Plain, on the shared tokens, so the harness reads in both themes. */
+.inventory-harness .button {
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--spl-border-dark);
+  border-radius: 4px;
+  background: var(--spl-background-secondary);
+  color: var(--spl-text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.inventory-harness .button-primary {
+  border-color: var(--spl-button-bg);
+  background: var(--spl-button-bg);
+  color: var(--spl-button-text);
+}
+
+.inventory-harness .button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.inventory-harness .form-input {
+  box-sizing: border-box;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--spl-border-dark);
+  border-radius: 4px;
+  background: var(--spl-background-primary);
+  color: var(--spl-text-primary);
+  font: inherit;
+}
+
+.inventory-harness .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
