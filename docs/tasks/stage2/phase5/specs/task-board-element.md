@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 50
+completed: 2026-11-07
 created: 2026-11-07T14:51:39-07:00
 tags: [apps, host-contract, code]
 ---
@@ -105,17 +107,17 @@ memory. Context Manager's task board page imports it from the submodule, and use
 
 ## Acceptance / completion checklist
 
-- [ ] `@stillpointlab/tasks-app/element` builds and registers its tag from a bare import in a
+- [x] `@stillpointlab/tasks-app/element` builds and registers its tag from a bare import in a
       production build, and imports neither the core's root nor `common`'s runtime.
-- [ ] The moved tests pass unchanged apart from imports, and the element passes
+- [x] The moved tests pass unchanged apart from imports, and the element passes
       `describeAppElementContract`.
-- [ ] `common-format/pointer-drag` carries the moved helper and its tests.
-- [ ] `check-tokens` passes on `board.scss`, and the Theming table lists the new tokens.
-- [ ] The harness mounts every fixture in light and dark, the in-memory host answers ops, and the
+- [x] `common-format/pointer-drag` carries the moved helper and its tests.
+- [x] `check-tokens` passes on `board.scss`, and the Theming table lists the new tokens.
+- [x] The harness mounts every fixture in light and dark, the in-memory host answers ops, and the
       failure controls roll the optimistic render back.
-- [ ] The Context Manager adoption is green: the build check holds, ADR-0037 is amended, and the tasks
+- [x] The Context Manager adoption is green: the build check holds, ADR-0037 is amended, and the tasks
       walks were run.
-- [ ] `npm run check` green here.
+- [x] `npm run check` green here.
 
 ## Implementation plan
 
@@ -123,3 +125,24 @@ memory. Context Manager's task board page imports it from the submodule, and use
    fixtures and in-memory host; the README.
 2. Context Manager PR: the adoption above, walked.
 3. Phase close: the four cards done, WAL entries, changelog section.
+
+## Implementation notes
+
+- Landed in #50, copied from Context Manager's transport-blind board (`085df527`). The element has
+  its own `tsconfig.element.json` with the DOM, so the core's stays DOM-free. A bare import builds
+  to 44 KB in production and registers the tag, with no zod and none of `common`'s runtime.
+- Tokens: five names Context Manager already set became tokens under those names (`primary-color`,
+  `hover-gray`, `pool-surface`, `alert-color`, `gold-color`), one literal mapped to `overlay-scrim`,
+  and four are new (`chip-hover-bg`, `drag-shadow`, `popover-shadow`, `text-faint`). Every default
+  is today's value.
+- The harness mounts apps now. Context Manager's page lays the board out on its own grid with
+  `display: contents`, so the fixture does the same, and the harness needed dark values for the new
+  tokens. Checked in Chromium on all four fixtures in both themes: a drag settles on the host's
+  answer, both failure controls roll back with their message, a tracked card comes back linked, and
+  the repo fixture's preview reads the file.
+- The Context Manager adoption is context-manager#1047 (merged 2026-11-07), pinned on `4939d67`. It
+  deleted the element, its styles and tests, and `pointerDrag`, and the folder tree imports the
+  helper from `common-format/pointer-drag`. The task board page grew by 946 bytes raw (281
+  gzipped) against #1045's build, with neither zod nor the formats' runtime. ADR-0037 is amended,
+  and three docs links point here. The inventory walks passed (38/38), and the tasks walks passed
+  01-29 apart from 28 (skipped by design), with step 09 passing in full for the first time.
