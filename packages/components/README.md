@@ -17,6 +17,9 @@ the host. See the placement test in [`../apps/README.md`](../apps/README.md).
 - **Styles** use `common`'s tokens and pass `tooling/check-tokens.mjs`. The stylesheet's name has no
   hyphen, because `tooling/gen-styles.mjs` turns `<name>.scss` into an export called `<name>Styles`
   (`modal.scss`, `modalStyles`).
+- **Markup** goes through ``render(target, html`…`)`` from `@stillpointlab/common-format/html`, and a
+  stylesheet in a shadow root is a `<style>` whose `textContent` is set (ESLint enforces the first).
+  Attributes reach the shadow DOM as attributes or text, never through markup.
 - **No host contract.** A component has no good and no mount, so it has no `whenReady` and no
   conformance suite. It raises events for anything the host owns.
 - **Build and test** with `formatPackage` from `tooling/tsup.ts` and `formatTest()` from

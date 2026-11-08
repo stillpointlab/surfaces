@@ -1,6 +1,10 @@
 /// <reference lib="dom" />
+/* eslint-disable no-restricted-syntax -- the board builds its markup as string
+   templates, escaping every value with escapeHtml. Moving it onto html`` from
+   common-format/html is in the stage 2 follow-ups; this exception is the reminder. */
 import { createReadyGate, reportError, requestOp } from '@stillpointlab/common-format/app';
 import { defineElement } from '@stillpointlab/common-format/elements';
+import { escapeHtml } from '@stillpointlab/common-format/html';
 import { enablePointerDrag } from '@stillpointlab/common-format/pointer-drag';
 
 import { taskKindById } from '../types.js';
@@ -228,15 +232,6 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
     }
   }
 
-  private escape(text: string): string {
-    const div = document.createElement('div');
-    div.textContent = text;
-    // textContent→innerHTML covers & < > only; the quotes matter because
-    // escape() is interpolated into double-quoted attribute positions
-    // (title=, data-*, href) with repo-file-derived values.
-    return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  }
-
   /**
    * Frontmatter `pr:` — a link when it's a URL, a plain chip otherwise. With a
    * cached `prState` (spec task_board_refresh) the chip wears the state as a
@@ -248,8 +243,8 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
     const stateClass = card.prState ? ` card-badge--meta-pr-${card.prState}` : '';
     const stateSuffix = card.prState ? ` — ${card.prState}` : '';
     return /^https?:\/\//.test(card.pr)
-      ? `<a class="card-badge card-badge--meta-pr${stateClass}" href="${this.escape(card.pr)}" target="_blank" rel="noopener" title="Pull request${stateSuffix}">${label}</a>`
-      : `<span class="card-badge card-badge--meta-pr${stateClass}" title="Pull request ${this.escape(card.pr)}${stateSuffix}">${this.escape(label)}</span>`;
+      ? `<a class="card-badge card-badge--meta-pr${stateClass}" href="${escapeHtml(card.pr)}" target="_blank" rel="noopener" title="Pull request${stateSuffix}">${label}</a>`
+      : `<span class="card-badge card-badge--meta-pr${stateClass}" title="Pull request ${escapeHtml(card.pr)}${stateSuffix}">${escapeHtml(label)}</span>`;
   }
 
   private baseName(path: string): string {
@@ -332,7 +327,7 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
       return '<span class="card-badge card-badge--checkin-pending" title="Check-in in progress — the pull request is being opened">PR…</span>';
     }
     return card.checkinPrUrl
-      ? `<a class="card-badge card-badge--pr" href="${this.escape(card.checkinPrUrl)}" target="_blank" rel="noopener" title="Checked in — view pull request">PR</a>`
+      ? `<a class="card-badge card-badge--pr" href="${escapeHtml(card.checkinPrUrl)}" target="_blank" rel="noopener" title="Checked in — view pull request">PR</a>`
       : '';
   }
 
@@ -688,18 +683,18 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
     const body =
       content === null
         ? '<p class="tracked-preview-loading">Loading…</p>'
-        : `<pre class="tracked-preview-content">${this.escape(content)}</pre>`;
+        : `<pre class="tracked-preview-content">${escapeHtml(content)}</pre>`;
     // Edit is the link moment (ADR-0023 state 1 → 2): import this one file,
     // then land in the good editor with a draft to work on.
     const editButton =
       content === null
         ? ''
-        : `<button type="button" class="tracked-preview-edit" data-action="tracked-edit" data-path="${this.escape(path)}">Edit in app</button>`;
+        : `<button type="button" class="tracked-preview-edit" data-action="tracked-edit" data-path="${escapeHtml(path)}">Edit in app</button>`;
     return `
       <div class="tracked-preview-backdrop" data-action="close-preview">
-        <section class="tracked-preview" role="dialog" aria-modal="true" aria-label="${this.escape(path)}">
+        <section class="tracked-preview" role="dialog" aria-modal="true" aria-label="${escapeHtml(path)}">
           <header class="tracked-preview-header">
-            <span class="tracked-preview-path" title="${this.escape(path)}">${this.escape(path)}</span>
+            <span class="tracked-preview-path" title="${escapeHtml(path)}">${escapeHtml(path)}</span>
             <span class="tracked-preview-note">Tracked from the repository — read only</span>
             ${editButton}
             <button type="button" class="tracked-preview-close" data-action="close-preview" aria-label="Close preview">×</button>
@@ -729,44 +724,44 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
     const displayTitle = card.frontmatterTitle ?? this.baseName(card.path);
     const badges = [
       pool
-        ? `<span class="card-badge card-badge--kind" title="${this.escape(card.kind)}">${this.escape(this.kindBadgeOf(card.kind))}</span>`
+        ? `<span class="card-badge card-badge--kind" title="${escapeHtml(card.kind)}">${escapeHtml(this.kindBadgeOf(card.kind))}</span>`
         : card.kind !== 'spec'
-          ? `<span class="card-badge card-badge--kind-name">${this.escape(card.kind)}</span>`
+          ? `<span class="card-badge card-badge--kind-name">${escapeHtml(card.kind)}</span>`
           : '',
       '<span class="card-badge card-badge--tracked" title="Tracked from the repository — not imported">repo</span>',
       card.parseError
-        ? `<span class="card-badge card-badge--error" title="${this.escape(card.parseError)}">!</span>`
+        ? `<span class="card-badge card-badge--error" title="${escapeHtml(card.parseError)}">!</span>`
         : '',
       card.warning
-        ? `<span class="card-badge card-badge--warn" title="${this.escape(card.warning)}">⚠</span>`
+        ? `<span class="card-badge card-badge--warn" title="${escapeHtml(card.warning)}">⚠</span>`
         : '',
       card.blocked
-        ? `<span class="card-badge card-badge--blocked" title="${this.escape(card.blocked)}">${pool ? '⛔' : 'blocked'}</span>`
+        ? `<span class="card-badge card-badge--blocked" title="${escapeHtml(card.blocked)}">${pool ? '⛔' : 'blocked'}</span>`
         : '',
       this.metaPrBadge(card),
       card.completed
-        ? `<span class="card-badge card-badge--completed" title="Completed ${this.escape(card.completed)}">✓</span>`
+        ? `<span class="card-badge card-badge--completed" title="Completed ${escapeHtml(card.completed)}">✓</span>`
         : '',
     ].join('');
     const classes = `board-card board-card--tracked${pool ? ' board-card--pool' : ''}`;
-    const common = `class="${classes}" data-kind="${this.escape(card.kind)}" data-kind-index="${this.kindIndexOf(card.kind)}" data-action="tracked-preview" data-path="${this.escape(card.path)}" data-tracked="1" role="button" tabindex="0"`;
+    const common = `class="${classes}" data-kind="${escapeHtml(card.kind)}" data-kind-index="${this.kindIndexOf(card.kind)}" data-action="tracked-preview" data-path="${escapeHtml(card.path)}" data-tracked="1" role="button" tabindex="0"`;
     if (pool) {
       return `
-      <li ${common} data-pool-card="1" title="${this.escape(card.path)}">
-        <span class="card-title">${this.escape(displayTitle)}</span>
+      <li ${common} data-pool-card="1" title="${escapeHtml(card.path)}">
+        <span class="card-title">${escapeHtml(displayTitle)}</span>
         <span class="card-pool-badges">${badges}</span>
       </li>`;
     }
     const tagChips = (card.tags ?? [])
-      .map((tag) => `<span class="card-tag">${this.escape(tag)}</span>`)
+      .map((tag) => `<span class="card-tag">${escapeHtml(tag)}</span>`)
       .join('');
     const pathSpan = card.frontmatterTitle
-      ? `<span class="card-path" title="${this.escape(card.path)}">${this.escape(this.baseName(card.path))}</span>`
+      ? `<span class="card-path" title="${escapeHtml(card.path)}">${escapeHtml(this.baseName(card.path))}</span>`
       : '';
     return `
       <li ${common}>
         <span class="card-top">
-          <span class="card-title">${this.escape(displayTitle)}</span>
+          <span class="card-title">${escapeHtml(displayTitle)}</span>
         </span>
         <span class="card-meta">
           ${pathSpan}${badges}
@@ -781,21 +776,21 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
     const badges = [
       // Specs are the default card kind — every other kind wears its name.
       card.kind !== 'spec'
-        ? `<span class="card-badge card-badge--kind-name">${this.escape(card.kind)}</span>`
+        ? `<span class="card-badge card-badge--kind-name">${escapeHtml(card.kind)}</span>`
         : '',
       card.dirty
         ? '<span class="card-badge card-badge--dirty" title="Uncommitted change">●</span>'
         : '',
       card.parseError
-        ? `<span class="card-badge card-badge--error" title="${this.escape(card.parseError)}">!</span>`
+        ? `<span class="card-badge card-badge--error" title="${escapeHtml(card.parseError)}">!</span>`
         : '',
       card.blocked
-        ? `<span class="card-badge card-badge--blocked" title="${this.escape(card.blocked)}">blocked</span>`
+        ? `<span class="card-badge card-badge--blocked" title="${escapeHtml(card.blocked)}">blocked</span>`
         : '',
       this.divergedBadge(card),
       this.metaPrBadge(card),
       card.completed
-        ? `<span class="card-badge card-badge--completed" title="Completed ${this.escape(card.completed)}">✓</span>`
+        ? `<span class="card-badge card-badge--completed" title="Completed ${escapeHtml(card.completed)}">✓</span>`
         : '',
       this.checkinChip(card),
     ].join('');
@@ -803,16 +798,16 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
     // without one, the filename IS the top line (shown exactly once either way).
     const displayTitle = card.frontmatterTitle ?? this.baseName(card.path);
     const pathSpan = card.frontmatterTitle
-      ? `<span class="card-path" title="${this.escape(card.path)}">${this.escape(this.baseName(card.path))}</span>`
+      ? `<span class="card-path" title="${escapeHtml(card.path)}">${escapeHtml(this.baseName(card.path))}</span>`
       : '';
     const tagChips = (card.tags ?? [])
-      .map((tag) => `<span class="card-tag">${this.escape(tag)}</span>`)
+      .map((tag) => `<span class="card-tag">${escapeHtml(tag)}</span>`)
       .join('');
     return `
-      <li class="board-card${selected}" data-kind="${this.escape(card.kind)}" data-kind-index="${this.kindIndexOf(card.kind)}" data-action="select" data-path="${this.escape(card.path)}" role="button" tabindex="0">
+      <li class="board-card${selected}" data-kind="${escapeHtml(card.kind)}" data-kind-index="${this.kindIndexOf(card.kind)}" data-action="select" data-path="${escapeHtml(card.path)}" role="button" tabindex="0">
         <span class="card-top">
-          <span class="card-title">${this.escape(displayTitle)}</span>
-          <button type="button" class="card-menu-btn" data-action="card-menu" data-path="${this.escape(card.path)}" aria-label="Card actions" aria-haspopup="true">⋯</button>
+          <span class="card-title">${escapeHtml(displayTitle)}</span>
+          <button type="button" class="card-menu-btn" data-action="card-menu" data-path="${escapeHtml(card.path)}" aria-label="Card actions" aria-haspopup="true">⋯</button>
         </span>
         <span class="card-meta">
           ${pathSpan}${badges}
@@ -840,31 +835,31 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
     if (card.tracked) return this.renderTrackedCard(card, true);
     const selected = this.selectedPath === card.path ? ' selected' : '';
     const badges = [
-      `<span class="card-badge card-badge--kind" title="${this.escape(card.kind)}">${this.escape(this.kindBadgeOf(card.kind))}</span>`,
+      `<span class="card-badge card-badge--kind" title="${escapeHtml(card.kind)}">${escapeHtml(this.kindBadgeOf(card.kind))}</span>`,
       card.changed
         ? '<span class="card-badge card-badge--dirty" title="Uncommitted change">●</span>'
         : '',
       card.parseError
-        ? `<span class="card-badge card-badge--error" title="${this.escape(card.parseError)}">!</span>`
+        ? `<span class="card-badge card-badge--error" title="${escapeHtml(card.parseError)}">!</span>`
         : '',
       card.warning
-        ? `<span class="card-badge card-badge--warn" title="${this.escape(card.warning)}">⚠</span>`
+        ? `<span class="card-badge card-badge--warn" title="${escapeHtml(card.warning)}">⚠</span>`
         : '',
       card.blocked
-        ? `<span class="card-badge card-badge--blocked" title="${this.escape(card.blocked)}">⛔</span>`
+        ? `<span class="card-badge card-badge--blocked" title="${escapeHtml(card.blocked)}">⛔</span>`
         : '',
       this.divergedBadge(card),
       this.checkinChip(card),
       (card.tags?.length ?? 0) > 0
-        ? `<span class="card-badge card-badge--tags" title="${this.escape((card.tags ?? []).join(', '))}">#${card.tags!.length}</span>`
+        ? `<span class="card-badge card-badge--tags" title="${escapeHtml((card.tags ?? []).join(', '))}">#${card.tags!.length}</span>`
         : '',
     ].join('');
     const displayTitle = card.frontmatterTitle ?? this.baseName(card.path);
     return `
-      <li class="board-card board-card--pool${selected}" data-pool-card="1" data-kind="${this.escape(card.kind)}" data-kind-index="${this.kindIndexOf(card.kind)}" data-action="select" data-path="${this.escape(card.path)}" role="button" tabindex="0" title="${this.escape(card.path)}">
-        <span class="card-title">${this.escape(displayTitle)}</span>
+      <li class="board-card board-card--pool${selected}" data-pool-card="1" data-kind="${escapeHtml(card.kind)}" data-kind-index="${this.kindIndexOf(card.kind)}" data-action="select" data-path="${escapeHtml(card.path)}" role="button" tabindex="0" title="${escapeHtml(card.path)}">
+        <span class="card-title">${escapeHtml(displayTitle)}</span>
         <span class="card-pool-badges">${badges}</span>
-        <button type="button" class="card-menu-btn" data-action="card-menu" data-path="${this.escape(card.path)}" aria-label="Card actions" aria-haspopup="true">⋯</button>
+        <button type="button" class="card-menu-btn" data-action="card-menu" data-path="${escapeHtml(card.path)}" aria-label="Card actions" aria-haspopup="true">⋯</button>
       </li>`;
   }
 
@@ -915,7 +910,7 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
     const pool = this.poolState();
     const cards = (pool?.cards ?? []).filter((c) => this.isVisible(c));
     const orderWarning = pool?.orderWarning
-      ? `<p class="pool-order-warning" role="status">⚠ ${this.escape(pool.orderWarning)}</p>`
+      ? `<p class="pool-order-warning" role="status">⚠ ${escapeHtml(pool.orderWarning)}</p>`
       : '';
     return `
       <aside class="board-pool-sidebar board-column board-column--pool" data-column-id="${POOL_COLUMN_ID}" aria-label="Unassigned pool">
@@ -935,11 +930,11 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
     cards: SharedTaskCard[],
     boardPath?: string
   ): string {
-    const rowAttr = boardPath !== undefined ? ` data-board-path="${this.escape(boardPath)}"` : '';
+    const rowAttr = boardPath !== undefined ? ` data-board-path="${escapeHtml(boardPath)}"` : '';
     return `
-      <section class="board-column" data-column-id="${this.escape(id)}"${rowAttr}>
+      <section class="board-column" data-column-id="${escapeHtml(id)}"${rowAttr}>
         <header class="column-header">
-          <span class="column-label">${this.escape(label)}</span>
+          <span class="column-label">${escapeHtml(label)}</span>
           <span class="column-count">${cards.length}</span>
         </header>
         <ul class="column-cards">${cards.map((c) => this.renderCard(c)).join('')}</ul>
@@ -955,7 +950,7 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
           .map((tag) => {
             const key = tag === TaskBoard.NO_TAGS ? tag : tag.toLowerCase();
             const hidden = this.hiddenTags.has(key) ? ' is-hidden' : '';
-            return `<button type="button" class="board-filter-tag${hidden}" data-action="toggle-tag" data-tag="${this.escape(key)}" aria-pressed="${hidden === ''}">${this.escape(tag)}</button>`;
+            return `<button type="button" class="board-filter-tag${hidden}" data-action="toggle-tag" data-tag="${escapeHtml(key)}" aria-pressed="${hidden === ''}">${escapeHtml(tag)}</button>`;
           })
           .join('')}
       </div>`;
@@ -976,7 +971,7 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
         if (phaseRow.cards.length === 0) {
           // Empty phases render collapsed (header only) — visible but quiet.
           return `<section class="stage-row stage-row--empty" data-phase="${phaseRow.phase}">
-              <header class="stage-row-header">${this.escape(phaseRow.label)} <span class="column-count">0</span></header>
+              <header class="stage-row-header">${escapeHtml(phaseRow.label)} <span class="column-count">0</span></header>
             </section>`;
         }
         const attention = visible.filter((c) => c.column === null);
@@ -997,7 +992,7 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
             </div>`
           : '';
         return `<section class="stage-row" data-phase="${phaseRow.phase}">
-            <header class="stage-row-header">${this.escape(phaseRow.label)} <span class="column-count">${visible.length}</span></header>
+            <header class="stage-row-header">${escapeHtml(phaseRow.label)} <span class="column-count">${visible.length}</span></header>
             <div class="board-columns board-columns--compact">${columns}</div>
             ${attentionHtml}
           </section>`;
@@ -1059,7 +1054,7 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
       .map((c) => c.checkinPrUrl as string)
       .pop();
     const prChip = latestPr
-      ? `<a class="board-pr" href="${this.escape(latestPr)}" target="_blank" rel="noopener" title="View the check-in pull request">PR</a>`
+      ? `<a class="board-pr" href="${escapeHtml(latestPr)}" target="_blank" rel="noopener" title="View the check-in pull request">PR</a>`
       : '';
     const summary =
       changed > 0
@@ -1080,7 +1075,7 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
             .filter((kind) => kind.creatable)
             .map(
               (kind) =>
-                `<button type="button" class="board-new-card" data-action="new-card" data-kind="${this.escape(kind.id)}" data-kind-dir="${this.escape(kind.dir)}" data-kind-templated="${kind.template !== undefined ? '1' : ''}">+ New ${this.escape(kind.id)}</button>`
+                `<button type="button" class="board-new-card" data-action="new-card" data-kind="${escapeHtml(kind.id)}" data-kind-dir="${escapeHtml(kind.dir)}" data-kind-templated="${kind.template !== undefined ? '1' : ''}">+ New ${escapeHtml(kind.id)}</button>`
             )
             .join('')}
           ${this.renderPoolToggle()}

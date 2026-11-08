@@ -1,3 +1,4 @@
+import { expectNoHostileMarkup, HOSTILE_PAYLOAD } from '@stillpointlab/common-format/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import './modal-dialog.js';
@@ -167,5 +168,41 @@ describe('ModalDialog title', () => {
 
     expect(dialog.shadowRoot!.querySelector('.modal-title')!.textContent).toBe('Second');
     dialog.close();
+  });
+});
+
+describe('ModalDialog markup', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+    delete (globalThis as { __hostile?: unknown }).__hostile;
+  });
+
+  it('writes no markup from a hostile title', () => {
+    const dialog = document.createElement('modal-dialog') as ModalDialog;
+    dialog.title = `Edit${HOSTILE_PAYLOAD}`;
+    document.body.appendChild(dialog);
+    dialog.open();
+
+    expectNoHostileMarkup(dialog.shadowRoot!);
+    expect(dialog.shadowRoot!.querySelector('.modal-title')!.textContent).toBe(
+      `Edit${HOSTILE_PAYLOAD}`
+    );
+    dialog.close();
+  });
+
+  it('keeps its stylesheet first in the shadow root, closed and open', () => {
+    const dialog = document.createElement('modal-dialog') as ModalDialog;
+    document.body.appendChild(dialog);
+    const shadow = dialog.shadowRoot!;
+    const style = shadow.firstElementChild;
+
+    expect(style!.tagName).toBe('STYLE');
+    expect(style!.textContent).toContain('.modal');
+    dialog.open();
+    expect(shadow.firstElementChild).toBe(style);
+    expect(shadow.querySelectorAll('style')).toHaveLength(1);
+    dialog.close();
+    expect(shadow.firstElementChild).toBe(style);
+    expect(shadow.querySelector('.modal')).toBeNull();
   });
 });

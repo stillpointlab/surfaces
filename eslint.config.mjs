@@ -68,6 +68,29 @@ export default [
     },
   },
   {
+    // Components and app elements set markup only through `render` from
+    // `@stillpointlab/common-format/html`, whose `html` template escapes every value.
+    // Tests may build fixtures however they like.
+    files: ['packages/components/*/src/**/*.ts', 'packages/apps/*/src/element/**/*.ts'],
+    ignores: ['**/*.test.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            'AssignmentExpression > MemberExpression.left[property.name=/^(innerHTML|outerHTML)$/]',
+          message:
+            'Set markup with render(target, html`…`) from @stillpointlab/common-format/html, which escapes every value.',
+        },
+        {
+          selector: "CallExpression > MemberExpression.callee[property.name='insertAdjacentHTML']",
+          message:
+            'Set markup with render(target, html`…`) from @stillpointlab/common-format/html, which escapes every value.',
+        },
+      ],
+    },
+  },
+  {
     // Node build scripts.
     files: ['tooling/**/*.mjs', '*.mjs'],
     languageOptions: {

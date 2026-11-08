@@ -1,9 +1,10 @@
 import { formatPackage } from '../../tooling/tsup';
 
-// Eight entries: the runtime (logging, contracts, the ready gate); `elements`,
+// Nine entries: the runtime (logging, contracts, the ready gate); `elements`,
 // `defineElement` alone for a component on every page of a host; `app`, the app
 // contract (results, the lifecycle and element halves) for apps and host pages;
-// `pointer-drag`, the pointer-events drag helper app elements and hosts share; `yaml` and
+// `pointer-drag`, the pointer-events drag helper app elements and hosts share; `html`, the
+// escaping template every element builds its markup with; `yaml` and
 // `frontmatter`, DOM-free text helpers the formats and app cores share;
 // `testing` (the element conformance suites); and `testing/app` (the app core
 // suite). Both suites import vitest and so stay out of the runtime bundles. The
@@ -20,6 +21,7 @@ export default formatPackage({
     elements: 'src/elements.ts',
     app: 'src/app.ts',
     'pointer-drag': 'src/pointer-drag.ts',
+    html: 'src/html.ts',
     yaml: 'src/yaml.ts',
     frontmatter: 'src/frontmatter.ts',
     testing: 'src/testing/index.ts',

@@ -5,6 +5,7 @@
 // `is-open` rather than a native <dialog>.
 
 import { defineElement } from '@stillpointlab/common-format/elements';
+import { html, render } from '@stillpointlab/common-format/html';
 
 import { modalStyles } from './modal.styles';
 
@@ -15,9 +16,15 @@ export class ModalDialog extends HTMLElement {
 
   private previouslyFocusedElement: HTMLElement | null = null;
 
+  // Set as text, so the stylesheet never goes through markup; each render puts it
+  // back first in the shadow root.
+  private readonly styleElement: HTMLStyleElement;
+
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
+    this.styleElement = document.createElement('style');
+    this.styleElement.textContent = modalStyles;
   }
 
   connectedCallback() {
@@ -231,11 +238,10 @@ export class ModalDialog extends HTMLElement {
 
   private render(): void {
     if (!this.shadowRoot) return;
-    this.shadowRoot.innerHTML = `
-            <style>${modalStyles}</style>
-            ${
-              this.isOpen
-                ? `
+    render(
+      this.shadowRoot,
+      this.isOpen
+        ? html`
                 <div class="modal-overlay" title="">
                 <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title-id" tabindex="-1" aria-hidden="false" title="">
                     <header class="modal-header">
@@ -253,9 +259,9 @@ export class ModalDialog extends HTMLElement {
                 </div>
                 </div>
             `
-                : ''
-            }
-        `;
+        : html``
+    );
+    this.shadowRoot.prepend(this.styleElement);
     // As text, never markup: a title can carry a name a person typed.
     const heading = this.shadowRoot.querySelector('.modal-title');
     if (heading) heading.textContent = this.title;

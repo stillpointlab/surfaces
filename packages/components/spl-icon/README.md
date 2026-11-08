@@ -30,3 +30,6 @@ An unknown name has no mask, so the element draws a filled square.
 
 None. It renders `role="button"` and `tabindex="0"`, and clicks reach the host as ordinary click
 events.
+
+Its attributes reach the shadow DOM as attributes, never as markup, so a label can carry any text
+(Context Manager's conversation indicator passes provider and model names an admin typed).

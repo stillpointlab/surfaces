@@ -31,7 +31,8 @@ contract (`put` is a proposal), so both share `packages/common` and the scaffold
   host's tree shows. The host adds its own policy (its error codes, adoption budgets) beside it.
 - **`./element` is reserved** for the app's element: an `AppElement` that takes state through
   `setState` and asks its host for ops with `requestOp`, by path. It imports the core's light
-  entries and `common-format/app`, never the core's root.
+  entries and `common-format/app`, never the core's root. It builds its markup with `html` and
+  `render` from `common-format/html` (ESLint enforces it), and its tests render a `hostile()` state.
 - **More DOM-free entries when a client needs a slice.** A bundler keeps a module's top-level
   calls (a zod schema, say), so a client that needs only constants or a helper gets an entry with
   just those (inventory's `./paths`).
