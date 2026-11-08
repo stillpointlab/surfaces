@@ -65,9 +65,9 @@ export class InventoryOverview
   private spaceHtml(space: SharedInventorySpace): SafeHtml {
     const links = this.links;
     const zones =
-      space.rooms.length === 0
+      space.zones.length === 0
         ? html`<p class="inventory-empty-zones">No zones yet — use Add zone or add <code>rooms/&lt;zone&gt;.yaml</code> beside <code>${space.manifestPath}</code>.</p>`
-        : html`<ul class="inventory-zone-list">${space.rooms.map((zone) => {
+        : html`<ul class="inventory-zone-list">${space.zones.map((zone) => {
             const problem = zone.parseError
               ? zone.parseError
               : zone.needsAttentionCount > 0

@@ -137,7 +137,7 @@ describe('<spl-inventory-overview>', () => {
       manifestPath: 'inventory/inventory.yaml',
       spacePath: 'inventory',
       schema: { mode: 'invalid', declaredVersion: 2, errors: ['total.field: invalid'] },
-      rooms: [],
+      zones: [],
       totals: { itemCount: 0 },
       enabled: true,
       dirty: [{ goodId: 9, path: 'inventory/inventory.yaml', kind: 'manifest' }],
@@ -172,7 +172,7 @@ describe('<spl-inventory-overview>', () => {
         ...SEEDED,
         warnings: ['A warning'],
         manifestErrors: ['An error'],
-        rooms: [...SEEDED.rooms, { ...SEEDED.rooms[0], path: 'rooms/x.yaml', parseError: 'Bad' }],
+        zones: [...SEEDED.zones, { ...SEEDED.zones[0], path: 'rooms/x.yaml', parseError: 'Bad' }],
       },
       { except: ['mode', 'type', 'kind'] }
     );

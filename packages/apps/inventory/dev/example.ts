@@ -4,15 +4,15 @@
 // untracked and clean, as a host shows a repository nobody has edited.
 import {
   aggregateItems,
-  applyRoomTotals,
+  applyZoneTotals,
   demoteDuplicateIds,
   parseInventoryManifest,
-  parseRoomFile,
+  parseZoneFile,
 } from '../src/index.js';
 
 import type {
-  SharedInventoryRoom,
-  SharedInventoryRoomState,
+  SharedInventoryZone,
+  SharedInventoryZoneState,
   SharedInventorySchema,
   SharedInventorySpace,
 } from '../src/types.js';
@@ -51,15 +51,15 @@ function schemaOf(content: string): { schema: SharedInventorySchema; warnings: s
   };
 }
 
-function zones(schema: SharedInventorySchema): SharedInventoryRoom[] {
+function zones(schema: SharedInventorySchema): SharedInventoryZone[] {
   const parsed = Object.entries(files)
     .filter(([file]) => file.startsWith('./example/rooms/'))
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([file, content]): SharedInventoryRoom => {
+    .map(([file, content]): SharedInventoryZone => {
       const path = repoPath(file);
       const slug = path.slice(path.lastIndexOf('/') + 1).replace(/\.yaml$/, '');
-      const result = parseRoomFile(content, schema);
-      const zone: SharedInventoryRoom = result.ok
+      const result = parseZoneFile(content, schema);
+      const zone: SharedInventoryZone = result.ok
         ? {
             slug,
             label: result.label ?? slug,
@@ -83,11 +83,11 @@ function zones(schema: SharedInventorySchema): SharedInventoryRoom[] {
       return zone;
     });
   demoteDuplicateIds(parsed);
-  for (const zone of parsed) applyRoomTotals(zone, schema);
+  for (const zone of parsed) applyZoneTotals(zone, schema);
   return parsed;
 }
 
-function load(): { space: SharedInventorySpace; zones: SharedInventoryRoom[] } {
+function load(): { space: SharedInventorySpace; zones: SharedInventoryZone[] } {
   const { schema, warnings } = schemaOf(files['./example/inventory.yaml'] ?? '');
   const all = zones(schema);
   const label = schema.mode === 'invalid' ? undefined : schema.manifest.label;
@@ -98,7 +98,7 @@ function load(): { space: SharedInventorySpace; zones: SharedInventoryRoom[] } {
       spacePath: SPACE_PATH,
       ...(label !== undefined ? { label } : {}),
       schema,
-      rooms: all.map((zone) => ({
+      zones: all.map((zone) => ({
         slug: zone.slug,
         label: zone.label,
         path: zone.path,
@@ -124,7 +124,7 @@ export function exampleSpace(): SharedInventorySpace {
 }
 
 /** One of the example's zones, by slug (the first when it has none). */
-export function exampleZone(slug?: string): SharedInventoryRoomState {
+export function exampleZone(slug?: string): SharedInventoryZoneState {
   const { space, zones: all } = load();
   const zone = all.find((candidate) => candidate.slug === slug) ?? all[0]!;
   return {
@@ -132,7 +132,7 @@ export function exampleZone(slug?: string): SharedInventoryRoomState {
     spacePath: space.spacePath,
     ...(space.label !== undefined ? { spaceLabel: space.label } : {}),
     schema: space.schema,
-    room: zone,
+    zone,
     enabled: true,
     dirty: [],
     warnings: space.warnings,

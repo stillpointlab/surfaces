@@ -8,7 +8,7 @@
 import type {
   SharedInventoryManifestV1,
   SharedInventoryManifestV2,
-  SharedInventoryRoomState,
+  SharedInventoryZoneState,
   SharedInventorySpace,
 } from '../types.js';
 
@@ -28,7 +28,7 @@ export const SPACE: SharedInventorySpace = {
   currency: 'USD',
   fields: [],
   containers: [],
-  rooms: [
+  zones: [
     {
       slug: 'kitchen',
       label: 'Kitchen',
@@ -48,7 +48,7 @@ export const SPACE: SharedInventorySpace = {
 
 export const SEEDED: SharedInventorySpace = {
   ...SPACE,
-  rooms: [
+  zones: [
     {
       slug: 'attic',
       label: 'Attic',
@@ -59,9 +59,9 @@ export const SEEDED: SharedInventorySpace = {
       unvaluedCount: 0,
       needsAttentionCount: 0,
     },
-    ...SPACE.rooms,
+    ...SPACE.zones,
   ],
-  dirty: [{ goodId: 200, path: 'rooms/attic.yaml', kind: 'room', newFile: true }],
+  dirty: [{ goodId: 200, path: 'rooms/attic.yaml', kind: 'zone', newFile: true }],
 };
 
 /** Straight after "Create inventory": nothing is upstream, everything is new. */
@@ -70,7 +70,7 @@ export const JUST_CREATED: SharedInventorySpace = {
   manifestPath: 'inventory/inventory.yaml',
   spacePath: 'inventory',
   label: 'Maple Street House',
-  rooms: [
+  zones: [
     {
       slug: 'garage',
       label: 'Garage',
@@ -95,8 +95,8 @@ export const JUST_CREATED: SharedInventorySpace = {
   totals: { itemCount: 0, value: 0, unvaluedCount: 0 },
   dirty: [
     { goodId: 200, path: 'inventory/inventory.yaml', kind: 'manifest', newFile: true },
-    { goodId: 201, path: 'inventory/rooms/garage.yaml', kind: 'room', newFile: true },
-    { goodId: 202, path: 'inventory/rooms/kitchen.yaml', kind: 'room', newFile: true },
+    { goodId: 201, path: 'inventory/rooms/garage.yaml', kind: 'zone', newFile: true },
+    { goodId: 202, path: 'inventory/rooms/kitchen.yaml', kind: 'zone', newFile: true },
   ],
 };
 
@@ -112,7 +112,7 @@ export const ATTRIBUTE_PAYLOADS = {
   warning: `warning " onmouseover="window.inventoryInjected=true & 'single'`,
 } as const;
 
-export const LEGACY_ZONE: SharedInventoryRoomState = {
+export const LEGACY_ZONE: SharedInventoryZoneState = {
   manifestPath: 'inventory.yaml',
   spacePath: '',
   spaceLabel: 'Maple St House',
@@ -139,7 +139,7 @@ export const LEGACY_ZONE: SharedInventoryRoomState = {
     },
   ],
   containers: [ATTRIBUTE_PAYLOADS.container],
-  room: {
+  zone: {
     slug: 'living-room',
     label: 'Living Room',
     path: 'rooms/living-room.yaml',
@@ -218,12 +218,12 @@ export const CONFIGURED_MANIFEST: SharedInventoryManifestV2 = {
   total: { field: 'amount', multiplyBy: 'quantity' },
 };
 
-export const CONFIGURED_ZONE: SharedInventoryRoomState = {
+export const CONFIGURED_ZONE: SharedInventoryZoneState = {
   manifestPath: 'inventory/inventory.yaml',
   spacePath: 'inventory',
   spaceLabel: 'Workshop',
   schema: { mode: 'configured', manifest: CONFIGURED_MANIFEST },
-  room: {
+  zone: {
     slug: 'workshop',
     label: 'Workshop floor',
     path: 'inventory/rooms/workshop.yaml',

@@ -17,7 +17,7 @@ export const inventoryLifecycle: AppLifecycle = {
     const detection = detectInventoryAt(manifestPath, nodes);
     const scope = new Set<string>([
       detection.manifestPath,
-      ...detection.rooms.map((room) => room.path),
+      ...detection.zones.map((zone) => zone.path),
     ]);
     return { ok: true, scope, warnings: parsed.warnings };
   },

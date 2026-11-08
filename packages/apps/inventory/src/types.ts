@@ -162,7 +162,7 @@ export type SharedInventoryTotals =
   SharedInventoryLegacyAggregate | SharedInventoryConfiguredAggregate;
 
 /** One zone, fully resolved for the zone view. */
-export interface SharedInventoryRoom {
+export interface SharedInventoryZone {
   /** Filename without extension; the URL segment. */
   slug: string;
   /** `label:` from the file, else the slug. */
@@ -184,7 +184,7 @@ export interface SharedInventoryRoom {
 }
 
 /** One zone row on the inventory overview (no item payload). */
-export interface SharedInventoryRoomSummary {
+export interface SharedInventoryZoneSummary {
   slug: string;
   label: string;
   path: string;
@@ -201,7 +201,7 @@ export interface SharedInventoryRoomSummary {
 export interface SharedInventoryDirtyFile {
   goodId: number;
   path: string;
-  kind: 'manifest' | 'room';
+  kind: 'manifest' | 'zone';
   newFile?: true;
 }
 
@@ -215,7 +215,7 @@ export interface SharedInventorySpace {
   currency?: string;
   fields?: SharedInventoryFieldDef[];
   containers?: string[];
-  rooms: SharedInventoryRoomSummary[];
+  zones: SharedInventoryZoneSummary[];
   totals: SharedInventoryTotals;
   enabled: boolean;
   dirty: SharedInventoryDirtyFile[];
@@ -227,7 +227,7 @@ export interface SharedInventorySpace {
 }
 
 /** Everything one zone view renders. */
-export interface SharedInventoryRoomState {
+export interface SharedInventoryZoneState {
   manifestPath: string;
   spacePath: string;
   spaceLabel?: string;
@@ -236,7 +236,7 @@ export interface SharedInventoryRoomState {
   currency?: string;
   fields?: SharedInventoryFieldDef[];
   containers?: string[];
-  room: SharedInventoryRoom;
+  zone: SharedInventoryZone;
   enabled: boolean;
   dirty: SharedInventoryDirtyFile[];
   warnings: string[];

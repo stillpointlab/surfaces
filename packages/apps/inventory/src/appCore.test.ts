@@ -3,12 +3,12 @@ import { describeAppCore } from '@stillpointlab/common-format/testing/app';
 import { detectInventoryAt } from './detection.js';
 import { inventoryLifecycle } from './lifecycle.js';
 import { parseInventoryManifest } from './manifest.js';
-import { parseRoomFile } from './room.js';
-import { roomSeedContent } from './roomSeed.js';
-import { appendItem, deleteItem, patchItem } from './roomWriter.js';
+import { parseZoneFile } from './zone.js';
+import { zoneSeedContent } from './zoneSeed.js';
+import { appendItem, deleteItem, patchItem } from './zoneWriter.js';
 
-import type { NewItemBlock } from './roomWriter.js';
 import type { TreeNode } from './types.js';
+import type { NewItemBlock } from './zoneWriter.js';
 import type { AppFixture, AppMountResult } from '@stillpointlab/common-format/testing/app';
 
 // The inventory core held to the app core suite (ADR-0028 decision 1: a rewrite
@@ -73,7 +73,7 @@ const v2Configured = {
     '',
   ].join('\n'),
   // A zone as "Add zone" seeds it: a label and no items yet.
-  'rooms/attic.yaml': roomSeedContent('Attic'),
+  'rooms/attic.yaml': zoneSeedContent('Attic'),
   // Not the app's files: ignored, and the folder still mounts.
   'notes.md': 'Insurance renewal is in March.\n',
   'rooms/README.txt': 'One YAML file per zone.\n',
@@ -113,7 +113,7 @@ function mount(files: AppFixture, manifestPath: string): AppMountResult {
   const detection = detectInventoryAt(manifestPath, nodes);
   return {
     ok: true,
-    scope: [manifestPath, ...detection.rooms.map((room) => room.path)],
+    scope: [manifestPath, ...detection.zones.map((zone) => zone.path)],
     warnings: parsed.warnings,
   };
 }
@@ -123,7 +123,7 @@ function written(result: { ok: true; content: string } | { ok: false }): string 
   return result.content;
 }
 
-const reparses = (text: string): boolean => parseRoomFile(text).ok;
+const reparses = (text: string): boolean => parseZoneFile(text).ok;
 
 const lamp: NewItemBlock = {
   id: 'lamp',

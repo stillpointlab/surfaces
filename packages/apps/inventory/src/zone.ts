@@ -26,9 +26,9 @@ export const ITEM_CORE_KEYS = [
 
 const LEGACY_CORE_KEY_SET: ReadonlySet<string> = new Set(ITEM_CORE_KEYS);
 const STRUCTURAL_KEY_SET: ReadonlySet<string> = new Set(['id', 'title']);
-const KNOWN_ROOM_KEYS = new Set(['label', 'items']);
+const KNOWN_ZONE_KEYS = new Set(['label', 'items']);
 
-export type RoomParseResult =
+export type ZoneParseResult =
   | {
       ok: true;
       label?: string;
@@ -332,9 +332,9 @@ function parseNeutralItem(
   };
 }
 
-type RoomSchemaInput = SharedInventorySchema | ReadonlySet<string>;
+type ZoneSchemaInput = SharedInventorySchema | ReadonlySet<string>;
 
-function isResolvedSchema(input: RoomSchemaInput): input is SharedInventorySchema {
+function isResolvedSchema(input: ZoneSchemaInput): input is SharedInventorySchema {
   return !('has' in input);
 }
 
@@ -364,13 +364,13 @@ function configuredAliasKeys(
 }
 
 /**
- * Parse one room/zone file. The Set overload is retained for frozen v1 unit
+ * Parse one zone file. The Set overload is retained for frozen v1 unit
  * tests and callers; production passes the resolved schema.
  */
-export function parseRoomFile(
+export function parseZoneFile(
   content: string,
-  schemaOrDeclaredIds: RoomSchemaInput = new Set()
-): RoomParseResult {
+  schemaOrDeclaredIds: ZoneSchemaInput = new Set()
+): ZoneParseResult {
   let document: ReturnType<typeof parseDocument>;
   let raw: unknown;
   try {
@@ -384,11 +384,12 @@ export function parseRoomFile(
   if (raw === null || raw === undefined) {
     return { ok: true, items: [], attention: [], warnings: [] };
   }
+  // A message users see: its wording stays as it was when the names became zone.
   if (!isPlainObject(raw)) return { ok: false, error: 'room file must be a YAML mapping' };
 
   const warnings: string[] = [];
   for (const key of Object.keys(raw)) {
-    if (!KNOWN_ROOM_KEYS.has(key)) warnings.push(`unknown key '${key}' is ignored`);
+    if (!KNOWN_ZONE_KEYS.has(key)) warnings.push(`unknown key '${key}' is ignored`);
   }
 
   let label: string | undefined;

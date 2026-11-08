@@ -14,7 +14,7 @@ export const INVENTORY_DEFAULT_CURRENCY = 'USD';
 /** Display-only currency code (ADR-0022 keeps conversion out of scope). */
 export const INVENTORY_CURRENCY_PATTERN = /^[A-Z]{3}$/;
 
-/** Configured field ids are durable room-file keys. */
+/** Configured field ids are durable zone-file keys. */
 export const INVENTORY_FIELD_ID_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
 export const INVENTORY_FIELD_ID_MAX_LENGTH = 100;
 export const INVENTORY_FIELD_LABEL_MAX_LENGTH = 120;
@@ -23,7 +23,7 @@ export const INVENTORY_RESERVED_FIELD_IDS: ReadonlySet<string> = new Set(['id', 
 
 /**
  * A title as a slug: lowercase alphanumeric runs joined by `-`, capped.
- * Empty for a degenerate title — callers that name FILES (room seeding)
+ * Empty for a degenerate title — callers that name FILES (zone seeding)
  * refuse instead of inventing a name, and callers that name ITEMS fall back.
  */
 export function slugifyInventoryName(title: string): string {

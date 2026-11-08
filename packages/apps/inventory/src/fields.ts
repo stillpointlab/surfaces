@@ -1,7 +1,7 @@
 /**
  * Inventory item field rules (ADR-0022): the frozen v1 declared-field checks,
  * the configured (v2) field checks, and the Other-data key rules. Pure — the
- * inventory service calls them before it writes a room, and maps a failure's
+ * inventory service calls them before it writes a zone, and maps a failure's
  * code back to the 400 `ApiError` it has always sent.
  */
 import { fail, ok } from '@stillpointlab/common-format/app';

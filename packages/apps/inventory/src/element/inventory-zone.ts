@@ -39,14 +39,14 @@ import type {
   SharedInventoryFieldV2,
   SharedInventoryItem,
   SharedInventoryResolvedValue,
-  SharedInventoryRoomState,
+  SharedInventoryZoneState,
   SharedInventoryScalar,
 } from '../types.js';
 import type { AppElement, Result } from '@stillpointlab/common-format/app';
 import type { SafeHtml } from '@stillpointlab/common-format/html';
 import type { ModalDialog } from '@stillpointlab/modal-dialog-component';
 
-type ZoneState = SharedInventoryRoomState;
+type ZoneState = SharedInventoryZoneState;
 
 function configuredFieldInput(field: SharedInventoryFieldV2, surface: 'add' | 'edit'): SafeHtml {
   return html`
@@ -62,7 +62,7 @@ function legacyQuickAddHtml(state: ZoneState): SafeHtml {
   const containers = [
     ...new Set([
       ...manifest.containers,
-      ...state.room.items
+      ...state.zone.items
         .map((item) => item.container)
         .filter((container): container is string => Boolean(container)),
     ]),
@@ -122,7 +122,7 @@ function otherDataButton(item: SharedInventoryItem, count: number): SafeHtml {
 
 function configuredTableHtml(state: ZoneState): SafeHtml {
   if (state.schema.mode !== 'configured') return html``;
-  const { room: zone } = state;
+  const { zone } = state;
   const fields = state.schema.manifest.fields.filter((field) => field.visibility.table);
   const showOther = zone.items.some((item) => item.extraFields.length > 0);
   const headers = [
@@ -157,7 +157,7 @@ function configuredTableHtml(state: ZoneState): SafeHtml {
 
 function legacyTableHtml(state: ZoneState): SafeHtml {
   if (state.schema.mode !== 'legacy') return html``;
-  const { room: zone } = state;
+  const { zone } = state;
   const manifest = state.schema.manifest;
   const fields = manifest.fields;
   const extras: string[] = [];
@@ -210,10 +210,10 @@ function legacyTableHtml(state: ZoneState): SafeHtml {
 }
 
 function neutralTableHtml(state: ZoneState): SafeHtml {
-  const showOther = state.room.items.some((item) => item.extraFields.length > 0);
+  const showOther = state.zone.items.some((item) => item.extraFields.length > 0);
   return html`
     <div class="inventory-table-wrap"><table class="inventory-table"><thead><tr><th scope="col">Title</th>${showOther ? html`<th scope="col">Other data</th>` : ''}<th scope="col"></th></tr></thead><tbody>
-      ${state.room.items.map((item) => {
+      ${state.zone.items.map((item) => {
         const count = item.extraFields.length;
         return html`<tr data-item-id="${item.id}" data-filter-text="${item.title.toLowerCase()}"><td class="inventory-cell-title">${item.title}</td>${showOther ? html`<td>${count > 0 ? otherDataButton(item, count) : ''}</td>` : ''}<td class="inventory-cell-actions"><button type="button" class="inventory-row-menu" data-action="edit-item" data-item-id="${item.id}" aria-label="View ${item.title}">⋯</button></td></tr>`;
       })}
@@ -221,10 +221,10 @@ function neutralTableHtml(state: ZoneState): SafeHtml {
 }
 
 function attentionHtml(state: ZoneState): SafeHtml {
-  if (state.room.needsAttention.length === 0) return html``;
+  if (state.zone.needsAttention.length === 0) return html``;
   return html`
     <section class="inventory-attention"><h2>Needs attention</h2><ul>
-      ${state.room.needsAttention.map(
+      ${state.zone.needsAttention.map(
         (entry) =>
           html`<li>${entry.title || entry.id ? html`<strong>${entry.title ?? entry.id ?? ''}</strong> — ` : ''}${entry.reason}</li>`
       )}
@@ -273,7 +273,7 @@ export class InventoryZone extends InventoryElement<ZoneState> implements AppEle
 
   private quickAddHtml(state: ZoneState): SafeHtml {
     if (!state.enabled || state.schema.mode === 'invalid') return html``;
-    const { room: zone } = state;
+    const { zone } = state;
     if (!zone.writable) {
       return html`
         <div class="inventory-notice inventory-notice--warning" role="status">
@@ -298,14 +298,14 @@ export class InventoryZone extends InventoryElement<ZoneState> implements AppEle
   private downloadHtml(state: ZoneState): SafeHtml {
     const links = this.links;
     const enabled =
-      links !== null && state.schema.mode !== 'invalid' && state.room.items.length > 0;
+      links !== null && state.schema.mode !== 'invalid' && state.zone.items.length > 0;
     return enabled
-      ? html`<a class="inventory-download" href="${links.exportZone(state.room.path)}" download>Download zone CSV</a>`
+      ? html`<a class="inventory-download" href="${links.exportZone(state.zone.path)}" download>Download zone CSV</a>`
       : html`<span class="inventory-download is-disabled" title="${state.schema.mode === 'invalid' ? 'Repair inventory.yaml before exporting' : 'Nothing to export yet'}">Download zone CSV</span>`;
   }
 
   private zoneHtml(state: ZoneState): SafeHtml {
-    const { room: zone } = state;
+    const { zone } = state;
     const notices = html`
       ${checkinBarHtml(state.dirty)}
       ${schemaNoticeHtml(this.links, state.schema, state.manifestPath)}`;
@@ -467,7 +467,7 @@ export class InventoryZone extends InventoryElement<ZoneState> implements AppEle
     }
     const res = await requestOp<InventoryOps, 'add-item'>(this, {
       type: 'add-item',
-      path: state.room.path,
+      path: state.zone.path,
       item,
     });
     if (!res.ok) {
@@ -483,13 +483,13 @@ export class InventoryZone extends InventoryElement<ZoneState> implements AppEle
 
   private openItem(itemId: string, section: 'configured' | 'other' = 'configured'): void {
     const state = this.state;
-    const item = state?.room.items.find((candidate) => candidate.id === itemId);
+    const item = state?.zone.items.find((candidate) => candidate.id === itemId);
     if (!state || !item) return;
     this.currentItem = item;
     const formHost = this.formHost();
     render(formHost, itemFormHtml(this.links, item, state));
     const disabled =
-      state.schema.mode === 'invalid' || item.readOnly !== undefined || !state.room.writable;
+      state.schema.mode === 'invalid' || item.readOnly !== undefined || !state.zone.writable;
     this.button('save-inventory-item').disabled = disabled;
     this.button('delete-inventory-item').disabled = disabled;
     this.disarmDelete();
@@ -559,7 +559,7 @@ export class InventoryZone extends InventoryElement<ZoneState> implements AppEle
     }
     const res = await requestOp<InventoryOps, 'update-item'>(this, {
       type: 'update-item',
-      path: state.room.path,
+      path: state.zone.path,
       id: item.id,
       changes,
     });
@@ -582,7 +582,7 @@ export class InventoryZone extends InventoryElement<ZoneState> implements AppEle
     }
     const res = await requestOp<InventoryOps, 'delete-item'>(this, {
       type: 'delete-item',
-      path: state.room.path,
+      path: state.zone.path,
       id: item.id,
     });
     if (!this.settleItemOp(res) || !res.ok) return;

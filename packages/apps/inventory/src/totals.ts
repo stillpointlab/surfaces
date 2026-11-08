@@ -1,12 +1,12 @@
 /**
- * Inventory totals and space-global id handling (ADR-0022): per-room and
+ * Inventory totals and space-global id handling (ADR-0022): per-zone and
  * overview totals for legacy and configured manifests, and demotion of
  * duplicate ids to needs-attention. Pure — the inventory service applies them
- * to the rooms it loads.
+ * to the zones it loads.
  */
 import type {
   SharedInventoryItem,
-  SharedInventoryRoom,
+  SharedInventoryZone,
   SharedInventorySchema,
   SharedInventoryTotals,
 } from './types.js';
@@ -61,46 +61,47 @@ export function emptyTotals(schema: SharedInventorySchema): SharedInventoryTotal
   return aggregateItems(schema, []);
 }
 
-export function applyRoomTotals(room: SharedInventoryRoom, schema: SharedInventorySchema): void {
-  room.totals = aggregateItems(schema, room.items);
-  if (schema.mode === 'legacy' && 'value' in room.totals) {
-    room.subtotal = room.totals.value;
-    room.unvaluedCount = room.totals.unvaluedCount;
+export function applyZoneTotals(zone: SharedInventoryZone, schema: SharedInventorySchema): void {
+  zone.totals = aggregateItems(schema, zone.items);
+  if (schema.mode === 'legacy' && 'value' in zone.totals) {
+    zone.subtotal = zone.totals.value;
+    zone.unvaluedCount = zone.totals.unvaluedCount;
   } else {
-    delete room.subtotal;
-    delete room.unvaluedCount;
+    delete zone.subtotal;
+    delete zone.unvaluedCount;
   }
 }
 
 /**
  * Space-global id uniqueness (ADR-0022): every item whose id collides —
- * within a room or across rooms — is demoted to needs-attention in its own
- * room, so the table never renders two rows claiming one identity.
+ * within a zone or across zones — is demoted to needs-attention in its own
+ * zone, so the table never renders two rows claiming one identity.
  */
-export function demoteDuplicateIds(rooms: SharedInventoryRoom[]): void {
-  const roomsById = new Map<string, string[]>();
-  for (const room of rooms) {
-    for (const item of room.items) {
-      roomsById.set(item.id, [...(roomsById.get(item.id) ?? []), room.slug]);
+export function demoteDuplicateIds(zones: SharedInventoryZone[]): void {
+  const zonesById = new Map<string, string[]>();
+  for (const zone of zones) {
+    for (const item of zone.items) {
+      zonesById.set(item.id, [...(zonesById.get(item.id) ?? []), zone.slug]);
     }
   }
-  for (const room of rooms) {
+  for (const zone of zones) {
     const keep: SharedInventoryItem[] = [];
-    for (const item of room.items) {
-      const holders = roomsById.get(item.id) ?? [];
+    for (const item of zone.items) {
+      const holders = zonesById.get(item.id) ?? [];
       if (holders.length <= 1) {
         keep.push(item);
         continue;
       }
-      const elsewhere = holders.filter((slug) => slug !== room.slug);
+      const elsewhere = holders.filter((slug) => slug !== zone.slug);
+      // A reason users see: its wording stays as it was when the names became zone.
       const where =
         elsewhere.length > 0 ? `also in ${[...new Set(elsewhere)].join(', ')}` : 'in this room';
-      room.needsAttention.push({
+      zone.needsAttention.push({
         id: item.id,
         title: item.title,
         reason: `duplicate id '${item.id}' (${where})`,
       });
     }
-    room.items = keep;
+    zone.items = keep;
   }
 }

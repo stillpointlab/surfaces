@@ -4,7 +4,7 @@ import { escapeCsvFormulaValue, serializeCsv } from '@stillpointlab/sheet-format
 import type {
   SharedInventoryFieldDef,
   SharedInventoryItem,
-  SharedInventoryRoom,
+  SharedInventoryZone,
   SharedInventorySchema,
 } from './types.js';
 import type { Result } from '@stillpointlab/common-format/app';
@@ -192,40 +192,41 @@ function exportableSchema(
 }
 
 /** One zone as a CSV file. */
-export function serializeRoom(
-  room: SharedInventoryRoom,
+export function serializeZone(
+  zone: SharedInventoryZone,
   input: SchemaOrLegacyFields
 ): Result<{ content: string }> {
   const exportable = exportableSchema(input);
   if (!exportable.ok) return exportable;
-  const columns = columnsFor(exportable.schema, room.items);
+  const columns = columnsFor(exportable.schema, zone.items);
   return ok({
     content: serializeTypedRows([
       columns.map((column) => textCell(column.header)),
-      ...room.items.map((item) => columns.map((column) => column.cell(item))),
+      ...zone.items.map((item) => columns.map((column) => column.cell(item))),
     ]),
   });
 }
 
-/** The full inventory as one flat CSV. V2 leads with `zone`; v1 keeps `room`. */
+/** The full inventory as one flat CSV. V2 leads with `zone`; v1 keeps `zone`. */
 export function serializeSpace(
-  rooms: SharedInventoryRoom[],
+  zones: SharedInventoryZone[],
   input: SchemaOrLegacyFields
 ): Result<{ content: string }> {
   const exportable = exportableSchema(input);
   if (!exportable.ok) return exportable;
   const { schema } = exportable;
-  const allItems = rooms.flatMap((room) => room.items);
+  const allItems = zones.flatMap((zone) => zone.items);
   const columns = columnsFor(schema, allItems);
   return ok({
     content: serializeTypedRows([
       [
+        // v1's export format keeps the `room` column people already have.
         textCell(schema.mode === 'configured' ? 'zone' : 'room'),
         ...columns.map((c) => textCell(c.header)),
       ],
-      ...rooms.flatMap((room) =>
-        room.items.map((item) => [
-          textCell(room.label),
+      ...zones.flatMap((zone) =>
+        zone.items.map((item) => [
+          textCell(zone.label),
           ...columns.map((column) => column.cell(item)),
         ])
       ),
@@ -233,36 +234,37 @@ export function serializeSpace(
   });
 }
 
-/** WARNINGS.txt body for skipped rooms/items and v2 structured cells. */
-export function exportWarnings(rooms: SharedInventoryRoom[], input?: SchemaOrLegacyFields): string {
+/** WARNINGS.txt body for skipped zones/items and v2 structured cells (v1 says rooms). */
+export function exportWarnings(zones: SharedInventoryZone[], input?: SchemaOrLegacyFields): string {
   const lines: string[] = [];
   const resolved = input === undefined ? undefined : resolvedSchema(input);
+  // v1's export keeps its room wording.
   const grouping = resolved?.mode === 'configured' ? 'zone' : 'room';
-  for (const room of rooms) {
-    if (room.parseError) {
-      lines.push(`${room.label} (${room.path}): ${grouping} skipped — ${room.parseError}`);
+  for (const zone of zones) {
+    if (zone.parseError) {
+      lines.push(`${zone.label} (${zone.path}): ${grouping} skipped — ${zone.parseError}`);
     }
-    for (const attention of room.needsAttention) {
+    for (const attention of zone.needsAttention) {
       const which = attention.title ?? attention.id ?? 'item';
-      lines.push(`${room.label} (${room.path}): '${which}' skipped — ${attention.reason}`);
+      lines.push(`${zone.label} (${zone.path}): '${which}' skipped — ${attention.reason}`);
     }
   }
 
   const schema = resolved;
   if (schema?.mode === 'configured') {
-    for (const room of rooms) {
-      for (const item of room.items) {
+    for (const zone of zones) {
+      for (const item of zone.items) {
         for (const field of schema.manifest.fields.filter((candidate) => candidate.export)) {
           if (item.resolvedFieldValues?.[field.id]?.state === 'structured') {
             lines.push(
-              `${room.label} (${room.path}): '${item.title}' field '${field.id}' omitted — structured value`
+              `${zone.label} (${zone.path}): '${item.title}' field '${field.id}' omitted — structured value`
             );
           }
         }
         for (const extra of item.extraFields) {
           if (extra.opaque) {
             lines.push(
-              `${room.label} (${room.path}): '${item.title}' key '${extra.key}' omitted — ${extra.summary ?? 'structured value'}`
+              `${zone.label} (${zone.path}): '${item.title}' key '${extra.key}' omitted — ${extra.summary ?? 'structured value'}`
             );
           }
         }

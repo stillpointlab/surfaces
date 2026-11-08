@@ -21,7 +21,7 @@ import type {
   SharedInventoryFieldV2,
   SharedInventoryItem,
   SharedInventoryResolvedValue,
-  SharedInventoryRoomState,
+  SharedInventoryZoneState,
   SharedInventoryScalar,
   SharedInventorySchema,
 } from '../types.js';
@@ -81,7 +81,7 @@ function readOnlyBanner(
 function legacyItemFormHtml(
   links: InventoryLinks | null,
   item: SharedInventoryItem,
-  state: SharedInventoryRoomState
+  state: SharedInventoryZoneState
 ): SafeHtml {
   if (state.schema.mode !== 'legacy') return html``;
   const disabled = item.readOnly !== undefined;
@@ -89,7 +89,7 @@ function legacyItemFormHtml(
     ? readOnlyBanner(
         links,
         item.readOnly ?? '',
-        state.room.path,
+        state.zone.path,
         ' — this item can only be edited in the file.'
       )
     : html``;
@@ -173,9 +173,9 @@ function scalarExtraControl(extra: SharedInventoryExtraField, disabled: boolean)
     </div>`;
 }
 
-function otherDataHtml(item: SharedInventoryItem, state: SharedInventoryRoomState): SafeHtml {
+function otherDataHtml(item: SharedInventoryItem, state: SharedInventoryZoneState): SafeHtml {
   const configured = state.schema.mode === 'configured';
-  const disabled = !configured || item.readOnly !== undefined || !state.room.writable;
+  const disabled = !configured || item.readOnly !== undefined || !state.zone.writable;
   return html`
     <details class="inventory-other-data" id="inventory-other-data-section" open>
       <summary><span id="inventory-other-data-heading" role="heading" aria-level="2" tabindex="-1">Other data</span></summary>
@@ -204,12 +204,12 @@ function otherDataHtml(item: SharedInventoryItem, state: SharedInventoryRoomStat
 function configuredItemFormHtml(
   links: InventoryLinks | null,
   item: SharedInventoryItem,
-  state: SharedInventoryRoomState
+  state: SharedInventoryZoneState
 ): SafeHtml {
   const schema = state.schema as ConfiguredSchema;
-  const disabled = item.readOnly !== undefined || !state.room.writable;
+  const disabled = item.readOnly !== undefined || !state.zone.writable;
   const banner = disabled
-    ? readOnlyBanner(links, item.readOnly ?? state.room.readOnlyReason ?? '', state.room.path, '')
+    ? readOnlyBanner(links, item.readOnly ?? state.zone.readOnlyReason ?? '', state.zone.path, '')
     : html``;
   return html`
     ${banner}
@@ -233,7 +233,7 @@ function configuredItemFormHtml(
 function neutralItemFormHtml(
   links: InventoryLinks | null,
   item: SharedInventoryItem,
-  state: SharedInventoryRoomState
+  state: SharedInventoryZoneState
 ): SafeHtml {
   return html`
     <section><h2 tabindex="-1" id="inventory-configured-fields-heading">Configured fields</h2><div class="inventory-add-grid">
@@ -247,7 +247,7 @@ function neutralItemFormHtml(
 export function itemFormHtml(
   links: InventoryLinks | null,
   item: SharedInventoryItem,
-  state: SharedInventoryRoomState
+  state: SharedInventoryZoneState
 ): SafeHtml {
   if (state.schema.mode === 'configured') return configuredItemFormHtml(links, item, state);
   if (state.schema.mode === 'legacy') return legacyItemFormHtml(links, item, state);
