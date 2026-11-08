@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseRoomFile } from './room.js';
+import { parseZoneFile } from './zone.js';
 
 import type { SharedInventorySchema } from './types.js';
 
@@ -29,9 +29,9 @@ const configuredSchema: SharedInventorySchema = {
   },
 };
 
-describe('parseRoomFile', () => {
-  it('parses a room with label and items, defaulting quantity', () => {
-    const result = parseRoomFile(
+describe('parseZoneFile', () => {
+  it('parses a zone with label and items, defaulting quantity', () => {
+    const result = parseZoneFile(
       [
         'label: Kitchen',
         'items:',
@@ -60,26 +60,26 @@ describe('parseRoomFile', () => {
     expect(result.attention).toEqual([]);
   });
 
-  it('treats an empty file and a label-only file as legitimate empty rooms', () => {
-    expect(parseRoomFile('')).toEqual({ ok: true, items: [], attention: [], warnings: [] });
-    const labeled = parseRoomFile('label: Attic\n');
+  it('treats an empty file and a label-only file as legitimate empty zones', () => {
+    expect(parseZoneFile('')).toEqual({ ok: true, items: [], attention: [], warnings: [] });
+    const labeled = parseZoneFile('label: Attic\n');
     expect(labeled).toMatchObject({ ok: true, label: 'Attic', items: [] });
   });
 
-  it('demotes the room on YAML errors and non-mapping documents', () => {
-    expect(parseRoomFile('items: [unclosed').ok).toBe(false);
-    expect(parseRoomFile('- just\n- a list\n')).toEqual({
+  it('demotes the zone on YAML errors and non-mapping documents', () => {
+    expect(parseZoneFile('items: [unclosed').ok).toBe(false);
+    expect(parseZoneFile('- just\n- a list\n')).toEqual({
       ok: false,
       error: 'room file must be a YAML mapping',
     });
-    expect(parseRoomFile('items: not-a-sequence\n')).toEqual({
+    expect(parseZoneFile('items: not-a-sequence\n')).toEqual({
       ok: false,
       error: `'items' must be a sequence`,
     });
   });
 
   it('demotes items with missing/empty id or title, keeping the rest', () => {
-    const result = parseRoomFile(
+    const result = parseZoneFile(
       [
         'items:',
         '  - title: No id',
@@ -101,7 +101,7 @@ describe('parseRoomFile', () => {
   });
 
   it('demotes non-mapping entries and bad core numerics with reasons', () => {
-    const result = parseRoomFile(
+    const result = parseZoneFile(
       [
         'items:',
         '  - just-a-string',
@@ -128,7 +128,7 @@ describe('parseRoomFile', () => {
   });
 
   it('demotes nested values under core keys', () => {
-    const result = parseRoomFile(
+    const result = parseZoneFile(
       ['items:', '  - id: bad', '    title: Bad', '    serial:', '      inner: 1'].join('\n')
     );
     expect(result.ok).toBe(true);
@@ -137,7 +137,7 @@ describe('parseRoomFile', () => {
   });
 
   it('coerces scalar core text (numeric serial) and scalar lists to strings', () => {
-    const result = parseRoomFile(
+    const result = parseZoneFile(
       [
         'items:',
         '  - id: tv',
@@ -153,7 +153,7 @@ describe('parseRoomFile', () => {
   });
 
   it('routes declared fields to fieldValues and unknown keys to extraFields', () => {
-    const result = parseRoomFile(
+    const result = parseZoneFile(
       [
         'items:',
         '  - id: desk',
@@ -178,7 +178,7 @@ describe('parseRoomFile', () => {
   });
 
   it('keeps a declared field with a nested value as an opaque extra with a warning', () => {
-    const result = parseRoomFile(
+    const result = parseZoneFile(
       ['items:', '  - id: desk', '    title: Desk', '    condition:', '      note: worn'].join(
         '\n'
       ),
@@ -192,7 +192,7 @@ describe('parseRoomFile', () => {
   });
 
   it('warns on unknown top-level keys and unusable labels', () => {
-    const result = parseRoomFile(['label: [nested]', 'color: blue', 'items: []'].join('\n'));
+    const result = parseZoneFile(['label: [nested]', 'color: blue', 'items: []'].join('\n'));
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.label).toBeUndefined();
@@ -203,7 +203,7 @@ describe('parseRoomFile', () => {
   });
 
   it('treats only id/title as core in configured mode and classifies values without coercion', () => {
-    const result = parseRoomFile(
+    const result = parseZoneFile(
       [
         'items:',
         '  - id: meter',
@@ -239,7 +239,7 @@ describe('parseRoomFile', () => {
   });
 
   it('distinguishes optional absence, missing required, valid scalars, and structured fields', () => {
-    const result = parseRoomFile(
+    const result = parseZoneFile(
       [
         'items:',
         '  - id: absent',
@@ -272,7 +272,7 @@ describe('parseRoomFile', () => {
   });
 
   it('uses neutral id/title/Other data recovery for invalid configuration', () => {
-    const result = parseRoomFile(
+    const result = parseZoneFile(
       'items:\n  - id: old\n    title: Old\n    value: 12\n    quantity: 2\n',
       { mode: 'invalid', declaredVersion: 2, errors: ['fields.0: bad'] }
     );
@@ -290,7 +290,7 @@ describe('parseRoomFile', () => {
   });
 
   it('keeps aliases read-only and structured even when they resolve to scalars or scalar lists', () => {
-    const result = parseRoomFile(
+    const result = parseZoneFile(
       [
         'defaults:',
         '  owner: &owner Jamie',
@@ -321,12 +321,12 @@ describe('parseRoomFile', () => {
 
   it('reclassifies the same bytes as fields are added, removed, or changed without coercion', () => {
     const source = 'items:\n  - id: meter\n    title: Meter\n    owner: Jamie\n';
-    const withoutOwner = parseRoomFile(source, {
+    const withoutOwner = parseZoneFile(source, {
       mode: 'configured',
       manifest: { version: 2, fields: [] },
     });
-    const withOwner = parseRoomFile(source, configuredSchema);
-    const ownerAsNumber = parseRoomFile(source, {
+    const withOwner = parseZoneFile(source, configuredSchema);
+    const ownerAsNumber = parseZoneFile(source, {
       mode: 'configured',
       manifest: {
         version: 2,

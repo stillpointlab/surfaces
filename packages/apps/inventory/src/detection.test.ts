@@ -10,7 +10,7 @@ const tree = (path: string): TreeNode => ({ path, type: 'tree', sha: `sha-${path
 // ADR-0025: the space is the manifest an instance points at — there is no
 // search for the shallowest manifest any more, so every case anchors a path.
 describe('detectInventoryAt', () => {
-  it('detects the space, rooms folder, and sorted room files', () => {
+  it('detects the space, its rooms folder, and sorted zone files', () => {
     const detection = detectInventoryAt('home/inventory.yaml', [
       blob('home/inventory.yaml'),
       tree('home/rooms'),
@@ -22,7 +22,7 @@ describe('detectInventoryAt', () => {
       spacePath: 'home',
       roomsDir: 'home/rooms',
     });
-    expect(detection.rooms).toEqual([
+    expect(detection.zones).toEqual([
       { path: 'home/rooms/attic.yaml', slug: 'attic' },
       { path: 'home/rooms/kitchen.yaml', slug: 'kitchen' },
     ]);
@@ -34,10 +34,10 @@ describe('detectInventoryAt', () => {
       blob('rooms/office.yaml'),
     ]);
     expect(detection.spacePath).toBe('');
-    expect(detection.rooms).toEqual([{ path: 'rooms/office.yaml', slug: 'office' }]);
+    expect(detection.zones).toEqual([{ path: 'rooms/office.yaml', slug: 'office' }]);
   });
 
-  it('excludes nested files, non-yaml files, and .yml spellings from rooms', () => {
+  it('excludes nested files, non-yaml files, and .yml spellings from zones', () => {
     const detection = detectInventoryAt('inventory.yaml', [
       blob('inventory.yaml'),
       blob('rooms/kitchen.yaml'),
@@ -46,7 +46,7 @@ describe('detectInventoryAt', () => {
       blob('rooms/garage.yml'),
       blob('rooms/.yaml'),
     ]);
-    expect(detection.rooms.map((room) => room.slug)).toEqual(['kitchen']);
+    expect(detection.zones.map((zone) => zone.slug)).toEqual(['kitchen']);
   });
 
   it('ignores rooms folders that belong to other directories', () => {
@@ -54,13 +54,13 @@ describe('detectInventoryAt', () => {
       blob('home/inventory.yaml'),
       blob('other/rooms/kitchen.yaml'),
     ]);
-    expect(detection.rooms).toEqual([]);
+    expect(detection.zones).toEqual([]);
   });
 
   it('enumerates the space even when its manifest is not in the tree (dangling)', () => {
     const detection = detectInventoryAt('home/inventory.yaml', [blob('home/rooms/attic.yaml')]);
     expect(detection.manifestPath).toBe('home/inventory.yaml');
-    expect(detection.rooms).toEqual([{ path: 'home/rooms/attic.yaml', slug: 'attic' }]);
+    expect(detection.zones).toEqual([{ path: 'home/rooms/attic.yaml', slug: 'attic' }]);
   });
 });
 
@@ -72,25 +72,25 @@ describe('detectInventoryAt with app-only paths (spec inventory_add_room)', () =
     );
   });
 
-  it('enumerates a seeded room that is not in the tree yet', () => {
+  it('enumerates a seeded zone that is not in the tree yet', () => {
     const detection = detectInventoryAt(
       'home/inventory.yaml',
       [blob('home/inventory.yaml'), blob('home/rooms/kitchen.yaml')],
       ['home/rooms/attic.yaml']
     );
-    expect(detection.rooms).toEqual([
+    expect(detection.zones).toEqual([
       { path: 'home/rooms/attic.yaml', slug: 'attic' },
       { path: 'home/rooms/kitchen.yaml', slug: 'kitchen' },
     ]);
   });
 
-  it('does not double a room that is now in BOTH the tree and the goods (post-merge)', () => {
+  it('does not double a zone that is now in BOTH the tree and the goods (post-merge)', () => {
     const detection = detectInventoryAt(
       'inventory.yaml',
       [blob('inventory.yaml'), blob('rooms/attic.yaml')],
       ['rooms/attic.yaml']
     );
-    expect(detection.rooms).toEqual([{ path: 'rooms/attic.yaml', slug: 'attic' }]);
+    expect(detection.zones).toEqual([{ path: 'rooms/attic.yaml', slug: 'attic' }]);
   });
 
   it('detects a space made ONLY of app-only paths (nothing upstream yet)', () => {
@@ -100,15 +100,15 @@ describe('detectInventoryAt with app-only paths (spec inventory_add_room)', () =
       ['inventory.yaml', 'rooms/attic.yaml']
     );
     expect(detection.manifestPath).toBe('inventory.yaml');
-    expect(detection.rooms).toEqual([{ path: 'rooms/attic.yaml', slug: 'attic' }]);
+    expect(detection.zones).toEqual([{ path: 'rooms/attic.yaml', slug: 'attic' }]);
   });
 
-  it('applies the same room-shape rules to app-only paths', () => {
+  it('applies the same zone-shape rules to app-only paths', () => {
     const detection = detectInventoryAt(
       'inventory.yaml',
       [blob('inventory.yaml')],
       ['rooms/attic.yaml', 'rooms/closet/box.yaml', 'rooms/notes.md', 'other/rooms/shed.yaml']
     );
-    expect(detection.rooms.map((room) => room.slug)).toEqual(['attic']);
+    expect(detection.zones.map((zone) => zone.slug)).toEqual(['attic']);
   });
 });

@@ -241,7 +241,7 @@ describe('parseInventoryManifest', () => {
     expect(result.errors.join(' ')).toContain(message);
   });
 
-  it('enforces the configured field cap before room parsing', () => {
+  it('enforces the configured field cap before zone parsing', () => {
     const fields = Array.from(
       { length: 101 },
       (_, index) => `  - id: field-${index}\n    label: Field ${index}\n    type: text`

@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseRoomFile } from './room.js';
+import { parseZoneFile } from './zone.js';
 import {
   appendItem,
   deleteItem,
   disambiguateItemId,
   patchItem,
-  scanRoomShape,
+  scanZoneShape,
   slugifyItemId,
-} from './roomWriter.js';
+} from './zoneWriter.js';
 
 const KITCHEN = [
   'label: Kitchen',
@@ -22,9 +22,9 @@ const KITCHEN = [
   '',
 ].join('\n');
 
-describe('scanRoomShape', () => {
+describe('scanZoneShape', () => {
   it('classifies a plain block-style file writable with entry spans and ids', () => {
-    const scan = scanRoomShape(KITCHEN);
+    const scan = scanZoneShape(KITCHEN);
     expect(scan.writable).toBe(true);
     if (!scan.writable) return;
     expect(scan.entryIndent).toBe('  ');
@@ -32,7 +32,7 @@ describe('scanRoomShape', () => {
   });
 
   it('handles quoted ids, comments, and nested list continuations', () => {
-    const scan = scanRoomShape(
+    const scan = scanZoneShape(
       [
         'items:',
         '  # the good stuff',
@@ -52,12 +52,12 @@ describe('scanRoomShape', () => {
   });
 
   it('treats a missing items: key as writable (fresh block at EOF)', () => {
-    const scan = scanRoomShape('label: Attic\n');
+    const scan = scanZoneShape('label: Attic\n');
     expect(scan).toMatchObject({ writable: true, itemsLine: null, insertAfter: null });
   });
 
   it('treats an empty items: key as writable with insertion at the key line', () => {
-    const scan = scanRoomShape('items:\n');
+    const scan = scanZoneShape('items:\n');
     expect(scan.writable).toBe(true);
     if (!scan.writable) return;
     expect(scan.entries).toEqual([]);
@@ -71,7 +71,7 @@ describe('scanRoomShape', () => {
     ['second document', 'items:\n  - id: a\n    title: A\n---\nitems: []\n', /documents/],
     ['duplicate items key', 'items:\nitems:\n', /duplicate/],
   ])('marks %s read-only for the whole FILE with a reason', (_name, content, reason) => {
-    const scan = scanRoomShape(content);
+    const scan = scanZoneShape(content);
     expect(scan.writable).toBe(false);
     if (scan.writable) return;
     expect(scan.reason).toMatch(reason);
@@ -85,14 +85,14 @@ describe('scanRoomShape', () => {
     ['flow-map value', 'items:\n  - id: a\n    receipt: { store: IKEA }\n', /flow maps/],
     ['dash-line alias value', 'items:\n  - title: *name\n    id: a\n', /anchors|aliases/],
   ])('marks %s read-only for that ITEM only (file stays writable)', (_name, content, reason) => {
-    const scan = scanRoomShape(content);
+    const scan = scanZoneShape(content);
     expect(scan.writable).toBe(true);
     if (!scan.writable) return;
     expect(scan.entries[0]?.readOnlyReason).toMatch(reason);
   });
 
   it('allows flow lists as leaf values (the writer emits those itself)', () => {
-    const scan = scanRoomShape('items:\n  - id: a\n    title: A\n    tags: [x, y]\n');
+    const scan = scanZoneShape('items:\n  - id: a\n    title: A\n    tags: [x, y]\n');
     expect(scan.writable).toBe(true);
     if (!scan.writable) return;
     expect(scan.entries[0].readOnlyReason).toBeUndefined();
@@ -248,7 +248,7 @@ describe('appendItem', () => {
     const result = appendItem(KITCHEN, { id: 'kettle', title: 'Kettle', value: 40 });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    const parsed = parseRoomFile(result.content);
+    const parsed = parseZoneFile(result.content);
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
     expect(parsed.items.map((i) => i.id)).toEqual(['espresso-machine', 'mugs', 'kettle']);
@@ -273,7 +273,7 @@ describe('appendItem', () => {
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    const rescan = scanRoomShape(result.content);
+    const rescan = scanZoneShape(result.content);
     expect(rescan.writable).toBe(true);
     if (!rescan.writable) return;
     expect(rescan.entries.map((e) => e.id)).toEqual(['a']);
@@ -392,7 +392,7 @@ describe('patchItem', () => {
     const result = patchItem(KITCHEN, 'mugs', { value: 9, serial: 'M-1' });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    const parsed = parseRoomFile(result.content);
+    const parsed = parseZoneFile(result.content);
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
     const mugs = parsed.items.find((i) => i.id === 'mugs');
@@ -442,7 +442,7 @@ describe('deleteItem', () => {
     if (!result.ok) return;
     expect(result.content).toBe('label: Attic\nitems:\n');
     // Still writable and appendable afterwards.
-    const rescan = scanRoomShape(result.content);
+    const rescan = scanZoneShape(result.content);
     expect(rescan.writable).toBe(true);
   });
 

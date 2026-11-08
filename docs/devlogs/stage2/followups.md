@@ -74,3 +74,8 @@ during this stage's setup, each entry struck with where it went.
   preview and diff; xmdl's editor and preview; sheet's editor; image's preview), mostly static
   scaffolding around an engine. A pass over them, onto `html` and `render` with the rule widened to
   `packages/formats`, is its own step.
+- 2026-11-08 (zone-vocabulary): two messages from the core still say room to users: a zone file
+  that is not a mapping ("room file must be a YAML mapping") and a duplicate id's reason ("in this
+  room"). The rename left them alone because it changes no behaviour, and each is commented. Saying
+  zone is a wording change that the inventory walks would need to check, so it is its own step. The
+  `rooms/` folder rename is still the seed-sized question the spec records.

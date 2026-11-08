@@ -5,7 +5,11 @@ import type { TreeNode } from './types.js';
 /** Filename that marks a repo Inventory-View-ready (ADR-0022). */
 export const INVENTORY_MANIFEST_FILENAME = 'inventory.yaml';
 
-/** Rooms folder name beside the manifest — convention, not configuration. */
+/**
+ * The folder a manifest's zones live in, beside it — convention, not
+ * configuration. It keeps the storage name `rooms` (ADR-0022's file format, in
+ * repositories that already exist); the app calls the groups zones.
+ */
 export const INVENTORY_ROOMS_DIR = 'rooms';
 
 function dirname(path: string): string {
@@ -17,9 +21,9 @@ function joinPath(parent: string, child: string): string {
   return parent === '' ? child : `${parent}/${child}`;
 }
 
-/** One detected room file. */
-export interface InventoryRoomFile {
-  /** Repo-relative path of the room's YAML file. */
+/** One detected zone file. */
+export interface InventoryZoneFile {
+  /** Repo-relative path of the zone's YAML file. */
   path: string;
   /** Filename without extension — the URL segment and default label. */
   slug: string;
@@ -30,17 +34,17 @@ export interface InventoryDetection {
   manifestPath: string;
   /** The manifest's directory ('' at repo root) — the space's identity. */
   spacePath: string;
-  /** Repo-relative rooms folder path (may not exist yet). */
+  /** Repo-relative path of the `rooms/` folder (may not exist yet): the storage name. */
   roomsDir: string;
-  /** Room files directly under the rooms folder, sorted by slug. */
-  rooms: InventoryRoomFile[];
+  /** Zone files directly under the `rooms/` folder, sorted by slug. */
+  zones: InventoryZoneFile[];
 }
 
 /**
  * The paths detection sees: the synced tree's blobs UNIONED with the paths of
  * app-only goods (files created in the app that have no upstream blob yet —
- * `appOnlyEligiblePaths` in `git/gitMetadata.ts`). A room seeded by "Add
- * room" therefore takes part in manifest candidacy and room enumeration
+ * `appOnlyEligiblePaths` in `git/gitMetadata.ts`). A zone seeded by "Add
+ * zone" therefore takes part in manifest candidacy and zone enumeration
  * exactly as a tree blob does, from the moment it is created until its first
  * PR merges and the refreshed tree carries it (deduped, so the merge does not
  * double it). Callers that render or check in pass the union; the
@@ -59,7 +63,7 @@ function unionBlobPaths(nodes: TreeNode[], appOnlyPaths: string[]): string[] {
 /**
  * The space anchored at ONE manifest path (ADR-0025: detection is a predicate,
  * not a search): the space is the manifest a view instance points at — never
- * a search for the shallowest one, which is the rule this ADR retired. Rooms
+ * a search for the shallowest one, which is the rule this ADR retired. Zones
  * are the convention: `rooms/*.yaml` directly beside the given manifest.
  */
 export function detectInventoryAt(
@@ -70,7 +74,7 @@ export function detectInventoryAt(
   const spacePath = dirname(manifestPath);
   const roomsDir = joinPath(spacePath, INVENTORY_ROOMS_DIR);
 
-  const rooms: InventoryRoomFile[] = unionBlobPaths(nodes, appOnlyPaths)
+  const zones: InventoryZoneFile[] = unionBlobPaths(nodes, appOnlyPaths)
     .filter(
       (path) =>
         path.startsWith(`${roomsDir}/`) &&
@@ -81,8 +85,8 @@ export function detectInventoryAt(
       path,
       slug: path.slice(roomsDir.length + 1, -'.yaml'.length),
     }))
-    .filter((room) => room.slug !== '')
+    .filter((zone) => zone.slug !== '')
     .sort((a, b) => a.slug.localeCompare(b.slug));
 
-  return { manifestPath, spacePath, roomsDir, rooms };
+  return { manifestPath, spacePath, roomsDir, zones };
 }

@@ -32,7 +32,7 @@ import type {
   HarnessFormat,
 } from '../../../../tooling/harness/types';
 import type { InventoryLinks, InventoryOverview, InventoryZone } from '../src/element/index.js';
-import type { SharedInventoryRoomState, SharedInventorySpace } from '../src/types.js';
+import type { SharedInventoryZoneState, SharedInventorySpace } from '../src/types.js';
 
 const OVERVIEW = 'spl-inventory-overview';
 const ZONE = 'spl-inventory-zone';
@@ -83,7 +83,7 @@ const overviewFixture = (state: () => SharedInventorySpace | null): HarnessFixtu
   },
 });
 
-const zoneFixture = (state: () => SharedInventoryRoomState): HarnessFixture => ({
+const zoneFixture = (state: () => SharedInventoryZoneState): HarnessFixture => ({
   content: '',
   apply: (elements) => {
     const { overview, zone } = prepare(elements);

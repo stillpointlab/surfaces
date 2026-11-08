@@ -4,7 +4,7 @@
  * ADR-0038): the ops the elements ask for, by path; the links the page builds;
  * and the requests the elements raise for what the page owns.
  */
-import type { SharedInventoryRoomState, SharedInventorySpace } from '../types.js';
+import type { SharedInventoryZoneState, SharedInventorySpace } from '../types.js';
 
 /** An item as quick add sends it: the endpoint's body, unchanged. */
 export type InventoryItemInput = Record<string, unknown>;
@@ -22,15 +22,15 @@ export type InventoryOps = {
   'add-zone': { op: { title: string }; reply: { space: SharedInventorySpace } };
   'add-item': {
     op: { path: string; item: InventoryItemInput };
-    reply: { state: SharedInventoryRoomState };
+    reply: { state: SharedInventoryZoneState };
   };
   'update-item': {
     op: { path: string; id: string; changes: InventoryItemChanges };
-    reply: { state: SharedInventoryRoomState };
+    reply: { state: SharedInventoryZoneState };
   };
   'delete-item': {
     op: { path: string; id: string };
-    reply: { state: SharedInventoryRoomState };
+    reply: { state: SharedInventoryZoneState };
   };
   /**
    * Link a file that is not linked yet so it can open in the editor, and answer

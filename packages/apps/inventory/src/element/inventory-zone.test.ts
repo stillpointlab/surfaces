@@ -14,13 +14,13 @@ import { INVENTORY_BASE, linkedEditors, mountInventory } from './inventory.testi
 
 import type { InventoryZone } from './inventory-zone.js';
 import type { Answer } from './inventory.testing.js';
-import type { SharedInventoryRoomState } from '../types.js';
+import type { SharedInventoryZoneState } from '../types.js';
 
 /** The discriminants the zone switches on, kept intact in hostile states. */
 const HOSTILE_EXCEPT = ['mode', 'type', 'state', 'kind', 'id', 'fieldId', 'field', 'multiplyBy'];
 
-const mountZone = (state: SharedInventoryRoomState, answer?: Answer, links?: null) =>
-  mountInventory<InventoryZone, SharedInventoryRoomState>(
+const mountZone = (state: SharedInventoryZoneState, answer?: Answer, links?: null) =>
+  mountInventory<InventoryZone, SharedInventoryZoneState>(
     'spl-inventory-zone',
     state,
     answer,
@@ -119,7 +119,7 @@ describe('<spl-inventory-zone> rendering a legacy zone', () => {
     const { el } = mountZone(LEGACY_ZONE);
 
     expect(el.querySelector('a.inventory-download')?.getAttribute('href')).toBe(
-      `${INVENTORY_BASE}/export/${encodeURIComponent(LEGACY_ZONE.room.path)}.csv`
+      `${INVENTORY_BASE}/export/${encodeURIComponent(LEGACY_ZONE.zone.path)}.csv`
     );
   });
 
@@ -133,7 +133,7 @@ describe('<spl-inventory-zone> rendering a legacy zone', () => {
   it('asks the page to check in from its check-in bar', () => {
     const mounted = mountZone({
       ...LEGACY_ZONE,
-      dirty: [{ goodId: 123, path: LEGACY_ZONE.room.path, kind: 'room' }],
+      dirty: [{ goodId: 123, path: LEGACY_ZONE.zone.path, kind: 'zone' }],
     });
 
     mounted.el.querySelector<HTMLButtonElement>('#inventory-checkin')!.click();
@@ -202,7 +202,7 @@ describe('<spl-inventory-zone> quick add and the item dialog', () => {
 
   it('asks to delete an item only on the second press, then renders the answer', async () => {
     const after = structuredClone(LEGACY_ZONE);
-    after.room.items = after.room.items.slice(1);
+    after.zone.items = after.zone.items.slice(1);
     const mounted = mountZone(LEGACY_ZONE, () => ok({ state: after }));
     rowsOf(mounted.el)[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
     const del = footerButton(mounted.el, 'delete-inventory-item');
@@ -214,7 +214,7 @@ describe('<spl-inventory-zone> quick add and the item dialog', () => {
 
     await vi.waitFor(() => expect(rowsOf(mounted.el)).toHaveLength(1));
     expect(mounted.ops).toEqual([
-      { type: 'delete-item', path: LEGACY_ZONE.room.path, id: ATTRIBUTE_PAYLOADS.itemId },
+      { type: 'delete-item', path: LEGACY_ZONE.zone.path, id: ATTRIBUTE_PAYLOADS.itemId },
     ]);
     expect(dialog(mounted.el).isOpen).toBe(false);
     expect(mounted.notifications).toContainEqual({
@@ -254,10 +254,10 @@ describe('<spl-inventory-zone> quick add and the item dialog', () => {
 });
 
 describe('<spl-inventory-zone> opening a file in the editor', () => {
-  const readOnly: SharedInventoryRoomState = {
+  const readOnly: SharedInventoryZoneState = {
     ...LEGACY_ZONE,
-    room: {
-      ...LEGACY_ZONE.room,
+    zone: {
+      ...LEGACY_ZONE.zone,
       writable: false,
       readOnlyReason: 'Flow-style items cannot be patched safely.',
     },
@@ -280,14 +280,14 @@ describe('<spl-inventory-zone> opening a file in the editor', () => {
 
     await vi.waitFor(() => expect(anchorClick).toHaveBeenCalledOnce());
     expect(mounted.ops).toEqual([
-      { type: 'link-editor', path: LEGACY_ZONE.room.path, kind: 'zone' },
+      { type: 'link-editor', path: LEGACY_ZONE.zone.path, kind: 'zone' },
     ]);
     const link = mounted.el.querySelector<HTMLAnchorElement>('a.inventory-editor-link')!;
     expect(link.pathname).toBe('/project/p/digital-goods/dg_zone');
   });
 
   it('renders a plain link when the page already knows the editor', () => {
-    linkedEditors.set(LEGACY_ZONE.room.path, '/project/p/digital-goods/dg_known');
+    linkedEditors.set(LEGACY_ZONE.zone.path, '/project/p/digital-goods/dg_known');
 
     const { el } = mountZone(readOnly);
 
@@ -309,7 +309,7 @@ describe('<spl-inventory-zone> opening a file in the editor', () => {
 
     await vi.waitFor(() => expect(anchorClick).toHaveBeenCalledOnce());
     expect(mounted.ops).toEqual([
-      { type: 'link-editor', path: LEGACY_ZONE.room.path, kind: 'zone' },
+      { type: 'link-editor', path: LEGACY_ZONE.zone.path, kind: 'zone' },
     ]);
     expect(
       form(mounted.el).querySelector<HTMLAnchorElement>('a.inventory-editor-link')!.pathname
@@ -390,7 +390,7 @@ describe('<spl-inventory-zone> rendering and editing a configured zone', () => {
     await vi.waitFor(() => expect(mounted.ops).toHaveLength(1));
     expect(mounted.ops[0]).toEqual({
       type: 'add-item',
-      path: CONFIGURED_ZONE.room.path,
+      path: CONFIGURED_ZONE.zone.path,
       item: { title: 'Planer', fieldValues: { owner: 'Jamie', amount: 12.345, quantity: -2 } },
     });
     await vi.waitFor(() =>
@@ -436,7 +436,7 @@ describe('<spl-inventory-zone> rendering and editing a configured zone', () => {
     await vi.waitFor(() => expect(mounted.ops).toHaveLength(1));
     expect(mounted.ops[0]).toEqual({
       type: 'update-item',
-      path: CONFIGURED_ZONE.room.path,
+      path: CONFIGURED_ZONE.zone.path,
       id: 'lathe',
       changes: { extraValues: { location: 'shelf', warranty: null, count: 3 } },
     });
@@ -464,7 +464,7 @@ describe('<spl-inventory-zone> rendering and editing a configured zone', () => {
 
   it('requires an explicit action before replacing a structured configured value', async () => {
     const state = structuredClone(CONFIGURED_ZONE);
-    state.room.items[0].resolvedFieldValues!.amount = {
+    state.zone.items[0].resolvedFieldValues!.amount = {
       state: 'structured',
       issue: {
         kind: 'structured',
@@ -473,7 +473,7 @@ describe('<spl-inventory-zone> rendering and editing a configured zone', () => {
         message: 'expected number, found mapping',
       },
     };
-    delete state.room.items[0].fieldValues.amount;
+    delete state.zone.items[0].fieldValues.amount;
     const mounted = mountZone(state, () => ok({ state }));
 
     mounted.el
@@ -495,11 +495,11 @@ describe('<spl-inventory-zone> rendering and editing a configured zone', () => {
   });
 
   it('supports an id/title-only table and count-only summaries without invented defaults', () => {
-    const state: SharedInventoryRoomState = {
+    const state: SharedInventoryZoneState = {
       ...CONFIGURED_ZONE,
       schema: { mode: 'configured', manifest: { version: 2, label: 'Simple', fields: [] } },
-      room: {
-        ...CONFIGURED_ZONE.room,
+      zone: {
+        ...CONFIGURED_ZONE.zone,
         items: [
           {
             id: 'only',
@@ -531,15 +531,15 @@ describe('<spl-inventory-zone> rendering and editing a configured zone', () => {
   });
 
   it('renders invalid-v2 neutral recovery read-only while keeping manifest check-in', () => {
-    const state: SharedInventoryRoomState = {
+    const state: SharedInventoryZoneState = {
       ...CONFIGURED_ZONE,
       schema: {
         mode: 'invalid',
         declaredVersion: 2,
         errors: ['fields.0.type: Invalid option'],
       },
-      room: {
-        ...CONFIGURED_ZONE.room,
+      zone: {
+        ...CONFIGURED_ZONE.zone,
         items: [
           {
             id: 'lathe',
@@ -590,8 +590,8 @@ describe('<spl-inventory-zone> with hostile repository text', () => {
       {
         ...LEGACY_ZONE,
         warnings: ['A warning'],
-        room: {
-          ...LEGACY_ZONE.room,
+        zone: {
+          ...LEGACY_ZONE.zone,
           writable: false,
           readOnlyReason: 'Read only',
           needsAttention: [{ id: 'x', title: 'Needs it', reason: 'Because' }],
@@ -600,7 +600,7 @@ describe('<spl-inventory-zone> with hostile repository text', () => {
       { except: HOSTILE_EXCEPT }
     );
     const broken = hostile(
-      { ...LEGACY_ZONE, room: { ...LEGACY_ZONE.room, parseError: 'Bad YAML' } },
+      { ...LEGACY_ZONE, zone: { ...LEGACY_ZONE.zone, parseError: 'Bad YAML' } },
       { except: HOSTILE_EXCEPT }
     );
 
@@ -609,7 +609,7 @@ describe('<spl-inventory-zone> with hostile repository text', () => {
   });
 });
 
-describeAppElementContract<SharedInventoryRoomState, InventoryZone>('spl-inventory-zone', {
+describeAppElementContract<SharedInventoryZoneState, InventoryZone>('spl-inventory-zone', {
   state: CONFIGURED_ZONE,
   trigger: (el) => {
     const quickAdd = el.querySelector<HTMLFormElement>('#inventory-quick-add')!;

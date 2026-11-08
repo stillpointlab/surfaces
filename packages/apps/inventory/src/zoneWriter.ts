@@ -6,7 +6,7 @@ import { slugifyInventoryName } from './paths.js';
 import type { SharedInventoryScalar } from './types.js';
 
 /**
- * Line-based room-file writer (ADR-0022). Never parse-and-re-emit: the app's
+ * Line-based zone-file writer (ADR-0022). Never parse-and-re-emit: the app's
  * edits must be exactly what a careful human would have typed — minimal
  * diffs, byte-stable outside the touched span, comments and unknown keys
  * untouched. The price is a supported-shape rule: a file the line scan
@@ -22,7 +22,7 @@ import type { SharedInventoryScalar } from './types.js';
  */
 
 /** One `- ` entry's location: segment indices of its first and last line. */
-export interface RoomEntrySpan {
+export interface ZoneEntrySpan {
   /** Segment index (line) of the `- ` line. */
   start: number;
   /** Segment index (line) of the last line belonging to this entry. */
@@ -38,7 +38,7 @@ export interface RoomEntrySpan {
   readOnlyReason?: string;
 }
 
-export type RoomShapeScan =
+export type ZoneShapeScan =
   | {
       writable: true;
       /** Line ending for inserted lines (the file's dominant style). */
@@ -47,7 +47,7 @@ export type RoomShapeScan =
       itemsLine: number | null;
       /** Indent of the `- ` entry lines ('  ' when there are none yet). */
       entryIndent: string;
-      entries: RoomEntrySpan[];
+      entries: ZoneEntrySpan[];
       /**
        * Segment index of the last line inside the sequence (insertion goes
        * after it); the `items:` line itself when the sequence is empty; null
@@ -75,14 +75,14 @@ const VALUE_UNSUPPORTED = /:[ \t]+(?:[&*][^ \t]|!!|\{)/;
 const MERGE_KEY = /^<<[ \t]*:/;
 
 /**
- * Classify a room file for the writer. Read-only is a UI state with a
+ * Classify a zone file for the writer. Read-only is a UI state with a
  * reason, not an error — reading is unaffected.
  */
-export function scanRoomShape(content: string): RoomShapeScan {
+export function scanZoneShape(content: string): ZoneShapeScan {
   if (content.startsWith('\uFEFF')) {
     // Preserve-and-recurse like the frontmatter rewriter would; the caller
     // re-attaches the BOM on write (see appendItem).
-    const inner = scanRoomShape(content.slice(1));
+    const inner = scanZoneShape(content.slice(1));
     return inner;
   }
   const segments = toSegments(content);
@@ -122,7 +122,7 @@ export function scanRoomShape(content: string): RoomShapeScan {
   }
 
   // Walk the sequence region: everything until the next top-level line.
-  const entries: RoomEntrySpan[] = [];
+  const entries: ZoneEntrySpan[] = [];
   let entryIndent: string | null = null;
   let regionEnd = itemsLine; // last line seen that belongs to the sequence
   for (let i = itemsLine + 2; i < segments.length; i += 2) {
@@ -140,7 +140,7 @@ export function scanRoomShape(content: string): RoomShapeScan {
     // any other indent is a shape the writer won't guess at.
     if (isDash && (entryIndent === null || lineIndent === entryIndent)) {
       entryIndent ??= lineIndent;
-      const entry: RoomEntrySpan = { start: i, end: i };
+      const entry: ZoneEntrySpan = { start: i, end: i };
       // Item-level YAML the writer won't patch marks the ITEM read-only,
       // not the file — appending never touches existing entries.
       if (ENTRY_UNSUPPORTED.test(trimmed)) {
@@ -189,7 +189,7 @@ export function scanRoomShape(content: string): RoomShapeScan {
 /** The `id:` scalar of one entry, read textually (quoted spellings included). */
 function scanEntryId(
   segments: string[],
-  entry: RoomEntrySpan,
+  entry: ZoneEntrySpan,
   contentIndent: number
 ): string | undefined {
   const idPattern = /^(?:id|"id"|'id')[ \t]*:[ \t]*(.*)$/;
@@ -267,12 +267,12 @@ export type AppendResult = { ok: true; content: string } | { ok: false; reason: 
  * EOF: trailing keys and comments after the sequence stay untouched below
  * the inserted block. When `items:` is absent entirely the block appends at
  * EOF (safe: there is no sequence to misjudge). Byte-stable outside the
- * inserted span; what this emits `scanRoomShape` can always re-scan.
+ * inserted span; what this emits `scanZoneShape` can always re-scan.
  */
 export function appendItem(content: string, item: NewItemBlock): AppendResult {
   const bom = content.startsWith('\uFEFF') ? '\uFEFF' : '';
   const src = bom === '' ? content : content.slice(1);
-  const scan = scanRoomShape(src);
+  const scan = scanZoneShape(src);
   if (!scan.writable) return { ok: false, reason: scan.reason };
 
   const { eol, entryIndent } = scan;
@@ -361,14 +361,14 @@ interface LocatedItem {
   bom: string;
   eol: string;
   entryIndent: string;
-  entry: RoomEntrySpan;
+  entry: ZoneEntrySpan;
 }
 
 /** Locate one item's span by id in a writable file (shared edit plumbing). */
 function locateItem(content: string, id: string): LocatedItem | ItemEditResult {
   const bom = content.startsWith('\uFEFF') ? '\uFEFF' : '';
   const src = bom === '' ? content : content.slice(1);
-  const scan = scanRoomShape(src);
+  const scan = scanZoneShape(src);
   if (!scan.writable) return { ok: false, reason: scan.reason };
   const entry = scan.entries.find((candidate) => candidate.id === id);
   if (!entry) return { ok: false, notFound: true };
@@ -464,7 +464,7 @@ export function patchItem(
 /**
  * Delete one item's whole span — the `- ` line through the last line
  * belonging to the entry, and nothing else. An emptied sequence leaves
- * `items:` in place (an empty room remains valid and writable).
+ * `items:` in place (an empty zone remains valid and writable).
  */
 export function deleteItem(content: string, id: string): ItemEditResult {
   const located = locateItem(content, id);

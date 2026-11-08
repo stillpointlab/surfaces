@@ -11,7 +11,7 @@ import type { InventoryOps } from '../src/element/index.js';
 import type {
   SharedInventoryItem,
   SharedInventoryResolvedValue,
-  SharedInventoryRoomState,
+  SharedInventoryZoneState,
   SharedInventoryScalar,
   SharedInventorySpace,
 } from '../src/types.js';
@@ -19,7 +19,7 @@ import type { AppOp, Result } from '@stillpointlab/common-format/app';
 
 export interface HarnessHost {
   /** The state the host answers from: set with each fixture. */
-  setState(state: SharedInventorySpace | SharedInventoryRoomState | null): void;
+  setState(state: SharedInventorySpace | SharedInventoryZoneState | null): void;
   /** Answer ops (true) or leave them unclaimed (false). */
   setAnswering(on: boolean): void;
   /** Refuse the next op once, with this code. */
@@ -34,7 +34,7 @@ const resolved = (value: SharedInventoryScalar | undefined): SharedInventoryReso
     ? { state: 'missing' }
     : { state: 'valid', value };
 
-function markDirty<S extends SharedInventorySpace | SharedInventoryRoomState>(
+function markDirty<S extends SharedInventorySpace | SharedInventoryZoneState>(
   state: S,
   path: string,
   newFile = false
@@ -43,7 +43,7 @@ function markDirty<S extends SharedInventorySpace | SharedInventoryRoomState>(
   state.dirty.push({
     goodId: state.dirty.length + 1,
     path,
-    kind: 'room',
+    kind: 'zone',
     ...(newFile ? { newFile: true } : {}),
   });
 }
@@ -76,18 +76,18 @@ function edited(item: SharedInventoryItem, changes: Record<string, unknown>): Sh
 }
 
 export function attachHost(elements: readonly HTMLElement[]): HarnessHost {
-  let state: SharedInventorySpace | SharedInventoryRoomState | null = null;
+  let state: SharedInventorySpace | SharedInventoryZoneState | null = null;
   let stops: (() => void)[] = [];
   let failCode: string | null = null;
 
-  const zoneState = (): SharedInventoryRoomState | null =>
-    state && 'room' in state ? state : null;
+  const zoneState = (): SharedInventoryZoneState | null =>
+    state && 'zone' in state ? state : null;
 
-  const settleZone = (zone: SharedInventoryRoomState, items: SharedInventoryItem[]): Result => {
-    zone.room.items = items;
-    zone.room.totals = aggregateItems(zone.schema, items);
-    markDirty(zone, zone.room.path);
-    return ok({ state: structuredClone(zone) });
+  const settleZone = (view: SharedInventoryZoneState, items: SharedInventoryItem[]): Result => {
+    view.zone.items = items;
+    view.zone.totals = aggregateItems(view.schema, items);
+    markDirty(view, view.zone.path);
+    return ok({ state: structuredClone(view) });
   };
 
   const answer = (op: AppOp<InventoryOps>): Result<object> => {
@@ -98,13 +98,13 @@ export function attachHost(elements: readonly HTMLElement[]): HarnessHost {
     }
     switch (op.type) {
       case 'add-zone': {
-        if (!state || !('rooms' in state)) return fail('NOT_FOUND', 'No overview');
+        if (!state || !('zones' in state)) return fail('NOT_FOUND', 'No overview');
         const slug = slugifyInventoryName(op.title);
         const path = `${state.spacePath ? `${state.spacePath}/` : ''}rooms/${slug}.yaml`;
-        if (state.rooms.some((zone) => zone.path === path)) {
+        if (state.zones.some((zone) => zone.path === path)) {
           return fail('INVENTORY_ROOM_EXISTS', `“${slug}.yaml” already exists here`);
         }
-        state.rooms.push({
+        state.zones.push({
           slug,
           label: op.title,
           path,
@@ -116,20 +116,20 @@ export function attachHost(elements: readonly HTMLElement[]): HarnessHost {
         return ok({ space: structuredClone(state) });
       }
       case 'add-item': {
-        const zone = zoneState();
-        if (!zone) return fail('NOT_FOUND', 'No zone');
+        const view = zoneState();
+        if (!view) return fail('NOT_FOUND', 'No zone');
         const title = String(op.item.title);
         const fieldValues = (op.item.fieldValues ?? {}) as Record<string, SharedInventoryScalar>;
         const item: SharedInventoryItem = {
           ...(op.item as Partial<SharedInventoryItem>),
-          id: `${slugifyInventoryName(title)}-${zone.room.items.length + 1}`,
+          id: `${slugifyInventoryName(title)}-${view.zone.items.length + 1}`,
           title,
           quantity: typeof op.item.quantity === 'number' ? op.item.quantity : 1,
           fieldValues,
-          ...(zone.schema.mode === 'configured'
+          ...(view.schema.mode === 'configured'
             ? {
                 resolvedFieldValues: Object.fromEntries(
-                  zone.schema.manifest.fields.map((field) => [
+                  view.schema.manifest.fields.map((field) => [
                     field.id,
                     resolved(fieldValues[field.id]),
                   ])
@@ -138,27 +138,27 @@ export function attachHost(elements: readonly HTMLElement[]): HarnessHost {
             : {}),
           extraFields: [],
         };
-        return settleZone(zone, [...zone.room.items, item]);
+        return settleZone(view, [...view.zone.items, item]);
       }
       case 'update-item': {
-        const zone = zoneState();
-        const item = zone?.room.items.find((candidate) => candidate.id === op.id);
-        if (!zone || !item) return fail('INVENTORY_ITEM_NOT_FOUND', `No item ${op.id}`);
+        const view = zoneState();
+        const item = view?.zone.items.find((candidate) => candidate.id === op.id);
+        if (!view || !item) return fail('INVENTORY_ITEM_NOT_FOUND', `No item ${op.id}`);
         return settleZone(
-          zone,
-          zone.room.items.map((candidate) =>
+          view,
+          view.zone.items.map((candidate) =>
             candidate === item ? edited(item, op.changes) : candidate
           )
         );
       }
       case 'delete-item': {
-        const zone = zoneState();
-        if (!zone?.room.items.some((candidate) => candidate.id === op.id)) {
+        const view = zoneState();
+        if (!view?.zone.items.some((candidate) => candidate.id === op.id)) {
           return fail('INVENTORY_ITEM_NOT_FOUND', `No item ${op.id}`);
         }
         return settleZone(
-          zone,
-          zone.room.items.filter((candidate) => candidate.id !== op.id)
+          view,
+          view.zone.items.filter((candidate) => candidate.id !== op.id)
         );
       }
       case 'link-editor':

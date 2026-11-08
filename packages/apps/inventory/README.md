@@ -5,13 +5,13 @@ root entry (`.`) exports:
 
 - the file model's types (`SharedInventory*`, and `TreeNode`, `common`'s `FolderNode`) and path rules (`slugifyInventoryName`,
   the field-id and currency patterns);
-- reading: `parseInventoryManifest`, `parseRoomFile`, `detectInventoryAt`;
+- reading: `parseInventoryManifest`, `parseZoneFile`, `detectInventoryAt`;
 - the rules: field validation (`fields.ts`), totals and duplicate-id demotion (`totals.ts`), each
   answering a `Result` from `@stillpointlab/common-format/app` whose refusal (`code`, `message`)
   the host maps to its own errors;
-- byte-preserving rewrites: `appendItem`, `patchItem`, `deleteItem` (`roomWriter.ts`);
-- seeds: `manifestSeedContent`, `roomSeedContent`;
-- CSV: `serializeRoom` and `serializeSpace` (each a `Result<{ content }>`), `exportWarnings`;
+- byte-preserving rewrites: `appendItem`, `patchItem`, `deleteItem` (`zoneWriter.ts`);
+- seeds: `manifestSeedContent`, `zoneSeedContent`;
+- CSV: `serializeZone` and `serializeSpace` (each a `Result<{ content }>`), `exportWarnings`;
 - the lifecycle: `inventoryLifecycle`, the `AppLifecycle` a host mounts an inventory folder with.
 
 Two more entries import nothing: `./paths` exports the path rules alone (`slugifyInventoryName`,
@@ -35,7 +35,7 @@ the core's root.
   `null` for a repository with no inventory.
 - **`<spl-inventory-zone>`**: one zone's items (configured, legacy or neutral columns), a filter,
   quick add, the CSV export, and an item dialog (a `<modal-dialog>` inside the element) for editing
-  fields and Other data or deleting the item. `setState(zone)` takes a `SharedInventoryRoomState`.
+  fields and Other data or deleting the item. `setState(zone)` takes a `SharedInventoryZoneState`.
 
 Both settle (`whenReady()`, the `ready` attribute) once they have rendered a state, render in light
 DOM, and build their markup with `html` from `common-format/html`, so repository text is escaped
@@ -81,8 +81,10 @@ Version 1 remains supported with its original behavior and is never converted au
 ### Files and Zones
 
 For a manifest at `house/inventory.yaml`, Zone files are the non-recursive `house/rooms/*.yaml`
-files. The application calls these groups **Zones**; the `rooms` directory and `/rooms` routes
-remain the storage and compatibility convention. A Zone file has an optional label and a block-style
+files. The application calls these groups **Zones**, and so do the core's names and state fields
+(`SharedInventoryZone`, `space.zones`, `parseZoneFile`). The `rooms` directory, a host's `/rooms`
+routes, and v1's `room` CSV column and `rooms/<slug>.csv` ZIP entries keep the old name: they are
+the storage and compatibility convention. A Zone file has an optional label and a block-style
 item list:
 
 ```yaml
@@ -226,7 +228,7 @@ application does not guess legacy fields or a default currency in this state.
 
 A valid `version: 1` manifest keeps the original home-inventory interpretation, mutation behavior,
 column order, and export layout. V1 tolerances and its conventional fields remain isolated to that
-version. Authoring v2 by hand is a schema decision, not an in-place migration service; no room file
+version. Authoring v2 by hand is a schema decision, not an in-place migration service; no zone file
 is automatically rewritten or converted.
 
 Context Manager's ADR-0022 (the inventory view) records the architecture decision, and its v2

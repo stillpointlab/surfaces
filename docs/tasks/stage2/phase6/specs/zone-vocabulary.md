@@ -1,5 +1,5 @@
 ---
-column: todo
+column: in-progress
 created: 2026-11-08T00:43:23-07:00
 tags: [apps, code]
 ---
@@ -54,14 +54,19 @@ is: the `rooms/` folder, the routes and API paths, and the export files. Users s
 3. **Context Manager's adoption** (one PR there, after this merges): move the pin; switch every
    import and every state field to the new names, in the service, the routes that serialise states,
    the page, the shared re-exports and the tests; rename the inventory service's own room
-   identifiers where they are the state's; the API, its schemas and its responses on the wire keep
-   their paths. Run the inventory walks.
+   identifiers where they are the state's. The API keeps its paths, request bodies and error codes;
+   the states its responses carry say zone, as the page's do (Jamie, 2026-11-08). Run the inventory
+   walks.
 
 ## Clarifications
 
-- **Why the state fields change but the API paths do not.** The state is SSR'd JSON that only the
-  page reads, and the server and the page change in one PR. The API paths are URLs that walks, tools
-  and MCP clients may hold.
+- **Why the state fields change but the API paths do not.** The state is SSR'd JSON that the page
+  reads, and the server and the page change in one PR. The API's mutation responses carry the same
+  states, and the page is their only reader (the walks and the MCP tools read neither), so they
+  change with it. The API paths are URLs that walks, tools and MCP clients may hold.
+- **Messages users see keep their wording.** Two strings in the core say room to users: a zone
+  file's parse error ("room file must be a YAML mapping") and a duplicate id's reason ("in this
+  room"). Changing them is a behaviour change, out of scope here; each is commented.
 - **Why last.** Renaming during the move would mix a rename into the diff that should read as a
   move. As its own step it is a mechanical rename on both sides.
 
@@ -76,8 +81,8 @@ is: the `rooms/` folder, the routes and API paths, and the export files. Users s
 - [ ] No exported name, state field or file name in the core says room, apart from those in
       requirement 2, each commented.
 - [ ] The core's tests pass with their names changed and nothing else.
-- [ ] The Context Manager adoption is green, the wire API is unchanged, and the inventory walks were
-      run.
+- [ ] The Context Manager adoption is green, the API's paths, request bodies and error codes are
+      unchanged, and the inventory walks were run.
 - [ ] `npm run check` green here.
 
 ## Implementation plan
