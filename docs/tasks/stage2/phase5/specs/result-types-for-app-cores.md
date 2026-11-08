@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 49
+completed: 2026-11-07
 created: 2026-11-07T14:51:39-07:00
 tags: [apps, host-contract, code]
 ---
@@ -74,13 +76,28 @@ deleted, and Context Manager maps each result's `code` to the same response it s
 
 ## Acceptance / completion checklist
 
-- [ ] No core source file contains `throw new` for a rule, and neither error class exists.
-- [ ] Each converted function's failures keep their former codes and messages, and tests cover them.
-- [ ] Context Manager's route tests for the affected endpoints pass unchanged.
-- [ ] `npm run check` green here.
+- [x] No core source file contains `throw new` for a rule, and neither error class exists.
+- [x] Each converted function's failures keep their former codes and messages, and tests cover them.
+- [x] Context Manager's route tests for the affected endpoints pass unchanged.
+- [x] `npm run check` green here.
 
 ## Implementation plan
 
 1. Surfaces PR, after [app-contract](app-contract.md) or stacked on it: both cores converted, with
    their tests.
 2. Context Manager: the call sites, in the [app-contract](app-contract.md) adoption PR.
+
+## Implementation notes
+
+- Landed in #49. Five tasks functions, not the spec table's four: `appendManifestListEntry` also
+  threw, through its section helper. The internal helpers (`sectionItems`, `findItem`) answer
+  failures too, so no core file throws for a rule.
+- The 8 assertions that expected a throw (7 in tasks, 1 in inventory) now check the failure's code
+  and message, and nothing else changed. The field validators had no tests, so they got 8, one per
+  code.
+- Context Manager's call sites changed in context-manager#1043. Each checks `ok` and raises the
+  error it raised before: 409 `MANIFEST_UNPATCHABLE` for the settings edit (a chain of patches that
+  stops at the first refusal), `ValidationError` for the tag registry, 400 for the field rules and
+  409 for the CSV and ZIP exports. The route tests passed unchanged, and three assertions that the
+  core's error class did not leak went with the classes.
+- The older result shapes this leaves alone are a WAL entry (2026-11-07).

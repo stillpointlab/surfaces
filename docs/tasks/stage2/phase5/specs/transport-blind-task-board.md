@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 'stillpointlab/context-manager#1045'
+completed: 2026-11-07
 created: 2026-11-07T14:51:39-07:00
 tags: [apps, host-contract, code]
 ---
@@ -104,13 +106,13 @@ element makes today. The element no longer knows the API, the project, the conne
 
 ## Acceptance / completion checklist
 
-- [ ] The element imports nothing from Context Manager's `utils/` apart from `pointerDrag` (which moves to `common` in the next spec), and reads no `goodId`, project or connection id.
-- [ ] Each op in the table is answered by the page with today's endpoint, and tracked cards link on
+- [x] The element imports nothing from Context Manager's `utils/` apart from `pointerDrag` (which moves to `common` in the next spec), and reads no `goodId`, project or connection id.
+- [x] Each op in the table is answered by the page with today's endpoint, and tracked cards link on
       demand.
-- [ ] The element's behaviours keep their tests, rewritten to answer ops. The page's op answers are
+- [x] The element's behaviours keep their tests, rewritten to answer ops. The page's op answers are
       tested, and the element passes `describeAppElementContract`.
-- [ ] ADR-0037 is written.
-- [ ] The tasks walks were run, or the PR says which were not and why. A walk selector the markup
+- [x] ADR-0037 is written.
+- [x] The tasks walks were run, or the PR says which were not and why. A walk selector the markup
       change breaks is fixed in the walk, and says so.
 
 ## Implementation plan
@@ -118,3 +120,21 @@ element makes today. The element no longer knows the API, the project, the conne
 1. Context Manager PR, after the [app-contract](app-contract.md) adoption: the element, the page, the
    EJS shell, the tests and the ADR, walked.
 2. Phase notes here: this card done, with the PR.
+
+## Implementation notes
+
+- Landed as context-manager#1045 (merged 2026-11-07, with #1047), with ADR-0037. The board's ten
+  fetches became the eight ops in the table, answered by `boardOps.ts`. The page keeps a path → good
+  index from every state and answer, and links a tracked file through the import endpoint before an
+  op that needs its good. A new `open-card` request replaces the board's own navigation.
+- The server's JSON and the ids moved out of the element into a sibling script in the EJS shell,
+  and the page sets the state. The 60 board tests answer ops instead of mocking `apiFetch`;
+  `boardOps.test.ts` covers each op's endpoint, linking on demand, a failed link and API errors.
+- One timing change: a dropped tracked card shows in its new place at once while the page links
+  it, where before nothing showed until the link returned. Navigating away inside that round trip
+  loses the move. Context Manager's WAL records it, with holding navigation as the fix if it bites.
+- The walks needed two kinds of change, both in the walks. Walks 14, 15, 16 and 22 read
+  `data-good-public-id`, which the board no longer has, so they open the editor as a person does
+  (an `openCardEditor` helper). Walks 1D and 3.1 acted while a move was in flight, so they wait for
+  it to settle. The last run on this branch stopped at step 03's 1B, the cold-server flake recorded
+  at the tasks adoption; #1047, which contains this branch, passed every step.

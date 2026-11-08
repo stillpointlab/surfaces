@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 48
+completed: 2026-11-07
 created: 2026-11-07T14:51:39-07:00
 tags: [apps, host-contract, common, code]
 ---
@@ -149,13 +151,13 @@ false, errors }`, `reason`, `notFound`). This spec does not change them; the res
 
 ## Acceptance / completion checklist
 
-- [ ] `common-format/app` exports `Result`, `ok`, `fail`, `FolderNode`, `AppLifecycle`, `AppElement`,
+- [x] `common-format/app` exports `Result`, `ok`, `fail`, `FolderNode`, `AppLifecycle`, `AppElement`,
       `APP_OP_EVENT`, `AppOpDetail`, `requestOp`, `answerOps`, `createReadyGate` and the log functions, and its built file imports nothing else from `common`'s runtime.
-- [ ] Both cores export their lifecycles, and `describeAppCore` checks them over the existing
+- [x] Both cores export their lifecycles, and `describeAppCore` checks them over the existing
       fixtures.
-- [ ] `describeAppElementContract` passes against a sample element in `common`'s own tests.
-- [ ] The Context Manager adoption is green, and walked.
-- [ ] `npm run check` green here.
+- [x] `describeAppElementContract` passes against a sample element in `common`'s own tests.
+- [x] The Context Manager adoption is green, and walked.
+- [x] `npm run check` green here.
 
 ## Implementation plan
 
@@ -163,3 +165,21 @@ false, errors }`, `reason`, `notFound`). This spec does not change them; the res
    README describes both halves.
 2. Context Manager PR: the adoption above, combined with the result-types adoption if both land
    together.
+
+## Implementation notes
+
+- Landed in #48, merged with #49 and #50 as `4939d67`. `common-format/app` is 492 bytes of ESM plus
+  the chunks it shares with the other entries.
+- An element test cannot see the promise `requestOp` returns. `describeAppElementContract` checks
+  what the element does (it raises one well-formed event, and keeps working when an op goes
+  unanswered or is refused), and `app.test.ts` covers `OP_UNHANDLED` and `OP_FAILED` directly.
+- The sample element in `common`'s tests first had a `title` field, which set the attribute from
+  its constructor. It is `heading` now. Overloads on `ok()` tripped `no-redeclare`, so it has one
+  signature with a default type parameter.
+- The cores' `TreeNode` is an alias of `FolderNode`, imported as a type, so their `./types` entries
+  still load nothing at runtime.
+- The Context Manager adoption is context-manager#1043, merged 2026-11-07 together with the
+  result types and pinned on `4939d67`. `RepoViewAdapter` is now `AppLifecycle` plus the host's
+  policy, and the two adapters spread the cores' lifecycles. The inventory walks passed (38/38),
+  and the tasks walks passed 01-29 apart from 28 and step 09's closing assertion (the drift
+  recorded in #1039).

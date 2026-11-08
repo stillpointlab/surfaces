@@ -196,3 +196,70 @@ merges, 40 files, +1,693/−31. One Context Manager PR carried the host side.
   the same levers replayed against the scratch repository. The one failure was walk-script drift.
 - After the tag: the phase 4 close-out, which opens phase 5 (the contract and the task board)
   empty.
+
+---
+
+## Phase 5: The contract and the task board (`stage2-phase5-complete`)
+
+Range: `stage2-phase4-complete..stage2-phase5-complete` (`2f51b4c..4939d67`), 2026-11-07: three
+merges, 58 files, +5,767/−280. Three stacked PRs (#48–#50) landed as one merge. Three Context
+Manager PRs carried the host side.
+
+### Shipped
+
+- Phase 4 closed and phase 5 opened empty
+  ([#46](https://github.com/stillpointlab/surfaces/pull/46)), then got four specs: the contract,
+  result types for the cores, the transport-blind board and the element's move
+  ([#47](https://github.com/stillpointlab/surfaces/pull/47)).
+- `@stillpointlab/common-format/app`, a light entry: `Result` with `ok()` and `fail()`, the
+  lifecycle half (`AppLifecycle` over `FolderNode`) and the element half (`AppElement`, ops as a
+  claimable `app-op` event through `requestOp` and `answerOps`). `describeAppElementContract` joins
+  `./testing`. Both cores export their lifecycles, which `describeAppCore` checks
+  ([#48](https://github.com/stillpointlab/surfaces/pull/48);
+  [spec](../../tasks/stage2/phase5/specs/app-contract.md)).
+- The cores answer results instead of throwing, with every former code and message, and
+  `TasksRuleError` and `InventoryRuleError` are gone
+  ([#49](https://github.com/stillpointlab/surfaces/pull/49);
+  [spec](../../tasks/stage2/phase5/specs/result-types-for-app-cores.md)). Context Manager adopted
+  both in context-manager#1043.
+- In Context Manager, `<spl-task-board>` stopped fetching: eight ops by path, answered by the page,
+  which links tracked cards on demand. ADR-0037 records the host side (context-manager#1045;
+  [spec](../../tasks/stage2/phase5/specs/transport-blind-task-board.md)).
+- `@stillpointlab/tasks-app/element`: the board moved here with its 60 tests, its styles on tokens
+  (five Context Manager names and four new ones), and `common-format/pointer-drag`. The harness
+  mounts apps, with fixtures that include this repository's own `docs/tasks/` and an in-memory host
+  ([#50](https://github.com/stillpointlab/surfaces/pull/50);
+  [spec](../../tasks/stage2/phase5/specs/task-board-element.md)). Context Manager adopted it in
+  context-manager#1047 and deleted its copies.
+
+### Decisions
+
+- Only the contract halves that exist are named. `project` and `apply` from the August design wait
+  for the pass that extracts the services' rules.
+- An op is an event the host claims and answers through `respond`; an unclaimed op resolves to
+  `OP_UNHANDLED` at once, so an element never waits on a missing host.
+- Ops name cards by path. The ids stay in Context Manager, whose page keeps the path → good index,
+  and the API did not change.
+- Only the throwers were converted. The cores' older result shapes stay, with a WAL entry.
+- Page-level UI stays in Context Manager this phase: the nav strip and its dialogs, settings,
+  refresh, check-in, and the new-card, title and tags dialogs.
+- The harness uses hand-built states plus `docs/tasks/` projected from the files, not Context
+  Manager's overlay.
+
+### Testing & review
+
+- 1,347 → 1,451 tests: the entry and its suite, the lifecycle checks over every fixture, 8 field
+  validator tests, and the board's 60 tests with the contract suite. The 8 assertions that expected
+  a throw now check the failure.
+- The element was checked in the harness with Chromium on every fixture in light and dark,
+  including both failure controls and a tracked card's link. A bare import builds to 44 KB with no
+  zod and none of `common`'s runtime. In Context Manager, the task board page grew by 946 bytes raw
+  (281 gzipped).
+- Every Context Manager PR was walked. The inventory walks passed 38/38 on each. The tasks walks
+  passed 01-29 apart from 28 on #1043 (with 09's known drift) and on #1047, where step 09 passed in
+  full for the first time. #1045's last run stopped at step 03's 1B, the cold-server flake from the
+  tasks adoption; #1047 contains it and passed.
+- The walks needed changes, not the board: four read a host id the board no longer has, and two
+  acted while a move was in flight, which the new timing makes visible (a dropped tracked card
+  shows at once while the page links it).
+- After the tag: the phase 5 close-out, which opens phase 6 (the inventory elements) empty.

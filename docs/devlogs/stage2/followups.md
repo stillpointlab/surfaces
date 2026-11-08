@@ -50,3 +50,15 @@ during this stage's setup, each entry struck with where it went.
   parse (`{ ok: false, errors }`), the room writer (`reason`, `notFound`), and the lifecycles'
   `validateAndScope` (`errors`, kept on purpose since a manifest can be wrong in several ways at
   once). Converging them changes their callers in Context Manager, so it is its own step.
+- 2026-11-07 (app contract): `project` and `apply` from the August `AppModule` design are not
+  named in `common-format/app`. The rules they would hold are still in Context Manager's services,
+  so naming them waits for the pass that extracts those rules, after phase 6.
+- 2026-11-07 (transport-blind task board): the board's page-level UI stays in Context Manager:
+  the nav strip and its close-phase dialogs, board settings, refresh, check-in, and the new-card,
+  title and tags dialogs. The board raises requests for them by path. Whether any of it moves into
+  the element, and so whether `tasks-nav.shared.ts` needs a DOM-free entry, is for the same later
+  pass. Context Manager's WAL has the timing change that came with the ops.
+- 2026-11-08 (task board element adoption): the tasks walks' step 03 1B still races a cold server:
+  a linked card's menu move is refused while the drag before it is in flight. The walk could wait
+  for the first move to settle, as 1D and 3.1 now do. Not done, to keep the merge moving; it is a
+  Context Manager walk change.
