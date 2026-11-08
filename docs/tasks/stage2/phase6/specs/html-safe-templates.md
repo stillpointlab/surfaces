@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 54
+completed: 2026-11-08
 created: 2026-11-08T00:43:23-07:00
 tags: [common, components, security, code]
 ---
@@ -110,14 +112,14 @@ a state with hostile strings and checks that none of them turns into markup.
 
 ## Acceptance / completion checklist
 
-- [ ] `@stillpointlab/common-format/html` exports `html`, `render`, `escapeHtml` and `isSafeHtml`,
+- [x] `@stillpointlab/common-format/html` exports `html`, `render`, `escapeHtml` and `isSafeHtml`,
       builds as its own entry, and pulls in none of `common`'s runtime.
-- [ ] `<spl-icon>` writes no markup from its attributes, and its hostile tests pass.
-- [ ] The task board uses `escapeHtml` from `common`, and its 60 tests pass unchanged.
-- [ ] `hostile` and `expectNoHostileMarkup` are in `common-format/testing`, with tests.
-- [ ] The lint guard is on for components and app elements, with the board's one exception.
-- [ ] `npm run check` green.
-- [ ] Stage 2 WAL: the `<spl-icon>` attributes entry closed, with board-on-`html` and formats-pass
+- [x] `<spl-icon>` writes no markup from its attributes, and its hostile tests pass.
+- [x] The task board uses `escapeHtml` from `common`, and its 60 tests pass unchanged.
+- [x] `hostile` and `expectNoHostileMarkup` are in `common-format/testing`, with tests.
+- [x] The lint guard is on for components and app elements, with the board's one exception.
+- [x] `npm run check` green.
+- [x] Stage 2 WAL: the `<spl-icon>` attributes entry closed, with board-on-`html` and formats-pass
       entries added.
 
 ## Implementation plan
@@ -126,3 +128,21 @@ a state with hostile strings and checks that none of them turns into markup.
    the lint rule, the READMEs, and the WAL.
 2. Context Manager picks up the `<spl-icon>` fix with the pin moved for
    [inventory-elements-in-cm](inventory-elements-in-cm.md), which needs `common-format/html` too.
+
+## Implementation notes
+
+- Landed in #54, merged 2026-11-08 as `61bb9a1`. The `./html` entry builds to 1.4 KB with no
+  imports. `html` has no escape hatch: only `html` can build a `SafeHtml`, through a key private to
+  the module, and `render` throws on anything else.
+- `<modal-dialog>` moved onto `html` too, though the spec didn't name it: the lint guard covers
+  components, and it wrote its shadow markup with `innerHTML`. Its stylesheet is a persistent
+  `<style>` set as text and put back first on each render.
+- `<spl-icon>` builds its shadow DOM once and sets its attributes through the DOM. Five of its 11 new
+  hostile tests failed on the old element.
+- Beyond the spec: Prettier formatted the inside of `html` templates as HTML (whitespace between
+  tags, quote style, `<br />`), which changes what renders. `.prettierrc` sets
+  `embeddedLanguageFormatting: "off"` for `*.ts` here and in Context Manager.
+- A test that read the built entry with `node:fs` was dropped, since `common` has no Node types;
+  `html-entry.test.ts` checks what the entry exports.
+- Tests went from 1,451 to 1,496. Context Manager picked up `<spl-icon>` and `<modal-dialog>` with the
+  pin moved in context-manager#1056.

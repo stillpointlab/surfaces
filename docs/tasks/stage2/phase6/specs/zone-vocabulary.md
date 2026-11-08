@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 56
+completed: 2026-11-08
 created: 2026-11-08T00:43:23-07:00
 tags: [apps, code]
 ---
@@ -78,15 +80,29 @@ is: the `rooms/` folder, the routes and API paths, and the export files. Users s
 
 ## Acceptance / completion checklist
 
-- [ ] No exported name, state field or file name in the core says room, apart from those in
+- [x] No exported name, state field or file name in the core says room, apart from those in
       requirement 2, each commented.
-- [ ] The core's tests pass with their names changed and nothing else.
-- [ ] The Context Manager adoption is green, the API's paths, request bodies and error codes are
+- [x] The core's tests pass with their names changed and nothing else.
+- [x] The Context Manager adoption is green, the API's paths, request bodies and error codes are
       unchanged, and the inventory walks were run.
-- [ ] `npm run check` green here.
+- [x] `npm run check` green here.
 
 ## Implementation plan
 
 1. Surfaces PR: the rename in the core, its tests and README, and the elements' imports.
 2. Context Manager PR: the adoption above, walked.
 3. Phase close: the four cards done, WAL entries, changelog section.
+
+## Implementation notes
+
+- Landed in #56, merged 2026-11-08 as `11f2b15`. Detection's file list became `zones` with the rest;
+  its `roomsDir` and `INVENTORY_ROOMS_DIR` keep the storage name, commented.
+- **Change to the spec:** Context Manager's API returns the states the page renders, so renaming the
+  state fields changes those responses. Jamie chose to rename them there too. The spec now says the
+  API keeps its paths, request bodies and error codes, rather than "the wire".
+- Messages users see keep their room wording: two in the core and six in Context Manager's service.
+  The spec ruled out behaviour changes, so each is commented and both WALs list them.
+- The core's tests changed their names and nothing else; the count stayed at 1,546.
+- The Context Manager adoption is context-manager#1059, merged 2026-11-08 and pinned on `11f2b15`.
+  The page's own variant and SSR variable say zone too. The inventory walks passed 38/38 with the
+  renamed fields.

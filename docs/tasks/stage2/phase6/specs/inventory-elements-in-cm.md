@@ -1,5 +1,7 @@
 ---
-column: todo
+column: done
+pr: 'stillpointlab/context-manager#1056'
+completed: 2026-11-08
 created: 2026-11-08T00:43:23-07:00
 tags: [apps, host-contract, code]
 ---
@@ -148,14 +150,14 @@ the place a zone. Users see no change.
 
 ## Acceptance / completion checklist
 
-- [ ] The elements import nothing from Context Manager's `utils/` or `shared/utils/sanitize`, read no
+- [x] The elements import nothing from Context Manager's `utils/` or `shared/utils/sanitize`, read no
       host id, and write markup only through `render`.
-- [ ] Each op in the table is answered by the page with today's endpoint, and each request is
+- [x] Each op in the table is answered by the page with today's endpoint, and each request is
       handled as today.
-- [ ] The page's behaviours keep their tests, rewritten to answer ops; the hostile fixtures pass; the
+- [x] The page's behaviours keep their tests, rewritten to answer ops; the hostile fixtures pass; the
       page's answers are tested; both elements pass `describeAppElementContract`.
-- [ ] ADR-0038 is written.
-- [ ] The inventory walks were run, with the selector renames in the walks and called out in the PR.
+- [x] ADR-0038 is written.
+- [x] The inventory walks were run, with the selector renames in the walks and called out in the PR.
 
 ## Implementation plan
 
@@ -163,3 +165,24 @@ the place a zone. Users see no change.
    (bringing the `<spl-icon>` fix) and makes the elements, the page, the EJS shell, the tests, the
    walks' selectors and the ADR, walked.
 2. Phase notes here: this card done, with the PR.
+
+## Implementation notes
+
+- Landed as context-manager#1056, merged 2026-11-08, with ADR-0038. `<spl-inventory-overview>` and
+  `<spl-inventory-zone>` render in light DOM through `render(this, html…)`, and share a base class
+  for the style element, the ready gate, links, notifications and delegated events. The item dialog
+  is one `<modal-dialog>` the zone element creates and re-appends.
+- **Departure:** "Open in editor" is an op, `link-editor {path, kind}` → `{href}`, not the spec's
+  `open-editor` request. The button needs to know whether linking worked, so it can restore itself
+  on failure or follow the URL the page answers, as it did before. The page keeps a map of linked
+  editors and answers at once for a file already linked.
+- The zone element's delete method is `deleteItem`: `remove()` would shadow `Element.remove`.
+- A fix on the way: the legacy money total was put into the markup unescaped when a manifest's
+  currency isn't a three-letter code. It is escaped now, with a test.
+- The page's 21 tests became 50 element tests (each zone fixture also rendered through `hostile()`),
+  9 tests of the page's op answers and 8 page tests. The page's script and stylesheet went from 60.0
+  to 65.9 kB raw (15.1 to 16.9 kB gzipped), the elements' stylesheet now shipping inside the
+  script.
+- About 34 walk selectors were renamed to say zone (`inventory-room-*` → `inventory-zone-*`). The
+  inventory walks passed 38/38. A first run never reached the branch: a stale phase 5 server held
+  port 3004.

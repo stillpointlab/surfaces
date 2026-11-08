@@ -263,3 +263,83 @@ Manager PRs carried the host side.
   acted while a move was in flight, which the new timing makes visible (a dropped tracked card
   shows at once while the page links it).
 - After the tag: the phase 5 close-out, which opens phase 6 (the inventory elements) empty.
+
+## Phase 6: The inventory elements (`stage2-phase6-complete`)
+
+Range: `stage2-phase5-complete..stage2-phase6-complete` (`4939d67..11f2b15`), 2026-11-07 – 2026-11-08:
+five merges, 80 files, +5,771/−340. Three Context Manager PRs carried the host side. This phase
+covered the brief's last outcome. There was no new brief, only four specs.
+
+### Shipped
+
+- Phase 5 closed and phase 6 opened empty
+  ([#52](https://github.com/stillpointlab/surfaces/pull/52)). Phase 6 then got four specs and the
+  decisions behind them ([#53](https://github.com/stillpointlab/surfaces/pull/53)).
+- `@stillpointlab/common-format/html`, a light entry of 1.4 KB:
+  - `html`, a tagged template that escapes every value it did not build itself, with no way to mark
+    a string as safe;
+  - `render`, which sets markup only from `html`, and `escapeHtml`.
+  - `<spl-icon>` builds its DOM once and sets attributes through the DOM, and `<modal-dialog>`
+    renders through `html`. The task board uses `common`'s `escapeHtml`.
+  - `hostile()` and `expectNoHostileMarkup()` joined `./testing`, and a lint rule bans direct markup
+    writes in components and app elements
+    ([#54](https://github.com/stillpointlab/surfaces/pull/54);
+    [spec](../../tasks/stage2/phase6/specs/html-safe-templates.md)).
+- In Context Manager, the inventory page became `<spl-inventory-overview>` and
+  `<spl-inventory-zone>`, in light DOM on `html`:
+  - five ops by zone path, answered by the page with the same endpoints;
+  - three requests for what the page keeps: notifications, check-in and reload;
+  - links supplied by the page.
+  - ADR-0038 records it (context-manager#1056;
+    [spec](../../tasks/stage2/phase6/specs/inventory-elements-in-cm.md)).
+- `@stillpointlab/inventory-app/element` and `./types`: the elements moved here with their 50 tests,
+  their styles on tokens (two new: `alert-bg`, `alert-text`) and a harness entry. The harness has
+  17 fixtures, including an example inventory parsed by the core and a hostile fixture, and an
+  in-memory host ([#55](https://github.com/stillpointlab/surfaces/pull/55);
+  [spec](../../tasks/stage2/phase6/specs/inventory-elements.md)). Context Manager adopted them in
+  context-manager#1058 and deleted its copies.
+- The core says zone: its exported names, its state fields (`space.zones`, `state.zone`, the dirty
+  kind `'zone'`) and its files (`zone.ts`, `zoneWriter.ts`, `zoneSeed.ts`)
+  ([#56](https://github.com/stillpointlab/surfaces/pull/56);
+  [spec](../../tasks/stage2/phase6/specs/zone-vocabulary.md)). Context Manager adopted the names in
+  context-manager#1059.
+
+### Decisions
+
+- Zone is the term, renamed wherever no one outside the code holds the name. These keep room: the
+  `rooms/` folder (a migration across existing repositories, left as a seed-sized question), the
+  routes and API paths, v1's export names, and the error codes.
+- Context Manager's API responses carry the renamed state fields, since the page is their only
+  reader. Messages users see kept their room wording, because the rename changed no behaviour.
+- `html` has no escape hatch. A stylesheet goes in as text instead.
+- "Open in editor" became an op (`link-editor`) rather than a request, so the button learns whether
+  linking worked. It is the one departure from the specs.
+- Light DOM, like the board. Check-in and the editor link stay with Context Manager's page.
+- The elements keep the host's `button`, `form-input` and `sr-only` classes rather than shipping
+  their own.
+- Prettier no longer formats embedded languages in `.ts` files in either repository: it reformatted
+  `html` templates and changed what they render.
+
+### Testing & review
+
+- 1,451 → 1,546 tests:
+  - `html` and its entry, `hostile` and `expectNoHostileMarkup`;
+  - `<spl-icon>`'s hostile tests, five of which failed on the old element;
+  - `<modal-dialog>`'s render tests;
+  - the elements' 50 tests, each zone fixture also rendered with hostile strings, with
+    `describeAppElementContract` on both.
+- The zone rename changed test names and nothing else.
+- The elements were checked in the harness with Chromium on every fixture in light and dark,
+  including both failure controls, the editor link and the hostile fixture.
+- A bare import of the elements builds to 67 KB minified (16 KB gzipped), with no zod and none of
+  the core's root.
+- Context Manager's inventory page:
+  - grew from 60.0 to 65.9 kB raw when it became elements, with their stylesheet now inside the
+    script;
+  - grew by 0.7 kB more when the elements came from the submodule.
+- Every Context Manager PR was walked after `e2e:reset`, and the inventory walks passed 38/38 on
+  each:
+  - #1056 renamed about 34 walk selectors to say zone;
+  - #1058 and #1059 needed no walk changes.
+  - #1056's first run hit a stale phase 5 server on port 3004.
+- After the tag: the phase 6 close-out, which opens phase 7 empty, ahead of the stage close.
