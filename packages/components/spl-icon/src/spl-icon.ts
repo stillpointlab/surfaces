@@ -12,43 +12,45 @@ export class SplIcon extends HTMLElement {
     return ['icon-name', 'aria-label', 'data-size', 'data-padding'];
   }
 
+  private readonly button: HTMLDivElement;
+  private readonly glyph: HTMLSpanElement;
+
+  // The shadow DOM is built once, and attribute changes only set attributes on it:
+  // a label can carry text a person typed (a provider or model name), so it never
+  // goes through markup.
   constructor() {
     super();
-    this.attachShadow({ mode: 'open' });
+    const shadow = this.attachShadow({ mode: 'open' });
+    const style = document.createElement('style');
+    style.textContent = iconStyles;
+    this.button = document.createElement('div');
+    this.button.className = 'spl-icon';
+    this.button.setAttribute('role', 'button');
+    this.button.setAttribute('tabindex', '0');
+    this.glyph = document.createElement('span');
+    this.glyph.className = 'icon';
+    this.button.append(this.glyph);
+    shadow.append(style, this.button);
+    this.update();
   }
 
   connectedCallback(): void {
-    this.render();
+    this.update();
   }
 
-  attributeChangedCallback(name: string, oldValue: string, newValue: string): void {
-    if (oldValue !== newValue) {
-      this.render();
-    }
+  attributeChangedCallback(_name: string, oldValue: string | null, newValue: string | null): void {
+    if (oldValue !== newValue) this.update();
   }
 
-  private render(): void {
-    const iconName = this.getAttribute('icon-name') || '';
-    const ariaLabel = this.getAttribute('aria-label') || '';
+  private update(): void {
     const size = this.getAttribute('data-size') || '';
     const padding = this.getAttribute('data-padding') || '';
-
-    this.shadowRoot!.innerHTML = `
-      <style>
-        ${iconStyles}
-      </style>
-
-      <div
-        class="spl-icon"
-        ${size ? `data-size="${size}"` : ''}
-        ${padding ? `data-padding="${padding}"` : ''}
-        aria-label="${ariaLabel}"
-        role="button"
-        tabindex="0"
-      >
-        <span class="icon" data-icon="${iconName}"></span>
-      </div>
-    `;
+    if (size) this.button.setAttribute('data-size', size);
+    else this.button.removeAttribute('data-size');
+    if (padding) this.button.setAttribute('data-padding', padding);
+    else this.button.removeAttribute('data-padding');
+    this.button.setAttribute('aria-label', this.getAttribute('aria-label') || '');
+    this.glyph.setAttribute('data-icon', this.getAttribute('icon-name') || '');
   }
 }
 

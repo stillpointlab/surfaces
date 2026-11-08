@@ -42,6 +42,9 @@ during this stage's setup, each entry struck with where it went.
   callers pass fixed names and labels, apart from Context Manager's `conversation-indicator`, whose
   label comes from admin-configured provider and model names. `<modal-dialog>`'s title got this fix;
   the icon did not.
+  - Closed 2026-11-08 (html-safe-templates): `<spl-icon>` builds its shadow DOM once and sets its
+    attributes as attributes; hostile values for all four are tested. `<modal-dialog>` now renders
+    through `html` too, with its stylesheet set as text.
 - 2026-11-07 (shared components): `md-icon` holds 18 of `<spl-icon>`'s names as inline SVG. md could
   use the component now that it lives here, but the two differ (`md-icon` is not a button, and its
   sizes differ).
@@ -62,3 +65,12 @@ during this stage's setup, each entry struck with where it went.
   a linked card's menu move is refused while the drag before it is in flight. The walk could wait
   for the first move to settle, as 1D and 3.1 now do. Not done, to keep the merge moving; it is a
   Context Manager walk change.
+- 2026-11-08 (html-safe-templates): the task board still builds its markup as string templates,
+  escaping each value with `escapeHtml` from `common-format/html` (it no longer has its own). Moving
+  it onto `html` and `render` is mechanical but touches most of its 1,400 lines. Its file-level
+  exception to the `innerHTML` lint rule is the reminder.
+- 2026-11-08 (html-safe-templates): the formats are outside the `innerHTML` lint rule. Eleven of
+  their element modules set markup directly (md's editor, toolbar, icon and preview; code's editor,
+  preview and diff; xmdl's editor and preview; sheet's editor; image's preview), mostly static
+  scaffolding around an engine. A pass over them, onto `html` and `render` with the rule widened to
+  `packages/formats`, is its own step.

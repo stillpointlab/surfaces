@@ -29,6 +29,11 @@
       "import": "./dist/pointer-drag.js",
       "require": "./dist/pointer-drag.cjs"
     },
+    "./html": {
+      "types": "./dist/html.d.ts",
+      "import": "./dist/html.js",
+      "require": "./dist/html.cjs"
+    },
     "./yaml": {
       "types": "./dist/yaml.d.ts",
       "import": "./dist/yaml.js",

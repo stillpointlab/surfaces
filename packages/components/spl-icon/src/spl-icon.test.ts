@@ -1,3 +1,4 @@
+import { expectNoHostileMarkup, HOSTILE_PAYLOAD } from '@stillpointlab/common-format/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import './spl-icon';
@@ -47,5 +48,61 @@ describe('<spl-icon>', () => {
     icon.setAttribute('icon-name', 'trash');
 
     expect(icon.shadowRoot!.querySelector('.icon')!.getAttribute('data-icon')).toBe('trash');
+  });
+});
+
+describe('<spl-icon> with hostile attributes', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+    delete (globalThis as { __hostile?: unknown }).__hostile;
+  });
+
+  const attributes = ['icon-name', 'aria-label', 'data-size', 'data-padding'] as const;
+
+  for (const name of attributes) {
+    it(`writes no markup from ${name}, and the value reads back intact`, () => {
+      const value = `x${HOSTILE_PAYLOAD}`;
+      const icon = mount({ 'icon-name': 'gear', [name]: value });
+
+      expectNoHostileMarkup(icon.shadowRoot!);
+      const target =
+        name === 'icon-name'
+          ? icon.shadowRoot!.querySelector('.icon')!.getAttribute('data-icon')
+          : icon.shadowRoot!.querySelector('.spl-icon')!.getAttribute(name);
+      expect(target).toBe(value);
+    });
+  }
+
+  it('keeps its nodes when an attribute changes', () => {
+    const icon = mount({ 'icon-name': 'gear', 'aria-label': 'Settings' });
+    const button = icon.shadowRoot!.querySelector('.spl-icon');
+
+    icon.setAttribute('aria-label', `Settings${HOSTILE_PAYLOAD}`);
+    icon.setAttribute('icon-name', 'trash');
+
+    expect(icon.shadowRoot!.querySelector('.spl-icon')).toBe(button);
+    expect(icon.shadowRoot!.children).toHaveLength(2);
+    expectNoHostileMarkup(icon.shadowRoot!);
+  });
+
+  it('drops size and padding when they are removed', () => {
+    const icon = mount({ 'icon-name': 'gear', 'data-size': 'small', 'data-padding': 'none' });
+
+    icon.removeAttribute('data-size');
+    icon.removeAttribute('data-padding');
+
+    const button = icon.shadowRoot!.querySelector('.spl-icon')!;
+    expect(button.hasAttribute('data-size')).toBe(false);
+    expect(button.hasAttribute('data-padding')).toBe(false);
+  });
+
+  it('still renders the button as before: role, tab stop, label and stylesheet', () => {
+    const icon = mount({ 'icon-name': 'gear' });
+
+    const button = icon.shadowRoot!.querySelector('.spl-icon')!;
+    expect(button.getAttribute('role')).toBe('button');
+    expect(button.getAttribute('tabindex')).toBe('0');
+    expect(button.getAttribute('aria-label')).toBe('');
+    expect(icon.shadowRoot!.querySelector('style')!.textContent).toContain('.icon');
   });
 });

@@ -27,11 +27,34 @@ What every surface shares. No elements of its own.
     ids.
   - It also re-exports `createReadyGate` and the logging functions, so an app element needs nothing
     else from `common`.
+- **Markup that escapes by default** (`@stillpointlab/common-format/html`), a light entry every
+  component and app element builds its markup with:
+  - `html`, a tagged template returning a `SafeHtml`. A `SafeHtml` value goes in as it is, an array
+    item by item, `null`/`undefined`/`false` add nothing, and anything else is converted with
+    `String()` and escaped (`&`, `<`, `>`, `"`, `'`). Only `html` makes a `SafeHtml`: there is no way
+    to mark a string as safe, so markup that must not be escaped is written in the literal parts.
+  - `render(target, content)`, the one place markup is set; it refuses anything but a `SafeHtml`.
+    ESLint holds components and app elements to it.
+  - `escapeHtml(text)` for a string outside a template (works in Node), and `isSafeHtml(value)`.
+  - Escaping does not make data safe as an attribute name or an unquoted attribute value, inside
+    `<script>` or `<style>` (set a stylesheet as `textContent`), or as a URL: it does not stop
+    `javascript:`, so an `href` comes from code that builds the URL, never from a data string.
 - **Conformance suites** (`@stillpointlab/common-format/testing`). `describePreviewContract`,
   `describeEditorContract`, `describeImagePreviewContract`, `describeDiffContract`, and for the raw
   view `describeRawViewContract` and `describeKeymapModeContract`, and for app elements
   `describeAppElementContract`: vitest suites a format or app runs for each element it ships, asserting what the contracts promise and nothing more.
   They import `vitest`, so they live in their own entry and never reach a runtime bundle.
+  - **Hostile states.** `hostile(state, { except })` returns a deep copy with `HOSTILE_PAYLOAD`
+    appended to every string (object keys and the `except`ed property names, such as a `mode` the
+    element switches on, stay as they are). The payload breaks out of a quoted attribute and opens
+    an `<img data-hostile>`. `expectNoHostileMarkup(root)` throws if any of it became markup in
+    `root` or the open shadow roots inside it:
+
+    ```ts
+    element.setState(hostile(fixture, { except: ['mode', 'type'] }));
+    await element.whenReady();
+    expectNoHostileMarkup(element);
+    ```
 - **App core suite** (`@stillpointlab/common-format/testing/app`). `describeAppCore`: a vitest
   suite an app core runs over fixture folders. Every fixture mounts, and each rewrite re-parses and
   keeps comment lines, CRLF line breaks and the final newline (or its absence), the parts of a
