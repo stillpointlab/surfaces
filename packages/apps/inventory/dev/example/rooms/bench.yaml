@@ -1,0 +1,13 @@
+label: Work bench
+items:
+  - id: vise
+    title: Bench vise
+    owner: Robin
+    replacement-value: 64.5
+    warranty: true
+    receipt:
+      store: Hardware Co
+      date: 2026-03-02
+  - id: chisels
+    title: Chisel set
+    replacement-value: 45

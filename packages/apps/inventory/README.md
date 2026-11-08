@@ -14,12 +14,63 @@ root entry (`.`) exports:
 - CSV: `serializeRoom` and `serializeSpace` (each a `Result<{ content }>`), `exportWarnings`;
 - the lifecycle: `inventoryLifecycle`, the `AppLifecycle` a host mounts an inventory folder with.
 
-A second entry, `./paths`, exports the path rules alone (`slugifyInventoryName`, the folder and
-currency defaults, the field-id and currency patterns). A client that needs only those imports it
-there: `.` builds the manifest's zod schemas at module scope, which a bundler cannot drop.
+Two more entries import nothing: `./paths` exports the path rules alone (`slugifyInventoryName`,
+the folder and currency defaults, the field-id and currency patterns), and `./types` the shared
+types. A client that needs only those imports them there: `.` builds the manifest's zod schemas at
+module scope, which a bundler cannot drop. `./element` is the app's two elements (below).
 
-It was moved as-is from Context Manager (source commit `373a20ae`), where the host side stays:
-drafts, check-in, routes and the inventory page. The rest of this README is the file format.
+The core was moved as-is from Context Manager (source commit `373a20ae`), and the elements followed
+(source commit `b73e3c59`). The host side stays there: drafts, check-in, routes and the page that
+mounts the elements. After the Element section, this README is the file format.
+
+## Element
+
+`@stillpointlab/inventory-app/element` registers two elements. It imports `./types`, `./paths`,
+`@stillpointlab/sheet-format/presentation` (number and currency formatting), `common-format/app`,
+`common-format/elements`, `common-format/html` and `@stillpointlab/modal-dialog-component`, never
+the core's root.
+
+- **`<spl-inventory-overview>`**: an inventory's zones, with counts, totals, a badge on zones with
+  local changes, "Add zone" and the ZIP export. `setState(space)` takes a `SharedInventorySpace`, or
+  `null` for a repository with no inventory.
+- **`<spl-inventory-zone>`**: one zone's items (configured, legacy or neutral columns), a filter,
+  quick add, the CSV export, and an item dialog (a `<modal-dialog>` inside the element) for editing
+  fields and Other data or deleting the item. `setState(zone)` takes a `SharedInventoryRoomState`.
+
+Both settle (`whenReady()`, the `ready` attribute) once they have rendered a state, render in light
+DOM, and build their markup with `html` from `common-format/html`, so repository text is escaped
+wherever it lands.
+
+- **Links in.** `links: InventoryLinks` builds the URLs the elements render as anchors:
+  `zone(path)`, `exportAll()`, `exportZone(path)`, and `editor(path)`, which returns `undefined` for
+  a file not yet linked. Without links, zone names render as text and exports as disabled.
+- **Ops out**, each asked through `requestOp` and naming a zone by its file's path:
+
+  | Op            | Fields                  | Reply                         |
+  | ------------- | ----------------------- | ----------------------------- |
+  | `add-zone`    | `title`                 | `{ space }`, the new overview |
+  | `add-item`    | `path`, `item`          | `{ state }`, the new zone     |
+  | `update-item` | `path`, `id`, `changes` | `{ state }`                   |
+  | `delete-item` | `path`, `id`            | `{ state }`                   |
+  | `link-editor` | `path`, `kind`          | `{ href }`, then followed     |
+
+  `item` and `changes` are the bodies a host's endpoints take: the title, `fieldValues`,
+  `extraValues` and, for version 1, its own fields. A failure's `message` shows inline (adding) or as
+  a notification (saving); `INVENTORY_ITEM_NOT_FOUND` warns and asks for a reload.
+
+- **Requests**, plain bubbling events a host answers with its own UI: `notification
+{ message, type }`, `checkin-request` (the check-in bar's button) and `reload-request`.
+- **Host-styled classes.** The elements render the host's `button`, `button-primary`,
+  `button-secondary`, `form-input` and `sr-only` classes and bring no rules for them, so a page's
+  buttons and inputs look like its own.
+- **Styles** live in each element's light DOM and read the `--spl-*` tokens, including
+  `--spl-alert-color`, `--spl-alert-bg` and `--spl-alert-text` for warnings and the check-in bar.
+
+In the harness (`npm run dev`, "inventory"), fixtures cover every case the elements render (the
+overview configured, legacy, just created, disabled, invalid and empty; zones configured, legacy,
+read-only, broken, empty, neutral and with hostile strings) and an example inventory in
+`dev/example/` parsed by the core, as files alone. An in-memory host answers the ops, and the
+controls switch it off or make it refuse the next op.
 
 ## Inventory repository format
 

@@ -1,0 +1,534 @@
+@use 'common/src/styles/tokens' as *;
+
+// The inventory overview and zone, injected into each element's light DOM. The
+// host styles the button and input classes they render (`button`,
+// `button-primary`, `button-secondary`, `form-input`); see the README's Element
+// section.
+
+spl-inventory-overview,
+spl-inventory-zone {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+:is(spl-inventory-overview, spl-inventory-zone) {
+  .inventory-notice {
+    border: 1px solid $border-color;
+    border-radius: $border-radius-md;
+    padding: $spacing-md;
+
+    p {
+      margin: $spacing-xs 0;
+      color: $text-secondary;
+    }
+
+    ul {
+      margin: $spacing-xs 0 0;
+      padding-left: 1.25rem;
+      color: $text-secondary;
+    }
+
+    .inventory-notice-heading {
+      font-weight: 600;
+    }
+
+    &--error {
+      border-color: $error-color;
+      background: $error-bg-subtle;
+
+      .inventory-notice-heading {
+        color: $error-color;
+      }
+    }
+
+    &--warning {
+      border-color: $alert-color;
+      background: $alert-bg;
+    }
+
+    &--info {
+      background: $background-secondary;
+    }
+
+    .button {
+      margin-top: $spacing-sm;
+    }
+  }
+
+  .inventory-zone-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  .inventory-zone-link {
+    display: flex;
+    align-items: baseline;
+    gap: $spacing-md;
+    padding: $spacing-sm $spacing-md;
+    border: 1px solid $border-color;
+    border-radius: $border-radius-md;
+    text-decoration: none;
+    color: $text-color;
+    background: $background-secondary;
+
+    &:hover {
+      background: $background-hover;
+    }
+  }
+
+  .inventory-zone-row.is-broken .inventory-zone-link {
+    border-color: $error-color;
+  }
+
+  .inventory-zone-name {
+    font-weight: 600;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .inventory-zone-count,
+  .inventory-zone-subtotal {
+    color: $text-secondary;
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+
+  .inventory-zone-problem {
+    color: $alert-text;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+
+  .inventory-zone-dirty {
+    margin-left: $spacing-xs;
+    padding: 0 $spacing-xs;
+    border-radius: $border-radius-sm;
+    background: $background-muted;
+    color: $text-secondary;
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    vertical-align: middle;
+  }
+
+  .inventory-empty-zones {
+    color: $text-secondary;
+  }
+
+  // Seeds a new rooms/<slug>.yaml, a zone (spec inventory_add_room) — the overview's
+  // sibling of the zone view's item quick-add.
+  .inventory-add-zone {
+    border: 1px dashed $border-color;
+    border-radius: $border-radius-md;
+    padding: $spacing-md;
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: $spacing-md;
+
+    .inventory-add-field {
+      display: flex;
+      flex-direction: column;
+      gap: $spacing-xs;
+
+      span {
+        font-size: 0.8rem;
+        color: $text-secondary;
+      }
+    }
+
+    .inventory-add-title {
+      flex: 1;
+      min-width: 14rem;
+    }
+
+    .inventory-add-error {
+      flex-basis: 100%;
+      margin: 0;
+      color: $error-color;
+      font-size: 0.9rem;
+    }
+  }
+
+  .inventory-filter {
+    max-width: 24rem;
+  }
+
+  .inventory-table-wrap {
+    overflow-x: auto;
+    border: 1px solid $border-color;
+    border-radius: $border-radius-md;
+  }
+
+  .inventory-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+
+    th,
+    td {
+      text-align: left;
+      padding: $spacing-xs $spacing-md;
+      border-bottom: 1px solid $border-light;
+      vertical-align: top;
+    }
+
+    thead th {
+      background: $background-secondary;
+      position: sticky;
+      top: 0;
+      white-space: nowrap;
+    }
+
+    .inventory-group-row th {
+      background: $background-muted;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+
+    tbody tr:not(.inventory-group-row):hover {
+      background: $background-hover;
+    }
+
+    tbody tr[data-item-id] {
+      cursor: pointer;
+    }
+  }
+
+  .inventory-cell-actions {
+    width: 2rem;
+    text-align: center;
+  }
+
+  .inventory-row-menu {
+    border: none;
+    background: transparent;
+    color: $text-secondary;
+    cursor: pointer;
+    padding: 0 $spacing-xs;
+    border-radius: $border-radius-sm;
+    font-size: 1rem;
+    line-height: 1;
+
+    &:hover {
+      background: $hover-gray;
+      color: $text-color;
+    }
+  }
+
+  .inventory-other-button {
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+    border: 1px solid $border-light;
+    border-radius: 999px;
+    background: $background-secondary;
+    color: $text-secondary;
+    cursor: pointer;
+
+    &:hover {
+      background: $background-hover;
+      color: $text-color;
+    }
+  }
+
+  .inventory-cell-title {
+    font-weight: 500;
+  }
+
+  .inventory-cell-value,
+  .inventory-cell-quantity {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .inventory-tags {
+    display: inline-flex;
+    gap: $spacing-xs;
+    margin-left: $spacing-xs;
+  }
+
+  .inventory-tag {
+    background: $background-muted;
+    border-radius: $border-radius-sm;
+    padding: 0 $spacing-xs;
+    font-size: 0.75rem;
+    color: $text-secondary;
+  }
+
+  .inventory-item-warning {
+    margin-left: $spacing-xs;
+    color: $alert-color;
+    cursor: help;
+  }
+
+  .inventory-invalid-value,
+  .inventory-field-issue {
+    color: $alert-text;
+    font-size: 0.82rem;
+  }
+
+  .inventory-opaque {
+    color: $text-muted;
+    font-style: italic;
+  }
+
+  .inventory-unvalued {
+    color: $text-muted;
+  }
+
+  .inventory-totals {
+    display: flex;
+    gap: $spacing-lg;
+    align-items: baseline;
+    color: $text-secondary;
+
+    .inventory-totals-value {
+      font-weight: 600;
+      color: $text-color;
+    }
+
+    .inventory-download {
+      margin-left: auto;
+      font-size: 0.9rem;
+
+      &.is-disabled {
+        color: $text-muted;
+        cursor: not-allowed;
+      }
+    }
+  }
+
+  .inventory-checkin-bar {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    padding: $spacing-sm $spacing-md;
+    border: 1px solid $alert-color;
+    border-radius: $border-radius-md;
+    background: $alert-bg;
+    color: $alert-text;
+
+    .button {
+      margin-left: auto;
+    }
+  }
+
+  .inventory-quick-add {
+    border: 1px dashed $border-color;
+    border-radius: $border-radius-md;
+    padding: $spacing-md;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+
+    .inventory-add-main {
+      display: flex;
+      align-items: flex-end;
+      gap: $spacing-md;
+      flex-wrap: wrap;
+    }
+
+    .inventory-add-title {
+      flex: 1;
+      min-width: 14rem;
+    }
+
+    .inventory-add-more summary {
+      cursor: pointer;
+      color: $text-secondary;
+      font-size: 0.9rem;
+    }
+
+    .inventory-add-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+      gap: $spacing-sm $spacing-md;
+      margin-top: $spacing-sm;
+    }
+
+    .inventory-add-description {
+      grid-column: 1 / -1;
+    }
+
+    .inventory-add-field {
+      display: flex;
+      flex-direction: column;
+      gap: $spacing-xs;
+
+      span {
+        font-size: 0.8rem;
+        color: $text-secondary;
+      }
+    }
+
+    .inventory-add-error {
+      margin: 0;
+      color: $error-color;
+      font-size: 0.9rem;
+    }
+  }
+
+  .inventory-attention {
+    border: 1px solid $alert-color;
+    border-radius: $border-radius-md;
+    background: $alert-bg;
+    padding: $spacing-md;
+
+    h2 {
+      margin: 0 0 $spacing-xs;
+      font-size: 1rem;
+      color: $alert-text;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 1.25rem;
+    }
+  }
+}
+
+#inventory-item-dialog {
+  h2 {
+    margin: 0 0 $spacing-sm;
+    font-size: 1rem;
+  }
+
+  section + section,
+  .inventory-other-data {
+    margin-top: $spacing-lg;
+  }
+
+  .inventory-add-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+    gap: $spacing-sm $spacing-md;
+  }
+
+  .inventory-add-field {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+
+    span {
+      font-size: 0.8rem;
+      color: $text-secondary;
+    }
+  }
+
+  .inventory-notice {
+    border: 1px solid $alert-color;
+    border-radius: $border-radius-md;
+    background: $alert-bg;
+    padding: $spacing-sm $spacing-md;
+    margin-bottom: $spacing-sm;
+
+    p {
+      margin: 0;
+    }
+  }
+
+  .inventory-add-error {
+    margin: $spacing-sm 0 0;
+    color: $error-color;
+    font-size: 0.9rem;
+  }
+
+  .inventory-dialog-extras {
+    margin-top: $spacing-md;
+    font-size: 0.85rem;
+    color: $text-secondary;
+
+    .inventory-dialog-extras-heading {
+      font-weight: 600;
+    }
+
+    ul {
+      margin: $spacing-xs 0 0;
+      padding-left: 1.25rem;
+    }
+  }
+
+  .inventory-structured-field,
+  .inventory-extra-row,
+  .inventory-extra-readonly {
+    padding: $spacing-sm;
+    border: 1px solid $border-light;
+    border-radius: $border-radius-md;
+  }
+
+  .inventory-structured-field p,
+  .inventory-extra-readonly {
+    margin: $spacing-xs 0;
+    color: $text-secondary;
+    font-size: 0.85rem;
+  }
+
+  .inventory-other-data summary {
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  #inventory-extra-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    margin: $spacing-sm 0;
+  }
+
+  .inventory-extra-row {
+    display: grid;
+    grid-template-columns: minmax(8rem, 1fr) minmax(10rem, 2fr) auto;
+    align-items: end;
+    gap: $spacing-sm;
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: $spacing-xs;
+    }
+
+    &[data-removed='true'] {
+      opacity: 0.65;
+      text-decoration: line-through;
+    }
+  }
+
+  .inventory-extra-row--new {
+    grid-template-columns: minmax(8rem, 1fr) minmax(7rem, auto) minmax(10rem, 2fr) auto;
+  }
+}
+
+.inventory-delete-button {
+  margin-right: auto;
+  color: $error-color;
+
+  &[data-armed='true'] {
+    background: $error-bg-subtle;
+    border-color: $error-color;
+  }
+}
+
+.inventory-editor-link--button {
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: $primary-color;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+
+  &:disabled {
+    cursor: wait;
+    opacity: 0.7;
+  }
+}

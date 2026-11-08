@@ -27,7 +27,7 @@
     "check": "npm run lint && npm run format && npm run typecheck && npm test && npm run build",
     "new-format": "node tooling/new-format.mjs",
     "build:common": "npm run build --workspace @stillpointlab/common-format",
-    "build:deps": "npm run build --workspace @stillpointlab/common-format --workspace @stillpointlab/sheet-format"
+    "build:deps": "npm run build --workspace @stillpointlab/common-format --workspace @stillpointlab/sheet-format --workspace @stillpointlab/modal-dialog-component"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

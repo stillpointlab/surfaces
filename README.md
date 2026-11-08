@@ -288,7 +288,9 @@ ship light defaults only and carry no `prefers-color-scheme` rules of their own.
 | `--spl-success-bg`           | `#dcfce7`                  | success badges, conditional markers      |
 | `--spl-info-color`           | `#1d4ed8`                  | informational text, template slots       |
 | `--spl-info-bg`              | `#dbeafe`                  | informational badges, template slots     |
-| `--spl-alert-color`          | `#d9662b`                  | the board's check-in chips               |
+| `--spl-alert-color`          | `#d9662b`                  | check-in chips, inventory warning frames |
+| `--spl-alert-bg`             | `#f9e7d8`                  | the inventory's check-in bar and notices |
+| `--spl-alert-text`           | `#8a4516`                  | text on alert backgrounds                |
 | `--spl-gold-color`           | `#b98a24`                  | the board's selected card                |
 | `--spl-chip-hover-bg`        | `rgba(139, 92, 246, 0.1)`  | hovered outlined chips                   |
 | `--spl-code-active-line-bg`  | `rgba(88, 166, 255, 0.12)` | CodeMirror's active line                 |
