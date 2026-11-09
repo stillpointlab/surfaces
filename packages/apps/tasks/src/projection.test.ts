@@ -5,6 +5,7 @@ import {
   projectTasksBoard,
   projectTasksNav,
   projectTasksPool,
+  projectResolvedCard,
   projectTasksStage,
   resolveTasks,
 } from './projection.js';
@@ -408,5 +409,30 @@ describe('columnOfContent', () => {
     expect(columnOfContent(card(null), manifest)).toBe('briefed');
     expect(columnOfContent(card('nope'), manifest)).toBeNull();
     expect(columnOfContent(card('done'), manifest, 'pool')).toBeNull();
+  });
+});
+
+describe('projectResolvedCard', () => {
+  const NEW = `${PHASE}/briefs/renamed.md`;
+  const s = snapshot(
+    { [IDEA]: card('briefed'), [NEW]: card('done'), [POOL_A]: card('briefed') },
+    { moves: { [NEW]: [IDEA] } }
+  );
+  const tasks = (() => {
+    const resolved = resolveTasks(s);
+    if (!resolved?.ok) throw new Error('no tasks');
+    return resolved.tasks;
+  })();
+
+  it('projects one card where it sits, with its facts', () => {
+    expect(
+      projectResolvedCard(s, tasks, NEW, { cards: { [NEW]: { changed: true } } })
+    ).toMatchObject({ path: NEW, kind: 'brief', column: 'done', changed: true });
+    expect(projectResolvedCard(s, tasks, POOL_A)).toMatchObject({ path: POOL_A, column: null });
+  });
+
+  it('is null for a moved-away path and for a path that is no card', () => {
+    expect(projectResolvedCard(s, tasks, IDEA)).toBeNull();
+    expect(projectResolvedCard(s, tasks, MANIFEST)).toBeNull();
   });
 });

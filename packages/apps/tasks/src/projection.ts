@@ -271,6 +271,30 @@ export function projectTasksPool(
   };
 }
 
+/**
+ * One card by path from a resolved instance, projected where it sits (a board
+ * or the pool) — for a host answering with a single fresh card. `null` when no
+ * card is there, or the path is a pending move's old one.
+ */
+export function projectResolvedCard(
+  snapshot: TasksSnapshot,
+  tasks: ResolvedTasks,
+  path: string,
+  facts: TasksHostFacts = {}
+): SharedTaskCard | null {
+  if (tasks.movedAway.has(path)) return null;
+  const { manifest } = tasks;
+  const find = (holder: Pick<SharedTaskBoardDescriptor, 'paths'>) =>
+    kindEntriesOf(holder, manifest.kinds).find((entry) => entry.path === path);
+  const pooled = find(tasks.pool);
+  if (pooled) return projectCard(snapshot, pooled, manifest, 'pool', facts.cards?.[path] ?? {});
+  for (const board of tasks.boards) {
+    const entry = find(board);
+    if (entry) return projectCard(snapshot, entry, manifest, 'board', facts.cards?.[path] ?? {});
+  }
+  return null;
+}
+
 const byPath = (a: { path: string }, b: { path: string }): number => a.path.localeCompare(b.path);
 
 /** One phase board from a resolved instance; `null` for a path that is no board. */

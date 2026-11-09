@@ -50,7 +50,9 @@ Each is `null` when the manifest is missing or does not parse, and for a path th
 stage with no phases. A phase with no folders yet (the pointer's, or `stage1/phase1` of a bare
 manifest) is an empty board. All three are built on `resolveTasks(snapshot)`, which a host reads
 to refuse a broken manifest: `null` when it is gone, `TASKS_MANIFEST_INVALID` when it does not
-parse, else the manifest, its warnings, the boards and the pool.
+parse, else the manifest, its warnings, the boards and the pool. The `projectResolved…` forms take
+that resolution, and `projectResolvedCard(snapshot, tasks, path, facts)` is one card where it sits,
+for a host answering with a single card.
 
 `facts` are what only the host knows, laid onto the states: per card by path, its `title`,
 `tracked`, `changed`, `dirty`, `versionColumn`, `diverged`, `movedFrom`, `checkinPrUrl` and
