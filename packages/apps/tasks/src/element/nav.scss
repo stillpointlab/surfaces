@@ -1,0 +1,119 @@
+@use 'common/src/styles/tokens' as *;
+
+// The stage/phase tab strip (ADR-0020): the element is the strip's row, with
+// the verb cluster inline after the tabs. A host places it; the row is its own.
+spl-tasks-nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+
+  .tasks-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid $border-color;
+    border-radius: $border-radius-sm;
+    padding: 3px 10px;
+    font-size: 0.85rem;
+
+    &.is-active {
+      background-color: $background-hover;
+      font-weight: 600;
+    }
+
+    .tasks-tab-link {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .tasks-tab-filter,
+    .tasks-other-select {
+      font-size: 0.8rem;
+      background: transparent;
+      color: inherit;
+      border: none;
+      cursor: pointer;
+    }
+  }
+
+  // The strip's verbs (+ stage, Close…, Set current): one treatment, matching
+  // the board toolbar's buttons. A host may give its own buttons the class too.
+  .tasks-nav-button {
+    font-size: 0.8rem;
+    border: 1px solid $border-color;
+    border-radius: $border-radius-sm;
+    background: none;
+    color: $text-secondary;
+    padding: 3px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover {
+      background-color: $background-hover;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  .tasks-current-marker {
+    font-size: 0.75rem;
+    opacity: 0.8;
+  }
+}
+
+// The close dialog: a container that takes no box; the <modal-dialog> overlays
+// the page. Its card list uses the check-in list's classes, as it did on the
+// host page; the form and button classes are the host's.
+.tasks-nav-dialogs {
+  display: contents;
+
+  .checkin-files {
+    margin: $spacing-sm 0;
+    padding-left: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    font-size: 0.85rem;
+    list-style: none;
+
+    li + li {
+      margin-top: $spacing-xs;
+    }
+
+    .checkin-file-option {
+      display: flex;
+      align-items: flex-start;
+      gap: $spacing-sm;
+      padding: $spacing-xs;
+      border: 1px solid $border-light;
+      border-radius: $border-radius-sm;
+      cursor: pointer;
+
+      &:hover {
+        background-color: $background-hover;
+      }
+    }
+
+    input {
+      margin-top: 2px;
+    }
+
+    code {
+      font-size: 0.8rem;
+    }
+
+    .checkin-change {
+      color: $text-muted;
+      margin-left: $spacing-xs;
+    }
+  }
+
+  .checkin-help {
+    margin-bottom: 0;
+    color: $text-secondary;
+    font-size: 0.85rem;
+  }
+}
