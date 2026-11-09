@@ -5,10 +5,10 @@
 // keeps comment lines, CRLF line breaks and the final newline (or its absence).
 // Everything beyond that is the app's own tests.
 //
-// It names no contract type. Its hooks wrap whatever functions the core has, so
-// the step that names the app contract can re-express them without changing what
-// the suite checks. Kept apart from `./testing` so importing it never loads the
-// element suites.
+// A core that implements `AppCore` also gets the round trip: each op is applied
+// to a fixture, its changes are written, and the view projects before and after.
+// Rewrites that are not yet ops are checked through the `rewrites` hook. Kept
+// apart from `./testing` so importing it never loads the element suites.
 //
 //   import { describeAppCore } from '@stillpointlab/common-format/testing/app';
 //   describeAppCore('inventory', { manifest: 'inventory.yaml', fixtures, mount, rewrites });
@@ -22,10 +22,15 @@ import {
   assertLifecycle,
   assertMounts,
   assertReparses,
+  assertRoundTripCommentsKept,
+  assertRoundTripCrlfKept,
+  assertRoundTripFinalNewlineKept,
+  assertRoundTripProjects,
+  assertRoundTripReparses,
   rewriteInput,
 } from './app-checks';
 
-import type { AppLifecycle } from '../app';
+import type { AppCore, AppLifecycle } from '../app';
 
 /** A fixture folder: path (relative to the folder) → text. */
 export type AppFixture = Readonly<Record<string, string>>;
@@ -54,6 +59,28 @@ export interface AppCoreRewrite {
   addsFinalNewline?: boolean;
 }
 
+/** One op the round trip applies to one fixture, and the view it projects around it. */
+export interface AppCoreRoundTrip {
+  name: string;
+  /** The fixture the op is applied to: every file visible and readable. */
+  fixture: string;
+  /** The op, as `apply` takes it: its `type` and its fields. */
+  op: { type: string; [field: string]: unknown };
+  /** The view, as `project` takes it: its `type` and its parameters. */
+  view: { type: string; [param: string]: unknown };
+  /** The same recorded gap as a rewrite's: a written file always ends with a line break. */
+  addsFinalNewline?: boolean;
+}
+
+/** The round trip's hook: the core, the facts it projects with, and its ops. */
+export interface AppCoreRoundTripOptions {
+  core: AppCore<any, any, any, any>;
+  facts: unknown;
+  ops: readonly AppCoreRoundTrip[];
+  /** Whether the app reads one written file back without error. */
+  reparses: (path: string, text: string) => boolean;
+}
+
 export interface AppCoreOptions {
   /** The manifest's path in every fixture, at the folder root (`inventory.yaml`). */
   manifest: string;
@@ -62,7 +89,9 @@ export interface AppCoreOptions {
   /** Mount a folder from its files and manifest path. */
   mount: (files: AppFixture, manifestPath: string) => AppMountResult;
   /** Rewrites to check. The suite derives CRLF and final-newline variants itself. */
-  rewrites: readonly AppCoreRewrite[];
+  rewrites?: readonly AppCoreRewrite[];
+  /** The core, when it implements `AppCore`: its ops are checked through the round trip. */
+  core?: AppCoreRoundTripOptions;
   /**
    * The core's lifecycle, when it exports one. The suite then checks that every
    * fixture validates, that its scope holds the manifest, and that the instance
@@ -90,7 +119,20 @@ export function describeAppCore(app: string, options: AppCoreOptions): void {
       });
     }
 
-    for (const rewrite of options.rewrites) {
+    const { core } = options;
+    for (const trip of core?.ops ?? []) {
+      describe(`op: ${trip.name} (${trip.fixture})`, () => {
+        it('projects the view before and after', () =>
+          assertRoundTripProjects(options, core!, trip));
+        it('output re-parses', () => assertRoundTripReparses(options, core!, trip));
+        it('keeps every comment line', () => assertRoundTripCommentsKept(options, core!, trip));
+        it('keeps CRLF line breaks', () => assertRoundTripCrlfKept(options, core!, trip));
+        it('keeps the final newline, or its absence', () =>
+          assertRoundTripFinalNewlineKept(options, core!, trip));
+      });
+    }
+
+    for (const rewrite of options.rewrites ?? []) {
       describe(`rewrite: ${rewrite.name} (${rewrite.fixture}/${rewrite.path})`, () => {
         it('output re-parses', () => assertReparses(rewrite, rewriteInput(options, rewrite)));
         it('keeps every comment line', () =>

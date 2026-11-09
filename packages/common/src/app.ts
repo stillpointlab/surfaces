@@ -1,11 +1,12 @@
 // The app contract, as far as the apps use it: what a host and an app agree on.
 //
-// Two halves. The lifecycle: a manifest marks an instance of an app, and the app
-// says which paths it owns and how the instance is described. The element: the
-// host sets state, and the element asks the host for ops, each with its own
-// reply. `project` and `apply` from the August design (Context Manager's
-// apps-as-executors spike) are not named here yet: the logic they would hold
-// still lives in the host's services.
+// Three parts. The lifecycle: a manifest marks an instance of an app, and the
+// app says which paths it owns and how the instance is described. The core: given
+// a snapshot of the instance's files, the app projects the state an element
+// renders, applies an op as file changes or a refusal, and seeds a new
+// instance's files (the August design's `project` and `apply`, named against
+// the inventory core). The element: the host sets state, and the element asks
+// the host for ops, each with its own reply.
 //
 // A light entry (`@stillpointlab/common-format/app`): an app element and a host
 // page import it without pulling in the formats' runtime. The helpers touch the
@@ -81,6 +82,113 @@ export interface AppLifecycle<Detail extends { label: string } = { label: string
     manifestPath: string,
     appOnlyPaths: string[]
   ): Detail;
+}
+
+// ---- The core half ----------------------------------------------------------
+
+/**
+ * What a host hands an app core: plain data, no callbacks. The host reads the
+ * files its own way (drafts first, caches) before calling the core. An app may
+ * extend it with plain data of its own.
+ */
+export interface AppSnapshot {
+  /** The manifest the instance is anchored at. */
+  manifestPath: string;
+  /** Every path the host can see: its tree and the files it created that have no upstream yet. */
+  paths: readonly string[];
+  /** Contents by path, the host's drafts laid over. `null` or absent: the host could not read it. */
+  files: Readonly<Record<string, string | null>>;
+  /** Paths a new file may not use beyond `paths` (files the host knows that its tree does not show). */
+  taken?: readonly string[];
+}
+
+/**
+ * One file an op changes, with its whole new content, so a host never
+ * re-derives it. A `move` is one file under a new path; its content may change
+ * with it. There is no `delete` until an app needs one.
+ */
+export type FileChange =
+  | { kind: 'write'; path: string; content: string }
+  | { kind: 'create'; path: string; content: string }
+  | { kind: 'move'; from: string; path: string; content: string };
+
+/** An app's views, by type: each names its parameters and the state it projects. */
+export type AppViewMap = Record<string, { params: object; state: object }>;
+
+/** An app's core ops, by type: each names its fields and what `apply` answers beside the changes. */
+export type AppCoreOpMap = Record<string, { op: object; result: object }>;
+
+/** One view of a map, as asked for: its `type` and its parameters. */
+export type AppView<V extends AppViewMap> = {
+  [K in keyof V & string]: { type: K } & V[K]['params'];
+}[keyof V & string];
+
+/** One core op of a map, as applied: its `type` and its fields. */
+export type AppCoreOp<O extends AppCoreOpMap> = {
+  [K in keyof O & string]: { type: K } & O[K]['op'];
+}[keyof O & string];
+
+/** What `apply` answers for one op type: the changes and the op's own result. */
+export type AppApplyResult<O extends AppCoreOpMap, K extends keyof O> = Result<
+  { changes: FileChange[] } & O[K]['result']
+>;
+
+/**
+ * An app core: pure, DOM-free and host-free. `Facts` are what only the host
+ * knows that the state shows (whether an instance is enabled, which files have
+ * local changes), as plain data a second host could supply; a host's own ids
+ * are never facts, and it lays them over the state afterwards.
+ */
+export interface AppCore<
+  V extends AppViewMap,
+  O extends AppCoreOpMap,
+  Facts,
+  Seed,
+  S extends AppSnapshot = AppSnapshot,
+> {
+  /** The state one view renders, or `null` when its subject is gone. A broken file is part of the state. */
+  project<K extends keyof V & string>(
+    snapshot: S,
+    view: { type: K } & V[K]['params'],
+    facts: Facts
+  ): V[K]['state'] | null;
+  /** One op as the changes it makes, or a refusal. An op that changes nothing answers no changes. */
+  apply<K extends keyof O & string>(
+    snapshot: S,
+    op: { type: K } & O[K]['op']
+  ): AppApplyResult<O, K>;
+  /** A new instance's files (`create` changes), or a refusal. Where they fit is `placeNewFiles`'s question. */
+  seed(input: Seed): Result<{ manifestPath: string; files: FileChange[] }>;
+}
+
+/**
+ * Whether new files fit among a host's paths: none of them, and no folder above
+ * one, may already be a file. `reusable` files (left by an earlier, unfinished
+ * attempt at the same create) are skipped instead of refused. Answers the files
+ * still to create, in order, or the first path in the way; each app turns that
+ * path into its own refusal.
+ */
+export function placeNewFiles<F extends { path: string }>(
+  files: readonly F[],
+  paths: { taken: readonly string[]; reusable?: readonly string[] }
+): { ok: true; files: F[] } | { ok: false; path: string } {
+  const taken = new Set(paths.taken);
+  const reusable = new Set(paths.reusable ?? []);
+  // Git cannot create `a/b` while `a` is a file.
+  const ancestors = new Set<string>();
+  for (const { path } of files) {
+    const segments = path.split('/');
+    for (let i = 1; i < segments.length; i++) ancestors.add(segments.slice(0, i).join('/'));
+  }
+  for (const ancestor of ancestors) {
+    if (taken.has(ancestor)) return { ok: false, path: ancestor };
+  }
+  const placed: F[] = [];
+  for (const file of files) {
+    if (!taken.has(file.path)) placed.push(file);
+    else if (!reusable.has(file.path)) return { ok: false, path: file.path };
+  }
+  return { ok: true, files: placed };
 }
 
 // ---- The element half -------------------------------------------------------

@@ -5,7 +5,7 @@
  * that no other space's scope overlaps, whether an earlier attempt is being
  * resumed) and seeds the files.
  */
-import { fail, ok } from '@stillpointlab/common-format/app';
+import { fail, ok, placeNewFiles } from '@stillpointlab/common-format/app';
 
 import { INVENTORY_MANIFEST_FILENAME, INVENTORY_ROOMS_DIR } from './detection.js';
 import { parseInventoryManifest } from './manifest.js';
@@ -14,8 +14,7 @@ import { INVENTORY_DEFAULT_FOLDER } from './paths.js';
 import { slugifyZoneTitle, zoneSeedContent } from './zoneSeed.js';
 
 import type { InventoryManifestSeed } from './manifestSeed.js';
-import type { InventoryChange } from './space.js';
-import type { Result } from '@stillpointlab/common-format/app';
+import type { FileChange, Result } from '@stillpointlab/common-format/app';
 
 /**
  * What the create dialog collects. Everything but the label has a default,
@@ -35,7 +34,7 @@ export interface CreateInventoryInput {
 export interface InventoryCreatePlan {
   manifestPath: string;
   spacePath: string;
-  files: (InventoryChange & { created: true })[];
+  files: (FileChange & { kind: 'create' })[];
 }
 
 /**
@@ -71,7 +70,7 @@ export function planInventoryCreate(input: CreateInventoryInput): Result<Invento
   const roomsDir = `${folder}/${INVENTORY_ROOMS_DIR}`;
 
   const files: InventoryCreatePlan['files'] = [
-    { path: manifestPath, content: manifestContent, created: true },
+    { kind: 'create', path: manifestPath, content: manifestContent },
   ];
   const slugs = new Set<string>();
   for (const title of input.zones ?? []) {
@@ -84,44 +83,30 @@ export function planInventoryCreate(input: CreateInventoryInput): Result<Invento
     }
     slugs.add(slug);
     files.push({
+      kind: 'create',
       path: `${roomsDir}/${slug}.yaml`,
       content: zoneSeedContent(title),
-      created: true,
     });
   }
   return ok({ manifestPath, spacePath: folder, files });
 }
 
 /**
- * Whether a plan's files fit among the host's paths: none of them, and no
- * folder above them, may already be a file. `reusable` names files a host
- * created in an earlier, unfinished attempt at this same create: they are
- * skipped rather than refused, so a retry finishes the job. Answers the
- * files still to seed, in the plan's order.
+ * Whether a plan's files fit among the host's paths (the contract's
+ * `placeNewFiles`): none of them, and no folder above them, may already be a
+ * file, or the first that is answers `INVENTORY_PATH_EXISTS`. `reusable` names
+ * files a host created in an earlier, unfinished attempt at this same create:
+ * they are skipped rather than refused, so a retry finishes the job. Answers
+ * the files still to seed, in the plan's order.
  */
 export function placeInventoryCreate(
   plan: InventoryCreatePlan,
   paths: { taken: readonly string[]; reusable?: readonly string[] }
 ): Result<{ files: InventoryCreatePlan['files'] }> {
-  const taken = new Set(paths.taken);
-  const reusable = new Set(paths.reusable ?? []);
-  const exists = (path: string) => fail('INVENTORY_PATH_EXISTS', `“${path}” already exists`);
-
-  // Git cannot create `a/b` while `a` is a file, and the failure would
-  // otherwise surface only when the first check-in's commit is built.
-  const ancestors = new Set<string>();
-  for (const { path } of plan.files) {
-    const segments = path.split('/');
-    for (let i = 1; i < segments.length; i++) ancestors.add(segments.slice(0, i).join('/'));
-  }
-  for (const ancestor of ancestors) {
-    if (taken.has(ancestor)) return exists(ancestor);
-  }
-
-  const files: InventoryCreatePlan['files'] = [];
-  for (const file of plan.files) {
-    if (!taken.has(file.path)) files.push(file);
-    else if (!reusable.has(file.path)) return exists(file.path);
-  }
-  return ok({ files });
+  // A file in the way would otherwise surface only when the first check-in's
+  // commit is built.
+  const placed = placeNewFiles(plan.files, paths);
+  return placed.ok
+    ? ok({ files: placed.files })
+    : fail('INVENTORY_PATH_EXISTS', `“${placed.path}” already exists`);
 }

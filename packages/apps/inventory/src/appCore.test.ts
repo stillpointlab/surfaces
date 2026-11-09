@@ -1,19 +1,21 @@
 import { describeAppCore } from '@stillpointlab/common-format/testing/app';
 
-import { detectInventoryAt } from './detection.js';
+import { inventoryCore } from './core.js';
+import { detectInventoryAt, INVENTORY_MANIFEST_FILENAME } from './detection.js';
 import { inventoryLifecycle } from './lifecycle.js';
 import { parseInventoryManifest } from './manifest.js';
 import { parseZoneFile } from './zone.js';
 import { zoneSeedContent } from './zoneSeed.js';
-import { appendItem, deleteItem, patchItem } from './zoneWriter.js';
 
+import type { AddInventoryItemInput } from './ops.js';
 import type { TreeNode } from './types.js';
-import type { NewItemBlock } from './zoneWriter.js';
 import type { AppFixture, AppMountResult } from '@stillpointlab/common-format/testing/app';
 
 // The inventory core held to the app core suite (ADR-0028 decision 1: a rewrite
-// keeps what a hand-edited file holds). Fixture folders are inventories with
-// the manifest at the root; files the app does not recognise stay beside them.
+// keeps what a hand-edited file holds), through the contract's round trip: each
+// op applied to a fixture, its changes written, and the view projected again.
+// Fixture folders are inventories with the manifest at the root; files the app
+// does not recognise stay beside them.
 
 const v2Minimal = {
   'inventory.yaml': 'version: 2\n',
@@ -118,86 +120,91 @@ function mount(files: AppFixture, manifestPath: string): AppMountResult {
   };
 }
 
-function written(result: { ok: true; content: string } | { ok: false }): string {
-  if (!result.ok) throw new Error(`the rewrite refused: ${JSON.stringify(result)}`);
-  return result.content;
-}
+/** A written file reads back: a zone file as a zone, the manifest as a manifest. */
+const reparses = (path: string, text: string): boolean =>
+  path.endsWith(INVENTORY_MANIFEST_FILENAME)
+    ? parseInventoryManifest(text).ok
+    : parseZoneFile(text).ok;
 
-const reparses = (text: string): boolean => parseZoneFile(text).ok;
-
-const lamp: NewItemBlock = {
-  id: 'lamp',
+const lamp: AddInventoryItemInput = {
   title: 'Arc lamp',
-  fieldValues: [
-    ['owner', 'Alex'],
-    ['replacement-value', 120],
-  ],
+  fieldValues: { owner: 'Alex', 'replacement-value': 120 },
 };
 
+// appendItem at the end of a file always ends it with a line break (CM's "adds
+// a newline first" test): a recorded gap, stage 2 follow-ups. `addsFinalNewline`
+// marks the ops that append there.
 describeAppCore('inventory', {
   manifest: 'inventory.yaml',
   lifecycle: inventoryLifecycle,
   fixtures: { 'v2 minimal': v2Minimal, 'v2 configured': v2Configured, v1 },
   mount,
-  rewrites: [
-    {
-      name: 'add an item',
-      fixture: 'v2 configured',
-      path: 'rooms/workshop.yaml',
-      apply: (text) => written(appendItem(text, lamp)),
-      reparses,
-    },
-    {
-      name: 'edit an item',
-      fixture: 'v2 configured',
-      path: 'rooms/workshop.yaml',
-      apply: (text) =>
-        written(patchItem(text, 'cordless-drill', { owner: 'Alex', 'replacement-value': 140 })),
-      reparses,
-    },
-    {
-      name: 'delete an item',
-      fixture: 'v2 configured',
-      path: 'rooms/workshop.yaml',
-      apply: (text) => written(deleteItem(text, 'bench-vise')),
-      reparses,
-    },
-    {
-      name: 'add the first item to an added zone',
-      fixture: 'v2 configured',
-      path: 'rooms/attic.yaml',
-      apply: (text) => written(appendItem(text, lamp)),
-      reparses,
-      // appendItem at the end of the file always ends with a line break (CM's
-      // "adds a newline first" test): a recorded gap, stage 2 follow-ups.
-      addsFinalNewline: true,
-    },
-    {
-      name: 'add an item to a minimal inventory',
-      fixture: 'v2 minimal',
-      path: 'rooms/garage.yaml',
-      apply: (text) => written(appendItem(text, { id: 'rake', title: 'Rake' })),
-      reparses,
-      // appendItem at the end of the file always ends with a line break (CM's
-      // "adds a newline first" test): a recorded gap, stage 2 follow-ups.
-      addsFinalNewline: true,
-    },
-    {
-      name: 'edit a v1 item',
-      fixture: 'v1',
-      path: 'rooms/kitchen.yaml',
-      apply: (text) => written(patchItem(text, 'espresso-machine', { value: 600 })),
-      reparses,
-    },
-    {
-      name: 'add a v1 item',
-      fixture: 'v1',
-      path: 'rooms/kitchen.yaml',
-      apply: (text) => written(appendItem(text, { id: 'toaster', title: 'Toaster', value: 35 })),
-      reparses,
-      // appendItem at the end of the file always ends with a line break (CM's
-      // "adds a newline first" test): a recorded gap, stage 2 follow-ups.
-      addsFinalNewline: true,
-    },
-  ],
+  core: {
+    core: inventoryCore,
+    facts: { enabled: true, dirty: [] },
+    reparses,
+    ops: [
+      {
+        name: 'add an item',
+        fixture: 'v2 configured',
+        op: { type: 'add-item', path: 'rooms/workshop.yaml', item: lamp },
+        view: { type: 'zone', slug: 'workshop' },
+      },
+      {
+        name: 'edit an item',
+        fixture: 'v2 configured',
+        op: {
+          type: 'update-item',
+          path: 'rooms/workshop.yaml',
+          id: 'cordless-drill',
+          changes: { fieldValues: { owner: 'Alex', 'replacement-value': 140 } },
+        },
+        view: { type: 'zone', slug: 'workshop' },
+      },
+      {
+        name: 'delete an item',
+        fixture: 'v2 configured',
+        op: { type: 'delete-item', path: 'rooms/workshop.yaml', id: 'bench-vise' },
+        view: { type: 'zone', slug: 'workshop' },
+      },
+      {
+        name: 'add the first item to an added zone',
+        fixture: 'v2 configured',
+        op: { type: 'add-item', path: 'rooms/attic.yaml', item: lamp },
+        view: { type: 'zone', slug: 'attic' },
+        addsFinalNewline: true,
+      },
+      {
+        name: 'add a zone',
+        fixture: 'v2 configured',
+        op: { type: 'add-zone', title: 'Loft: east end' },
+        view: { type: 'space' },
+      },
+      {
+        name: 'add an item to a minimal inventory',
+        fixture: 'v2 minimal',
+        op: { type: 'add-item', path: 'rooms/garage.yaml', item: { title: 'Rake' } },
+        view: { type: 'zone', slug: 'garage' },
+        addsFinalNewline: true,
+      },
+      {
+        name: 'edit a v1 item',
+        fixture: 'v1',
+        op: {
+          type: 'update-item',
+          path: 'rooms/kitchen.yaml',
+          id: 'espresso-machine',
+          changes: { value: 600 },
+        },
+        view: { type: 'zone', slug: 'kitchen' },
+      },
+      {
+        name: 'add a v1 item',
+        fixture: 'v1',
+        op: { type: 'add-item', path: 'rooms/kitchen.yaml', item: { title: 'Toaster', value: 35 } },
+        view: { type: 'zone', slug: 'kitchen' },
+        addsFinalNewline: true,
+      },
+    ],
+  },
 });

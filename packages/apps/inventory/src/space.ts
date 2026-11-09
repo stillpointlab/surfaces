@@ -22,30 +22,14 @@ import type {
   SharedInventoryZone,
   SharedInventoryZoneState,
 } from './types.js';
+import type { AppSnapshot } from '@stillpointlab/common-format/app';
 
 /**
- * What a host hands the core: plain data, no callbacks. `detectInventoryAt`
- * over `paths` names the files the host must read for it.
+ * What a host hands the core: the contract's `AppSnapshot` (plain data, no
+ * callbacks). `detectInventoryAt` over its `paths` names the files the host
+ * must read: the manifest and the zone files.
  */
-export interface InventorySnapshot {
-  /** The manifest the space is anchored at (ADR-0025: chosen, never searched for). */
-  manifestPath: string;
-  /**
-   * Every path the host can see: its tree's files plus the files it created
-   * that have no upstream yet. Detection runs over these.
-   */
-  paths: readonly string[];
-  /**
-   * File contents by path, the host's drafts already laid over. `null`, or a
-   * path left out, is a file the host could not read.
-   */
-  files: Readonly<Record<string, string | null>>;
-  /**
-   * Paths a new file may not use beyond `paths`: files the host knows that
-   * detection does not show (in Context Manager, every good of the connection).
-   */
-  taken?: readonly string[];
-}
+export type InventorySnapshot = AppSnapshot;
 
 /** The facts only a host knows, laid onto a projected state. */
 export interface InventoryHostFacts {
@@ -53,13 +37,6 @@ export interface InventoryHostFacts {
   enabled: boolean;
   /** The space's files with local changes not yet checked in. */
   dirty: readonly SharedInventoryDirtyFile[];
-}
-
-/** One file a host writes for an op: replaced, or created when `created`. */
-export interface InventoryChange {
-  path: string;
-  content: string;
-  created?: true;
 }
 
 /** The space assembled from a snapshot: what both projections and the ops read. */

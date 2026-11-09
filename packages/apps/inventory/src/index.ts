@@ -16,3 +16,4 @@ export * from './lifecycle.js';
 export * from './space.js';
 export * from './ops.js';
 export * from './create.js';
+export * from './core.js';
