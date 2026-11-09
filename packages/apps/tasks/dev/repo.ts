@@ -1,19 +1,9 @@
-// This repository's own docs/tasks/ as a board: the files alone, projected with
-// the core's functions. Every card is tracked, with no host overlay: what a host
-// shows for a repository nobody has edited in it yet.
-import {
-  detectBoards,
-  detectPool,
-  effectiveColumn,
-  kindEntriesOf,
-  orderPoolCards,
-  parseCardProjection,
-  parseOrderFileDetailed,
-  parseTasksManifest,
-  resolveProjectionColumn,
-} from '../src/index.js';
+// This repository's own docs/tasks/ as a board: the files alone, projected by
+// the core (phase 7, tasks-rules). Every card is tracked, with no other host
+// fact: what a host shows for a repository nobody has edited in it yet.
+import { projectTasksBoard, projectTasksNav } from '../src/index.js';
 
-import type { SharedTaskBoardState, SharedTaskCard, TreeNode } from '../src/index.js';
+import type { SharedTaskBoardState, TasksHostFacts, TasksSnapshot } from '../src/index.js';
 
 const raw = import.meta.glob<string>('../../../../docs/tasks/**/*.{md,yaml}', {
   query: '?raw',
@@ -28,61 +18,22 @@ export const repoFiles: Record<string, string> = Object.fromEntries(
 
 const MANIFEST = 'docs/tasks/tasks.yaml';
 
-/** The board `current:` points at, or the last board, as a tracked-only state. */
+/** The repository's task files as the snapshot a host hands the core. */
+export function repoSnapshot(): TasksSnapshot {
+  return { manifestPath: MANIFEST, paths: Object.keys(repoFiles), files: repoFiles };
+}
+
+/** Every file tracked: no host has a local copy of any of them. */
+export const repoFacts: TasksHostFacts = {
+  cards: Object.fromEntries(Object.keys(repoFiles).map((path) => [path, { tracked: true }])),
+};
+
+/** The board `current:` points at, or the last phase board, as a tracked-only state. */
 export function repoBoard(): SharedTaskBoardState | null {
-  const parsed = parseTasksManifest(repoFiles[MANIFEST] ?? '');
-  if (!parsed.ok) return null;
-  const { manifest } = parsed;
-  const nodes: TreeNode[] = Object.keys(repoFiles).map((path) => ({ path, type: 'blob' }));
-  const boards = detectBoards(nodes, MANIFEST, manifest.kinds);
-  const board =
-    boards.find(
-      (candidate) =>
-        candidate.stage === manifest.current?.stage && candidate.phase === manifest.current?.phase
-    ) ?? boards[boards.length - 1];
-  if (!board) return null;
-
-  const project = (path: string, kind: string, location: 'board' | 'pool'): SharedTaskCard => {
-    const projection = parseCardProjection(repoFiles[path] ?? '', manifest.frontmatterKey);
-    const read = resolveProjectionColumn(projection, manifest);
-    return {
-      goodId: null,
-      goodPublicId: null,
-      tracked: true,
-      title: path.slice(path.lastIndexOf('/') + 1),
-      ...(projection.title !== undefined ? { frontmatterTitle: projection.title } : {}),
-      path,
-      kind,
-      column: effectiveColumn(read, manifest, location),
-      dirty: false,
-      changed: false,
-      ...(projection.tags ? { tags: projection.tags } : {}),
-      ...projection.meta,
-    };
-  };
-
-  const pool = detectPool(nodes, MANIFEST, manifest.kinds);
-  const poolCards = kindEntriesOf(pool, manifest.kinds).map(({ path, kind }) =>
-    project(path, kind, 'pool')
-  );
-  return {
-    board,
-    columns: manifest.columns,
-    cards: kindEntriesOf(board, manifest.kinds).map(({ path, kind }) =>
-      project(path, kind, 'board')
-    ),
-    pool: {
-      path: pool.path,
-      orderPath: pool.orderPath,
-      cards: orderPoolCards(
-        poolCards,
-        parseOrderFileDetailed(repoFiles[pool.orderPath] ?? '').paths
-      ),
-    },
-    tags: manifest.tags,
-    doneColumn: manifest.doneColumn,
-    defaultColumn: manifest.defaultColumn,
-    kinds: manifest.kinds,
-    housekeeping: [],
-  };
+  const snapshot = repoSnapshot();
+  const nav = projectTasksNav(snapshot);
+  if (!nav) return null;
+  const last = nav.nav.stages.at(-1)?.phases.at(-1)?.path ?? null;
+  const path = nav.currentPointerPath ?? last;
+  return path === null ? null : projectTasksBoard(snapshot, path, repoFacts);
 }

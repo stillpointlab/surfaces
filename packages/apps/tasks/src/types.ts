@@ -189,13 +189,12 @@ export interface SharedTaskPoolState {
   orderPath: string;
   /**
    * Pool cards in priority order (order file, then path for unlisted).
-   * Includes tracked cards — pool files with no digital good (ADR-0023).
+   * Includes tracked cards — pool files the host has no local copy of (ADR-0023).
    */
   cards: SharedTaskCard[];
-  /** The order file's good, once imported/created — for the check-in list. */
+  /** Set when the host holds a local copy of the order file (a host fact). */
   order?: {
-    goodId: number;
-    /** True when the user's order draft differs from the latest version. */
+    /** True when the local order differs from the latest version. */
     changed: boolean;
   };
   /** Set when order.yaml exists but could not be parsed as a YAML list. */
@@ -220,7 +219,6 @@ export interface SharedTaskStagePhase {
  * not.
  */
 export interface SharedTaskHousekeepingFile {
-  goodId: number;
   path: string;
   kind: 'manifest' | 'scaffold';
 }
@@ -268,23 +266,20 @@ export interface SharedTaskBoardState {
 }
 
 /**
- * A card on a task board. Either **linked** — backed by an imported digital
- * good — or **tracked**: rendered straight from the repo blob with no good at
- * all (ADR-0023 state 1), which is every in-scope file nobody has edited in
- * the app. Tracked cards are read-only: no drafts, no dirty/changed state, no
- * mutations (every card mutation is keyed by `goodId`).
+ * A card on a task board. Either **linked** — the host holds a local copy —
+ * or **tracked**: rendered straight from the repository (ADR-0023 state 1),
+ * which is every in-scope file nobody has edited in the app. Tracked cards
+ * have no local work: no dirty or changed state. Cards are named by path; a
+ * host's ids for them are its own extension of this type (phase 7,
+ * tasks-rules).
  */
 export interface SharedTaskCard {
-  /** The imported good's id; null iff the card is tracked. */
-  goodId: number | null;
-  /** The imported good's public id; null iff the card is tracked. */
-  goodPublicId: string | null;
   /** Set only on tracked cards — the repo blob is the whole story. */
   tracked?: true;
   title: string;
   /** Display title from the file's frontmatter `title:` key, when present. */
   frontmatterTitle?: string;
-  /** Repo-relative file path (`metadata.gitOrigin.path`). */
+  /** Repo-relative file path: the card's name. */
   path: string;
   kind: SharedTaskCardKind;
   /**
