@@ -32,7 +32,7 @@ is the file format, drawn from Context Manager's ADR-0014, ADR-0020, ADR-0021 an
 
 `@stillpointlab/tasks-app/element` registers `<spl-task-board>`: the Kanban board over one phase
 folder, or (with `variant="stage"`) every phase of a stage as swimlanes, with the backlog pool beside
-it. It imports `./types`, `./paths`, `common-format/app`, `common-format/elements`,
+it; and `<spl-tasks-nav>`, the stage/phase tab strip (below). It imports `./types`, `./paths`, `common-format/app`, `common-format/elements`,
 `common-format/html`, `common-format/pointer-drag` and `@stillpointlab/modal-dialog-component`, never
 the core's root.
 
@@ -83,9 +83,39 @@ the core's root.
   `--spl-pool-surface`, `--spl-alert-color`, `--spl-gold-color`, `--spl-primary-color` and the
   board's shadows.
 
+### The tab strip
+
+`<spl-tasks-nav>` renders the stages as tabs (the active one holding its phase select, with
+"+ New phase"), "+ stage", a "Boards…" select for boards outside the stages, "Close…" while
+`tasks.yaml` has a `current:` pointer, and on a phase page either the ★ current marker or "Set
+current" (never on a phase the nav does not list). It is light DOM and is its own flex row; a host
+places it.
+
+- **State in.** `setState({ nav, current, currentPointer, currentPointerPath, doneColumn })`: the
+  core's `buildTasksNav` result, the page's selection (`stage`, `phase`, `other`, `boardPath`), the
+  pointer and its board path, and the done column. `navState` reads it back.
+- **Links in.** `links: TasksNavLinks` gives `stage(n)`, `phase(n, m)` and `board(path)`; without
+  them stage names render as text.
+- **Ops out:**
+
+  | Op                   | Fields           | Reply                                           |
+  | -------------------- | ---------------- | ----------------------------------------------- |
+  | `create-stage-phase` | `kind`, `stage?` | `{ stage, phase }`                              |
+  | `set-current`        | `stage`, `phase` | `{}`                                            |
+  | `close-candidates`   | `path`           | `{ cards: [{ path, title, column }] }`          |
+  | `close`              | `kind`, `paths`  | `{ target: { stage, phase }, moved, created? }` |
+
+- **Requests:** `navigate { href }` (a phase or board chosen, or one just created or closed to),
+  `reload-request` (after Set current), `notification`, and `open-options-menu` from "Close…",
+  answered with `options-menu-select` (`close-phase` or `close-stage`) on the strip.
+- **The close dialog** comes with it: a `<modal-dialog id="close-dialog">` listing the pointer
+  phase's cards outside the done column, all checked, and asking `close` with the checked paths.
+  It is kept attached while the strip re-renders.
+
 In the harness (`npm run dev`, "tasks"), fixtures cover every card state, the stage view, an empty
 board, this repository's own `docs/tasks/` as files alone, and each dialog open; an in-memory host
-answers the ops.
+answers the ops. The strip sits above the board in every fixture, with its own in-memory host, and
+the "Nav:" fixtures show a phase that is not current, no pointer, and the close dialog.
 
 ## The tasks folder
 
