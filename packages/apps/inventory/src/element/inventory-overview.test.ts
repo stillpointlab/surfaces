@@ -140,7 +140,7 @@ describe('<spl-inventory-overview>', () => {
       zones: [],
       totals: { itemCount: 0 },
       enabled: true,
-      dirty: [{ goodId: 9, path: 'inventory/inventory.yaml', kind: 'manifest' }],
+      dirty: [{ path: 'inventory/inventory.yaml', kind: 'manifest' }],
       warnings: [],
     };
     const { el } = mountOverview(space);

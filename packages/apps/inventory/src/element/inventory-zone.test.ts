@@ -133,7 +133,7 @@ describe('<spl-inventory-zone> rendering a legacy zone', () => {
   it('asks the page to check in from its check-in bar', () => {
     const mounted = mountZone({
       ...LEGACY_ZONE,
-      dirty: [{ goodId: 123, path: LEGACY_ZONE.zone.path, kind: 'zone' }],
+      dirty: [{ path: LEGACY_ZONE.zone.path, kind: 'zone' }],
     });
 
     mounted.el.querySelector<HTMLButtonElement>('#inventory-checkin')!.click();
@@ -552,7 +552,7 @@ describe('<spl-inventory-zone> rendering and editing a configured zone', () => {
         ],
         totals: { itemCount: 1 },
       },
-      dirty: [{ goodId: 9, path: 'inventory/inventory.yaml', kind: 'manifest' }],
+      dirty: [{ path: 'inventory/inventory.yaml', kind: 'manifest' }],
     };
     const { el } = mountZone(state);
 

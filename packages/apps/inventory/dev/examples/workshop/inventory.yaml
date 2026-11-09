@@ -16,6 +16,14 @@ fields:
   - id: quantity
     label: Quantity
     type: number
+  # Kept in the file, never shown or asked for by the app.
+  - id: asset-tag
+    label: Asset tag
+    type: text
+    visibility:
+      table: false
+      add: false
+      edit: false
 total:
   field: replacement-value
   multiplyBy: quantity

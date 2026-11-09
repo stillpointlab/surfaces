@@ -1,0 +1,14 @@
+# A duplicate id (mugs, also in the kitchen) and an item the writer cannot
+# patch (a flow map): the first needs attention, the second is read-only.
+label: Office
+items:
+  - id: desk
+    title: Desk
+    value: 100
+  - id: mugs
+    title: Pen mugs
+    value: 3
+  - id: printer
+    title: Printer
+    value: 180
+    receipt: { store: Office Co }

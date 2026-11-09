@@ -6,9 +6,14 @@ root entry (`.`) exports:
 - the file model's types (`SharedInventory*`, and `TreeNode`, `common`'s `FolderNode`) and path rules (`slugifyInventoryName`,
   the field-id and currency patterns);
 - reading: `parseInventoryManifest`, `parseZoneFile`, `detectInventoryAt`;
-- the rules: field validation (`fields.ts`), totals and duplicate-id demotion (`totals.ts`), each
-  answering a `Result` from `@stillpointlab/common-format/app` whose refusal (`code`, `message`)
-  the host maps to its own errors;
+- the space from a host's files (`space.ts`): `resolveInventory`, `projectInventorySpace` and
+  `projectInventoryZone` (below);
+- the ops as rules (`ops.ts`): `addInventoryZone`, `addInventoryItem`, `updateInventoryItem`,
+  `deleteInventoryItem`; and creating an inventory (`create.ts`): `planInventoryCreate`,
+  `placeInventoryCreate`;
+- the smaller rules they are built from: field validation (`fields.ts`), totals and duplicate-id
+  demotion (`totals.ts`). Every rule answers a `Result` from `@stillpointlab/common-format/app`
+  whose refusal (`code`, `message`) the host maps to its own errors;
 - byte-preserving rewrites: `appendItem`, `patchItem`, `deleteItem` (`zoneWriter.ts`);
 - seeds: `manifestSeedContent`, `zoneSeedContent`;
 - CSV: `serializeZone` and `serializeSpace` (each a `Result<{ content }>`), `exportWarnings`;
@@ -20,8 +25,42 @@ types. A client that needs only those imports them there: `.` builds the manifes
 module scope, which a bundler cannot drop. `./element` is the app's two elements (below).
 
 The core was moved as-is from Context Manager (source commit `373a20ae`), and the elements followed
-(source commit `b73e3c59`). The host side stays there: drafts, check-in, routes and the page that
-mounts the elements. After the Element section, this README is the file format.
+(source commit `b73e3c59`). The rules that assemble a space and answer its ops followed in stage 2
+phase 7. The host side stays there: loading files, drafts, linking, check-in, routes and the page
+that mounts the elements. After the Rules and Element sections, this README is the file format.
+
+## Rules
+
+A host hands the core an `InventorySnapshot`: plain data, no callbacks.
+
+- `manifestPath`: the manifest the space is anchored at.
+- `paths`: every path the host can see, its tree's files and the files it created that have no
+  upstream yet. `detectInventoryAt(manifestPath, [], paths)` names the files to read.
+- `files`: their contents by path, with the host's drafts already laid over. `null` (or a missing
+  path) is a file the host could not read.
+- `taken` (optional): paths a new file may not use beyond `paths`, such as files the host knows
+  that its tree has not caught up with.
+
+**Projection.** `projectInventorySpace(snapshot, facts)` is the overview and
+`projectInventoryZone(snapshot, slug, facts)` one zone's state, each `null` when the manifest (or
+the zone) is gone. `facts` are what only the host knows: `enabled` and the `dirty` files. Both are
+built on `resolveInventory(snapshot)`, the space with every zone parsed, scanned for writability,
+duplicate ids demoted and totalled, which a host can also read whole (for an export). A host lays
+its own facts over the result: its ids for files, or a label that tells sibling spaces apart.
+
+**Ops.** Each op function takes the snapshot and the op in the shape the elements ask for it
+(`{ title }`, `{ path, item }`, `{ path, id, changes }`, `{ path, id }`) and answers the
+`changes` to write, each `{ path, content }` and marked `created` for a new file, or a refusal with
+the codes and messages Context Manager's endpoints have always sent. `addInventoryZone` also
+answers the new `slug` and `path`, and `addInventoryItem` the new `id`. An edit that changes
+nothing answers no changes. How a change is written (a draft, a new file) is the host's.
+
+**Creating an inventory** is two steps, so a host can check what only it knows between them:
+`planInventoryCreate(input)` answers the manifest and zone files to seed (or refuses an invalid
+manifest, the repository root, and zone titles that name no file or the same file), and
+`placeInventoryCreate(plan, { taken, reusable })` refuses a seed path, or a folder above one, that
+is already a file. `reusable` names files an earlier, unfinished attempt at the same create left
+behind; they are skipped, so a retry finishes the job.
 
 ## Element
 
@@ -66,11 +105,13 @@ wherever it lands.
 - **Styles** live in each element's light DOM and read the `--spl-*` tokens, including
   `--spl-alert-color`, `--spl-alert-bg` and `--spl-alert-text` for warnings and the check-in bar.
 
-In the harness (`npm run dev`, "inventory"), fixtures cover every case the elements render (the
-overview configured, legacy, just created, disabled, invalid and empty; zones configured, legacy,
-read-only, broken, empty, neutral and with hostile strings) and an example inventory in
-`dev/example/` parsed by the core, as files alone. An in-memory host answers the ops, and the
-controls switch it off or make it refuse the next op.
+In the harness (`npm run dev`, "inventory"), two example inventories in `dev/examples/` run on the
+core: a configured workshop and a legacy house (with a duplicate id, a read-only item, a read-only
+file and a parse error). An in-memory host keeps their files, answers every op with the core's
+rules, writes the changes back and re-projects, so an edit shows on each example fixture until the
+page reloads. Hand-built fixtures cover the cases files alone do not show (local changes, a disabled
+space, no inventory, hostile strings) and the element tests' states; the host refuses their ops.
+The controls switch the host off or make it refuse the next op.
 
 ## Inventory repository format
 

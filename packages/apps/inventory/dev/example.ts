@@ -1,140 +1,33 @@
-// The example inventory in dev/example/, parsed with the core's functions and
-// assembled into the states the elements take. A host's service does the
-// assembling for real, overlaying drafts and check-ins; here every file is
-// untracked and clean, as a host shows a repository nobody has edited.
-import {
-  aggregateItems,
-  applyZoneTotals,
-  demoteDuplicateIds,
-  parseInventoryManifest,
-  parseZoneFile,
-} from '../src/index.js';
+// The example inventories in dev/examples/, as the files a host would hand the
+// core: each folder is a repository holding one inventory. The harness's host
+// keeps them in memory, so what an op changes lasts until the page reloads.
+import type { InventorySnapshot } from '../src/space.js';
 
-import type {
-  SharedInventoryZone,
-  SharedInventoryZoneState,
-  SharedInventorySchema,
-  SharedInventorySpace,
-} from '../src/types.js';
-
-const files = import.meta.glob<string>('./example/**/*.yaml', {
+const files = import.meta.glob<string>('./examples/**/*.yaml', {
   query: '?raw',
   import: 'default',
   eager: true,
 });
 
-/** Where the example sits in an imagined repository. */
-const SPACE_PATH = 'workshop';
-const MANIFEST_PATH = `${SPACE_PATH}/inventory.yaml`;
+/** The examples: a configured (version 2) workshop and a legacy (version 1) house. */
+export type ExampleName = 'workshop' | 'house';
 
-const repoPath = (file: string): string => file.replace(/^\.\/example/, SPACE_PATH);
+/** Where each example sits in its imagined repository. */
+const SPACE_PATHS: Record<ExampleName, string> = { workshop: 'workshop', house: '' };
 
-function schemaOf(content: string): { schema: SharedInventorySchema; warnings: string[] } {
-  const parsed = parseInventoryManifest(content);
-  if (!parsed.ok) {
-    return {
-      schema: {
-        mode: 'invalid',
-        errors: parsed.errors,
-        ...(parsed.declaredVersion !== undefined
-          ? { declaredVersion: parsed.declaredVersion }
-          : {}),
-      },
-      warnings: [],
-    };
+/** One example as a snapshot: every file readable, nothing else in the repository. */
+export function exampleSnapshot(name: ExampleName): InventorySnapshot {
+  const prefix = `./examples/${name}/`;
+  const spacePath = SPACE_PATHS[name];
+  const repoPath = (file: string): string =>
+    `${spacePath === '' ? '' : `${spacePath}/`}${file.slice(prefix.length)}`;
+  const contents: Record<string, string> = {};
+  for (const [file, content] of Object.entries(files)) {
+    if (file.startsWith(prefix)) contents[repoPath(file)] = content;
   }
-  const { manifest } = parsed;
   return {
-    schema:
-      manifest.version === 1 ? { mode: 'legacy', manifest } : { mode: 'configured', manifest },
-    warnings: parsed.warnings,
-  };
-}
-
-function zones(schema: SharedInventorySchema): SharedInventoryZone[] {
-  const parsed = Object.entries(files)
-    .filter(([file]) => file.startsWith('./example/rooms/'))
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([file, content]): SharedInventoryZone => {
-      const path = repoPath(file);
-      const slug = path.slice(path.lastIndexOf('/') + 1).replace(/\.yaml$/, '');
-      const result = parseZoneFile(content, schema);
-      const zone: SharedInventoryZone = result.ok
-        ? {
-            slug,
-            label: result.label ?? slug,
-            path,
-            items: result.items,
-            totals: aggregateItems(schema, []),
-            needsAttention: result.attention,
-            writable: true,
-            ...(result.warnings.length > 0 ? { warnings: result.warnings } : {}),
-          }
-        : {
-            slug,
-            label: slug,
-            path,
-            items: [],
-            totals: aggregateItems(schema, []),
-            needsAttention: [],
-            parseError: result.error,
-            writable: false,
-          };
-      return zone;
-    });
-  demoteDuplicateIds(parsed);
-  for (const zone of parsed) applyZoneTotals(zone, schema);
-  return parsed;
-}
-
-function load(): { space: SharedInventorySpace; zones: SharedInventoryZone[] } {
-  const { schema, warnings } = schemaOf(files['./example/inventory.yaml'] ?? '');
-  const all = zones(schema);
-  const label = schema.mode === 'invalid' ? undefined : schema.manifest.label;
-  return {
-    zones: all,
-    space: {
-      manifestPath: MANIFEST_PATH,
-      spacePath: SPACE_PATH,
-      ...(label !== undefined ? { label } : {}),
-      schema,
-      zones: all.map((zone) => ({
-        slug: zone.slug,
-        label: zone.label,
-        path: zone.path,
-        itemCount: zone.items.length,
-        totals: zone.totals,
-        needsAttentionCount: zone.needsAttention.length,
-        ...(zone.parseError !== undefined ? { parseError: zone.parseError } : {}),
-      })),
-      totals: aggregateItems(
-        schema,
-        all.flatMap((zone) => zone.items)
-      ),
-      enabled: true,
-      dirty: [],
-      warnings,
-    },
-  };
-}
-
-/** The example's overview. */
-export function exampleSpace(): SharedInventorySpace {
-  return load().space;
-}
-
-/** One of the example's zones, by slug (the first when it has none). */
-export function exampleZone(slug?: string): SharedInventoryZoneState {
-  const { space, zones: all } = load();
-  const zone = all.find((candidate) => candidate.slug === slug) ?? all[0]!;
-  return {
-    manifestPath: space.manifestPath,
-    spacePath: space.spacePath,
-    ...(space.label !== undefined ? { spaceLabel: space.label } : {}),
-    schema: space.schema,
-    zone,
-    enabled: true,
-    dirty: [],
-    warnings: space.warnings,
+    manifestPath: repoPath(`${prefix}inventory.yaml`),
+    paths: Object.keys(contents).sort(),
+    files: contents,
   };
 }

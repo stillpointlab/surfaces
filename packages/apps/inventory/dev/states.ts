@@ -51,7 +51,7 @@ export function configuredOverview(): SharedInventorySpace {
     ],
     totals: clone(CONFIGURED_ZONE.zone.totals),
     enabled: true,
-    dirty: [{ goodId: 1, path: 'inventory/rooms/workshop.yaml', kind: 'zone' }],
+    dirty: [{ path: 'inventory/rooms/workshop.yaml', kind: 'zone' }],
     warnings: [],
   };
 }
@@ -68,7 +68,7 @@ export function invalidOverview(): SharedInventorySpace {
     zones: [],
     totals: { itemCount: 0 },
     enabled: true,
-    dirty: [{ goodId: 9, path: 'inventory/inventory.yaml', kind: 'manifest' }],
+    dirty: [{ path: 'inventory/inventory.yaml', kind: 'manifest' }],
     warnings: [],
   };
 }
@@ -79,7 +79,7 @@ export const legacyZone = (): SharedInventoryZoneState => clone(LEGACY_ZONE);
 /** A configured zone with a dirty file and items that need attention. */
 export function attentionZone(): SharedInventoryZoneState {
   const state = clone(CONFIGURED_ZONE);
-  state.dirty = [{ goodId: 1, path: state.zone.path, kind: 'zone' }];
+  state.dirty = [{ path: state.zone.path, kind: 'zone' }];
   state.zone.needsAttention = [
     { id: 'lathe', title: 'Lathe (copy)', reason: 'duplicate id `lathe` (also in shed.yaml)' },
     { reason: 'item 4 has no id' },

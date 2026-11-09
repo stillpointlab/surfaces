@@ -13,3 +13,6 @@ export * from './csv.js';
 export * from './manifestSeed.js';
 export * from './zoneSeed.js';
 export * from './lifecycle.js';
+export * from './space.js';
+export * from './ops.js';
+export * from './create.js';

@@ -1,93 +1,102 @@
-// An in-memory host for the harness: answers the inventory elements' ops
-// against the state they show, so adding, saving and deleting render without a
-// server. It writes no files and keeps no drafts; it only gives the elements an
-// answer of the shape a real host gives, or refuses on request.
+// An in-memory host for the harness: it keeps an inventory's files in memory,
+// answers the elements' ops with the core's rules, writes the changes back and
+// re-projects. There are no drafts, check-in or repository: a changed file is
+// marked dirty, as a host marks it until check-in. A hand-built state has no
+// files, so its ops are refused.
 import { answerOps, fail, ok } from '@stillpointlab/common-format/app';
 
-import { slugifyInventoryName } from '../src/paths.js';
-import { aggregateItems } from '../src/totals.js';
+import {
+  addInventoryItem,
+  addInventoryZone,
+  deleteInventoryItem,
+  updateInventoryItem,
+} from '../src/ops.js';
+import { projectResolvedSpace, projectResolvedZone, resolveInventory } from '../src/space.js';
 
 import type { InventoryOps } from '../src/element/index.js';
+import type { AddInventoryItemInput, UpdateInventoryItemInput } from '../src/ops.js';
+import type { InventoryChange, InventoryHostFacts, InventorySnapshot } from '../src/space.js';
 import type {
-  SharedInventoryItem,
-  SharedInventoryResolvedValue,
-  SharedInventoryZoneState,
-  SharedInventoryScalar,
+  SharedInventoryDirtyFile,
   SharedInventorySpace,
+  SharedInventoryZoneState,
 } from '../src/types.js';
 import type { AppOp, Result } from '@stillpointlab/common-format/app';
 
+/** One inventory's files and the facts the harness keeps about them. */
+export interface Workspace {
+  snapshot: { manifestPath: string; paths: string[]; files: Record<string, string | null> };
+  enabled: boolean;
+  dirty: SharedInventoryDirtyFile[];
+}
+
+export function workspace(snapshot: InventorySnapshot): Workspace {
+  return {
+    snapshot: {
+      manifestPath: snapshot.manifestPath,
+      paths: [...snapshot.paths],
+      files: { ...snapshot.files },
+    },
+    enabled: true,
+    dirty: [],
+  };
+}
+
+const facts = (ws: Workspace): InventoryHostFacts => ({ enabled: ws.enabled, dirty: ws.dirty });
+
+/** The workspace's overview, or `null` when its manifest is gone. */
+export function spaceOf(ws: Workspace): SharedInventorySpace | null {
+  const resolved = resolveInventory(ws.snapshot);
+  return resolved && projectResolvedSpace(resolved, facts(ws));
+}
+
+/** One zone of the workspace, by its file's path (the first zone when none is given). */
+export function zoneOf(ws: Workspace, path?: string): SharedInventoryZoneState | null {
+  const resolved = resolveInventory(ws.snapshot);
+  const zone = resolved?.zones.find((candidate) => candidate.path === path) ?? resolved?.zones[0];
+  return resolved && zone ? projectResolvedZone(resolved, zone.slug, facts(ws)) : null;
+}
+
+/** Write an op's changes into memory, marking each file dirty. */
+function write(ws: Workspace, changes: readonly InventoryChange[]): void {
+  for (const change of changes) {
+    ws.snapshot.files[change.path] = change.content;
+    if (change.created && !ws.snapshot.paths.includes(change.path)) {
+      ws.snapshot.paths.push(change.path);
+    }
+    if (ws.dirty.some((file) => file.path === change.path)) continue;
+    ws.dirty.push({
+      path: change.path,
+      kind: change.path === ws.snapshot.manifestPath ? 'manifest' : 'zone',
+      ...(change.created ? { newFile: true as const } : {}),
+    });
+  }
+}
+
 export interface HarnessHost {
-  /** The state the host answers from: set with each fixture. */
-  setState(state: SharedInventorySpace | SharedInventoryZoneState | null): void;
+  /** The files the host answers from (`null` for a hand-built state): set with each fixture. */
+  use(ws: Workspace | null): void;
   /** Answer ops (true) or leave them unclaimed (false). */
   setAnswering(on: boolean): void;
   /** Refuse the next op once, with this code. */
   failNext(code: string): void;
 }
 
-type Values = Record<string, SharedInventoryScalar | null>;
-
-/** A configured field's value as the core resolves it (configured fields are text or number). */
-const resolved = (value: SharedInventoryScalar | undefined): SharedInventoryResolvedValue =>
-  value === undefined || typeof value === 'boolean'
-    ? { state: 'missing' }
-    : { state: 'valid', value };
-
-function markDirty<S extends SharedInventorySpace | SharedInventoryZoneState>(
-  state: S,
-  path: string,
-  newFile = false
-): void {
-  if (state.dirty.some((file) => file.path === path)) return;
-  state.dirty.push({
-    goodId: state.dirty.length + 1,
-    path,
-    kind: 'zone',
-    ...(newFile ? { newFile: true } : {}),
-  });
-}
-
-/** Apply an edit the way the server would, closely enough for the harness. */
-function edited(item: SharedInventoryItem, changes: Record<string, unknown>): SharedInventoryItem {
-  const next: SharedInventoryItem = structuredClone(item);
-  for (const [key, value] of Object.entries(changes)) {
-    if (key === 'fieldValues' || key === 'extraValues') continue;
-    if (value === null) delete (next as unknown as Record<string, unknown>)[key];
-    else (next as unknown as Record<string, unknown>)[key] = value;
-  }
-  for (const [id, value] of Object.entries((changes.fieldValues ?? {}) as Values)) {
-    if (value === null) {
-      delete next.fieldValues[id];
-      if (next.resolvedFieldValues) next.resolvedFieldValues[id] = { state: 'missing' };
-    } else {
-      next.fieldValues[id] = value;
-      if (next.resolvedFieldValues) next.resolvedFieldValues[id] = resolved(value);
-    }
-  }
-  for (const [key, value] of Object.entries((changes.extraValues ?? {}) as Values)) {
-    const at = next.extraFields.findIndex((extra) => extra.key === key);
-    if (value === null) {
-      if (at >= 0) next.extraFields.splice(at, 1);
-    } else if (at >= 0) next.extraFields[at] = { key, value };
-    else next.extraFields.push({ key, value });
-  }
-  return next;
-}
-
 export function attachHost(elements: readonly HTMLElement[]): HarnessHost {
-  let state: SharedInventorySpace | SharedInventoryZoneState | null = null;
+  let ws: Workspace | null = null;
   let stops: (() => void)[] = [];
   let failCode: string | null = null;
 
-  const zoneState = (): SharedInventoryZoneState | null =>
-    state && 'zone' in state ? state : null;
-
-  const settleZone = (view: SharedInventoryZoneState, items: SharedInventoryItem[]): Result => {
-    view.zone.items = items;
-    view.zone.totals = aggregateItems(view.schema, items);
-    markDirty(view, view.zone.path);
-    return ok({ state: structuredClone(view) });
+  /** Write a successful op's changes and answer the zone it changed. */
+  const zoneReply = (
+    files: Workspace,
+    path: string,
+    result: Result<{ changes: InventoryChange[] }>
+  ): Result<{ state: SharedInventoryZoneState }> => {
+    if (!result.ok) return result;
+    write(files, result.changes);
+    const state = zoneOf(files, path);
+    return state ? ok({ state }) : fail('NOT_FOUND', `No zone at ${path}`);
   };
 
   const answer = (op: AppOp<InventoryOps>): Result<object> => {
@@ -96,73 +105,44 @@ export function attachHost(elements: readonly HTMLElement[]): HarnessHost {
       failCode = null;
       return fail(code, `The harness refused this op (${code})`);
     }
+    // Linking is a host's own business: the harness's editor is an anchor.
+    if (op.type === 'link-editor') return ok({ href: `#editor:${op.path}` });
+    if (!ws) {
+      return fail(
+        'HARNESS_NO_FILES',
+        'This state is hand-built: the harness has no files to change.'
+      );
+    }
     switch (op.type) {
       case 'add-zone': {
-        if (!state || !('zones' in state)) return fail('NOT_FOUND', 'No overview');
-        const slug = slugifyInventoryName(op.title);
-        const path = `${state.spacePath ? `${state.spacePath}/` : ''}rooms/${slug}.yaml`;
-        if (state.zones.some((zone) => zone.path === path)) {
-          return fail('INVENTORY_ROOM_EXISTS', `“${slug}.yaml” already exists here`);
-        }
-        state.zones.push({
-          slug,
-          label: op.title,
-          path,
-          itemCount: 0,
-          totals: aggregateItems(state.schema, []),
-          needsAttentionCount: 0,
-        });
-        markDirty(state, path, true);
-        return ok({ space: structuredClone(state) });
+        const result = addInventoryZone(ws.snapshot, op);
+        if (!result.ok) return result;
+        write(ws, result.changes);
+        const space = spaceOf(ws);
+        return space ? ok({ space }) : fail('NOT_FOUND', 'The inventory is gone');
       }
-      case 'add-item': {
-        const view = zoneState();
-        if (!view) return fail('NOT_FOUND', 'No zone');
-        const title = String(op.item.title);
-        const fieldValues = (op.item.fieldValues ?? {}) as Record<string, SharedInventoryScalar>;
-        const item: SharedInventoryItem = {
-          ...(op.item as Partial<SharedInventoryItem>),
-          id: `${slugifyInventoryName(title)}-${view.zone.items.length + 1}`,
-          title,
-          quantity: typeof op.item.quantity === 'number' ? op.item.quantity : 1,
-          fieldValues,
-          ...(view.schema.mode === 'configured'
-            ? {
-                resolvedFieldValues: Object.fromEntries(
-                  view.schema.manifest.fields.map((field) => [
-                    field.id,
-                    resolved(fieldValues[field.id]),
-                  ])
-                ),
-              }
-            : {}),
-          extraFields: [],
-        };
-        return settleZone(view, [...view.zone.items, item]);
-      }
-      case 'update-item': {
-        const view = zoneState();
-        const item = view?.zone.items.find((candidate) => candidate.id === op.id);
-        if (!view || !item) return fail('INVENTORY_ITEM_NOT_FOUND', `No item ${op.id}`);
-        return settleZone(
-          view,
-          view.zone.items.map((candidate) =>
-            candidate === item ? edited(item, op.changes) : candidate
-          )
+      // The elements send the bodies a host's endpoints take: the core's inputs.
+      case 'add-item':
+        return zoneReply(
+          ws,
+          op.path,
+          addInventoryItem(ws.snapshot, {
+            path: op.path,
+            item: op.item as unknown as AddInventoryItemInput,
+          })
         );
-      }
-      case 'delete-item': {
-        const view = zoneState();
-        if (!view?.zone.items.some((candidate) => candidate.id === op.id)) {
-          return fail('INVENTORY_ITEM_NOT_FOUND', `No item ${op.id}`);
-        }
-        return settleZone(
-          view,
-          view.zone.items.filter((candidate) => candidate.id !== op.id)
+      case 'update-item':
+        return zoneReply(
+          ws,
+          op.path,
+          updateInventoryItem(ws.snapshot, {
+            path: op.path,
+            id: op.id,
+            changes: op.changes as UpdateInventoryItemInput,
+          })
         );
-      }
-      case 'link-editor':
-        return ok({ href: `#editor:${op.path}` });
+      case 'delete-item':
+        return zoneReply(ws, op.path, deleteInventoryItem(ws.snapshot, op));
     }
   };
 
@@ -172,7 +152,7 @@ export function attachHost(elements: readonly HTMLElement[]): HarnessHost {
   };
   setAnswering(true);
   return {
-    setState: (next) => (state = structuredClone(next)),
+    use: (next) => (ws = next),
     setAnswering,
     failNext: (code) => (failCode = code),
   };

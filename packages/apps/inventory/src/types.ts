@@ -178,8 +178,6 @@ export interface SharedInventoryZone {
   parseError?: string;
   writable: boolean;
   readOnlyReason?: string;
-  goodId?: number;
-  goodPublicId?: string;
   warnings?: string[];
 }
 
@@ -197,9 +195,11 @@ export interface SharedInventoryZoneSummary {
   parseError?: string;
 }
 
-/** An inventory file with un-checked-in local changes. */
+/**
+ * An inventory file with local changes not yet checked in. A host that names
+ * its files by its own ids adds them in its own extension of this type.
+ */
 export interface SharedInventoryDirtyFile {
-  goodId: number;
   path: string;
   kind: 'manifest' | 'zone';
   newFile?: true;
@@ -222,8 +222,6 @@ export interface SharedInventorySpace {
   warnings: string[];
   /** Legacy recovery errors; configured/invalid consumers use `schema.errors`. */
   manifestErrors?: string[];
-  /** Direct editor destination when the manifest is already linked. */
-  manifestGoodPublicId?: string;
 }
 
 /** Everything one zone view renders. */
@@ -240,7 +238,6 @@ export interface SharedInventoryZoneState {
   enabled: boolean;
   dirty: SharedInventoryDirtyFile[];
   warnings: string[];
-  manifestGoodPublicId?: string;
 }
 
 /** Inventory presence composed onto the repo-tree endpoint. */

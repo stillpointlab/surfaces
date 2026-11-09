@@ -1,0 +1,11 @@
+# The harness's legacy example: a version 1 inventory, the frozen fields and
+# one declared field, parsed and changed by the core.
+version: 1
+label: Maple St House
+currency: USD
+fields:
+  - id: condition
+    label: Condition
+containers:
+  - counter
+  - pantry

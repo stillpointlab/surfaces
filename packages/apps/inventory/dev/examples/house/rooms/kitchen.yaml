@@ -1,0 +1,14 @@
+label: Kitchen
+items:
+  - id: espresso-machine
+    title: Rancilio Silvia
+    value: 545
+    container: counter
+    tags: [coffee, appliance]
+    condition: good
+  - id: mugs
+    title: Diner mugs
+    quantity: 6
+    value: 8
+  - id: mystery
+    title: Unpriced thing
