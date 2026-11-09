@@ -61,7 +61,7 @@ export const SEEDED: SharedInventorySpace = {
     },
     ...SPACE.zones,
   ],
-  dirty: [{ goodId: 200, path: 'rooms/attic.yaml', kind: 'zone', newFile: true }],
+  dirty: [{ path: 'rooms/attic.yaml', kind: 'zone', newFile: true }],
 };
 
 /** Straight after "Create inventory": nothing is upstream, everything is new. */
@@ -94,9 +94,9 @@ export const JUST_CREATED: SharedInventorySpace = {
   ],
   totals: { itemCount: 0, value: 0, unvaluedCount: 0 },
   dirty: [
-    { goodId: 200, path: 'inventory/inventory.yaml', kind: 'manifest', newFile: true },
-    { goodId: 201, path: 'inventory/rooms/garage.yaml', kind: 'zone', newFile: true },
-    { goodId: 202, path: 'inventory/rooms/kitchen.yaml', kind: 'zone', newFile: true },
+    { path: 'inventory/inventory.yaml', kind: 'manifest', newFile: true },
+    { path: 'inventory/rooms/garage.yaml', kind: 'zone', newFile: true },
+    { path: 'inventory/rooms/kitchen.yaml', kind: 'zone', newFile: true },
   ],
 };
 

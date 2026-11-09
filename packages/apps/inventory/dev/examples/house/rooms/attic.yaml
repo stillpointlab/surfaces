@@ -1,0 +1,3 @@
+# Flow-style items: readable, but the whole file is read-only to the writer.
+label: Attic
+items: [{ id: books, title: Boxes of books, quantity: 4 }]

@@ -1,14 +1,18 @@
 // The inventory elements in the surfaces harness (`npm run dev`). Both elements
-// are mounted; a fixture shows the one it fills and hides the other. An
-// in-memory host answers their ops, and the controls switch it off (every op
-// unhandled) or make it refuse the next op. Requests and notifications show in
-// the event log. Links are `#` anchors: the zone, export and editor URLs belong
-// to a host.
+// are mounted; a fixture shows the one it fills and hides the other. The
+// example fixtures run on the core: an in-memory host holds the examples'
+// files, answers the elements' ops with the core's rules and re-projects, so
+// an edit shows on every example fixture until the page reloads. The
+// hand-built fixtures show cases the examples do not (a disabled space, local
+// changes, hostile strings); their ops are refused. The controls switch the
+// host off (every op unhandled) or make it refuse the next op. Requests and
+// notifications show in the event log. Links are `#` anchors: the zone, export
+// and editor URLs belong to a host.
 import '../src/element/index.js';
 import './host.css';
 
-import { exampleSpace, exampleZone } from './example.js';
-import { attachHost } from './host.js';
+import { exampleSnapshot } from './example.js';
+import { attachHost, spaceOf, workspace, zoneOf } from './host.js';
 import {
   attentionZone,
   brokenZone,
@@ -25,7 +29,7 @@ import {
   readOnlyZone,
 } from './states.js';
 
-import type { HarnessHost } from './host.js';
+import type { HarnessHost, Workspace } from './host.js';
 import type {
   HarnessElements,
   HarnessFixture,
@@ -37,13 +41,19 @@ import type { SharedInventoryZoneState, SharedInventorySpace } from '../src/type
 const OVERVIEW = 'spl-inventory-overview';
 const ZONE = 'spl-inventory-zone';
 
-/** The manifests and the example's garage are "linked": the rest ask `link-editor`. */
+/** The manifests and the workshop's garage are "linked": the rest ask `link-editor`. */
 const LINKS: InventoryLinks = {
   zone: (path) => `#zone:${path}`,
   exportAll: () => '#export.zip',
   exportZone: (path) => `#export:${path}.csv`,
   editor: (path) =>
     path.endsWith('inventory.yaml') || path.endsWith('garage.yaml') ? `#editor:${path}` : undefined,
+};
+
+/** The examples' files, kept for the page's life so edits carry across fixtures. */
+const WORKSPACES = {
+  workshop: workspace(exampleSnapshot('workshop')),
+  house: workspace(exampleSnapshot('house')),
 };
 
 let host: HarnessHost | null = null;
@@ -72,27 +82,38 @@ function only(shown: HTMLElement, hidden: HTMLElement): void {
   if (hideBlock) hideBlock.hidden = true;
 }
 
-const overviewFixture = (state: () => SharedInventorySpace | null): HarnessFixture => ({
+const overviewFixture = (
+  state: () => SharedInventorySpace | null,
+  ws: Workspace | null = null
+): HarnessFixture => ({
   content: '',
   apply: (elements) => {
     const { overview, zone } = prepare(elements);
     only(overview, zone);
-    const next = state();
-    host!.setState(next);
-    overview.setState(next);
+    host!.use(ws);
+    overview.setState(state());
   },
 });
 
-const zoneFixture = (state: () => SharedInventoryZoneState): HarnessFixture => ({
+const zoneFixture = (
+  state: () => SharedInventoryZoneState,
+  ws: Workspace | null = null
+): HarnessFixture => ({
   content: '',
   apply: (elements) => {
     const { overview, zone } = prepare(elements);
     only(zone, overview);
-    const next = state();
-    host!.setState(next);
-    zone.setState(next);
+    host!.use(ws);
+    zone.setState(state());
   },
 });
+
+/** An example's overview, projected by the core from its files. */
+const exampleOverview = (ws: Workspace): HarnessFixture => overviewFixture(() => spaceOf(ws), ws);
+
+/** One of an example's zones, by its file's path. */
+const exampleZone = (ws: Workspace, path: string): HarnessFixture =>
+  zoneFixture(() => zoneOf(ws, path)!, ws);
 
 export default {
   elements: { extra: [OVERVIEW, ZONE] },
@@ -117,9 +138,14 @@ export default {
     },
   ],
   fixtures: {
-    'Example inventory (files only)': overviewFixture(exampleSpace),
-    'Example zone: garage': zoneFixture(() => exampleZone('garage')),
-    'Example zone: work bench': zoneFixture(() => exampleZone('bench')),
+    'Example workshop (configured)': exampleOverview(WORKSPACES.workshop),
+    'Example workshop: garage': exampleZone(WORKSPACES.workshop, 'workshop/rooms/garage.yaml'),
+    'Example workshop: work bench': exampleZone(WORKSPACES.workshop, 'workshop/rooms/bench.yaml'),
+    'Example house (legacy)': exampleOverview(WORKSPACES.house),
+    'Example house: kitchen': exampleZone(WORKSPACES.house, 'rooms/kitchen.yaml'),
+    'Example house: office, needs attention': exampleZone(WORKSPACES.house, 'rooms/office.yaml'),
+    'Example house: attic, read-only file': exampleZone(WORKSPACES.house, 'rooms/attic.yaml'),
+    'Example house: cellar, parse error': exampleZone(WORKSPACES.house, 'rooms/cellar.yaml'),
     'Overview: configured, dirty, broken zone': overviewFixture(configuredOverview),
     'Overview: legacy, a seeded zone': overviewFixture(legacyOverview),
     'Overview: just created': overviewFixture(justCreated),

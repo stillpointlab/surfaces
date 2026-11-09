@@ -4,6 +4,7 @@ items:
     title: Bench vise
     owner: Robin
     replacement-value: 64.5
+    asset-tag: WS-0042
     warranty: true
     receipt:
       store: Hardware Co
