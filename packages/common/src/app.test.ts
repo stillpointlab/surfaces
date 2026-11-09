@@ -1,7 +1,15 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { answerOps, APP_OP_EVENT, createReadyGate, fail, ok, requestOp } from './app';
+import {
+  answerOps,
+  APP_OP_EVENT,
+  createReadyGate,
+  fail,
+  ok,
+  placeNewFiles,
+  requestOp,
+} from './app';
 import { describeAppElementContract } from './testing/app-element';
 
 import type { AppElement, AppOpDetail, Result } from './app';
@@ -10,6 +18,50 @@ type SampleOps = {
   rename: { op: { path: string; title: string }; reply: { title: string } };
   ping: { op: object; reply: object };
 };
+
+describe('placeNewFiles', () => {
+  const files = [
+    { path: 'inventory/inventory.yaml' },
+    { path: 'inventory/rooms/kitchen.yaml' },
+    { path: 'inventory/rooms/garage.yaml' },
+  ];
+
+  it('answers every file, in order, when nothing is in the way', () => {
+    expect(placeNewFiles(files, { taken: ['README.md', 'inventory/notes.md'] })).toEqual({
+      ok: true,
+      files,
+    });
+  });
+
+  it('answers a file already taken', () => {
+    expect(placeNewFiles(files, { taken: ['inventory/rooms/garage.yaml'] })).toEqual({
+      ok: false,
+      path: 'inventory/rooms/garage.yaml',
+    });
+  });
+
+  it('answers a parent folder that is a file, before the files themselves', () => {
+    expect(
+      placeNewFiles(files, { taken: ['inventory/rooms/garage.yaml', 'inventory/rooms'] })
+    ).toEqual({ ok: false, path: 'inventory/rooms' });
+    expect(placeNewFiles(files, { taken: ['inventory'] })).toEqual({
+      ok: false,
+      path: 'inventory',
+    });
+  });
+
+  it('skips reusable files, and still refuses a reusable parent folder', () => {
+    const leftovers = ['inventory/inventory.yaml', 'inventory/rooms/kitchen.yaml'];
+    expect(placeNewFiles(files, { taken: leftovers, reusable: leftovers })).toEqual({
+      ok: true,
+      files: [{ path: 'inventory/rooms/garage.yaml' }],
+    });
+    expect(placeNewFiles(files, { taken: ['inventory'], reusable: ['inventory'] })).toEqual({
+      ok: false,
+      path: 'inventory',
+    });
+  });
+});
 
 describe('ok and fail', () => {
   it('builds a success with its fields beside ok', () => {

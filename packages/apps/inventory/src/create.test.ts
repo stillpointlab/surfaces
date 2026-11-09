@@ -42,7 +42,7 @@ describe('planInventoryCreate', () => {
       'inventory/rooms/kitchen.yaml',
       'inventory/rooms/garage.yaml',
     ]);
-    expect(result.files.every((file) => file.created)).toBe(true);
+    expect(result.files.every((file) => file.kind === 'create')).toBe(true);
     expect(result.files[0]!.content).toBe(
       [
         'version: 2',
@@ -75,9 +75,9 @@ describe('planInventoryCreate', () => {
     const result = plan({ label: 'Attic: north side' });
     expect(result.files).toEqual([
       {
+        kind: 'create',
         path: 'inventory/inventory.yaml',
         content: 'version: 2\nlabel: "Attic: north side"\n',
-        created: true,
       },
     ]);
   });

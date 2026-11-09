@@ -2,8 +2,14 @@ import { expect } from 'vitest';
 
 import { withLineBreak } from '../line-endings';
 
-import type { AppCoreOptions, AppCoreRewrite, AppFixture } from './app';
-import type { AppLifecycle, FolderNode } from '../app';
+import type {
+  AppCoreOptions,
+  AppCoreRewrite,
+  AppCoreRoundTrip,
+  AppCoreRoundTripOptions,
+  AppFixture,
+} from './app';
+import type { AppLifecycle, AppSnapshot, FileChange, FolderNode } from '../app';
 
 // The checks describeAppCore runs, one function per `it`, so common's own tests
 // can show each one failing against a broken sample core.
@@ -117,6 +123,150 @@ export function assertFinalNewlineKept(rewrite: AppCoreRewrite, input: string): 
       /(\r\n|\r|\n)$/.test(output),
       `"${rewrite.name}" ${expected ? 'lost' : 'added'} the final newline`
     ).toBe(expected);
+  }
+}
+
+// ---- The round trip ---------------------------------------------------------
+
+/** A fixture as the snapshot a host would hand the core: every file visible and readable. */
+export function fixtureSnapshot(files: AppFixture, manifestPath: string): AppSnapshot {
+  return { manifestPath, paths: Object.keys(files), files };
+}
+
+/** The op's changes over these files, failing when the core refuses it. */
+function applyTrip(
+  options: AppCoreOptions,
+  core: AppCoreRoundTripOptions,
+  trip: AppCoreRoundTrip,
+  files: AppFixture
+): FileChange[] {
+  const result = core.core.apply(fixtureSnapshot(files, options.manifest), trip.op);
+  expect(
+    result.ok,
+    `"${trip.name}" was refused: ${result.ok ? '' : `${result.code}: ${result.message}`}`
+  ).toBe(true);
+  return result.ok ? result.changes : [];
+}
+
+/** The files after a host writes the changes. */
+function written(files: AppFixture, changes: readonly FileChange[]): Record<string, string> {
+  const next: Record<string, string> = { ...files };
+  for (const change of changes) {
+    if (change.kind === 'move') delete next[change.from];
+    next[change.path] = change.content;
+  }
+  return next;
+}
+
+/** A changed file's text before the op: the file it rewrites, or none for a new file. */
+function inputOf(files: AppFixture, change: FileChange): string | undefined {
+  if (change.kind === 'create') return undefined;
+  return files[change.kind === 'move' ? change.from : change.path];
+}
+
+/** The view projects over the fixture, the op changes something, and the view projects after. */
+export function assertRoundTripProjects(
+  options: AppCoreOptions,
+  core: AppCoreRoundTripOptions,
+  trip: AppCoreRoundTrip
+): void {
+  const files = fixtureFiles(options, trip.fixture);
+  const before = core.core.project(fixtureSnapshot(files, options.manifest), trip.view, core.facts);
+  expect(before, `"${trip.name}": the view does not project before the op`).not.toBeNull();
+  const changes = applyTrip(options, core, trip, files);
+  expect(changes.length, `"${trip.name}" changed nothing`).toBeGreaterThan(0);
+  const after = core.core.project(
+    fixtureSnapshot(written(files, changes), options.manifest),
+    trip.view,
+    core.facts
+  );
+  expect(after, `"${trip.name}": the view does not project after the op`).not.toBeNull();
+}
+
+/** Every file the op writes parses again as the app reads it. */
+export function assertRoundTripReparses(
+  options: AppCoreOptions,
+  core: AppCoreRoundTripOptions,
+  trip: AppCoreRoundTrip
+): void {
+  for (const change of applyTrip(options, core, trip, fixtureFiles(options, trip.fixture))) {
+    expect(
+      core.reparses(change.path, change.content),
+      `"${trip.name}" wrote ${change.path}, which does not parse`
+    ).toBe(true);
+  }
+}
+
+/** Every comment line of a rewritten file appears in its new content, as often and verbatim. */
+export function assertRoundTripCommentsKept(
+  options: AppCoreOptions,
+  core: AppCoreRoundTripOptions,
+  trip: AppCoreRoundTrip
+): void {
+  const files = fixtureFiles(options, trip.fixture);
+  for (const change of applyTrip(options, core, trip, files)) {
+    const input = inputOf(files, change);
+    if (input === undefined) continue;
+    const kept = countLines(commentLines(change.content));
+    for (const [line, count] of countLines(commentLines(input))) {
+      expect(
+        kept.get(line) ?? 0,
+        `"${trip.name}" dropped or changed the comment ${JSON.stringify(line)} in ${change.path}`
+      ).toBeGreaterThanOrEqual(count);
+    }
+  }
+}
+
+/** Over a fixture whose files all break lines with CRLF, every rewritten file keeps CRLF and parses. */
+export function assertRoundTripCrlfKept(
+  options: AppCoreOptions,
+  core: AppCoreRoundTripOptions,
+  trip: AppCoreRoundTrip
+): void {
+  const files = Object.fromEntries(
+    Object.entries(fixtureFiles(options, trip.fixture)).map(([path, text]) => [
+      path,
+      withLineBreak(text, '\r\n'),
+    ])
+  );
+  for (const change of applyTrip(options, core, trip, files)) {
+    if (change.kind === 'create') continue;
+    const breaks = change.content.match(/\r\n|\r|\n/g) ?? [];
+    expect(
+      breaks.every((lineBreak) => lineBreak === '\r\n'),
+      `"${trip.name}" wrote a line break other than CRLF into ${change.path}`
+    ).toBe(true);
+    expect(
+      core.reparses(change.path, change.content),
+      `"${trip.name}" wrote ${change.path} from CRLF text, which does not parse`
+    ).toBe(true);
+  }
+}
+
+/**
+ * A rewritten file ends with a line break exactly when it did before, over the
+ * fixture as given and over its variant with every final newline toggled. An op
+ * with the `addsFinalNewline` gap must end with one either way.
+ */
+export function assertRoundTripFinalNewlineKept(
+  options: AppCoreOptions,
+  core: AppCoreRoundTripOptions,
+  trip: AppCoreRoundTrip
+): void {
+  const given = fixtureFiles(options, trip.fixture);
+  const toggled = Object.fromEntries(
+    Object.entries(given).map(([path, text]) => [path, toggleFinalNewline(text)])
+  );
+  for (const files of [given, toggled]) {
+    for (const change of applyTrip(options, core, trip, files)) {
+      const input = inputOf(files, change);
+      if (input === undefined) continue;
+      const expected = /(\r\n|\r|\n)$/.test(input) || trip.addsFinalNewline === true;
+      expect(
+        /(\r\n|\r|\n)$/.test(change.content),
+        `"${trip.name}" ${expected ? 'lost' : 'added'} the final newline of ${change.path}`
+      ).toBe(expected);
+    }
   }
 }
 

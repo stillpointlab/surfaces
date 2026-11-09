@@ -31,7 +31,8 @@ that mounts the elements. After the Rules and Element sections, this README is t
 
 ## Rules
 
-A host hands the core an `InventorySnapshot`: plain data, no callbacks.
+A host hands the core an `InventorySnapshot`, the app contract's `AppSnapshot`: plain data, no
+callbacks.
 
 - `manifestPath`: the manifest the space is anchored at.
 - `paths`: every path the host can see, its tree's files and the files it created that have no
@@ -50,7 +51,7 @@ its own facts over the result: its ids for files, or a label that tells sibling 
 
 **Ops.** Each op function takes the snapshot and the op in the shape the elements ask for it
 (`{ title }`, `{ path, item }`, `{ path, id, changes }`, `{ path, id }`) and answers the
-`changes` to write, each `{ path, content }` and marked `created` for a new file, or a refusal with
+`changes` to write, each a contract `FileChange` (`write`, or `create` for a new file), or a refusal with
 the codes and messages Context Manager's endpoints have always sent. `addInventoryZone` also
 answers the new `slug` and `path`, and `addInventoryItem` the new `id`. An edit that changes
 nothing answers no changes. How a change is written (a draft, a new file) is the host's.
@@ -60,7 +61,13 @@ nothing answers no changes. How a change is written (a draft, a new file) is the
 manifest, the repository root, and zone titles that name no file or the same file), and
 `placeInventoryCreate(plan, { taken, reusable })` refuses a seed path, or a folder above one, that
 is already a file. `reusable` names files an earlier, unfinished attempt at the same create left
-behind; they are skipped, so a retry finishes the job.
+behind; they are skipped, so a retry finishes the job. It is the contract's `placeNewFiles` with
+inventory's refusal.
+
+**The contract.** `inventoryCore` is the same functions as the app contract's `AppCore`: views
+`space` and `zone { slug }`, ops `add-zone`, `add-item`, `update-item` and `delete-item`, and
+`seed` (`planInventoryCreate`). The harness's host goes through it; Context Manager calls the named
+functions. The app-core test holds every op to the contract's round trip.
 
 ## Element
 

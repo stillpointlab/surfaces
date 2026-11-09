@@ -18,6 +18,7 @@ import {
 import { projectInventorySpace, projectInventoryZone } from './space.js';
 
 import type { InventorySnapshot } from './space.js';
+import type { FileChange, Result } from '@stillpointlab/common-format/app';
 
 // The ops' rules, moved from Context Manager's `inventory.service.test.ts`
 // (`addItem`, `updateItem`, `deleteItem` and `addZone`), where they ran
@@ -42,13 +43,9 @@ function changed(result: { ok: boolean; changes?: { content: string }[] }): stri
 }
 
 /** The zone after a host writes an op's changes. */
-function after(snapshot: InventorySnapshot, result: { ok: boolean; changes?: never[] | object[] }) {
+function after(snapshot: InventorySnapshot, result: Result<{ changes: FileChange[] }>) {
   if (!result.ok) throw new Error('refused');
-  return projectInventoryZone(
-    applyChanges(snapshot, (result as { changes: { path: string; content: string }[] }).changes),
-    'kitchen',
-    NO_FACTS
-  )!;
+  return projectInventoryZone(applyChanges(snapshot, result.changes), 'kitchen', NO_FACTS)!;
 }
 
 describe('addInventoryItem', () => {
@@ -66,6 +63,7 @@ describe('addInventoryItem', () => {
     expect(result).toMatchObject({ ok: true, id: 'kettle' });
     expect(result.ok && result.changes).toEqual([
       {
+        kind: 'write',
         path: KITCHEN_PATH,
         content: `${KITCHEN}\n  - id: kettle\n    title: Kettle\n    value: 40\n    container: counter\n    condition: good\n`,
       },
@@ -419,7 +417,7 @@ describe('addInventoryZone', () => {
       ok: true,
       slug: 'attic',
       path: 'rooms/attic.yaml',
-      changes: [{ path: 'rooms/attic.yaml', content: 'label: Attic\n', created: true }],
+      changes: [{ kind: 'create', path: 'rooms/attic.yaml', content: 'label: Attic\n' }],
     });
     // In the overview straight away, empty; and writable, so items can follow.
     const next = applyChanges(snapshot, result.ok ? result.changes : []);

@@ -20,6 +20,13 @@ What every surface shares. No elements of its own.
   - The lifecycle half, `AppLifecycle` over `FolderNode`s: an app's manifest name,
     `validateAndScope` (the paths an instance owns, or every error in its manifest) and
     `describeInstance` (what the host's tree shows).
+  - The core half, `AppCore` over an `AppSnapshot` (the manifest path, the paths a host sees, the
+    files' contents with its drafts laid over, and paths a new file may not use: plain data, no
+    callbacks). `project(snapshot, view, facts)` answers the state one view renders, or `null` when
+    its subject is gone; `facts` are what only the host knows, never its ids. `apply(snapshot, op)`
+    answers the `FileChange`s an op makes (`write`, `create`, or `move` with the new content) or a
+    refusal. `seed(input)` answers a new instance's files, and `placeNewFiles(files, { taken,
+reusable })` whether they fit among a host's paths.
   - The element half, `AppElement<State>`: the host calls `setState`, and the element asks for ops
     with `requestOp(element, op)`, a cancelable `app-op` event the host claims and answers through
     `respond`. Nothing claiming it resolves to `OP_UNHANDLED`, and a host that throws to
@@ -56,11 +63,13 @@ What every surface shares. No elements of its own.
     expectNoHostileMarkup(element);
     ```
 - **App core suite** (`@stillpointlab/common-format/testing/app`). `describeAppCore`: a vitest
-  suite an app core runs over fixture folders. Every fixture mounts, and each rewrite re-parses and
+  suite an app core runs over fixture folders. Every fixture mounts, and each change re-parses and
   keeps comment lines, CRLF line breaks and the final newline (or its absence), the parts of a
-  byte-preserving rewrite that can be checked without knowing the format. Its hooks wrap the core's
-  own functions, and an optional `lifecycle` hook checks the core's `AppLifecycle` over the same
-  fixtures. A rewrite that always ends with a line break (an append at
+  byte-preserving rewrite that can be checked without knowing the format. A core that implements
+  `AppCore` gives a `core` hook: each op is applied to a fixture, its changes written, and a view
+  projected before and after (the round trip). A core that does not yet gives `rewrites`, each a
+  `text → text` function. An optional `lifecycle` hook checks the core's `AppLifecycle` over the
+  same fixtures. A rewrite that always ends with a line break (an append at
   the end of the file) sets the `addsFinalNewline` gap, recorded in the follow-ups. A separate entry, so it never loads the element suites.
 - **YAML helpers** (`@stillpointlab/common-format/yaml`). `formatYamlScalar`: a scalar written plain
   when YAML reads it back as the same value, otherwise JSON-quoted. DOM-free, for the app cores.

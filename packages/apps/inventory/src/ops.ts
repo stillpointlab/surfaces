@@ -24,7 +24,7 @@ import {
   slugifyItemId,
 } from './zoneWriter.js';
 
-import type { InventoryChange, InventorySnapshot, ResolvedInventory } from './space.js';
+import type { InventorySnapshot, ResolvedInventory } from './space.js';
 import type {
   SharedInventoryManifestV1,
   SharedInventoryManifestV2,
@@ -32,7 +32,7 @@ import type {
   SharedInventoryZone,
 } from './types.js';
 import type { ItemEditResult, ItemPatchValue } from './zoneWriter.js';
-import type { Failure, Result } from '@stillpointlab/common-format/app';
+import type { Failure, FileChange, Result } from '@stillpointlab/common-format/app';
 
 /** A new item's fields (its id is assigned by `addInventoryItem`). */
 export interface AddInventoryItemInput {
@@ -69,7 +69,7 @@ export interface UpdateInventoryItemInput {
 
 /** What every op answers on success: the files to write. */
 export interface InventoryOpChanges {
-  changes: InventoryChange[];
+  changes: FileChange[];
 }
 
 type WritableSchema =
@@ -157,7 +157,7 @@ export function addInventoryZone(
   return ok({
     slug,
     path,
-    changes: [{ path, content: zoneSeedContent(op.title), created: true as const }],
+    changes: [{ kind: 'create', path, content: zoneSeedContent(op.title) }],
   });
 }
 
@@ -240,7 +240,7 @@ export function addInventoryItem(
     // The gate's scan already passed; this is the writer double-checking.
     return fail('INVENTORY_ROOM_READ_ONLY', appended.reason);
   }
-  return ok({ id, changes: [{ path: op.path, content: appended.content }] });
+  return ok({ id, changes: [{ kind: 'write', path: op.path, content: appended.content }] });
 }
 
 /**
@@ -378,7 +378,7 @@ export function updateInventoryItem(
 
   const patched = patchItem(content, op.id, patch);
   if (!patched.ok) return itemEditFailure(patched, op.id);
-  return ok({ changes: [{ path: op.path, content: patched.content }] });
+  return ok({ changes: [{ kind: 'write', path: op.path, content: patched.content }] });
 }
 
 /** Remove one item's whole span from its zone file. */
@@ -390,5 +390,5 @@ export function deleteInventoryItem(
   if (!gate.ok) return gate;
   const deleted = deleteItem(gate.content, op.id);
   if (!deleted.ok) return itemEditFailure(deleted, op.id);
-  return ok({ changes: [{ path: op.path, content: deleted.content }] });
+  return ok({ changes: [{ kind: 'write', path: op.path, content: deleted.content }] });
 }

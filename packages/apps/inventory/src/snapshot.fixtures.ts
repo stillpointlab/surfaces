@@ -5,7 +5,8 @@
  * kitchen. `snapshotOf` turns a file set into the snapshot a host would hand
  * the core; `applyChanges` writes an op's answer back, as a host would.
  */
-import type { InventoryChange, InventorySnapshot } from './space.js';
+import type { InventorySnapshot } from './space.js';
+import type { FileChange } from '@stillpointlab/common-format/app';
 
 export const MANIFEST = [
   'version: 1',
@@ -108,11 +109,15 @@ export function snapshotOf(
 /** The snapshot after a host writes an op's changes. */
 export function applyChanges(
   snapshot: InventorySnapshot,
-  changes: readonly InventoryChange[]
+  changes: readonly FileChange[]
 ): InventorySnapshot {
-  const files = { ...snapshot.files };
-  const paths = [...snapshot.paths];
+  const files: Record<string, string | null> = { ...snapshot.files };
+  let paths = [...snapshot.paths];
   for (const change of changes) {
+    if (change.kind === 'move') {
+      delete files[change.from];
+      paths = paths.filter((path) => path !== change.from);
+    }
     files[change.path] = change.content;
     if (!paths.includes(change.path)) paths.push(change.path);
   }

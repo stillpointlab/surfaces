@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 
+import { fail, ok } from '../app';
 import { lineBreakOf } from '../line-endings';
 
 import { describeAppCore } from './app';
@@ -10,9 +11,22 @@ import {
   assertFinalNewlineKept,
   assertMounts,
   assertReparses,
+  assertRoundTripCommentsKept,
+  assertRoundTripCrlfKept,
+  assertRoundTripFinalNewlineKept,
+  assertRoundTripProjects,
+  assertRoundTripReparses,
 } from './app-checks';
 
-import type { AppCoreOptions, AppCoreRewrite, AppFixture, AppMountResult } from './app';
+import type {
+  AppCoreOptions,
+  AppCoreRewrite,
+  AppCoreRoundTrip,
+  AppCoreRoundTripOptions,
+  AppFixture,
+  AppMountResult,
+} from './app';
+import type { AppCore, AppSnapshot } from '../app';
 
 // A sample app core: line-based `key: value` files under a `kv.app` manifest that
 // says `kind: kv`. `#` lines are comments; blank lines are allowed.
@@ -142,5 +156,149 @@ describe('describeAppCore checks fail on a broken core', () => {
   it('an added final newline', () => {
     const broken = rewrite('terminate', (text) => setValue(text.trimEnd(), 'b', 'twenty') + '\n');
     expect(() => assertFinalNewlineKept(broken, input)).toThrow(/added the final newline/);
+  });
+});
+
+// The sample as an `AppCore`: one view (a file's entries), three ops (set a
+// value, move a file, add a file) and a seed. `garble`, `strip`, `normalise`,
+// `trim` and `vanish` are the broken variants the failure tests apply.
+
+type KvViews = { file: { params: { path: string }; state: { entries: string[] } } };
+type KvOps = {
+  set: { op: { path: string; key: string; value: string; broken?: string }; result: object };
+  move: { op: { path: string; to: string }; result: object };
+  add: { op: { path: string }; result: object };
+};
+
+function setBroken(text: string, key: string, value: string, broken?: string): string {
+  const set = setValue(text, key, value);
+  switch (broken) {
+    case 'garble':
+      return `${set}not an entry\n`;
+    case 'strip':
+      return set
+        .split(/(?<=\n)/)
+        .filter((line) => !line.trimStart().startsWith('#'))
+        .join('');
+    case 'normalise':
+      return set.replace(/\r\n/g, '\n');
+    case 'trim':
+      return set.trimEnd();
+    default:
+      return set;
+  }
+}
+
+const kvCore: AppCore<KvViews, KvOps, null, { folder: string }> = {
+  project: (snapshot: AppSnapshot, view) => {
+    const text = snapshot.files[view.path];
+    return typeof text === 'string' && parses(text)
+      ? { entries: text.split(/\r\n|\r|\n/).filter((line) => entry.test(line)) }
+      : null;
+  },
+  apply: (snapshot, op) => {
+    const text = snapshot.files[op.path];
+    if (typeof text !== 'string') return fail('KV_NO_FILE', `No file at ${op.path}`);
+    switch (op.type) {
+      case 'set': {
+        const { key, value, broken } = op as KvOps['set']['op'];
+        return ok({
+          changes: [{ kind: 'write', path: op.path, content: setBroken(text, key, value, broken) }],
+        });
+      }
+      case 'move':
+        return ok({
+          changes: [
+            { kind: 'move', from: op.path, path: (op as KvOps['move']['op']).to, content: text },
+          ],
+        });
+      default:
+        return ok({ changes: [{ kind: 'create', path: `${op.path}.new.kv`, content: 'a: 0\n' }] });
+    }
+  },
+  seed: ({ folder }) =>
+    ok({
+      manifestPath: `${folder}/kv.app`,
+      files: [{ kind: 'create', path: `${folder}/kv.app`, content: 'kind: kv\n' }],
+    }),
+};
+
+const trip = (name: string, op: AppCoreRoundTrip['op'], extra: Partial<AppCoreRoundTrip> = {}) => ({
+  name,
+  fixture: 'commented',
+  op,
+  view: { type: 'file', path: 'notes/two.kv' },
+  ...extra,
+});
+
+const roundTrip: AppCoreRoundTripOptions = {
+  core: kvCore,
+  facts: null,
+  reparses: (_path, text) => parses(text),
+  ops: [
+    trip('set b', { type: 'set', path: 'notes/two.kv', key: 'b', value: 'twenty' }),
+    trip('add a file', { type: 'add', path: 'notes/two.kv' }),
+    {
+      ...trip('move the file', {
+        type: 'move',
+        path: 'notes/two.kv',
+        to: 'notes/moved.kv',
+      }),
+      view: { type: 'file', path: 'kv.app' },
+    },
+  ],
+};
+
+describeAppCore('sample core', { manifest: 'kv.app', fixtures, mount, core: roundTrip });
+
+describe('the round trip fails on a broken core', () => {
+  const coreOptions: AppCoreOptions = { manifest: 'kv.app', fixtures, mount, core: roundTrip };
+  const broken = (variant: string) =>
+    trip(variant, {
+      type: 'set',
+      path: 'notes/two.kv',
+      key: 'b',
+      value: 'twenty',
+      broken: variant,
+    });
+
+  it('a refused op', () => {
+    const refused = trip('refused', {
+      type: 'set',
+      path: 'nowhere.kv',
+      key: 'a',
+      value: '1',
+    });
+    expect(() => assertRoundTripReparses(coreOptions, roundTrip, refused)).toThrow(/KV_NO_FILE/);
+  });
+
+  it('a view that no longer projects', () => {
+    expect(() => assertRoundTripProjects(coreOptions, roundTrip, broken('garble'))).toThrow(
+      /does not project after/
+    );
+  });
+
+  it('output that does not parse', () => {
+    expect(() => assertRoundTripReparses(coreOptions, roundTrip, broken('garble'))).toThrow(
+      /does not parse/
+    );
+  });
+
+  it('a dropped comment', () => {
+    expect(() => assertRoundTripCommentsKept(coreOptions, roundTrip, broken('strip'))).toThrow(
+      /dropped or changed the comment/
+    );
+  });
+
+  it('LF written into CRLF text', () => {
+    expect(() => assertRoundTripCrlfKept(coreOptions, roundTrip, broken('normalise'))).toThrow(
+      /other than CRLF/
+    );
+  });
+
+  it('a lost final newline', () => {
+    expect(() => assertRoundTripFinalNewlineKept(coreOptions, roundTrip, broken('trim'))).toThrow(
+      /lost the final newline/
+    );
   });
 });
