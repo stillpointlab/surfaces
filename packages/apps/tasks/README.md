@@ -32,8 +32,9 @@ is the file format, drawn from Context Manager's ADR-0014, ADR-0020, ADR-0021 an
 
 `@stillpointlab/tasks-app/element` registers `<spl-task-board>`: the Kanban board over one phase
 folder, or (with `variant="stage"`) every phase of a stage as swimlanes, with the backlog pool beside
-it. It imports `./types`, `common-format/app`, `common-format/elements` and
-`common-format/pointer-drag`, never the core's root.
+it. It imports `./types`, `./paths`, `common-format/app`, `common-format/elements`,
+`common-format/html`, `common-format/pointer-drag` and `@stillpointlab/modal-dialog-component`, never
+the core's root.
 
 - **State in.** `setState(board)` or `setStageState(stage)`: a host's projection of the folder with
   its own overlay (which cards are linked, changed, checked in or drifted). The board settles
@@ -42,22 +43,38 @@ it. It imports `./types`, `common-format/app`, `common-format/elements` and
   (where the pool's collapsed state is remembered).
 - **Ops out**, each asked through `requestOp` and naming its card by repo path:
 
-  | Op                | Fields                                   | Reply                   |
-  | ----------------- | ---------------------------------------- | ----------------------- |
-  | `move`            | `path`, `column`                         | `{ card }`              |
-  | `move-file`       | `path`, `target` (`{ pool }` or a board) | `{ card }` at its path  |
-  | `reorder-pool`    | `paths`                                  | `{ pool }`              |
-  | `resolve`         | `path`, `mode`                           | `{ card }`              |
-  | `scan-references` | `path`                                   | `{ references: paths }` |
-  | `fix-references`  | `path`, `referencingPaths`               | `{ fixed }`             |
-  | `read-file`       | `path`                                   | `{ content }`           |
-  | `refresh-stage`   | `stage`                                  | `{ stage }`             |
+  | Op                | Fields                                   | Reply                    |
+  | ----------------- | ---------------------------------------- | ------------------------ |
+  | `move`            | `path`, `column`                         | `{ card }`               |
+  | `move-file`       | `path`, `target` (`{ pool }` or a board) | `{ card }` at its path   |
+  | `reorder-pool`    | `paths`                                  | `{ pool }`               |
+  | `resolve`         | `path`, `mode`                           | `{ card }`               |
+  | `scan-references` | `path`                                   | `{ references: paths }`  |
+  | `fix-references`  | `path`, `referencingPaths`               | `{ fixed }`              |
+  | `read-file`       | `path`                                   | `{ content }`            |
+  | `refresh-stage`   | `stage`                                  | `{ stage }`              |
+  | `edit-manifest`   | `edit` (one manifest edit)               | `{ manifest, warnings }` |
+  | `create-card`     | `boardPath`, `title`, `kind`             | `{ card }`               |
+  | `set-title`       | `path`, `title` (or `null` to remove)    | `{}`                     |
+  | `set-tags`        | `path`, `tags`                           | `{}`                     |
+  | `add-tag`         | `tag`                                    | `{ tags }`, the registry |
 
   A move renders at once and settles on the reply, or rolls back on a failure (whose `message` the
   board shows). A host that keeps ids maps paths to them, and links a tracked card before answering.
+  After a dialog's change the host hands the board a fresh state, as it would after any edit.
+
+- **Dialogs.** The board owns four `<modal-dialog>`s, made once and kept as its last child while it
+  repaints, so a refresh behind an open dialog leaves its inputs and focus alone:
+  - **settings** (columns, kinds, the default and done columns, one `edit-manifest` per change, its
+    refusals in a status line), opened by the host's own button through `openSettings()`, which
+    answers `false` when there is no board state to edit;
+  - **new card**, from the toolbar's "+ New" buttons (`create-card`);
+  - **title** and **tags**, from a card's ⋯ menu on a phase board (`set-title`; `add-tag` at once
+    and `set-tags` on Save).
+
+  New card, title and tags close before their op and report a refusal as a notification.
 
 - **Requests**, plain bubbling events the host answers with its own UI: `open-card { path }`,
-  `brief-request`, `set-title-request { path, … }`, `set-tags-request { path, … }`,
   `checkin-request` (the changed cards, the pool's order file by path, housekeeping files),
   `open-options-menu` (a card's ⋯ menu; answer with `options-menu-select` on the board) and
   `notification { message, type }`. `markCheckinInFlight(paths)` and `clearCheckinInFlight()` show a
@@ -67,7 +84,8 @@ it. It imports `./types`, `common-format/app`, `common-format/elements` and
   board's shadows.
 
 In the harness (`npm run dev`, "tasks"), fixtures cover every card state, the stage view, an empty
-board, and this repository's own `docs/tasks/` as files alone; an in-memory host answers the ops.
+board, this repository's own `docs/tasks/` as files alone, and each dialog open; an in-memory host
+answers the ops.
 
 ## The tasks folder
 

@@ -47,6 +47,7 @@
   },
   "dependencies": {
     "@stillpointlab/common-format": "*",
+    "@stillpointlab/modal-dialog-component": "*",
     "yaml": "^2.9.0",
     "zod": "^4.6.7"
   }

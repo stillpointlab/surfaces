@@ -10,14 +10,17 @@ import { enablePointerDrag } from '@stillpointlab/common-format/pointer-drag';
 import { taskKindById } from '../types.js';
 
 import { boardStyles } from './board.styles';
+import { BoardDialogs } from './dialogs.js';
 
 import type {
   SharedTaskBoardState,
   SharedTaskCard,
   SharedTaskHousekeepingFile,
   SharedTaskKindDescriptor,
+  SharedTaskManifestEditOp,
   SharedTaskPoolState,
   SharedTaskStageState,
+  SharedTasksManifest,
 } from '../types.js';
 import type { AppElement } from '@stillpointlab/common-format/app';
 
@@ -53,6 +56,22 @@ export type TaskBoardOps = {
   };
   'read-file': { op: { path: string }; reply: { content: string } };
   'refresh-stage': { op: { stage: number }; reply: { stage: SharedTaskStageState } };
+  /** One settings change: a column or kind added, changed or removed, or a picker set. */
+  'edit-manifest': {
+    op: { edit: SharedTaskManifestEditOp };
+    reply: { manifest: SharedTasksManifest; warnings: string[] };
+  };
+  /** A new card of a creatable kind, named from its title, on a board (or the pool). */
+  'create-card': {
+    op: { boardPath: string; title: string; kind: string };
+    reply: { card: SharedTaskCard };
+  };
+  /** A card's frontmatter title, or `null` to remove it. */
+  'set-title': { op: { path: string; title: string | null }; reply: object };
+  /** A card's tags, from the registry. */
+  'set-tags': { op: { path: string; tags: string[] }; reply: object };
+  /** A tag added to the registry in `tasks.yaml`; the reply is the registry after it. */
+  'add-tag': { op: { tag: string }; reply: { tags: string[] } };
 };
 
 /** The `checkin-request` event's detail: everything with an uncommitted change. */
@@ -110,6 +129,8 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
   private poolCollapsed = false;
   /** Open read-only preview of a tracked file, if any (ADR-0023). */
   private trackedPreview: { path: string; content: string | null } | null = null;
+  /** The settings, new-card, title and tags dialogs: made once, kept across repaints. */
+  private boardDialogs: BoardDialogs | null = null;
 
   whenReady(): Promise<void> {
     return this.ready.whenReady();
@@ -186,6 +207,45 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
   /** The current board state (board variant; null on the stage variant). */
   get boardState(): SharedTaskBoardState | null {
     return this.state;
+  }
+
+  /**
+   * Open the settings dialog on this board's manifest (columns, kinds, the
+   * default and done columns). The host's own button calls it. False, and
+   * reported, when there is no board state to edit (the stage view, or a
+   * state that did not load): the host decides what its button does then.
+   */
+  openSettings(): boolean {
+    if (!this.state) {
+      reportError('Board settings opened without a manifest snapshot');
+      return false;
+    }
+    this.dialogs().openSettings({
+      columns: this.state.columns,
+      kinds: this.state.kinds,
+      defaultColumn: this.state.defaultColumn,
+      doneColumn: this.state.doneColumn,
+    });
+    return true;
+  }
+
+  private dialogs(): BoardDialogs {
+    this.boardDialogs ??= new BoardDialogs(this, (message, type) => this.notify(message, type));
+    return this.boardDialogs;
+  }
+
+  /**
+   * Replace what the board shows, keeping the dialogs' container as the last
+   * child: never detached, so a repaint behind an open dialog leaves its
+   * inputs and focus where they were.
+   */
+  private paint(markup: string): void {
+    const keep = this.dialogs().container;
+    for (const node of [...this.childNodes]) if (node !== keep) node.remove();
+    const template = document.createElement('template');
+    template.innerHTML = markup;
+    if (keep.parentNode === this) this.insertBefore(template.content, keep);
+    else this.append(template.content, keep);
   }
 
   /** Replace the board state and re-render (used by refresh / later specs). */
@@ -999,7 +1059,7 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
       })
       .join('');
 
-    this.innerHTML = `
+    this.paint(`
       <style>${boardStyles}</style>
       ${this.renderPoolSidebar()}
       <div class="task-board task-board--stage">
@@ -1011,7 +1071,7 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
         ${this.renderFilterBar()}
         <div class="stage-rows">${rows}</div>
       </div>
-      ${this.renderTrackedPreview()}`;
+      ${this.renderTrackedPreview()}`);
   }
 
   private render(): void {
@@ -1023,14 +1083,18 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
   private renderState(): void {
     if (this.variant === 'stage') {
       if (!this.stageState) {
-        this.innerHTML = `<style>${boardStyles}</style><div class="board-empty">Could not load this stage.</div>`;
+        this.paint(
+          `<style>${boardStyles}</style><div class="board-empty">Could not load this stage.</div>`
+        );
         return;
       }
       this.renderStage(this.stageState);
       return;
     }
     if (!this.state) {
-      this.innerHTML = `<style>${boardStyles}</style><div class="board-empty">Could not load this board.</div>`;
+      this.paint(
+        `<style>${boardStyles}</style><div class="board-empty">Could not load this board.</div>`
+      );
       return;
     }
     // The global pool as its own panel first (ADR-0020, spec
@@ -1064,7 +1128,7 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
 
     const filterBar = this.renderFilterBar();
 
-    this.innerHTML = `
+    this.paint(`
       <style>${boardStyles}</style>
       ${this.renderPoolSidebar()}
       <div class="task-board">
@@ -1086,7 +1150,7 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
         <div class="board-columns">${columns}</div>
         ${attention}
       </div>
-      ${this.renderTrackedPreview()}`;
+      ${this.renderTrackedPreview()}`);
   }
 
   /**
@@ -1127,40 +1191,20 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
     this.pendingMenuPath = null;
     if (!path) return;
     const { itemId } = (e as CustomEvent).detail as { itemId: string };
+    // Title and tags are phase-board edits: the stage view does not offer them.
     if (itemId === 'set-title') {
       const card = this.findCard(path)?.card;
       if (!card || !this.state) return;
-      this.dispatchEvent(
-        new CustomEvent('set-title-request', {
-          detail: {
-            path,
-            // The title the card is SHOWING, not just the frontmatter one — a
-            // card without a `title:` key displays its filename, and opening
-            // the dialog empty made renaming a retype rather than an edit.
-            currentTitle: card.frontmatterTitle ?? this.baseName(card.path),
-            boardPath: this.state?.board.path ?? '',
-          },
-          bubbles: true,
-          composed: true,
-        })
-      );
+      // The title the card is SHOWING, not just the frontmatter one — a card
+      // without a `title:` key displays its filename, and opening the dialog
+      // empty made renaming a retype rather than an edit.
+      this.dialogs().openTitle(path, card.frontmatterTitle ?? this.baseName(card.path));
       return;
     }
     if (itemId === 'set-tags') {
       const card = this.findCard(path)?.card;
       if (!card || !this.state) return;
-      this.dispatchEvent(
-        new CustomEvent('set-tags-request', {
-          detail: {
-            path,
-            currentTags: card.tags ?? [],
-            registry: this.tagRegistry(),
-            boardPath: this.state?.board.path ?? '',
-          },
-          bubbles: true,
-          composed: true,
-        })
-      );
+      this.dialogs().openTags(path, card.tags ?? [], this.tagRegistry());
       return;
     }
     if (itemId === 'resolve-rebase' || itemId === 'resolve-take-latest') {
@@ -1254,24 +1298,17 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
 
     if (el.dataset.action === 'new-card') {
       if (!this.state) return; // creation lives on phase boards, not the stage view
-      // The kind and its folder ride the button's data attrs — the dialog's
-      // copy needs the dir, and the page holds no registry of its own.
+      // The kind and its folder ride the button's data attrs: the dialog's
+      // copy needs the folder.
       const kind = el.dataset.kind;
       if (!kind) return;
-      this.dispatchEvent(
-        new CustomEvent('brief-request', {
-          detail: {
-            boardPath: this.state.board.path,
-            boardLabel: this.state.board.label,
-            kind,
-            kindDir: el.dataset.kindDir ?? `${kind}s`,
-            // Template-less kinds create from a stub — the dialog copy says so.
-            templated: el.dataset.kindTemplated === '1',
-          },
-          bubbles: true,
-          composed: true,
-        })
-      );
+      this.dialogs().openNewCard({
+        boardPath: this.state.board.path,
+        kind,
+        kindDir: el.dataset.kindDir ?? `${kind}s`,
+        // Template-less kinds create from a stub; the dialog's copy says so.
+        templated: el.dataset.kindTemplated === '1',
+      });
       return;
     }
 
