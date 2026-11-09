@@ -646,3 +646,128 @@ spl-task-board.dragging .board-card {
     color: $text-muted;
   }
 }
+
+// The board's dialogs (spec board-dialogs): a container the board repaints
+// around, so it takes no box of its own; each <modal-dialog> overlays the page.
+// The form, button and input classes inside are the host's.
+.board-dialogs {
+  display: contents;
+
+  // Tags: registry checkboxes and the add-new row (ADR-0020).
+  .tag-options {
+    list-style: none;
+    margin: 8px 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 220px;
+    overflow-y: auto;
+
+    .tag-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+  }
+
+  .tag-add-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+
+    .form-input {
+      flex: 1;
+    }
+  }
+
+  // Settings (spec tasks_edit): read-only ids beside editable display fields;
+  // removals defer to the host's emptiness rule, whose refusal lands in the
+  // status line.
+  .board-settings-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  .board-settings-row {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  .board-settings-row-line {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  .board-settings-id {
+    flex: none;
+    min-width: 7rem;
+    font-size: 0.85em;
+    color: $text-muted;
+  }
+
+  .board-settings-badge {
+    max-width: 4.5rem;
+  }
+
+  .board-settings-creatable {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    white-space: nowrap;
+    font-size: 0.85rem;
+  }
+
+  .board-settings-description {
+    font-size: 0.85rem;
+    margin-left: 7rem;
+  }
+
+  .board-settings-remove {
+    flex: none;
+    padding: 0 $spacing-sm;
+    border: 1px solid $border-light;
+    border-radius: $border-radius-md;
+    background: transparent;
+    color: $text-muted;
+    font-size: 1.1rem;
+    line-height: 2;
+    cursor: pointer;
+
+    &:hover {
+      color: $error-color;
+      border-color: $error-color;
+    }
+  }
+
+  .board-settings-add-line {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin-top: $spacing-xs;
+  }
+
+  .board-settings-add-id {
+    max-width: 9rem;
+    font-family: monospace;
+  }
+
+  .board-settings-pickers {
+    display: flex;
+    gap: $spacing-lg;
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: $spacing-xs;
+    }
+  }
+
+  #board-settings-status.error {
+    color: $error-color;
+  }
+}

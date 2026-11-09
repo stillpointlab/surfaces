@@ -1,7 +1,9 @@
 // The task board in the surfaces harness (`npm run dev`). A fixture hands the
 // board a state; an in-memory host answers its ops, and the controls switch that
 // host off (every op unhandled, so the optimistic render rolls back) or make it
-// refuse the next op. Requests the board raises show in the event log.
+// refuse the next op. Requests the board raises show in the event log. The
+// "Dialog:" fixtures open each of the board's dialogs on the every-card state;
+// "Refuse the next op" shows a dialog's refusal.
 import '../src/element/index.js';
 
 import { attachHost } from './host.js';
@@ -63,6 +65,27 @@ const boardFixture = (state: () => ReturnType<typeof everyCardState> | null) => 
   },
 });
 
+/** The every-card state with one of the board's dialogs open. */
+const dialogFixture = (open: (el: TaskBoard) => void) => ({
+  content: '',
+  apply: (elements: HarnessElements) => {
+    const el = board(elements);
+    variant(el, 'board');
+    stage = null;
+    el.setState(everyCardState());
+    open(el);
+  },
+});
+
+/** Pick an item from a card's ⋯ menu, as the host page's options menu does. */
+function menuItem(el: TaskBoard, itemId: string): void {
+  const card = el.boardState?.cards.find((candidate) => !candidate.tracked);
+  const button = card && el.querySelector<HTMLElement>(`.card-menu-btn[data-path="${card.path}"]`);
+  if (!button) return;
+  button.click();
+  el.dispatchEvent(new CustomEvent('options-menu-select', { detail: { itemId } }));
+}
+
 export default {
   elements: { extra: [TAG] },
   controls: [
@@ -87,6 +110,12 @@ export default {
     'Every card state': boardFixture(everyCardState),
     'This repository (files only)': boardFixture(repoBoard),
     'Empty board': boardFixture(emptyBoard),
+    'Dialog: board settings': dialogFixture((el) => el.openSettings()),
+    'Dialog: new card': dialogFixture((el) =>
+      el.querySelector<HTMLElement>('.board-new-card[data-kind="brief"]')?.click()
+    ),
+    'Dialog: card title': dialogFixture((el) => menuItem(el, 'set-title')),
+    'Dialog: card tags': dialogFixture((el) => menuItem(el, 'set-tags')),
     'Stage view': {
       content: '',
       apply: (elements) => {

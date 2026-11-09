@@ -348,21 +348,18 @@ describe('TaskBoard component', () => {
     expect(el.querySelector(`${sel(11)}`)).not.toBeNull();
   });
 
-  it('Tags… dispatches set-tags-request with current tags and the registry', () => {
+  it('Tags… opens the tags dialog on the registry, the card’s tags checked', () => {
     const el = mount();
-    let detail: { path: string; currentTags: string[]; registry: string[] } | null = null;
-    el.addEventListener('set-tags-request', (e) => {
-      detail = (e as CustomEvent).detail;
-    });
     (el.querySelector(`.card-menu-btn${sel(11)}`) as HTMLElement).click();
     el.dispatchEvent(new CustomEvent('options-menu-select', { detail: { itemId: 'set-tags' } }));
 
-    expect(detail).toEqual({
-      path: P[11],
-      currentTags: ['infra'],
-      registry: ['infra', 'ui'],
-      boardPath: 'docs/tasks/stage1/phase1',
-    });
+    expect(el.querySelector('#set-tags-dialog')!.hasAttribute('is-open')).toBe(true);
+    const options = [...el.querySelectorAll<HTMLInputElement>('#tag-options input')];
+    expect(options.map((input) => [input.dataset.tag, input.checked])).toEqual([
+      ['infra', true],
+      ['ui', false],
+    ]);
+    expect(host).not.toHaveBeenCalled();
   });
 
   it('renders pool cards collapsed, in order, with kind + changed badges', () => {
@@ -827,38 +824,29 @@ describe('TaskBoard component', () => {
       expect(badge?.getAttribute('title')).toContain('body-edited');
     });
 
-    it('selecting Set title dispatches set-title-request with the current title', () => {
+    it('selecting Set title opens the title dialog on the current title', () => {
       const el = mount();
-      let detail: { path: string; currentTitle: string; boardPath: string } | null = null;
-      el.addEventListener('set-title-request', (e) => {
-        detail = (e as CustomEvent).detail;
-      });
 
       openMoveMenu(el, 12);
       selectMenuItem(el, 'set-title');
 
-      expect(detail).toEqual({
-        path: P[12],
-        currentTitle: 'Implement login flow',
-        boardPath: 'docs/tasks/stage1/phase1',
-      });
+      expect(el.querySelector('#set-title-dialog')!.hasAttribute('is-open')).toBe(true);
+      expect(el.querySelector<HTMLInputElement>('#set-title-input')!.value).toBe(
+        'Implement login flow'
+      );
       expect(host).not.toHaveBeenCalled();
     });
 
     // A card with no frontmatter title displays its filename, so that is what
     // the dialog must open on — seeding '' made renaming a retype rather than
     // an edit.
-    it('set-title-request carries the displayed filename for a card without a title', () => {
+    it('the title dialog opens on the displayed filename for a card without a title', () => {
       const el = mount();
-      let detail: { currentTitle: string } | null = null;
-      el.addEventListener('set-title-request', (e) => {
-        detail = (e as CustomEvent).detail;
-      });
 
       openMoveMenu(el, 11);
       selectMenuItem(el, 'set-title');
 
-      expect(detail!.currentTitle).toBe('idea.md');
+      expect(el.querySelector<HTMLInputElement>('#set-title-input')!.value).toBe('idea.md');
     });
 
     it('moves optimistically, asks for the move, and settles on the host card', async () => {
@@ -1084,19 +1072,18 @@ describe('TaskBoard component', () => {
       expect(buttons.map((b) => b.dataset.kindTemplated)).toEqual(['', '1', '', '']);
     });
 
-    it('dispatches brief-request from the New brief button', () => {
+    it('opens the new-card dialog from the New brief button, worded for a templated brief', () => {
       const el = mount();
-      let detail: { boardPath: string; kind: string; templated: boolean } | null = null;
-      el.addEventListener('brief-request', (e) => {
-        detail = (e as CustomEvent).detail;
-      });
 
       (el.querySelector('.board-new-card[data-kind="brief"]') as HTMLElement).click();
 
-      expect(detail).not.toBeNull();
-      expect(detail!.boardPath).toBe('docs/tasks/stage1/phase1');
-      expect(detail!.kind).toBe('brief');
-      expect(detail!.templated).toBe(true);
+      const dialog = el.querySelector('#new-brief-dialog')!;
+      expect(dialog.hasAttribute('is-open')).toBe(true);
+      expect(dialog.getAttribute('title')).toBe('New brief');
+      expect(el.querySelector('#new-brief-description')!.textContent).toBe(
+        "Creates a brief from the repository's brief template in this board's briefs folder. It stays local until you check it in."
+      );
+      expect(host).not.toHaveBeenCalled();
     });
 
     it('dispatches checkin-request with the changed cards and board path', () => {
