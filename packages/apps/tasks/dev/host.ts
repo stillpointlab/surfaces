@@ -49,7 +49,7 @@ export function attachHost(
     cards().find((card) => card.path === path);
   // Answering links a tracked card, as a real host does on its first edit.
   const linked = (card: SharedTaskCard, changes: Partial<SharedTaskCard>): SharedTaskCard => {
-    const next: SharedTaskCard = { ...card, goodId: card.goodId ?? 1, ...changes };
+    const next: SharedTaskCard = { ...card, ...changes };
     delete next.tracked;
     return next;
   };
@@ -175,7 +175,7 @@ export function attachHost(
           pool: {
             ...pool,
             cards: orderPoolCards(pool.cards, op.paths),
-            order: { goodId: 1, changed: true },
+            order: { changed: true },
           },
         });
       }
@@ -209,8 +209,6 @@ export function attachHost(
         const path = `${op.boardPath}/${dir}/${slug}.md`;
         if (find(path)) return fail('TASKS_BRIEF_EXISTS', `“${slug}.md” already exists here`);
         const card: SharedTaskCard = {
-          goodId: 1,
-          goodPublicId: null,
           title: `${slug}.md`,
           frontmatterTitle: op.title,
           path,

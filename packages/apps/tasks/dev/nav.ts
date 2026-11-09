@@ -6,41 +6,28 @@
 // (navigate, reload-request) show in the event log.
 import { answerOps, fail, ok } from '@stillpointlab/common-format/app';
 
-import {
-  buildTasksNav,
-  detectBoards,
-  parseTasksManifest,
-  resolveCurrentPointerPath,
-} from '../src/index.js';
+import { projectTasksNav } from '../src/index.js';
 
-import { repoFiles } from './repo.js';
+import { repoSnapshot } from './repo.js';
 
 import type { TaskBoard, TasksNav, TasksNavOps, TasksNavState } from '../src/element/index.js';
-import type { SharedTasksNav, TreeNode } from '../src/index.js';
+import type { SharedTasksNav } from '../src/index.js';
 import type { AppOp, Result } from '@stillpointlab/common-format/app';
-
-const MANIFEST = 'docs/tasks/tasks.yaml';
 
 /** This repository's nav, on the phase `current:` points at. */
 export function repoNav(): TasksNavState | null {
-  const parsed = parseTasksManifest(repoFiles[MANIFEST] ?? '');
-  if (!parsed.ok) return null;
-  const { manifest } = parsed;
-  const nodes: TreeNode[] = Object.keys(repoFiles).map((path) => ({ path, type: 'blob' }));
-  const nav = buildTasksNav(detectBoards(nodes, MANIFEST, manifest.kinds));
-  const pointerPath = resolveCurrentPointerPath(nav, manifest);
-  const pointer = pointerPath !== null && manifest.current ? manifest.current : null;
+  const projected = projectTasksNav(repoSnapshot());
+  if (!projected) return null;
+  const { currentPointer, currentPointerPath } = projected;
+  const on = currentPointerPath !== null ? currentPointer : null;
   return {
-    nav,
+    ...projected,
     current: {
-      stage: pointer?.stage ?? null,
-      phase: pointer?.phase ?? null,
+      stage: on?.stage ?? null,
+      phase: on?.phase ?? null,
       other: false,
-      boardPath: pointerPath ?? '',
+      boardPath: currentPointerPath ?? '',
     },
-    currentPointer: pointer,
-    currentPointerPath: pointerPath,
-    doneColumn: manifest.doneColumn,
   };
 }
 

@@ -58,8 +58,6 @@ const STATE: SharedTaskBoardState = {
   ],
   cards: [
     {
-      goodId: 11,
-      goodPublicId: 'dg_brief000001',
       title: 'idea.md',
       path: 'docs/tasks/stage1/phase1/briefs/idea.md',
       kind: 'brief',
@@ -69,8 +67,6 @@ const STATE: SharedTaskBoardState = {
       tags: ['infra'],
     },
     {
-      goodId: 12,
-      goodPublicId: null,
       title: 'task_a.md',
       frontmatterTitle: 'Implement login flow',
       path: 'docs/tasks/stage1/phase1/specs/task_a.md',
@@ -81,8 +77,6 @@ const STATE: SharedTaskBoardState = {
       versionColumn: 'briefed',
     },
     {
-      goodId: 13,
-      goodPublicId: null,
       title: 'task_b.md',
       frontmatterTitle: '<img src=x onerror=alert(1)>',
       path: 'docs/tasks/stage1/phase1/specs/task_b.md',
@@ -98,8 +92,6 @@ const STATE: SharedTaskBoardState = {
     orderPath: 'docs/tasks/unassigned/order.yaml',
     cards: [
       {
-        goodId: 21,
-        goodPublicId: null,
         title: 'back_idea.md',
         path: 'docs/tasks/unassigned/briefs/back_idea.md',
         kind: 'brief',
@@ -108,8 +100,6 @@ const STATE: SharedTaskBoardState = {
         changed: false,
       },
       {
-        goodId: 22,
-        goodPublicId: null,
         title: 'back_task.md',
         path: 'docs/tasks/unassigned/specs/back_task.md',
         kind: 'spec',
@@ -118,7 +108,7 @@ const STATE: SharedTaskBoardState = {
         changed: true,
       },
     ],
-    order: { goodId: 23, changed: true },
+    order: { changed: true },
   },
   tags: ['infra', 'ui'],
   doneColumn: 'done',
@@ -226,7 +216,9 @@ describe('TaskBoard component', () => {
     const state = {
       ...STATE,
       cards: STATE.cards.map((c) =>
-        c.goodId === 11 ? { ...c, blocked: 'waiting on review', pr: '388' } : c
+        c.path === 'docs/tasks/stage1/phase1/briefs/idea.md'
+          ? { ...c, blocked: 'waiting on review', pr: '388' }
+          : c
       ),
     };
     const el = mount(state);
@@ -239,9 +231,9 @@ describe('TaskBoard component', () => {
     const state = {
       ...STATE,
       cards: STATE.cards.map((c) =>
-        c.goodId === 11
+        c.path === 'docs/tasks/stage1/phase1/briefs/idea.md'
           ? { ...c, pr: '388', prState: 'merged' as const }
-          : c.goodId === 12
+          : c.path === 'docs/tasks/stage1/phase1/specs/task_a.md'
             ? { ...c, pr: 'https://github.com/o/r/pull/9', prState: 'open' as const }
             : c
       ),
@@ -258,7 +250,9 @@ describe('TaskBoard component', () => {
   it('a pr chip without cached state renders exactly as before', () => {
     const state = {
       ...STATE,
-      cards: STATE.cards.map((c) => (c.goodId === 11 ? { ...c, pr: '388' } : c)),
+      cards: STATE.cards.map((c) =>
+        c.path === 'docs/tasks/stage1/phase1/briefs/idea.md' ? { ...c, pr: '388' } : c
+      ),
     };
     const el = mount(state);
     const chip = el.querySelector(`${sel(11)} .card-badge--meta-pr`)!;
@@ -270,7 +264,9 @@ describe('TaskBoard component', () => {
     const state = {
       ...STATE,
       cards: STATE.cards.map((c) =>
-        c.goodId === 11 ? { ...c, checkinPrUrl: 'https://github.com/o/r/pull/7' } : c
+        c.path === 'docs/tasks/stage1/phase1/briefs/idea.md'
+          ? { ...c, checkinPrUrl: 'https://github.com/o/r/pull/7' }
+          : c
       ),
     };
     const el = mount(state);
@@ -333,7 +329,9 @@ describe('TaskBoard component', () => {
     const el = mount({
       ...STATE,
       cards: STATE.cards.map((card) =>
-        card.goodId === 11 ? { ...card, tags: ['infra', 'docs'] } : card
+        card.path === 'docs/tasks/stage1/phase1/briefs/idea.md'
+          ? { ...card, tags: ['infra', 'docs'] }
+          : card
       ),
     });
     const chips = [...el.querySelectorAll(`${sel(11)} .card-tag`)].map((c) => c.textContent);
@@ -399,8 +397,6 @@ describe('TaskBoard component', () => {
       ...STATE,
       cards: [
         {
-          goodId: 31,
-          goodPublicId: null,
           title: 'evil.md',
           path: 'docs/tasks/stage1/phase1/specs/evil.md',
           kind: 'spec',
@@ -440,8 +436,6 @@ describe('TaskBoard component', () => {
   describe('tracked cards (ADR-0023)', () => {
     const TRACKED_PATH = 'docs/tasks/stage1/phase1/specs/task_c.md';
     const tracked: SharedTaskCard = {
-      goodId: null,
-      goodPublicId: null,
       tracked: true,
       title: 'task_c.md',
       frontmatterTitle: 'Tracked spec',
@@ -481,7 +475,7 @@ describe('TaskBoard component', () => {
     it('dragging a tracked card asks for a move by path and settles on the linked card', async () => {
       const el = mount(withTracked());
       host.mockResolvedValue(
-        ok({ card: { ...tracked, tracked: undefined, goodId: 77, column: 'in-progress' } })
+        ok({ card: { ...tracked, tracked: undefined, column: 'in-progress' } })
       );
       const column = el.querySelector('[data-column-id="in-progress"]') as HTMLElement;
       // jsdom has no layout; inject the drop target the way pointerDrag's own
@@ -518,12 +512,12 @@ describe('TaskBoard component', () => {
         ...STATE,
         cards: [...STATE.cards, { ...tracked, changed: true }],
       });
-      let detail: { cards: { goodId: number }[] } | null = null;
+      let detail: { cards: { path: string }[] } | null = null;
       el.addEventListener('checkin-request', (e) => {
         detail = (e as CustomEvent).detail;
       });
       (el.querySelector('[data-action="checkin"]') as HTMLElement).click();
-      expect(detail!.cards.map((c) => c.goodId)).toEqual([12, 22]);
+      expect(detail!.cards.map((c) => c.path)).toEqual([P[12], P[22]]);
     });
 
     // Pool order is a list of PATHS, so a tracked neighbour is a legitimate
@@ -703,13 +697,13 @@ describe('TaskBoard component', () => {
 
     it('checkin-request carries the stage for stage-scoped check-ins', () => {
       const el = mountStage();
-      let detail: { stage: number | null; cards: { goodId: number }[] } | null = null;
+      let detail: { stage: number | null; cards: { path: string }[] } | null = null;
       el.addEventListener('checkin-request', (e) => {
         detail = (e as CustomEvent).detail;
       });
       (el.querySelector('.board-checkin') as HTMLElement).click();
       expect(detail!.stage).toBe(1);
-      expect(detail!.cards.map((c) => c.goodId)).toEqual([12, 22]);
+      expect(detail!.cards.map((c) => c.path)).toEqual([P[12], P[22]]);
     });
 
     it('board-card menus offer other phases as file-move targets', () => {
@@ -741,12 +735,12 @@ describe('TaskBoard component', () => {
   describe('moving cards', () => {
     const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-    const openMoveMenu = (el: TaskBoard, goodId: number) => {
+    const openMoveMenu = (el: TaskBoard, id: number) => {
       let detail: { items: { id: string; label: string }[] } | null = null;
       el.addEventListener('open-options-menu', (e) => {
         detail = (e as CustomEvent).detail;
       });
-      (el.querySelector(`.card-menu-btn${sel(goodId)}`) as HTMLElement).click();
+      (el.querySelector(`.card-menu-btn${sel(id)}`) as HTMLElement).click();
       return detail!;
     };
 
@@ -784,7 +778,9 @@ describe('TaskBoard component', () => {
       const state = {
         ...STATE,
         cards: STATE.cards.map((c) =>
-          c.goodId === 12 ? { ...c, diverged: 'metadata' as const } : c
+          c.path === 'docs/tasks/stage1/phase1/specs/task_a.md'
+            ? { ...c, diverged: 'metadata' as const }
+            : c
         ),
       };
       const el = mount(state);
@@ -802,7 +798,9 @@ describe('TaskBoard component', () => {
       const state = {
         ...STATE,
         cards: STATE.cards.map((c) =>
-          c.goodId === 12 ? { ...c, diverged: 'content' as const } : c
+          c.path === 'docs/tasks/stage1/phase1/specs/task_a.md'
+            ? { ...c, diverged: 'content' as const }
+            : c
         ),
       };
       const el = mount(state);
@@ -852,7 +850,6 @@ describe('TaskBoard component', () => {
     it('moves optimistically, asks for the move, and settles on the host card', async () => {
       const el = mount();
       const serverCard = {
-        goodId: 12,
         title: 'task_a.md',
         path: 'docs/tasks/stage1/phase1/specs/task_a.md',
         kind: 'spec',
@@ -904,7 +901,9 @@ describe('TaskBoard component', () => {
       const withPr: SharedTaskBoardState = {
         ...STATE,
         cards: STATE.cards.map((card) =>
-          card.goodId === 12 ? { ...card, checkinPrUrl: 'https://github.com/o/r/pull/8' } : card
+          card.path === 'docs/tasks/stage1/phase1/specs/task_a.md'
+            ? { ...card, checkinPrUrl: 'https://github.com/o/r/pull/8' }
+            : card
         ),
       };
       const el = mount(withPr);
@@ -916,7 +915,9 @@ describe('TaskBoard component', () => {
       el.setState({
         ...withPr,
         cards: withPr.cards.map((card) =>
-          card.goodId === 12 ? { ...card, checkinPrUrl: 'https://github.com/o/r/pull/9' } : card
+          card.path === 'docs/tasks/stage1/phase1/specs/task_a.md'
+            ? { ...card, checkinPrUrl: 'https://github.com/o/r/pull/9' }
+            : card
         ),
       });
 
@@ -926,7 +927,9 @@ describe('TaskBoard component', () => {
       el.setState({
         ...withPr,
         cards: withPr.cards.map((card) =>
-          card.goodId === 12 ? { ...card, checkinPrUrl: 'https://github.com/o/r/pull/9' } : card
+          card.path === 'docs/tasks/stage1/phase1/specs/task_a.md'
+            ? { ...card, checkinPrUrl: 'https://github.com/o/r/pull/9' }
+            : card
         ),
       });
       expect(notifications).toEqual([]);
@@ -944,7 +947,7 @@ describe('TaskBoard component', () => {
         pool: {
           ...STATE.pool,
           cards: STATE.pool.cards.map((card) => ({ ...card, changed: false })),
-          order: { goodId: 23, changed: false },
+          order: { changed: false },
         },
       };
       const el = mount(cleanState);
@@ -955,7 +958,7 @@ describe('TaskBoard component', () => {
       expect(el.querySelector('.board-dirty-summary')?.textContent).toContain(
         '1 uncommitted change'
       );
-      let detail: { cards: { goodId: number; versionColumn?: string | null }[] } | null = null;
+      let detail: { cards: { path: string; versionColumn?: string | null }[] } | null = null;
       el.addEventListener('checkin-request', (e) => {
         detail = (e as CustomEvent).detail;
       });
@@ -963,7 +966,7 @@ describe('TaskBoard component', () => {
       (el.querySelector('.board-checkin') as HTMLElement).click();
 
       expect(detail).not.toBeNull();
-      expect(detail!.cards.map((card) => card.goodId)).toEqual([11]);
+      expect(detail!.cards.map((card) => card.path)).toEqual([P[11]]);
       expect(detail!.cards[0].versionColumn).toBe('briefed');
     });
 
@@ -1088,7 +1091,7 @@ describe('TaskBoard component', () => {
 
     it('dispatches checkin-request with the changed cards and board path', () => {
       const el = mount();
-      let detail: { boardPath: string; cards: { goodId: number }[] } | null = null;
+      let detail: { boardPath: string; cards: { path: string }[] } | null = null;
       el.addEventListener('checkin-request', (e) => {
         detail = (e as CustomEvent).detail;
       });
@@ -1098,7 +1101,7 @@ describe('TaskBoard component', () => {
       expect(detail).not.toBeNull();
       expect(detail!.boardPath).toBe('docs/tasks/stage1/phase1');
       // Changed board card + changed pool card; the changed order file rides along.
-      expect(detail!.cards.map((c) => c.goodId)).toEqual([12, 22]);
+      expect(detail!.cards.map((c) => c.path)).toEqual([P[12], P[22]]);
       // The order file by path: its good is the host's to look up.
       expect((detail as unknown as { orderFile: { path: string } | null })!.orderFile).toEqual({
         path: 'docs/tasks/unassigned/order.yaml',
@@ -1109,7 +1112,9 @@ describe('TaskBoard component', () => {
       const state = {
         ...STATE,
         cards: STATE.cards.map((c) =>
-          c.goodId === 11 ? { ...c, checkinPrUrl: 'https://github.com/o/r/pull/9' } : c
+          c.path === 'docs/tasks/stage1/phase1/briefs/idea.md'
+            ? { ...c, checkinPrUrl: 'https://github.com/o/r/pull/9' }
+            : c
         ),
       };
       const el = mount(state);

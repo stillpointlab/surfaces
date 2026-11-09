@@ -29,8 +29,6 @@ const STATE: SharedTaskBoardState = {
   ],
   cards: [
     {
-      goodId: 1,
-      goodPublicId: null,
       title: 'login.md',
       frontmatterTitle: 'Login flow',
       path: CARD,

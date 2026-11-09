@@ -3,6 +3,7 @@
 The tasks app's core: DOM-free, so a host runs it on its server and in its client alike. The root
 entry (`.`) exports:
 
+- the rules over a host's files: the projections and the draft helpers (see Rules below);
 - reading: `parseTasksManifest`, `validateManifestAgainstTree`, `detectBoards`, `detectPool`,
   `parseFrontmatter`, `readColumn`, `parseCardProjection`, `parseOrderFile`, `buildTasksNav`;
 - byte-preserving rewrites: `rewriteFrontmatter` for cards; `rewriteManifestCurrent`,
@@ -27,6 +28,48 @@ manifest's zod schemas at module scope, which a bundler cannot drop):
 It was moved as-is from Context Manager (source commit `30428c3c`), where the host side stays:
 drafts, check-in, the pool and board services, routes and the task board. The rest of this README
 is the file format, drawn from Context Manager's ADR-0014, ADR-0020, ADR-0021 and ADR-0027.
+
+## Rules
+
+A host hands the core a `TasksSnapshot`, the app contract's `AppSnapshot` with two additions:
+
+- `manifestPath`: the `tasks.yaml` the instance is anchored at.
+- `paths`: every path the host can see, its tree's files and the files it created that have no
+  upstream yet.
+- `files`: the contents it read, with its drafts already laid over: the manifest, the pool's order
+  file, and the cards it has. `null` (or a missing path) is a file the host could not read.
+- `projections` (optional): cards the host holds parsed (`CardProjection`, as
+  `parseCardProjection` makes it) and did not read, by path. A path in `files` wins.
+- `moves` (optional): pending moves, each card's current path and the old paths it moved from. An
+  old path is hidden from every state: a card is where it moved to.
+
+**Projection.** `projectTasksBoard(snapshot, path, facts)` is one board,
+`projectTasksStage(snapshot, stage, facts)` one stage's phases as rows, and
+`projectTasksNav(snapshot)` the tab strip's nav with the `current:` pointer and the done column.
+Each is `null` when the manifest is missing or does not parse, and for a path that is no board or a
+stage with no phases. A phase with no folders yet (the pointer's, or `stage1/phase1` of a bare
+manifest) is an empty board. All three are built on `resolveTasks(snapshot)`, which a host reads
+to refuse a broken manifest: `null` when it is gone, `TASKS_MANIFEST_INVALID` when it does not
+parse, else the manifest, its warnings, the boards and the pool. The `projectResolved…` forms take
+that resolution, and `projectResolvedCard(snapshot, tasks, path, facts)` is one card where it sits,
+for a host answering with a single card; `projectCardEntry` projects one from its entry and
+location when the host already knows them.
+
+`facts` are what only the host knows, laid onto the states: per card by path, its `title`,
+`tracked`, `changed`, `dirty`, `versionColumn`, `diverged`, `movedFrom`, `checkinPrUrl` and
+`prState`; the order file's `changed`; and the `housekeeping` files that join a check-in. A card
+with no facts is titled by its file name and has no local work. Ids are never facts: the core's
+types carry none, and a host lays its own ids over the states. `columnOfContent(content, manifest)`
+is the column a card's content renders in, for a host working out `versionColumn`.
+
+**Drafts.** When to rebase a diverged draft is the host's decision; the comparison is the core's.
+`metadataOnlyCheck(draft, base)` says whether a draft changes only its base's frontmatter, or
+answers the reconstruction the host formats its own way and compares with the draft.
+`rebaseMetadata({ draft, base, latest, keys, mineWins, metadataOnly })` answers the `rebased`
+content, or why not: `metadata` (a key both sides changed differently, or a change the patch
+cannot carry) or `content` (the draft edits the body). `keys` is `trackedCardKeys(manifest)`;
+`mineWins` is the explicit resolution, where my changes to those keys win and the rest are dropped.
+`metadataDelta` is the key-wise comparison under both.
 
 ## Element
 

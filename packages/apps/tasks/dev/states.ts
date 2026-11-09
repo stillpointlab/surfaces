@@ -14,8 +14,6 @@ const card = (
   column: string | null,
   extra: Partial<SharedTaskCard> = {}
 ): SharedTaskCard => ({
-  goodId: 1,
-  goodPublicId: 'dg_fixture',
   title: path.slice(path.lastIndexOf('/') + 1),
   path,
   kind,
@@ -72,8 +70,6 @@ export function everyCardState(): SharedTaskBoardState {
       }),
       card(`${BOARD}/specs/blocked.md`, 'spec', 'todo', { blocked: 'waiting on review' }),
       card(`${BOARD}/spikes/tracked.md`, 'spike', 'todo', {
-        goodId: null,
-        goodPublicId: null,
         tracked: true,
         frontmatterTitle: 'Tracked from the repository',
       }),
@@ -91,12 +87,10 @@ export function everyCardState(): SharedTaskBoardState {
         card(`${POOL}/seeds/idea.md`, 'seed', null, { frontmatterTitle: 'A loose idea' }),
         card(`${POOL}/specs/next_up.md`, 'spec', null, { changed: true, tags: ['code'] }),
         card(`${POOL}/briefs/later.md`, 'brief', null, {
-          goodId: null,
-          goodPublicId: null,
           tracked: true,
         }),
       ],
-      order: { goodId: 1, changed: true },
+      order: { changed: true },
     },
     tags: ['code', 'docs', 'auth'],
     doneColumn: 'done',
