@@ -57,9 +57,21 @@ export interface TasksSnapshot extends AppSnapshot {
   projections?: Readonly<Record<string, CardProjection>>;
   /**
    * Pending moves: each moved card's current path and the old paths it moved
-   * from. An old path is hidden everywhere — a card is where it moved to.
+   * from, the original path (the move's anchor) first, then any paths it
+   * passed through. An old path is hidden everywhere — a card is where it
+   * moved to.
    */
   moves?: Readonly<Record<string, readonly string[]>>;
+  /**
+   * Cards created in the host that have no upstream file yet (never checked
+   * in). Moving one only renames it: there is no old file to delete.
+   */
+  created?: readonly string[];
+  /**
+   * Cards whose check-in pull request is in flight. A move that would strand
+   * that commit is refused: a created card's, or undoing a pending move.
+   */
+  inFlight?: readonly string[];
 }
 
 /** What only the host knows about one card, laid onto it. Ids are never facts. */
