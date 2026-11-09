@@ -52,7 +52,8 @@ manifest) is an empty board. All three are built on `resolveTasks(snapshot)`, wh
 to refuse a broken manifest: `null` when it is gone, `TASKS_MANIFEST_INVALID` when it does not
 parse, else the manifest, its warnings, the boards and the pool. The `projectResolved…` forms take
 that resolution, and `projectResolvedCard(snapshot, tasks, path, facts)` is one card where it sits,
-for a host answering with a single card.
+for a host answering with a single card; `projectCardEntry` projects one from its entry and
+location when the host already knows them.
 
 `facts` are what only the host knows, laid onto the states: per card by path, its `title`,
 `tracked`, `changed`, `dirty`, `versionColumn`, `diverged`, `movedFrom`, `checkinPrUrl` and

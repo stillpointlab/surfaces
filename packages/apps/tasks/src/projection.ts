@@ -171,9 +171,12 @@ function resolvedOrNull(snapshot: TasksSnapshot): ResolvedTasks | null {
   return resolved?.ok ? resolved.tasks : null;
 }
 
+/** Where a card's content comes from: the snapshot's files and held projections. */
+export type CardSources = Pick<TasksSnapshot, 'files' | 'projections'>;
+
 /** A card's parsed content: the file when the host read it, else its held projection. */
 function projectionOf(
-  snapshot: TasksSnapshot,
+  snapshot: CardSources,
   path: string,
   manifest: SharedTasksManifest
 ): CardProjection | null {
@@ -202,13 +205,17 @@ function fileName(path: string): string {
   return path.slice(path.lastIndexOf('/') + 1);
 }
 
-/** One card: its content projected, its column resolved, the host's facts laid on. */
-function projectCard(
-  snapshot: TasksSnapshot,
+/**
+ * One card from its entry: its content projected, its column resolved where it
+ * sits, the host's facts laid on — for a host that already knows the card's
+ * kind and location (a card it just moved, say).
+ */
+export function projectCardEntry(
+  snapshot: CardSources,
   entry: { path: string; kind: SharedTaskCardKind },
   manifest: SharedTasksManifest,
   location: 'board' | 'pool',
-  facts: TasksCardFacts
+  facts: TasksCardFacts = {}
 ): SharedTaskCard {
   const projection = projectionOf(snapshot, entry.path, manifest);
   const read = projection === null ? null : resolveProjectionColumn(projection, manifest);
@@ -247,7 +254,7 @@ function projectCards(
   return kindEntriesOf(holder, tasks.manifest.kinds)
     .filter((entry) => !tasks.movedAway.has(entry.path))
     .map((entry) =>
-      projectCard(snapshot, entry, tasks.manifest, location, facts.cards?.[entry.path] ?? {})
+      projectCardEntry(snapshot, entry, tasks.manifest, location, facts.cards?.[entry.path] ?? {})
     );
 }
 
@@ -287,10 +294,12 @@ export function projectResolvedCard(
   const find = (holder: Pick<SharedTaskBoardDescriptor, 'paths'>) =>
     kindEntriesOf(holder, manifest.kinds).find((entry) => entry.path === path);
   const pooled = find(tasks.pool);
-  if (pooled) return projectCard(snapshot, pooled, manifest, 'pool', facts.cards?.[path] ?? {});
+  if (pooled)
+    return projectCardEntry(snapshot, pooled, manifest, 'pool', facts.cards?.[path] ?? {});
   for (const board of tasks.boards) {
     const entry = find(board);
-    if (entry) return projectCard(snapshot, entry, manifest, 'board', facts.cards?.[path] ?? {});
+    if (entry)
+      return projectCardEntry(snapshot, entry, manifest, 'board', facts.cards?.[path] ?? {});
   }
   return null;
 }

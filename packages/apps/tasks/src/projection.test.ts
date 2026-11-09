@@ -5,6 +5,7 @@ import {
   projectTasksBoard,
   projectTasksNav,
   projectTasksPool,
+  projectCardEntry,
   projectResolvedCard,
   projectTasksStage,
   resolveTasks,
@@ -434,5 +435,22 @@ describe('projectResolvedCard', () => {
   it('is null for a moved-away path and for a path that is no card', () => {
     expect(projectResolvedCard(s, tasks, IDEA)).toBeNull();
     expect(projectResolvedCard(s, tasks, MANIFEST)).toBeNull();
+  });
+});
+
+describe('projectCardEntry', () => {
+  it('projects a card from its entry where the host says it sits', () => {
+    const files = { [POOL_A]: card('done') };
+    const manifest = (() => {
+      const resolved = resolveTasks(snapshot({}));
+      if (!resolved?.ok) throw new Error('no tasks');
+      return resolved.tasks.manifest;
+    })();
+    const entry = { path: POOL_A, kind: 'brief' };
+    expect(projectCardEntry({ files }, entry, manifest, 'board')).toMatchObject({ column: 'done' });
+    expect(projectCardEntry({ files }, entry, manifest, 'pool', { title: 'A' })).toMatchObject({
+      column: null,
+      title: 'A',
+    });
   });
 });
