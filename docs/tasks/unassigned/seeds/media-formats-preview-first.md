@@ -1,5 +1,4 @@
 ---
-column: todo
 created: 2026-11-01T15:32:34-07:00
 tags: [formats, feature]
 ---

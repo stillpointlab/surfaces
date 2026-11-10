@@ -12,3 +12,35 @@
 - docs/tasks/unassigned/seeds/formats-under-the-markup-rule.md
 - docs/tasks/unassigned/seeds/browser-tests.md
 - docs/tasks/unassigned/seeds/raw-view-toolbar.md
+
+# Moved from Context Manager's pool (2026-11-10), in its ranking. The apps:
+- docs/tasks/unassigned/seeds/board-theme-pass.md
+- docs/tasks/unassigned/seeds/card-context-menu.md
+- docs/tasks/unassigned/seeds/move-undo-reference-strand.md
+- docs/tasks/unassigned/seeds/task-view-tests.md
+- docs/tasks/unassigned/seeds/related-tasks.md
+- docs/tasks/unassigned/seeds/stage-backlog-bin.md
+- docs/tasks/unassigned/seeds/backlog-view.md
+- docs/tasks/unassigned/seeds/followups-view.md
+- docs/tasks/unassigned/seeds/changelog-view.md
+- docs/tasks/unassigned/seeds/feature-board.md
+- docs/tasks/unassigned/seeds/roadmap-view.md
+- docs/tasks/unassigned/seeds/inventory-view.md
+
+# The formats:
+- docs/tasks/unassigned/seeds/copy-code-button.md
+- docs/tasks/unassigned/seeds/good-editor-expansion.md
+- docs/tasks/unassigned/seeds/editor-line-numbers.md
+- docs/tasks/unassigned/seeds/tab-space-option.md
+- docs/tasks/unassigned/seeds/good-editor-ctrl-click.md
+- docs/tasks/unassigned/seeds/yaml-view.md
+- docs/tasks/unassigned/seeds/dictation-editor.md
+- docs/tasks/unassigned/seeds/webcam-editor.md
+- docs/tasks/unassigned/seeds/video-editor.md
+- docs/tasks/unassigned/seeds/captions-editor.md
+- docs/tasks/unassigned/seeds/image-editor-basic.md
+- docs/tasks/unassigned/seeds/image-editor-intermediate.md
+- docs/tasks/unassigned/seeds/pdf-preview.md
+- docs/tasks/unassigned/seeds/mermaid-editor.md
+- docs/tasks/unassigned/seeds/slide-editor.md
+- docs/tasks/unassigned/seeds/spritesheet-editor.md

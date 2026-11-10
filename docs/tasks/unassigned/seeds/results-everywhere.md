@@ -1,5 +1,4 @@
 ---
-column: todo
 created: 2026-11-10T12:47:26-07:00
 tags: [apps, code, host-contract]
 ---
