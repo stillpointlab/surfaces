@@ -6,7 +6,7 @@ tags: [apps, host-contract, common, code]
 
 # Spec: the app module
 
-_The [generic app host brief](../briefs/generic_app_host.md), desired outcome 1. The first spec:
+_The [generic app host brief](../../phase1/briefs/generic_app_host.md), desired outcome 1. The first spec:
 [one-op-route](one-op-route.md) and every spec after it register these modules._
 
 ## High-level goal
@@ -19,7 +19,7 @@ element ops are typed with the core's inputs.
 
 ## Related context
 
-- The [spike](../spikes/generic-app-host.md), §§2–5: what is already generic, the five steps both
+- The [spike](../../phase1/spikes/generic-app-host.md), §§2–5: what is already generic, the five steps both
   services share, host facts, and host ops and replies.
 - The contract today (`packages/common/src/app.ts`): `AppLifecycle`, `AppCore`, `AppSnapshot`,
   `FileChange`, and the element half (`requestOp`, `answerOps`).
@@ -121,7 +121,7 @@ their per-app reply switches go.
 ## Non-goals
 
 - Context Manager running the modules: that is [one-op-route](one-op-route.md).
-- The create form: [create-from-the-app](create-from-the-app.md).
+- The create form: [create-from-the-app](../../phase4/specs/create-from-the-app.md).
 - Any change to what the elements ask or render.
 
 ## Acceptance / completion checklist

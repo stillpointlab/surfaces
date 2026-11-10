@@ -6,8 +6,8 @@ tags: [apps, host-contract, code]
 
 # Spec: create from the app
 
-_The [generic app host brief](../briefs/generic_app_host.md), desired outcome 5. After
-[one-view-page](one-view-page.md), whose client registry it extends._
+_The [generic app host brief](../../phase1/briefs/generic_app_host.md), desired outcome 5. After
+[one-view-page](../../phase3/specs/one-view-page.md), whose client registry it extends._
 
 ## High-level goal
 
