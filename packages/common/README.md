@@ -67,7 +67,8 @@ reusable })` whether they fit among a host's paths.
   keeps comment lines, CRLF line breaks and the final newline (or its absence), the parts of a
   byte-preserving rewrite that can be checked without knowing the format. A core that implements
   `AppCore` gives a `core` hook: each op is applied to a fixture, its changes written, and a view
-  projected before and after (the round trip). A core that does not yet gives `rewrites`, each a
+  projected before and after (the round trip). An op whose core reads host facts beyond the files
+  (a pending move, say) lays them on through its `snapshot`. A core that does not yet gives `rewrites`, each a
   `text → text` function. An optional `lifecycle` hook checks the core's `AppLifecycle` over the
   same fixtures. A rewrite that always ends with a line break (an append at
   the end of the file) sets the `addsFinalNewline` gap, recorded in the follow-ups. A separate entry, so it never loads the element suites.

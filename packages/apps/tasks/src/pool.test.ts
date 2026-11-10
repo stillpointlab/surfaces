@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatOrderFile, orderPoolCards, parseOrderFile, parseOrderFileDetailed } from './pool.js';
+import {
+  formatOrderFile,
+  orderPoolCards,
+  parseOrderFile,
+  parseOrderFileDetailed,
+  rewriteOrderFile,
+} from './pool.js';
 
 describe('parseOrderFile', () => {
   it('parses a YAML list of paths', () => {
@@ -79,5 +85,98 @@ describe('parseOrderFileDetailed', () => {
     expect(parseOrderFileDetailed('[unclosed')).toEqual({ paths: [], invalid: true });
     expect(parseOrderFileDetailed('key: value\n')).toEqual({ paths: [], invalid: true });
     expect(parseOrderFileDetailed('- a.md\n')).toEqual({ paths: ['a.md'], invalid: false });
+  });
+});
+
+describe('rewriteOrderFile', () => {
+  const grouped = [
+    '# Backlog: top = highest priority.',
+    '',
+    '# Next up',
+    '- p/specs/a.md',
+    '- p/specs/b.md  # waiting on review',
+    '',
+    '# Later',
+    '- p/seeds/c.md',
+    '',
+  ].join('\n');
+
+  it('refills the item lines in the new order, leaving comments and blank lines in place', () => {
+    expect(rewriteOrderFile(grouped, ['p/seeds/c.md', 'p/specs/a.md', 'p/specs/b.md'])).toBe(
+      [
+        '# Backlog: top = highest priority.',
+        '',
+        '# Next up',
+        '- p/seeds/c.md',
+        '- p/specs/a.md',
+        '',
+        '# Later',
+        '- p/specs/b.md  # waiting on review',
+        '',
+      ].join('\n')
+    );
+  });
+
+  it('drops the line of a path that left the list', () => {
+    expect(rewriteOrderFile(grouped, ['p/specs/a.md', 'p/seeds/c.md'])).toBe(
+      [
+        '# Backlog: top = highest priority.',
+        '',
+        '# Next up',
+        '- p/specs/a.md',
+        '',
+        '# Later',
+        '- p/seeds/c.md',
+        '',
+      ].join('\n')
+    );
+  });
+
+  it('adds a new path after the last item', () => {
+    const next = rewriteOrderFile(grouped, [
+      'p/specs/a.md',
+      'p/specs/b.md',
+      'p/seeds/c.md',
+      'p/x.md',
+    ]);
+    expect(next.endsWith('- p/seeds/c.md\n- p/x.md\n')).toBe(true);
+    expect(parseOrderFile(next)).toEqual([
+      'p/specs/a.md',
+      'p/specs/b.md',
+      'p/seeds/c.md',
+      'p/x.md',
+    ]);
+  });
+
+  it('writes an emptied list as [] where the list was, and refills []', () => {
+    const emptied = rewriteOrderFile('# Pool\n- p/a.md\n# end\n', []);
+    expect(emptied).toBe('# Pool\n[]\n# end\n');
+    expect(parseOrderFileDetailed(emptied)).toEqual({ paths: [], invalid: false });
+    expect(rewriteOrderFile(emptied, ['p/a.md', 'p/b.md'])).toBe(
+      '# Pool\n- p/a.md\n- p/b.md\n# end\n'
+    );
+  });
+
+  it('keeps CRLF and a missing final newline', () => {
+    expect(rewriteOrderFile('# Pool\r\n- p/a.md\r\n- p/b.md', ['p/b.md', 'p/a.md', 'p/c.md'])).toBe(
+      '# Pool\r\n- p/b.md\r\n- p/a.md\r\n- p/c.md'
+    );
+  });
+
+  it('keeps a quoted path that holds a comment marker', () => {
+    const content = '- "p/odd #1.md"\n- p/a.md\n';
+    expect(rewriteOrderFile(content, ['p/a.md', 'p/odd #1.md'])).toBe(
+      '- p/a.md\n- "p/odd #1.md"\n'
+    );
+  });
+
+  it('regenerates a file it cannot read line by line, or none', () => {
+    const regenerated = formatOrderFile(['p/a.md']);
+    expect(rewriteOrderFile('[p/b.md, p/a.md]\n', ['p/a.md'])).toBe(regenerated);
+    expect(rewriteOrderFile('- - nested\n', ['p/a.md'])).toBe(regenerated);
+    expect(rewriteOrderFile('not: a list\n', ['p/a.md'])).toBe(regenerated);
+    expect(rewriteOrderFile('# only a comment\n', ['p/a.md'])).toBe(regenerated);
+    expect(rewriteOrderFile(undefined, ['p/a.md'])).toBe(regenerated);
+    expect(rewriteOrderFile(null, ['p/a.md'])).toBe(regenerated);
   });
 });

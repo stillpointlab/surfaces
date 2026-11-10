@@ -72,16 +72,16 @@ describe('resolveTasks', () => {
     });
   });
 
-  it('warns about markdown no kind projects, after the parse warnings', () => {
+  it('warns about the manifest only, not about markdown no kind projects', () => {
     const resolved = resolveTasks(
       snapshot({
         [MANIFEST]: `${MANIFEST_TEXT}extra: 1\n`,
         [`${PHASE}/notes/n.md`]: '# n\n',
+        [`${PHASE}/README.md`]: '# About this phase\n',
       })
     );
     expect(resolved?.ok && resolved.tasks.manifestWarnings).toEqual([
       "unknown key 'extra' is ignored",
-      `'${PHASE}/notes/' is not a declared kind folder (1 markdown file not shown)`,
     ]);
   });
 });

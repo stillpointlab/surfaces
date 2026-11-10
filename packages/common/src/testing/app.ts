@@ -68,6 +68,11 @@ export interface AppCoreRoundTrip {
   op: { type: string; [field: string]: unknown };
   /** The view, as `project` takes it: its `type` and its parameters. */
   view: { type: string; [param: string]: unknown };
+  /**
+   * Fields laid over the fixture's snapshot, for a core whose snapshot carries
+   * host facts an op needs (a pending move, say).
+   */
+  snapshot?: Readonly<Record<string, unknown>>;
   /** The same recorded gap as a rewrite's: a written file always ends with a line break. */
   addsFinalNewline?: boolean;
 }

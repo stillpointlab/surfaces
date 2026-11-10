@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  collectUnprojectedFileWarnings,
   detectBoards,
   detectPool,
   synthesizeBoardForPath,
@@ -296,72 +295,5 @@ describe('board synthesis (existence is not a signal, ADR-0027)', () => {
     expect(synthesizeBoardForPath('docs/tasks/deep/stage3/phase9', 'docs/tasks')).toBeNull();
     expect(synthesizeBoardForPath('elsewhere/stage3/phase9', 'docs/tasks')).toBeNull();
     expect(synthesizeBoardForPath('docs/tasks/stage3/phase9x', 'docs/tasks')).toBeNull();
-  });
-});
-
-describe('collectUnprojectedFileWarnings (ADR-0028 decision 4)', () => {
-  const kinds = [
-    { id: 'spike', label: 'Spike', badge: 's', dir: 'spikes', creatable: true },
-    { id: 'spec', label: 'Spec', badge: 'sp', dir: 'specs', creatable: true },
-  ];
-  const MANIFEST_PATH = 'docs/tasks/tasks.yaml';
-
-  it('warns once per undeclared folder holding markdown inside a board, with a count', () => {
-    const nodes = [
-      blob(MANIFEST_PATH),
-      blob('docs/tasks/stage1/phase1/specs/a.md'),
-      blob('docs/tasks/stage1/phase1/notes/x.md'),
-      blob('docs/tasks/stage1/phase1/notes/y.md'),
-    ];
-
-    expect(collectUnprojectedFileWarnings(nodes, MANIFEST_PATH, kinds)).toEqual([
-      "'docs/tasks/stage1/phase1/notes/' is not a declared kind folder (2 markdown files not shown)",
-    ]);
-  });
-
-  it('markdown directly in a board or pool folder warns as outside any kind folder', () => {
-    const nodes = [
-      blob(MANIFEST_PATH),
-      blob('docs/tasks/stage1/phase1/specs/a.md'),
-      blob('docs/tasks/stage1/phase1/loose.md'),
-      blob('docs/tasks/unassigned/floating.md'),
-      blob('docs/tasks/unassigned/order.yaml'),
-    ];
-
-    expect(collectUnprojectedFileWarnings(nodes, MANIFEST_PATH, kinds)).toEqual([
-      "'docs/tasks/stage1/phase1/' holds 1 markdown file outside any kind folder (not shown on the board)",
-      "'docs/tasks/unassigned/' holds 1 markdown file outside any kind folder (not shown on the board)",
-    ]);
-  });
-
-  it('declared kind folders (any depth), templates beside the manifest, and clean repos stay silent', () => {
-    const nodes = [
-      blob(MANIFEST_PATH),
-      blob('docs/tasks/spike.template.md'),
-      blob('docs/tasks/stage1/phase1/specs/a.md'),
-      blob('docs/tasks/stage1/phase1/specs/archive/old.md'),
-      blob('docs/tasks/unassigned/spikes/pooled.md'),
-    ];
-
-    expect(collectUnprojectedFileWarnings(nodes, MANIFEST_PATH, kinds)).toEqual([]);
-  });
-
-  it('app-only markdown counts too, and files attribute to the DEEPEST containing base', () => {
-    // The docs root is itself an (unconventional) board because it directly
-    // holds a kind folder; its nested phase's stray folder must be attributed
-    // to the phase, not to the root board.
-    const nodes = [
-      blob(MANIFEST_PATH),
-      blob('docs/tasks/specs/root-card.md'),
-      blob('docs/tasks/stage1/phase1/specs/a.md'),
-    ];
-
-    expect(
-      collectUnprojectedFileWarnings(nodes, MANIFEST_PATH, kinds, [
-        'docs/tasks/stage1/phase1/drafts/pending.md',
-      ])
-    ).toEqual([
-      "'docs/tasks/stage1/phase1/drafts/' is not a declared kind folder (1 markdown file not shown)",
-    ]);
   });
 });

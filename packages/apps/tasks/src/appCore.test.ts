@@ -1,11 +1,6 @@
 import { describeAppCore } from '@stillpointlab/common-format/testing/app';
 
-import {
-  collectUnprojectedFileWarnings,
-  detectBoards,
-  detectPool,
-  kindPathsOf,
-} from './boardDetection.js';
+import { detectBoards, detectPool, kindPathsOf } from './boardDetection.js';
 import { tasksCore } from './core.js';
 import { parseFrontmatter, rewriteFrontmatter } from './frontmatter.js';
 import { tasksLifecycle } from './lifecycle.js';
@@ -98,7 +93,18 @@ const configured = {
   ].join('\n'),
   'stage1/phase2/specs/no-frontmatter.md': '# Spec: written by hand\n\nNo block yet.\n',
   'unassigned/seeds/idea.md': '---\ncolumn: todo\n---\n\n# Seed: an idea\n',
-  'unassigned/order.yaml': '# Backlog pool priority order\n- unassigned/seeds/idea.md\n',
+  'unassigned/specs/later.md': '---\ncolumn: todo\n---\n\n# Spec: later\n',
+  'unassigned/order.yaml': [
+    '# Backlog pool priority order',
+    '- unassigned/seeds/idea.md',
+    '',
+    '# Later',
+    '- unassigned/specs/later.md  # after the walks',
+    '',
+  ].join('\n'),
+  // Links to where the seed was before it moved to the pool.
+  'stage1/phase2/specs/follow-up.md':
+    '---\ncolumn: todo\n---\n\n# Spec: follow-up\n\nFrom the [seed](../../phase1/seeds/idea.md).\n',
   // Agents leave these beside cards. Not the app's, and the folder still mounts.
   'stage1/phase2/specs/README.md': 'Notes for whoever picks these up.\n',
   'stage1/phase2/specs/scratch.txt': 'helper output\n',
@@ -162,7 +168,7 @@ function mount(files: AppFixture, manifestPath: string): AppMountResult {
   return {
     ok: true,
     scope,
-    warnings: [...parsed.warnings, ...collectUnprojectedFileWarnings(nodes, manifestPath, kinds)],
+    warnings: parsed.warnings,
   };
 }
 
@@ -270,10 +276,8 @@ describeAppCore('tasks', {
       reparses: manifestParses,
     },
   ],
-  // The ops through the contract. Not here: reordering the pool, which
-  // regenerates order.yaml whole (its comments go; a recorded gap, as it has
-  // always been), and fixing references, which needs a pending move. Removing
-  // a column or kind is a manifest rewrite the rewrites above already hold.
+  // The ops through the contract. Removing a column or kind is a manifest
+  // rewrite the rewrites above already hold.
   core: {
     core: tasksCore,
     facts: {},
@@ -347,6 +351,36 @@ describeAppCore('tasks', {
           now: '2026-11-09T12:00:00.000Z',
         },
         view: { type: 'nav' },
+      },
+      {
+        name: 'reorder the pool, keeping its comments',
+        fixture: 'configured',
+        op: {
+          type: 'reorder-pool',
+          paths: ['unassigned/specs/later.md', 'unassigned/seeds/idea.md'],
+        },
+        view: { type: 'board', path: 'stage1/phase2' },
+      },
+      {
+        name: 'move a pool card to a phase, pruning the order file',
+        fixture: 'configured',
+        op: {
+          type: 'move-file',
+          path: 'unassigned/specs/later.md',
+          target: { boardPath: 'stage1/phase2', column: 'todo' },
+        },
+        view: { type: 'board', path: 'stage1/phase2' },
+      },
+      {
+        name: 'fix the references to a moved card',
+        fixture: 'configured',
+        op: {
+          type: 'fix-references',
+          path: 'unassigned/seeds/idea.md',
+          referencingPaths: ['stage1/phase2/specs/follow-up.md'],
+        },
+        snapshot: { moves: { 'unassigned/seeds/idea.md': ['stage1/phase1/seeds/idea.md'] } },
+        view: { type: 'board', path: 'stage1/phase2' },
       },
       {
         name: 'add a tag to the registry',
