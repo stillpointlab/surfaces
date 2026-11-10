@@ -10,4 +10,6 @@ backlog pool as seeds.
 
 - 2026-11-10 (stage 2 close): sheet's "bounds committed transaction history to the latest 100
   edits" (`sheet-editor-edit.test.ts`) times out under a full `npm run check` now and then, and
-  passes alone and on a re-run. It failed that way three times during stage 2's last phase. The test makes 101 edits and 101 undos through the editor's DOM in jsdom, so its time grows with machine load; a longer timeout for it, or fewer DOM steps per edit, would steady it.
+  passes alone and on a re-run. It failed that way three times during stage 2's last phase. The
+  test makes 101 edits and 101 undos through the editor's DOM in jsdom, so its time grows with
+  machine load; a longer timeout for it, or fewer DOM steps per edit, would steady it.
