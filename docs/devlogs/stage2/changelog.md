@@ -1,7 +1,7 @@
 # Stage 2: The Apps Breakout Changelog
 
-- **Dates:** 2026-11-03 – TBD
-- **Stage Tag:** TBD _(filled with `stage2-complete` at stage close)_
+- **Dates:** 2026-11-03 – 2026-11-10
+- **Stage Tag:** `stage2-complete` _(created on the merge of the stage close PR)_
 
 > Agent-drafted from evidence (merged PRs, git history, task cards). Appended per phase at phase
 > close. Regenerable at any time; see [devlogs](../README.md). Reflections do NOT belong here — they
@@ -9,7 +9,9 @@
 
 > The stage's theme is the [apps breakout brief](../../tasks/stage2/phase1/briefs/apps_breakout.md):
 > tasks and inventory move here from Context Manager as a DOM-free core and an element each, with a
-> limited set of shared components, in six phases.
+> limited set of shared components. The brief planned six phases; a seventh, the
+> [apps' rules](../../tasks/stage2/phase7/briefs/app_rules.md), moved their rules into the cores
+> too, so both apps now run in this repository's harness on their cores alone.
 
 ---
 
@@ -428,3 +430,55 @@ five specs, and covered all six of its outcomes.
     full `npm run build`.
 - The harness hosts were checked headless; #67's was not clicked through in a browser.
 - After the tag: the phase 7 close-out, which opens phase 8 empty, ahead of the stage close.
+
+---
+
+## After phase 7: the follow-ups (stage close)
+
+Range: `stage2-phase7-complete..f3bac9c`, 2026-11-10: four merges, 46 files, +764/−232. Before
+the stage closed, both follow-up logs were reviewed, and every entry was closed, moved to a seed or
+dropped. Context Manager adopted the code in context-manager#1113.
+
+### Shipped
+
+- Phase 7 closed and phase 8 opened empty
+  ([#68](https://github.com/stillpointlab/surfaces/pull/68)). Phase 8 was never used and is
+  removed at stage close.
+- The pool's `order.yaml` keeps its comments: `rewriteOrderFile` refills the item lines in the new
+  order and leaves comment and blank lines in place. The tasks core no longer warns about markdown
+  no kind projects (`collectUnprojectedFileWarnings` is gone). `describeAppCore`'s round-trip op
+  takes `snapshot` fields, so every tasks op, 18 in all, is held to the round trip
+  ([#69](https://github.com/stillpointlab/surfaces/pull/69)).
+- `<spl-icon>` gains `spinner`, and the inventory core's five user-facing messages say zone
+  ([#70](https://github.com/stillpointlab/surfaces/pull/70)).
+- Both follow-up logs drained: eight new seeds in the backlog pool, two entries folded into existing
+  seeds, two dropped ([#71](https://github.com/stillpointlab/surfaces/pull/71)).
+
+### Decisions
+
+- Jamie: the unmapped-file warning goes. Context Manager's ADR-0028 withdraws decision 4, recording
+  the cost that stays: a card in a removed or misspelled kind's folder disappears without a trace.
+- A reorder keeps the order file's comments in place rather than moving them with items, so a group
+  heading heads whatever ranks below it.
+- Jamie: `md-icon` keeps its own icons, and toolbar geometry is dropped.
+
+### Testing & review
+
+- 1,877 → 1,897 tests: the order rewrite's cases, the round trip's three new ops, and the snapshot
+  hook's sample-core test.
+- The task board harness on `tasksCore` was driven in headless Chromium: every fixture in light and
+  dark with no console errors, and 40 checks of the board's and the strip's ops.
+- context-manager#1113 was walked after `e2e:reset`: tasks 01–27 and 29, inventory 38/38.
+
+---
+
+## Stage totals
+
+- `eecebb0..f3bac9c` (`stage1-complete` to the last merge): 82 commits, 34 of them merges on
+  `main` (`git rev-list --count`, with and without `--first-parent`); 213 files, +33,326/−68
+  (`git diff --shortstat`): the stage mostly added the apps beside the formats. 36 PRs merged, #35
+  to #71, two of them stacked into another PR's branch rather than `main`.
+- Tests: 884 at stage 1's close to 1,897 at #69.
+- Context Manager carried the host side in the 18 PRs this changelog names, context-manager#1019
+  to #1113.
+- No token or cost figures were collected.

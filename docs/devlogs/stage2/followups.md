@@ -122,3 +122,6 @@ during this stage's setup, each entry struck with where it went.
   - Closed 2026-11-10: driven in headless Chromium before the stage close, every fixture in light and
     dark with no console errors, and the board's and the strip's ops through the core (40 checks,
     recorded on #69).
+
+Reviewed at stage close, 2026-11-10 ([#71](https://github.com/stillpointlab/surfaces/pull/71)):
+every entry above is closed, moved to a seed in the backlog pool, or dropped.
