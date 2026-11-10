@@ -40,9 +40,7 @@ export function planTasksCreate(input: CreateTasksInput): Result<TasksCreatePlan
     input.folder === '' ? TASKS_MANIFEST_FILENAME : `${input.folder}/${TASKS_MANIFEST_FILENAME}`;
   const content = tasksManifestSeedContent({ columns: input.columns, kinds: input.kinds });
   const parsed = parseTasksManifest(content);
-  if (!parsed.ok) {
-    return fail('TASKS_MANIFEST_INVALID', `Invalid tasks.yaml: ${parsed.errors.join('; ')}`);
-  }
+  if (!parsed.ok) return parsed;
   return ok({ manifestPath, files: [{ kind: 'create', path: manifestPath, content }] });
 }
 

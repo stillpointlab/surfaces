@@ -326,13 +326,12 @@ export function editTasksManifest(
   if (!reparsed.ok) {
     return fail(
       'TASKS_MANIFEST_UNPATCHABLE',
-      `this change would leave tasks.yaml invalid (${reparsed.errors.join(
+      `this change would leave tasks.yaml invalid (${reparsed.details.join(
         '; '
       )}) — make it by editing the file instead`
     );
   }
-  // The warnings as the instance after it reads: the manifest's own, and
-  // markdown no kind now projects.
+  // The warnings as the instance after it reads them.
   const after = resolveTasks({
     ...snapshot,
     files: { ...snapshot.files, [snapshot.manifestPath]: rewritten.content },

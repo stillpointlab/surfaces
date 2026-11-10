@@ -31,7 +31,7 @@ import type {
   SharedInventoryScalar,
   SharedInventoryZone,
 } from './types.js';
-import type { ItemEditResult, ItemPatchValue } from './zoneWriter.js';
+import type { ItemPatchValue } from './zoneWriter.js';
 import type { Failure, FileChange, Result } from '@stillpointlab/common-format/app';
 
 /** A new item's fields (its id is assigned by `addInventoryItem`). */
@@ -108,19 +108,9 @@ function writableZone(snapshot: InventorySnapshot, path: string): Result<Writabl
   }
   const content = snapshotContent(snapshot, path);
   if (content === null) {
-    return fail('INVENTORY_CONTENT_UNAVAILABLE', 'Room content is unavailable');
+    return fail('INVENTORY_CONTENT_UNAVAILABLE', 'Zone content is unavailable');
   }
   return ok({ resolved, schema, zone, content });
-}
-
-/** A writer's refusal as the op's. */
-function itemEditFailure(result: ItemEditResult & { ok: false }, id: string): Failure {
-  if (result.notFound) {
-    // Hand-deleted since the state was read (spec inventory_edit_item #1): an
-    // element asks its host to reload on this code.
-    return fail('INVENTORY_ITEM_NOT_FOUND', `No item with id '${id}' exists in this zone`);
-  }
-  return fail('INVENTORY_ITEM_READ_ONLY', result.reason ?? 'The item cannot be edited by the app');
 }
 
 /** Fields in the manifest's order. */
@@ -236,10 +226,8 @@ export function addInventoryItem(
       : {}),
     ...(fieldValues.length > 0 ? { fieldValues } : {}),
   });
-  if (!appended.ok) {
-    // The gate's scan already passed; this is the writer double-checking.
-    return fail('INVENTORY_ROOM_READ_ONLY', appended.reason);
-  }
+  // The gate's scan already passed; a refusal here is the writer double-checking.
+  if (!appended.ok) return appended;
   return ok({ id, changes: [{ kind: 'write', path: op.path, content: appended.content }] });
 }
 
@@ -258,7 +246,9 @@ function configuredPatch(
   const legacy = rejectConfiguredLegacyInput(input);
   if (!legacy.ok) return legacy;
   const item = zone.items.find((candidate) => candidate.id === id);
-  if (!item) return itemEditFailure({ ok: false, notFound: true }, id);
+  // Hand-deleted since the state was read (spec inventory_edit_item #1): an
+  // element asks its host to reload on this code.
+  if (!item) return fail('INVENTORY_ITEM_NOT_FOUND', `No item with id '${id}' exists in this zone`);
 
   for (const [key, value] of Object.entries(input.fieldValues ?? {})) {
     const field = manifest.fields.find((candidate) => candidate.id === key);
@@ -377,7 +367,7 @@ export function updateInventoryItem(
   if (Object.keys(patch).length === 0) return ok({ changes: [] });
 
   const patched = patchItem(content, op.id, patch);
-  if (!patched.ok) return itemEditFailure(patched, op.id);
+  if (!patched.ok) return patched;
   return ok({ changes: [{ kind: 'write', path: op.path, content: patched.content }] });
 }
 
@@ -389,6 +379,6 @@ export function deleteInventoryItem(
   const gate = writableZone(snapshot, op.path);
   if (!gate.ok) return gate;
   const deleted = deleteItem(gate.content, op.id);
-  if (!deleted.ok) return itemEditFailure(deleted, op.id);
+  if (!deleted.ok) return deleted;
   return ok({ changes: [{ kind: 'write', path: op.path, content: deleted.content }] });
 }

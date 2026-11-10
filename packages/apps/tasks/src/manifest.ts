@@ -1,3 +1,4 @@
+import { manifestFailure } from '@stillpointlab/common-format/app';
 import { parse as parseYaml } from 'yaml';
 import { z } from 'zod';
 
@@ -5,6 +6,7 @@ import { BUILTIN_TASK_KINDS, UNASSIGNED_COLUMN_ID, UNASSIGNED_DIR } from './type
 
 import type { SharedTaskKindDescriptor, SharedTasksManifest } from './types.js';
 import type { TreeNode } from './types.js';
+import type { ManifestFailure } from '@stillpointlab/common-format/app';
 
 /** Filename that marks a repo Tasks-View-ready (ADR-0014). */
 export const TASKS_MANIFEST_FILENAME = 'tasks.yaml';
@@ -175,8 +177,13 @@ const KNOWN_TOP_LEVEL_KEYS = new Set([
 const KNOWN_COLUMN_KEYS = new Set(['id', 'label', 'description', 'stage']);
 const KNOWN_KIND_KEYS = new Set(['id', 'label', 'badge', 'dir', 'creatable', 'template']);
 
+/** A parsed manifest, or `TASKS_MANIFEST_INVALID` with every error in `details`. */
 export type ManifestParseResult =
-  { ok: true; manifest: SharedTasksManifest; warnings: string[] } | { ok: false; errors: string[] };
+  { ok: true; manifest: SharedTasksManifest; warnings: string[] } | ManifestFailure;
+
+/** A refusal of `tasks.yaml` with every error in `details`. */
+export const invalidTasksManifest = (errors: string[]): ManifestFailure =>
+  manifestFailure('TASKS_MANIFEST_INVALID', 'tasks.yaml', errors);
 
 /** Unknown keys are tolerated (the file is hand-edited) but surfaced as warnings. */
 function collectUnknownKeyWarnings(raw: Record<string, unknown>): string[] {
@@ -270,10 +277,10 @@ export function parseTasksManifest(content: string): ManifestParseResult {
     raw = parseYaml(content);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return { ok: false, errors: [`YAML parse error: ${message}`] };
+    return invalidTasksManifest([`YAML parse error: ${message}`]);
   }
   if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
-    return { ok: false, errors: ['manifest must be a YAML mapping'] };
+    return invalidTasksManifest(['manifest must be a YAML mapping']);
   }
 
   const parsed = manifestSchema.safeParse(raw);
@@ -281,7 +288,7 @@ export function parseTasksManifest(content: string): ManifestParseResult {
     const errors = parsed.error.issues.map((issue) =>
       issue.path.length > 0 ? `${issue.path.join('.')}: ${issue.message}` : issue.message
     );
-    return { ok: false, errors };
+    return invalidTasksManifest(errors);
   }
 
   const { templates: rawTemplates, kinds: rawKinds, ...rest } = parsed.data;

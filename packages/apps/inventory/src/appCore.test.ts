@@ -110,7 +110,7 @@ const v1 = {
 /** Mount the way Context Manager's inventory lifecycle derives the scope. */
 function mount(files: AppFixture, manifestPath: string): AppMountResult {
   const parsed = parseInventoryManifest(files[manifestPath] ?? '');
-  if (!parsed.ok) return { ok: false, errors: parsed.errors };
+  if (!parsed.ok) return { ok: false, errors: parsed.details };
   const nodes: TreeNode[] = Object.keys(files).map((path) => ({ path, type: 'blob' }));
   const detection = detectInventoryAt(manifestPath, nodes);
   return {

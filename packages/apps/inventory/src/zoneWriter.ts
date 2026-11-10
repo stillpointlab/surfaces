@@ -1,9 +1,11 @@
+import { fail } from '@stillpointlab/common-format/app';
 import { formatYamlScalar } from '@stillpointlab/common-format/yaml';
 import { parse as parseYaml } from 'yaml';
 
 import { slugifyInventoryName } from './paths.js';
 
 import type { SharedInventoryScalar } from './types.js';
+import type { Failure, Result } from '@stillpointlab/common-format/app';
 
 /**
  * Line-based zone-file writer (ADR-0022). Never parse-and-re-emit: the app's
@@ -260,7 +262,8 @@ export function itemBlockLines(item: NewItemBlock): string[] {
   return lines;
 }
 
-export type AppendResult = { ok: true; content: string } | { ok: false; reason: string };
+/** The file after an append, or `INVENTORY_ROOM_READ_ONLY` when its shape is not one the app writes. */
+export type AppendResult = Result<{ content: string }>;
 
 /**
  * Append one item at the end of the located `items:` sequence — never blind
@@ -273,7 +276,7 @@ export function appendItem(content: string, item: NewItemBlock): AppendResult {
   const bom = content.startsWith('\uFEFF') ? '\uFEFF' : '';
   const src = bom === '' ? content : content.slice(1);
   const scan = scanZoneShape(src);
-  if (!scan.writable) return { ok: false, reason: scan.reason };
+  if (!scan.writable) return fail('INVENTORY_ROOM_READ_ONLY', scan.reason);
 
   const { eol, entryIndent } = scan;
   const bodyIndent = `${entryIndent}  `;
@@ -304,10 +307,13 @@ export function appendItem(content: string, item: NewItemBlock): AppendResult {
 /** A patchable item field value: scalar, tag list, or `null` to remove. */
 export type ItemPatchValue = SharedInventoryScalar | string[] | null;
 
-export type ItemEditResult =
-  | { ok: true; content: string }
-  | { ok: false; notFound: true }
-  | { ok: false; notFound?: false; reason: string };
+/**
+ * The file after an item edit, or a refusal: `INVENTORY_ITEM_NOT_FOUND` for an
+ * id the file does not hold (hand-deleted since the state was read; an element
+ * asks its host to reload on this code), `INVENTORY_ITEM_READ_ONLY` for an item
+ * or file the app does not write.
+ */
+export type ItemEditResult = Result<{ content: string }>;
 
 function formatPatchValue(value: SharedInventoryScalar | string[]): string {
   return Array.isArray(value)
@@ -365,14 +371,18 @@ interface LocatedItem {
 }
 
 /** Locate one item's span by id in a writable file (shared edit plumbing). */
-function locateItem(content: string, id: string): LocatedItem | ItemEditResult {
+function locateItem(content: string, id: string): LocatedItem | Failure {
   const bom = content.startsWith('\uFEFF') ? '\uFEFF' : '';
   const src = bom === '' ? content : content.slice(1);
   const scan = scanZoneShape(src);
-  if (!scan.writable) return { ok: false, reason: scan.reason };
+  if (!scan.writable) return fail('INVENTORY_ITEM_READ_ONLY', scan.reason);
   const entry = scan.entries.find((candidate) => candidate.id === id);
-  if (!entry) return { ok: false, notFound: true };
-  if (entry.readOnlyReason !== undefined) return { ok: false, reason: entry.readOnlyReason };
+  if (!entry) {
+    return fail('INVENTORY_ITEM_NOT_FOUND', `No item with id '${id}' exists in this zone`);
+  }
+  if (entry.readOnlyReason !== undefined) {
+    return fail('INVENTORY_ITEM_READ_ONLY', entry.readOnlyReason);
+  }
   return { segments: toSegments(src), bom, eol: scan.eol, entryIndent: scan.entryIndent, entry };
 }
 

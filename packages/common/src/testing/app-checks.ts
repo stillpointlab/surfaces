@@ -57,10 +57,9 @@ export function assertLifecycle(
   const files = fixtureFiles(options, name);
   const nodes = fixtureNodes(files);
   const result = lifecycle.validateAndScope(files[options.manifest], nodes, options.manifest);
-  expect(
-    result.ok,
-    `fixture "${name}" did not validate: ${JSON.stringify(result.ok ? [] : result.errors)}`
-  ).toBe(true);
+  expect(result.ok, `fixture "${name}" did not validate: ${result.ok ? '' : result.message}`).toBe(
+    true
+  );
   if (result.ok) {
     expect(result.scope.has(options.manifest), 'the scope must hold the manifest').toBe(true);
   }

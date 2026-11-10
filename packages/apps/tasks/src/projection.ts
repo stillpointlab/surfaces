@@ -160,9 +160,7 @@ export function resolveTasks(snapshot: TasksSnapshot): Result<{ tasks: ResolvedT
     return fail('TASKS_MANIFEST_INVALID', 'Invalid tasks.yaml: its content is unavailable');
   }
   const parsed = parseTasksManifest(content);
-  if (!parsed.ok) {
-    return fail('TASKS_MANIFEST_INVALID', `Invalid tasks.yaml: ${parsed.errors.join('; ')}`);
-  }
+  if (!parsed.ok) return parsed;
   const { manifest } = parsed;
   const nodes = nodesOf(snapshot);
   return ok({

@@ -31,6 +31,17 @@ export interface Failure {
 /** Success with the answer's fields beside `ok`, or a failure. Nothing throws for a rule. */
 export type Result<T extends object = object> = ({ ok: true } & T) | Failure;
 
+/**
+ * A manifest that does not validate: every error in `details` (a manifest can
+ * be wrong in several ways at once), and all of them joined as the `message`.
+ */
+export type ManifestFailure = Omit<Failure, 'details'> & { details: string[] };
+
+/** A manifest refusal from its errors: `Invalid <file>: <errors>`. */
+export function manifestFailure(code: string, file: string, errors: string[]): ManifestFailure {
+  return { ok: false, code, message: `Invalid ${file}: ${errors.join('; ')}`, details: errors };
+}
+
 /** Build a success. `ok()` for one with no fields. */
 export function ok<T extends object = Record<never, never>>(value?: T): { ok: true } & T {
   return { ...(value as T), ok: true };
@@ -63,14 +74,13 @@ export interface AppLifecycle<Detail extends { label: string } = { label: string
   manifestName: string;
   /**
    * Validate one manifest and derive the instance's scope: every path it owns,
-   * anchored at `manifestPath`. Lists every error, since a manifest can be wrong
-   * in several ways at once.
+   * anchored at `manifestPath`. A refusal lists every error in `details`.
    */
   validateAndScope(
     content: string,
     nodes: FolderNode[],
     manifestPath: string
-  ): { ok: true; scope: Set<string>; warnings: string[] } | { ok: false; errors: string[] };
+  ): { ok: true; scope: Set<string>; warnings: string[] } | ManifestFailure;
   /**
    * What one instance shows in the host's tree: its label and anything else the
    * app draws there. Called whether or not the manifest parses (`content` is

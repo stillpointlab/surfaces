@@ -98,7 +98,7 @@ tags:
     const result = parseTasksManifest(`${VALID_MANIFEST}doneColumn: nope\n`);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.errors.some((e) => e.includes("doneColumn 'nope'"))).toBe(true);
+    expect(result.details.some((e) => e.includes("doneColumn 'nope'"))).toBe(true);
   });
 
   it('rejects a non-integer current pointer', () => {
@@ -114,26 +114,30 @@ current:
     const result = parseTasksManifest(`${VALID_MANIFEST}tags: [Infra, infra]\n`);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.errors.some((e) => e.includes("duplicate tag 'infra'"))).toBe(true);
+    expect(result.details.some((e) => e.includes("duplicate tag 'infra'"))).toBe(true);
   });
 
   it('rejects unparseable YAML with an error result, not a throw', () => {
     const result = parseTasksManifest('columns: [unclosed');
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.errors[0]).toContain('YAML parse error');
+    expect(result.details[0]).toContain('YAML parse error');
   });
 
   it('rejects a non-mapping document', () => {
     const result = parseTasksManifest('- just\n- a list\n');
-    expect(result).toEqual({ ok: false, errors: ['manifest must be a YAML mapping'] });
+    expect(result).toMatchObject({
+      ok: false,
+      code: 'TASKS_MANIFEST_INVALID',
+      details: ['manifest must be a YAML mapping'],
+    });
   });
 
   it('rejects a missing/unsupported version', () => {
     const result = parseTasksManifest(VALID_MANIFEST.replace('version: 1', 'version: 2'));
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.errors.some((e) => e.startsWith('version'))).toBe(true);
+    expect(result.details.some((e) => e.startsWith('version'))).toBe(true);
   });
 
   it('rejects an empty column list', () => {
@@ -151,14 +155,14 @@ templates:
     const result = parseTasksManifest(VALID_MANIFEST.replace('id: done', 'id: briefed'));
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.errors.some((e) => e.includes("duplicate column id 'briefed'"))).toBe(true);
+    expect(result.details.some((e) => e.includes("duplicate column id 'briefed'"))).toBe(true);
   });
 
   it('rejects the reserved unassigned column id', () => {
     const result = parseTasksManifest(VALID_MANIFEST.replace('id: done', 'id: unassigned'));
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.errors.some((e) => e.includes('reserved'))).toBe(true);
+    expect(result.details.some((e) => e.includes('reserved'))).toBe(true);
   });
 
   it('rejects non-slug column ids', () => {
@@ -170,7 +174,7 @@ templates:
     const result = parseTasksManifest(`${VALID_MANIFEST}defaultColumn: nope\n`);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.errors.some((e) => e.includes("defaultColumn 'nope'"))).toBe(true);
+    expect(result.details.some((e) => e.includes("defaultColumn 'nope'"))).toBe(true);
   });
 
   it('tolerates unknown keys with warnings', () => {
@@ -212,7 +216,7 @@ somethingCustom: true
     const result = parseTasksManifest(VALID_MANIFEST.replace(/templates:[\s\S]*$/, ''));
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.errors.some((e) => e.includes("unless a 'kinds:' block"))).toBe(true);
+    expect(result.details.some((e) => e.includes("unless a 'kinds:' block"))).toBe(true);
   });
 });
 
@@ -246,14 +250,14 @@ describe('parseTasksManifest kinds: block (ADR-0027)', () => {
     const result = parseTasksManifest(`${KINDS_MANIFEST.replace('id: epic', 'id: story')}`);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.errors.some((e) => e.includes("duplicate kind id 'story'"))).toBe(true);
+    expect(result.details.some((e) => e.includes("duplicate kind id 'story'"))).toBe(true);
   });
 
   it('rejects duplicate resolved dirs (an explicit dir colliding with a default)', () => {
     const result = parseTasksManifest(`${KINDS_MANIFEST.replace('dir: epics-dir', 'dir: storys')}`);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.errors.some((e) => e.includes("duplicate kind folder 'storys'"))).toBe(true);
+    expect(result.details.some((e) => e.includes("duplicate kind folder 'storys'"))).toBe(true);
   });
 
   it('rejects an id or dir that collides with the reserved pool folder', () => {
@@ -264,7 +268,7 @@ describe('parseTasksManifest kinds: block (ADR-0027)', () => {
     );
     expect(byDir.ok).toBe(false);
     if (byDir.ok) return;
-    expect(byDir.errors.some((e) => e.includes('reserved for the backlog pool'))).toBe(true);
+    expect(byDir.details.some((e) => e.includes('reserved for the backlog pool'))).toBe(true);
   });
 
   it('rejects a non-slug kind id and an empty kinds list', () => {
@@ -312,7 +316,7 @@ describe('validateManifestAgainstTree', () => {
 
   function manifestOf(content: string) {
     const result = parseTasksManifest(content);
-    if (!result.ok) throw new Error(result.errors.join('; '));
+    if (!result.ok) throw new Error(result.details.join('; '));
     return result.manifest;
   }
 
