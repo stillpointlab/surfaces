@@ -343,3 +343,88 @@ covered the brief's last outcome. There was no new brief, only four specs.
   - #1058 and #1059 needed no walk changes.
   - #1056's first run hit a stale phase 5 server on port 3004.
 - After the tag: the phase 6 close-out, which opens phase 7 empty, ahead of the stage close.
+
+## Phase 7: The apps' rules (`stage2-phase7-complete`)
+
+Range: `stage2-phase6-complete..stage2-phase7-complete` (`11f2b15..2618767`), 2026-11-08 –
+2026-11-10: eleven merges, 80 files, +10,287/−922. Seven Context Manager PRs carried the host side.
+The phase had a brief of its own ([app rules](../../tasks/stage2/phase7/briefs/app_rules.md)) and
+five specs, and covered all six of its outcomes.
+
+### Shipped
+
+- Phase 6 closed and phase 7 opened empty
+  ([#57](https://github.com/stillpointlab/surfaces/pull/57)). The brief and Jamie's decisions on it
+  ([#58](https://github.com/stillpointlab/surfaces/pull/58)), then the specs in two passes
+  ([#59](https://github.com/stillpointlab/surfaces/pull/59),
+  [#61](https://github.com/stillpointlab/surfaces/pull/61)).
+- Inventory's rules in its core: `InventorySnapshot` and `resolveInventory`, the space and zone
+  projections, the four ops answering file changes or a refusal, and the create plan. The core's
+  types lost the goods' ids, which Context Manager's extension adds back. The harness answers every
+  op with the core over two example inventories in memory
+  ([#60](https://github.com/stillpointlab/surfaces/pull/60);
+  [spec](../../tasks/stage2/phase7/specs/inventory-rules.md); context-manager#1062).
+- The contract's other half in `common-format/app`: `AppSnapshot`, `FileChange` (`write`, `create`,
+  `move`), `AppCore` with `project`, `apply` and `seed`, and `placeNewFiles`. `describeAppCore`
+  gained the round trip (project, apply, re-parse, and keep comments, CRLF and the final newline),
+  and `inventoryCore` implements it
+  ([#62](https://github.com/stillpointlab/surfaces/pull/62);
+  [spec](../../tasks/stage2/phase7/specs/app-core-contract.md); context-manager#1069).
+- The board's settings, new-card, title and tags dialogs moved into `<spl-task-board>` as
+  `<modal-dialog>`s that survive a repaint, asking five ops. The three `*-request` events are gone
+  ([#63](https://github.com/stillpointlab/surfaces/pull/63);
+  [spec](../../tasks/stage2/phase7/specs/board-dialogs.md); context-manager#1078).
+- The stage and phase tab strip became `<spl-tasks-nav>`, with its close dialog and four ops.
+  Context Manager deleted `tasks-nav.shared.ts` and its parity tests
+  ([#64](https://github.com/stillpointlab/surfaces/pull/64);
+  [spec](../../tasks/stage2/phase7/specs/tasks-nav-element.md); context-manager#1083).
+- Tasks' rules in its core, in three steps
+  ([spec](../../tasks/stage2/phase7/specs/tasks-rules.md)):
+  - projection: `TasksSnapshot`, the board, stage and nav views, the rebase helpers
+    ([#65](https://github.com/stillpointlab/surfaces/pull/65); context-manager#1093);
+  - the card ops and `tasksCore` on the contract
+    ([#66](https://github.com/stillpointlab/surfaces/pull/66); context-manager#1095);
+  - the manifest ops (settings, the tag registry, the pointer, new stages and phases, close), all
+    twelve ops on `tasksCore`, and the board harness on the core over in-memory files
+    ([#67](https://github.com/stillpointlab/surfaces/pull/67); context-manager#1101).
+
+### Decisions
+
+- Jamie, on the brief: inventory first, then the contract, then tasks; a core receives plain data
+  (paths and contents with drafts laid over, plus the few host facts a rule reads); one phase; the
+  create dialogs stay in Context Manager.
+- The direction: both apps should run in a harness here, as the foundation for stand-alone apps.
+  Nothing in the cores assumes Context Manager is the host.
+- Draft rebase splits: the frontmatter comparison moved to the tasks core, and deciding when to
+  rebase stays with the host.
+- Housekeeping stays in the board and stage states, named by path, because the board counts it for
+  Check-in (Jamie's OK). Only its `goodId` moved out.
+- Create is a plan and a placement, in both apps, so Context Manager's own checks run between them.
+- Every refusal is decided before any change. Context Manager links a tracked file only once the
+  core has said yes.
+- The cores' not-found codes are their own (`TASKS_CARD_NOT_FOUND`, `TASKS_BOARD_NOT_FOUND`), mapped
+  back to `NotFoundError` by the host.
+- A pending move hides its anchor only; the paths a card passed through are for finding links.
+
+### Testing & review
+
+- 1,546 → 1,877 tests:
+  - inventory's moved rule tests (31 from Context Manager's service) and the new core cases;
+  - the round trip: 8 inventory ops (40 checks), 15 tasks ops;
+  - `dialogs.test.ts` (25) and `tasks-nav.test.ts` (27), with new card, title and tags tested for
+    the first time;
+  - `cardOps.test.ts` (32) and `manifestOps.test.ts` (24).
+- Context Manager's service tests passed unchanged through each adoption before any moved, and the
+  tasks service keeps its tests as the integration check.
+- Behaviour changes in Context Manager, all small and named in their PRs: refused ops no longer
+  link a tracked file first; an undo during an open check-in PR is refused before any write; an
+  unreadable template is a 409 `TASKS_TEMPLATE_UNAVAILABLE`; removing a column is refused when a
+  linked card can't be read.
+- Every Context Manager PR was walked after `e2e:reset`: the inventory walks passed 38/38 on #1062
+  and #1069, and the tasks walks passed 01–27 and 29 (28 is skipped by design) on the other five.
+  - #1078 fixed walk 09, which waited for `<modal-dialog>`'s 0×0 host to be visible.
+  - #1101 fixed walk 03's 1B race: its menu move now waits for the drag's move to settle.
+  - #1101's first run used a stale `dist/`. The e2e server runs the build, so walks now follow a
+    full `npm run build`.
+- The harness hosts were checked headless; #67's was not clicked through in a browser.
+- After the tag: the phase 7 close-out, which opens phase 8 empty, ahead of the stage close.

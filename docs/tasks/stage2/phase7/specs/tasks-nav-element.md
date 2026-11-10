@@ -1,5 +1,7 @@
 ---
-column: todo
+column: done
+pr: 64
+completed: 2026-11-09
 created: 2026-11-08T14:34:29-07:00
 tags: [apps, host-contract, code]
 ---
@@ -107,18 +109,32 @@ links, answers the ops, and decides where to navigate. Users see no change.
 
 ## Acceptance / completion checklist
 
-- [ ] `<spl-tasks-nav>` renders today's strip from state and links, with markup only through
+- [x] `<spl-tasks-nav>` renders today's strip from state and links, with markup only through
       `render`.
-- [ ] The four ops and the requests are answered or handled by the page as today, and the close
+- [x] The four ops and the requests are answered or handled by the page as today, and the close
       dialog lives in the element.
-- [ ] `tasks-nav.shared.ts` and its parity tests are gone; the page keeps only state, answers and
+- [x] `tasks-nav.shared.ts` and its parity tests are gone; the page keeps only state, answers and
       navigation.
-- [ ] Element tests and the contract suite pass; the harness mounts the strip with ops answered.
-- [ ] Context Manager is green and the tasks walks were run, with no selector changes.
-- [ ] `npm run check` green here.
+- [x] Element tests and the contract suite pass; the harness mounts the strip with ops answered.
+- [x] Context Manager is green and the tasks walks were run, with no selector changes.
+- [x] `npm run check` green here.
 
 ## Implementation plan
 
 1. Surfaces PR: the element, its styles, tests and harness fixtures.
 2. Context Manager PR: move the pin, embed the nav state, answer the ops, delete the string
    renderer and the close dialog's page code, walked.
+
+## Implementation notes
+
+- Landed in #64, merged 2026-11-09 as `51e99f7`. `<spl-tasks-nav>` renders in light DOM through
+  `html`, from `setState` and `links`. Its markup was checked against Context Manager's
+  `renderTasksNavStrip` in 7 cases, escaping included, and matched after DOM normalisation.
+- The four ops (`create-stage-phase`, `set-current`, `close-candidates`, `close`) and the requests
+  (`navigate`, `reload-request`, `notification`, `open-options-menu`) keep today's notices. The close
+  dialog lives in the element and stays attached when the strip re-renders.
+- 27 element tests, with `describeAppElementContract`. Tests went from 1,673 to 1,700. The harness
+  puts the strip above the board in every tasks fixture.
+- Context Manager adopted it in context-manager#1083, merged 2026-11-09, deleting
+  `tasks-nav.shared.ts`, its parity tests and the strip's page styles. The tasks walks passed 01–27
+  and 29 in one run with no selector changes.

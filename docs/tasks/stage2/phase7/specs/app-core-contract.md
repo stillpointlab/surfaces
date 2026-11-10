@@ -1,5 +1,7 @@
 ---
-column: todo
+column: done
+pr: 62
+completed: 2026-11-09
 created: 2026-11-09T13:30:21-07:00
 tags: [apps, host-contract, common, code]
 ---
@@ -172,16 +174,31 @@ project again.
 
 ## Acceptance / completion checklist
 
-- [ ] `common-format/app` exports `AppSnapshot`, `FileChange`, `AppViewMap`, `AppCoreOpMap`,
+- [x] `common-format/app` exports `AppSnapshot`, `FileChange`, `AppViewMap`, `AppCoreOpMap`,
       `AppCore` and `placeNewFiles`, still importing nothing else from `common`'s runtime.
-- [ ] `inventoryCore` implements `AppCore`; `InventoryChange` is gone; the harness host goes through
+- [x] `inventoryCore` implements `AppCore`; `InventoryChange` is gone; the harness host goes through
       `project` and `apply`.
-- [ ] `describeAppCore` runs the round trip, and inventory's app-core test uses it for its ops.
-- [ ] Context Manager is green on the new pin, and the inventory walks were run.
-- [ ] `npm run check` green here.
+- [x] `describeAppCore` runs the round trip, and inventory's app-core test uses it for its ops.
+- [x] Context Manager is green on the new pin, and the inventory walks were run.
+- [x] `npm run check` green here.
 
 ## Implementation plan
 
 1. Surfaces PR: the types and helper in `common`, the suite's round trip, inventory on the contract,
    the harness host.
 2. Context Manager PR: the pin and `write`'s switch, walked.
+
+## Implementation notes
+
+- Landed in #62, merged 2026-11-09 as `3a8bd2d`. `common-format/app` names `AppSnapshot` (moved
+  from inventory), `FileChange` (`write`, `create`, `move`), the view and op maps, `AppCore` with
+  `project`, `apply` and `seed`, and `placeNewFiles`. `AppCore` takes a fifth, defaulted parameter
+  for an extended snapshot, which tasks uses. The `app` entry imports the same shared chunks.
+- `describeAppCore`'s round trip checks, per op: the view projects before and after, every written
+  file re-parses, comments survive, CRLF survives, and the final newline (or its absence) is kept.
+  It is tested against a sample core, each check failing on a broken variant.
+- `inventoryCore` puts the named functions behind the contract; they stay exported, and Context
+  Manager keeps calling them. Its app-core test runs 8 ops (the seven former rewrites and add zone),
+  40 checks. Tests went from 1,609 to 1,648.
+- Context Manager adopted it in context-manager#1069, merged 2026-11-09: `InventoryService.write`
+  switches on the change's kind. The inventory walks passed 38/38.

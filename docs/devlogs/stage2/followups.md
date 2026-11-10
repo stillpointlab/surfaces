@@ -56,15 +56,23 @@ during this stage's setup, each entry struck with where it went.
 - 2026-11-07 (app contract): `project` and `apply` from the August `AppModule` design are not
   named in `common-format/app`. The rules they would hold are still in Context Manager's services,
   so naming them waits for the pass that extracts those rules, after phase 6.
+  - Closed 2026-11-09 (app-core-contract, #62): `AppCore` names `project`, `apply` and `seed`, and
+    `inventoryCore` implements it. `tasksCore` followed in tasks-rules (#66, #67).
 - 2026-11-07 (transport-blind task board): the board's page-level UI stays in Context Manager:
   the nav strip and its close-phase dialogs, board settings, refresh, check-in, and the new-card,
   title and tags dialogs. The board raises requests for them by path. Whether any of it moves into
   the element, and so whether `tasks-nav.shared.ts` needs a DOM-free entry, is for the same later
   pass. Context Manager's WAL has the timing change that came with the ops.
+  - Closed 2026-11-09 (board-dialogs, #63; tasks-nav-element, #64): the settings, new-card, title
+    and tags dialogs are in the board, and the strip and its close dialog are `<spl-tasks-nav>`, with
+    no DOM-free nav entry needed. Refresh and check-in stay with the page, as the phase 7 brief
+    decided.
 - 2026-11-08 (task board element adoption): the tasks walks' step 03 1B still races a cold server:
   a linked card's menu move is refused while the drag before it is in flight. The walk could wait
   for the first move to settle, as 1D and 3.1 now do. Not done, to keep the merge moving; it is a
   Context Manager walk change.
+  - Closed 2026-11-10 (context-manager#1101): the walk awaits the drag's move before the menu
+    move. It had hit again on #1101's walks.
 - 2026-11-08 (html-safe-templates): the task board still builds its markup as string templates,
   escaping each value with `escapeHtml` from `common-format/html` (it no longer has its own). Moving
   it onto `html` and `render` is mechanical but touches most of its 1,400 lines. Its file-level
@@ -84,3 +92,13 @@ during this stage's setup, each entry struck with where it went.
   migration across existing repositories: detection would read both folders, and a check-in or a
   one-off pull request would move the files. The routes would need redirects. The question is
   seed-sized and has no card yet.
+- 2026-11-09 (inventory-rules): the inventory elements' op types stay loose
+  (`Record<string, unknown>` for an item and its changes). The harness casts them to the core's
+  `AddInventoryItemInput` and `UpdateInventoryItemInput`. Tightening them touches the element's form
+  code.
+- 2026-11-10 (tasks-rules step 2): `fix-references` is not in `describeAppCore`'s round trip for
+  tasks, since it needs a pending move and the fixtures' snapshots have none. `reorder-pool` is left
+  out too, for the 2026-11-04 entry's reason.
+- 2026-11-10 (tasks-rules step 3): the task board harness on `tasksCore` was checked with throwaway
+  node and jsdom tests, not clicked through in a browser. The next harness change should drive it in
+  Chromium, light and dark, as phase 6 did for inventory.

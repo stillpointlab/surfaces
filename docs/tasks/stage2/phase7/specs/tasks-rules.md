@@ -1,5 +1,7 @@
 ---
-column: todo
+column: done
+pr: 67
+completed: 2026-11-10
 created: 2026-11-09T13:30:21-07:00
 tags: [apps, host-contract, code]
 ---
@@ -178,18 +180,18 @@ repository's own `docs/tasks/`.
 
 ## Acceptance / completion checklist
 
-- [ ] `tasksCore` implements `AppCore` (views, ops, seed) with the snapshot extension; the named
+- [x] `tasksCore` implements `AppCore` (views, ops, seed) with the snapshot extension; the named
       functions are exported for direct use.
-- [ ] The core's types carry no Context Manager ids; Context Manager's extension does, and the JSON
+- [x] The core's types carry no Context Manager ids; Context Manager's extension does, and the JSON
       is unchanged.
-- [ ] `BoardService` holds no tasks rule: it loads, links, overlays, writes, rebases by its own
+- [x] `BoardService` holds no tasks rule: it loads, links, overlays, writes, rebases by its own
       decision, and maps codes to statuses.
-- [ ] Moved tests pass in the core, the service's remaining tests pass, and each PR lists what moved.
-- [ ] The board harness answers its ops with the core over `docs/tasks/`, with no hand-written op
+- [x] Moved tests pass in the core, the service's remaining tests pass, and each PR lists what moved.
+- [x] The board harness answers its ops with the core over `docs/tasks/`, with no hand-written op
       handling left.
-- [ ] `describeAppCore` runs the tasks round trip over its fixtures.
-- [ ] Context Manager is green and the tasks walks were run after each adoption.
-- [ ] `npm run check` green here.
+- [x] `describeAppCore` runs the tasks round trip over its fixtures.
+- [x] Context Manager is green and the tasks walks were run after each adoption.
+- [x] `npm run check` green here.
 
 ## Implementation plan
 
@@ -202,3 +204,43 @@ earlier ones.
    `fix-references` and `referencesTo`; Context Manager links by path and writes changes.
 3. **Manifest ops and create.** `edit-manifest`, `add-tag`, `create-stage-phase`, `set-current`,
    `close`, `seed`; the harness on the core throughout.
+
+## Implementation notes
+
+Three steps, each a surfaces PR and a Context Manager adoption, walked.
+
+- **Step 1, projection:** #65, merged 2026-11-09 as `fe5110e`, adopted in context-manager#1093.
+  `TasksSnapshot` is the contract's snapshot plus `projections` and `moves`; the views are board,
+  stage and nav; the rebase helpers moved. The core's card, pool and housekeeping types lost the
+  goods' ids.
+  - **Departure:** housekeeping stays in the board and stage states, named by path, because the
+    element counts it for Check-in (Jamie's OK). Only `goodId` moved out.
+  - `rebaseMetadata` takes the host's `metadataOnly` verdict, since the formatter check stays with
+    the host.
+- **Step 2, card ops:** #66, merged 2026-11-10 as `af10590`, adopted in context-manager#1095. The
+  card ops answer file changes or a refusal decided before any change, `tasksCore` implements
+  `AppCore`, and `seed` came forward from step 3. The snapshot gained `created` and `inFlight`.
+  - Two behaviour changes in Context Manager, both tested: an undo while the move's check-in PR is
+    open is refused before any write, and an unreadable template is a 409
+    `TASKS_TEMPLATE_UNAVAILABLE`.
+  - `reorder-pool` and `fix-references` are left out of the round trip: the first regenerates
+    `order.yaml` (the WAL's 2026-11-04 entry), and the second needs a pending move the fixtures
+    lack.
+- **Step 3, manifest ops:** #67, merged 2026-11-10 as `2618767`, adopted in context-manager#1101.
+  `add-tag`, `edit-manifest` with its guards, `create-stage-phase`, `set-current` and `close`;
+  `tasksCore` carries all twelve ops.
+  - One rule fixed: a pending move hides its anchor only. Hiding the paths a card passed through hid
+    any card created at one since; context-manager#1095 had worked around it.
+  - The harness answers every op of the board and the strip with `tasksCore.apply` over in-memory
+    files (`dev/workspace.ts`) and re-projects. The hand-built states became a hand-built folder
+    (`dev/workshop.ts`) the core projects. It was checked with throwaway node and jsdom tests, not
+    clicked through in a browser.
+  - Three behaviour changes in Context Manager: a refused settings edit no longer links a tracked
+    `tasks.yaml` first (tested); removing a column is refused when a linked card can't be read; an
+    invalid create request is refused before the existing-instance check.
+- Context Manager's service tests passed unchanged through all three steps and stay as the
+  integration check; the rules also have core tests (`projection`, `cardOps` with 32,
+  `manifestOps` with 24). Tests here went from 1,700 to 1,877.
+- Every adoption was walked after `e2e:reset` and a scratch baseline: 01–27 and 29 passed each
+  time. Walk 03 now waits for a drag's move to settle before the menu move (context-manager#1101),
+  closing the 1B race.

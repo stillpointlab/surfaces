@@ -1,5 +1,7 @@
 ---
-column: todo
+column: done
+pr: 60
+completed: 2026-11-09
 created: 2026-11-08T14:34:29-07:00
 tags: [apps, host-contract, code]
 ---
@@ -113,20 +115,42 @@ runs the inventory elements on the same functions, with the files in memory.
 
 ## Acceptance / completion checklist
 
-- [ ] The core exports the snapshot type, both projections, the four op functions and the create
+- [x] The core exports the snapshot type, both projections, the four op functions and the create
       plan, all DOM-free and host-free.
-- [ ] The core's types carry no Context Manager ids; Context Manager's extension does, and the JSON
+- [x] The core's types carry no Context Manager ids; Context Manager's extension does, and the JSON
       is unchanged.
-- [ ] `InventoryService` holds no inventory rule: it loads, links, overlays, writes and maps codes
+- [x] `InventoryService` holds no inventory rule: it loads, links, overlays, writes and maps codes
       to statuses.
-- [ ] Moved tests pass in the core; the service's remaining tests pass; the PRs list what moved.
-- [ ] The harness projects the example with the core and answers ops with it, in memory, with no
+- [x] Moved tests pass in the core; the service's remaining tests pass; the PRs list what moved.
+- [x] The harness projects the example with the core and answers ops with it, in memory, with no
       hand-written op handling left.
-- [ ] Context Manager is green and the inventory walks were run.
-- [ ] `npm run check` green here.
+- [x] Context Manager is green and the inventory walks were run.
+- [x] `npm run check` green here.
 
 ## Implementation plan
 
 1. Surfaces PR: the snapshot, projections, ops and create plan, with the moved tests; the types
    split; the harness on the core.
 2. Context Manager PR: the service as host work, the extension types, the status table, walked.
+
+## Implementation notes
+
+- Landed in #60, merged 2026-11-09 as `b8cf4ad`. The core gained `space.ts` (`InventorySnapshot`,
+  `resolveInventory`, both projections), `ops.ts` (the four ops, each answering file changes or a
+  refusal with today's codes and messages) and `create.ts`. The core's types lost the goods' ids;
+  Context Manager's `inventory.types.ts` extends them, and the JSON is unchanged.
+- **Departures:**
+  - Create is two functions, `planInventoryCreate` and `placeInventoryCreate`. Context Manager
+    checks a synced tree, overlapping views and a resumed create between them, so the overlap check
+    still runs before the collision check.
+  - The sibling-space label is not a host fact. It is built from the manifest's label, so it stays
+    an overlay in Context Manager; the facts are `enabled` and `dirty`.
+  - The elements' op types stay loose (`Record<string, unknown>`). Tightening them touches the
+    element's form code.
+- 31 rule tests moved from `inventory.service.test.ts` into `space.test.ts`, `ops.test.ts` and
+  `create.test.ts`; the service keeps 34 and gained 6. Tests here went from 1,546 to 1,609.
+- The harness keeps two examples' files in memory (workshop, and a new version 1 house with a
+  duplicate id, read-only items and a parse error) and answers every op with the core.
+- Context Manager adopted it in context-manager#1062, merged 2026-11-09: the service loads, links,
+  overlays, writes and maps codes through `INVENTORY_REFUSAL_STATUS`. One small difference: a
+  refused op on a tracked zone no longer links the zone first. The inventory walks passed 38/38.
