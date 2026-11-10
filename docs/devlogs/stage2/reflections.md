@@ -35,9 +35,9 @@
 
 ## Agent observations
 
-- (claude) Every Context Manager adoption was walked, and when a walk failed, the cause was the
-  setup or the walk script, never the code: a stale build, a server left on the port, a dialog host
-  Playwright never counts as visible, and a race in walk 03.
+- (claude) Every Context Manager adoption after the prep (#1019) was walked, and when a walk failed,
+  the cause was the setup or the walk script, never the code: a stale build, a server left on the
+  port, a dialog host Playwright never counts as visible, and a race in walk 03.
 - (claude) Splitting tasks' rules into three steps, each a surfaces PR plus a walked Context Manager
   adoption, kept every PR reviewable. "The core decides before the host writes" changed Context
   Manager's behaviour only in small, named ways, such as refusals no longer linking a file first.
