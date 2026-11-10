@@ -47,7 +47,7 @@ kinds:
 # Current stage/phase pointer: the tasks page opens here.
 current:
   stage: 2
-  phase: 7
+  phase: 8
 
 # Tags: type, size, and area. Add through the board's "+ add new" or here.
 tags:

@@ -1,5 +1,7 @@
 ---
-column: todo
+column: done
+pr: 63
+completed: 2026-11-09
 created: 2026-11-08T14:34:29-07:00
 tags: [apps, host-contract, code]
 ---
@@ -96,17 +98,35 @@ dialog.
 
 ## Acceptance / completion checklist
 
-- [ ] The four dialogs render inside `<spl-task-board>` through `html`, and the page holds none of
+- [x] The four dialogs render inside `<spl-task-board>` through `html`, and the page holds none of
       their markup or logic.
-- [ ] The five ops are answered by the page with today's endpoints, with linking and the draft
+- [x] The five ops are answered by the page with today's endpoints, with linking and the draft
       message as today; the three `*-request` events are gone.
-- [ ] Element tests cover all four dialogs; the page's answers are tested.
-- [ ] The harness opens every dialog and answers its ops.
-- [ ] Context Manager is green and the tasks walks were run, with no selector changes.
-- [ ] `npm run check` green here.
+- [x] Element tests cover all four dialogs; the page's answers are tested.
+- [x] The harness opens every dialog and answers its ops.
+- [x] Context Manager is green and the tasks walks were run, with no selector changes.
+- [x] `npm run check` green here.
 
 ## Implementation plan
 
 1. Surfaces PR: the dialogs, ops, tests and harness answers.
 2. Context Manager PR: move the pin, answer the ops, delete `boardSettings.ts` and the three dialogs'
    markup and handlers, call `openSettings()`, walked.
+
+## Implementation notes
+
+- Landed in #63, merged 2026-11-09 as `f748beb`. The board builds its four `<modal-dialog>`s once,
+  with Context Manager's ids, classes, limits and copy, in a `.board-dialogs` container that is never
+  detached, so a refresh behind an open dialog keeps its inputs and focus. Settings opens through
+  `openSettings()`; each change is one `edit-manifest` op.
+- `brief-request`, `set-title-request` and `set-tags-request` are gone. The dialogs' styles moved to
+  `board.scss` on tokens; the form and button classes are still the host's.
+- `dialogs.test.ts` has 25 tests: `boardSettings.test.ts`'s cases answering ops, plus new card,
+  title and tags tested for the first time. Tests went from 1,648 to 1,673.
+- The harness answered the five ops by hand in this step; they moved onto the core in tasks-rules
+  step 3.
+- Context Manager adopted it in context-manager#1078, merged 2026-11-09, answering the ops with
+  today's endpoints in `boardOps.ts` and deleting `boardSettings.ts` and the dialogs' page code. The
+  tasks walks passed 01–27 and 29 with no selector changes. A fix to walk 09 came with it:
+  `<modal-dialog>`'s host is a 0×0 anchor, so the walk now waits for the dialog to be attached, not
+  visible.
