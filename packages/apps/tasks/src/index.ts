@@ -19,3 +19,5 @@ export * from './cardOps.js';
 export * from './manifestOps.js';
 export * from './create.js';
 export * from './core.js';
+export * from './elementOps.js';
+export * from './module.js';

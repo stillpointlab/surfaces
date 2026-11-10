@@ -18,8 +18,9 @@ What every surface shares. No elements of its own.
   - `Result`, `ok()` and `fail()`: an answer is `{ ok: true, …fields }` or
     `{ ok: false, code, message, details? }`, and nothing throws for a rule.
   - The lifecycle half, `AppLifecycle` over `FolderNode`s: an app's manifest name,
-    `validateAndScope` (the paths an instance owns, or every error in its manifest) and
-    `describeInstance` (what the host's tree shows).
+    `validateAndScope` (the paths an instance owns, or a `ManifestFailure` with every error in its
+    manifest in `details`; `manifestFailure` builds one) and `describeInstance` (what the host's
+    tree shows).
   - The core half, `AppCore` over an `AppSnapshot` (the manifest path, the paths a host sees, the
     files' contents with its drafts laid over, and paths a new file may not use: plain data, no
     callbacks). `project(snapshot, view, facts)` answers the state one view renders, or `null` when
@@ -27,6 +28,13 @@ What every surface shares. No elements of its own.
     answers the `FileChange`s an op makes (`write`, `create`, or `move` with the new content) or a
     refusal. `seed(input)` answers a new instance's files, and `placeNewFiles(files, { taken,
 reusable })` whether they fit among a host's paths.
+  - The module, `AppModule`: everything a host needs to run an app without knowing which it is.
+    It names the app (`id`), its lifecycle and core, which element ops are the core's
+    (`coreOps`) and which the host answers itself (`hostOps`), how an element op becomes a core
+    op (`toCoreOp`, adding what only the host knows, such as the time), the element's `reply` to
+    a core op from the instance after its changes, and `refusalClass(code, op)`: `not-found`,
+    `conflict` or `invalid`, which a host maps onto its own answers. The harness answers both
+    apps through their modules with one in-memory host (`tooling/harness/memory-host.ts`).
   - The element half, `AppElement<State>`: the host calls `setState`, and the element asks for ops
     with `requestOp(element, op)`, a cancelable `app-op` event the host claims and answers through
     `respond`. Nothing claiming it resolves to `OP_UNHANDLED`, and a host that throws to

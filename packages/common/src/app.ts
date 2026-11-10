@@ -171,6 +171,79 @@ export interface AppCore<
   seed(input: Seed): Result<{ manifestPath: string; files: FileChange[] }>;
 }
 
+// ---- The module ------------------------------------------------------------
+
+/**
+ * How a host treats a refusal: its subject is gone (`not-found`), it clashes
+ * with what is there (`conflict`), or the op itself is wrong (`invalid`). A
+ * host maps the three onto its own answers; Context Manager sends 404, 409
+ * and 400.
+ */
+export type RefusalClass = 'not-found' | 'conflict' | 'invalid';
+
+/** What only a host knows that an op needs: the time a new file is stamped with. */
+export interface AppHostInput {
+  now: string;
+}
+
+/**
+ * What a module's reply reads: the instance after the op's changes are
+ * written, the host's facts about it, and the view the page shows (an op whose
+ * reply depends on it, a pool, says so).
+ */
+export interface AppReplyContext<S extends AppSnapshot, Facts, V extends AppViewMap> {
+  snapshot: S;
+  facts: Facts;
+  view?: AppView<V>;
+}
+
+/**
+ * Everything a host needs to run one app without knowing which app it is: the
+ * lifecycle and the core, which element ops are the core's and which the host
+ * answers itself, how an element op becomes a core op and how the core's
+ * answer becomes the element's reply, and how to treat each refusal. DOM-free:
+ * a host finds the element through its own registration.
+ */
+export interface AppModule<
+  V extends AppViewMap,
+  O extends AppCoreOpMap,
+  Facts,
+  Seed,
+  S extends AppSnapshot,
+  E extends AppOpMap,
+> {
+  /** The app's name: `inventory`, `tasks`. */
+  id: string;
+  lifecycle: AppLifecycle;
+  core: AppCore<V, O, Facts, Seed, S>;
+  /** The element ops the core applies. */
+  coreOps: readonly (keyof E & keyof O & string)[];
+  /** The element ops a host answers itself (a divergence resolved, an editor linked). */
+  hostOps: readonly (keyof E & string)[];
+  /** One of `coreOps` as the core applies it, with what only the host knows added. */
+  toCoreOp(op: AppOp<E>, host: AppHostInput): AppCoreOp<O>;
+  /**
+   * The element's reply to a core op the host applied and wrote: what the
+   * element shows next, read from the instance after the changes.
+   */
+  reply(
+    op: AppOp<E>,
+    applied: { ok: true; changes: FileChange[] } & Record<string, unknown>,
+    context: AppReplyContext<S, Facts, V>
+  ): Result<object>;
+  /** How a host treats the core's refusal of one op. */
+  refusalClass(code: string, op: string): RefusalClass;
+}
+
+/** Any app's module, for a host that runs whichever it is given. */
+
+export type AnyAppModule = AppModule<any, any, any, any, any, any>;
+
+/** Whether an element op is one the module's core applies. */
+export function isCoreOp(module: AnyAppModule, type: string): boolean {
+  return (module.coreOps as readonly string[]).includes(type);
+}
+
 /**
  * Whether new files fit among a host's paths: none of them, and no folder above
  * one, may already be a file. `reusable` files (left by an earlier, unfinished
