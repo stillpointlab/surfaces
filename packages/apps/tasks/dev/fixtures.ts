@@ -1,24 +1,24 @@
-// The task board in the surfaces harness (`npm run dev`). A fixture hands the
-// board a state; an in-memory host answers its ops, and the controls switch that
-// host off (every op unhandled, so the optimistic render rolls back) or make it
-// refuse the next op. Requests the board raises show in the event log. The
-// "Dialog:" fixtures open each of the board's dialogs on the every-card state;
-// "Refuse the next op" shows a dialog's refusal. The tab strip, <spl-tasks-nav>,
-// sits above the board with its own in-memory host: each fixture sets it, and
-// the "Nav:" fixtures show its cases. Its links are `#` anchors: where a phase
-// lives is a host's.
+// The task board in the surfaces harness (`npm run dev`), with its tab strip,
+// <spl-tasks-nav>, above it. Every fixture runs on the tasks core: an in-memory
+// host holds a workspace's files, answers both elements' ops with the core's
+// rules and re-projects, so an edit shows on every fixture over the same files
+// until the page reloads. The workshop is a hand-built folder with every card
+// state; "This repository" is this repository's own docs/tasks/. The controls
+// switch the host off (every op unhandled, so the optimistic render rolls back)
+// or make it refuse the next op. Requests the elements raise show in the event
+// log. The "Dialog:" fixtures open each of the board's dialogs on the
+// workshop. The strip's links are `#` anchors: where a phase lives is a host's.
 import '../src/element/index.js';
 
 import { attachHost } from './host.js';
-import { attachNavHost, handNav, navWithoutPointer, repoNav } from './nav.js';
-import { repoBoard, repoFiles } from './repo.js';
-import { emptyBoard, everyCardState, stageView } from './states.js';
+import { repoWorkspace } from './repo.js';
+import { emptyWorkshop, WORKSHOP_BOARD, workshop } from './workshop.js';
+import { navOf } from './workspace.js';
 
-import type { HarnessHost } from './host.js';
-import type { NavHost } from './nav.js';
+import type { HarnessHost, HarnessView } from './host.js';
+import type { Workspace } from './workspace.js';
 import type { HarnessElements, HarnessFormat } from '../../../../tooling/harness/types';
-import type { TaskBoard, TasksNav, TasksNavLinks, TasksNavState } from '../src/element/index.js';
-import type { SharedTaskStageState } from '../src/types.js';
+import type { TaskBoard, TasksNav, TasksNavLinks } from '../src/element/index.js';
 
 const TAG = 'spl-task-board';
 const NAV_TAG = 'spl-tasks-nav';
@@ -27,22 +27,30 @@ const NAV_LINKS: TasksNavLinks = {
   phase: (stage, phase) => `#stage/${stage}/phase/${phase}`,
   board: (path) => `#board/${path}`,
 };
+
+/** The workspaces, kept for the page's life so edits carry across fixtures. */
+const WORKSPACES = {
+  workshop: workshop(),
+  unpointed: workshop({ pointer: false }),
+  empty: emptyWorkshop(),
+  repo: repoWorkspace(),
+};
+
 let host: HarnessHost | null = null;
-let navHost: NavHost | null = null;
-let stage: SharedTaskStageState | null = null;
 let answering = true;
 
 /**
- * The board, with the harness host attached once. A host page makes the board
- * `display: contents` and lays its pool sidebar and board out in a grid (Context
- * Manager's task board page does), so the harness pane does the same, at full
- * height.
+ * The board and the strip, with the host attached once. A host page makes the
+ * board `display: contents` and lays its pool sidebar and board out in a grid
+ * (Context Manager's task board page does), so the harness pane does the same,
+ * at full height.
  */
-function board(elements: HarnessElements): TaskBoard {
-  const el = elements.extras[TAG] as TaskBoard;
-  el.setAttribute('storage-key', 'harness');
-  el.style.display = 'contents';
-  const pane = el.parentElement;
+function elementsOf(elements: HarnessElements): TaskBoard {
+  const board = elements.extras[TAG] as TaskBoard;
+  const nav = elements.extras[NAV_TAG] as TasksNav;
+  board.setAttribute('storage-key', 'harness');
+  board.style.display = 'contents';
+  const pane = board.parentElement;
   if (pane) {
     Object.assign(pane.style, {
       height: 'auto',
@@ -52,20 +60,11 @@ function board(elements: HarnessElements): TaskBoard {
       gap: '12px',
     });
   }
-  host ??= attachHost(el, repoFiles, () => stage);
+  nav.links = NAV_LINKS;
+  if (nav.parentElement) nav.parentElement.style.height = 'auto';
+  host ??= attachHost(board, nav);
   host.setAnswering(answering);
-  return el;
-}
-
-/** Set the strip, with its host attached once. */
-function nav(elements: HarnessElements, state: TasksNavState | null): void {
-  const el = elements.extras[NAV_TAG] as TasksNav;
-  el.links = NAV_LINKS;
-  const pane = el.parentElement;
-  if (pane) pane.style.height = 'auto';
-  navHost ??= attachNavHost(el, elements.extras[TAG] as TaskBoard);
-  navHost.setAnswering(answering);
-  if (state) el.setState(state);
+  return board;
 }
 
 /** The board reads its variant on connect, so a variant change reconnects it. */
@@ -77,35 +76,28 @@ function variant(el: TaskBoard, value: 'board' | 'stage'): void {
   parent?.append(el);
 }
 
-const boardFixture = (
-  state: () => ReturnType<typeof everyCardState> | null,
-  navState: () => TasksNavState | null = () => handNav()
-) => ({
+/** Show a workspace's view; the board defaults to the phase `current:` points at. */
+function show(elements: HarnessElements, ws: Workspace, view?: HarnessView): TaskBoard {
+  const board = elementsOf(elements);
+  const shown: HarnessView = view ?? { board: navOf(ws)?.currentPointerPath ?? WORKSHOP_BOARD };
+  variant(board, 'stage' in shown ? 'stage' : 'board');
+  host!.show(ws, shown);
+  return board;
+}
+
+const fixture = (ws: () => Workspace, view?: HarnessView) => ({
   content: '',
-  apply: (elements: HarnessElements) => {
-    const el = board(elements);
-    variant(el, 'board');
-    stage = null;
-    const next = state();
-    if (next) el.setState(next);
-    nav(elements, navState());
-  },
+  apply: (elements: HarnessElements) => void show(elements, ws(), view),
 });
 
-/** The every-card state with one of the board's dialogs open. */
+/** The workshop with one of the board's dialogs open. */
 const dialogFixture = (open: (el: TaskBoard) => void) => ({
   content: '',
-  apply: (elements: HarnessElements) => {
-    const el = board(elements);
-    variant(el, 'board');
-    stage = null;
-    el.setState(everyCardState());
-    nav(elements, handNav());
-    open(el);
-  },
+  apply: (elements: HarnessElements) =>
+    open(show(elements, WORKSPACES.workshop, { board: WORKSHOP_BOARD })),
 });
 
-/** Pick an item from a card's ⋯ menu, as the host page's options menu does. */
+/** Pick an item from a linked card's ⋯ menu, as the host page's options menu does. */
 function menuItem(el: TaskBoard, itemId: string): void {
   const card = el.boardState?.cards.find((candidate) => !candidate.tracked);
   const button = card && el.querySelector<HTMLElement>(`.card-menu-btn[data-path="${card.path}"]`);
@@ -124,48 +116,38 @@ export default {
       apply: (_elements, on) => {
         answering = on;
         host?.setAnswering(on);
-        navHost?.setAnswering(on);
       },
     },
     {
       kind: 'toggle',
       label: 'Refuse the next op',
       apply: (_elements, on) => {
-        if (on) {
-          host?.failNext();
-          navHost?.failNext();
-        }
+        if (on) host?.failNext();
       },
     },
   ],
   fixtures: {
-    'Every card state': boardFixture(everyCardState),
-    'This repository (files only)': boardFixture(repoBoard, repoNav),
-    'Empty board': boardFixture(emptyBoard),
+    'Every card state': fixture(() => WORKSPACES.workshop, { board: WORKSHOP_BOARD }),
+    'This repository': fixture(() => WORKSPACES.repo),
+    'Empty board': fixture(() => WORKSPACES.empty, { board: WORKSHOP_BOARD }),
     'Dialog: board settings': dialogFixture((el) => el.openSettings()),
     'Dialog: new card': dialogFixture((el) =>
       el.querySelector<HTMLElement>('.board-new-card[data-kind="brief"]')?.click()
     ),
     'Dialog: card title': dialogFixture((el) => menuItem(el, 'set-title')),
     'Dialog: card tags': dialogFixture((el) => menuItem(el, 'set-tags')),
-    'Stage view': {
-      content: '',
-      apply: (elements) => {
-        const el = board(elements);
-        variant(el, 'stage');
-        stage = stageView();
-        el.setStageState(stage);
-        nav(elements, handNav({ stage: 1, phase: null }));
-      },
-    },
-    'Nav: a phase that is not current': boardFixture(everyCardState, () =>
-      handNav({ stage: 1, phase: 2 })
-    ),
-    'Nav: no current pointer': boardFixture(everyCardState, navWithoutPointer),
+    'Stage view': fixture(() => WORKSPACES.workshop, { stage: 1 }),
+    'Nav: a phase that is not current': fixture(() => WORKSPACES.workshop, {
+      board: 'docs/tasks/stage1/phase2',
+    }),
+    'Nav: a board outside the stages': fixture(() => WORKSPACES.workshop, {
+      board: 'docs/tasks/research',
+    }),
+    'Nav: no current pointer': fixture(() => WORKSPACES.unpointed, { board: WORKSHOP_BOARD }),
     'Nav: close phase': {
       content: '',
       apply: (elements) => {
-        boardFixture(everyCardState).apply(elements);
+        show(elements, WORKSPACES.workshop, { board: WORKSHOP_BOARD });
         // The host's options menu answers Close… on the strip.
         elements.extras[NAV_TAG]!.dispatchEvent(
           new CustomEvent('options-menu-select', { detail: { itemId: 'close-phase' } })

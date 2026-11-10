@@ -1,262 +1,232 @@
-// An in-memory host for the harness: answers the board's ops against the state
-// the board holds, so drags, moves, reorders and the dialogs' changes settle
-// without a server. It does nothing a real host's server does (no drafts, no
-// files written): it lets the optimistic render settle or roll back, and, for a
-// dialog's change, sets the board a state with the change in it, as a host's
-// refresh would. The tasks-rules spec answers these with the core instead.
+// An in-memory host for the harness: it holds a workspace's files, answers the
+// board's and the strip's ops with the tasks core's `apply` (the app
+// contract's), writes the changes back and re-projects with its `project`, as
+// Context Manager's board service does over drafts. What only a host does is
+// done here by hand: the creation time a new card is stamped with, resolving a
+// divergence (dropping it), reading a file, and showing the board a change
+// lands on. The controls switch the host off (every op unhandled, so the
+// optimistic render rolls back) or make it refuse the next op.
 import { answerOps, fail, ok } from '@stillpointlab/common-format/app';
 
-import { slugifyTaskId } from '../src/paths.js';
-import { orderPoolCards } from '../src/pool.js';
-import { taskKindById } from '../src/types.js';
+import { projectResolvedCard, referencesTo, resolveTasks, tasksCore } from '../src/index.js';
 
-import type { TaskBoard, TaskBoardOps } from '../src/element/index.js';
+import { boardOf, factsOf, navOf, stageOf, write } from './workspace.js';
+
+import type { Workspace } from './workspace.js';
 import type {
-  SharedTaskBoardState,
-  SharedTaskCard,
-  SharedTaskManifestEditOp,
-  SharedTasksManifest,
-  SharedTaskStageState,
-} from '../src/types.js';
-import type { AppOp, Result } from '@stillpointlab/common-format/app';
+  TaskBoard,
+  TaskBoardOps,
+  TasksNav,
+  TasksNavOps,
+  TasksNavState,
+} from '../src/element/index.js';
+import type { SharedTaskCard, TasksCoreOps } from '../src/index.js';
+import type { AppApplyResult, AppOp, Result } from '@stillpointlab/common-format/app';
+
+/** What the board shows: one board by path, or one stage's phases. */
+export type HarnessView = { board: string } | { stage: number };
 
 export interface HarnessHost {
+  /** Show a workspace's view on the board and the strip. */
+  show(ws: Workspace, view: HarnessView): void;
   /** Answer ops (true) or leave them unclaimed (false). */
   setAnswering(on: boolean): void;
   /** Refuse the next op, once. */
   failNext(): void;
 }
 
-export function attachHost(
-  board: TaskBoard,
-  files: Readonly<Record<string, string>>,
-  stage: () => SharedTaskStageState | null
-): HarnessHost {
-  let stop: (() => void) | null = null;
+/** The strip's state: the nav projected, with the view the page is on. */
+export function navState(ws: Workspace, view: HarnessView): TasksNavState | null {
+  const projected = navOf(ws);
+  if (!projected) return null;
+  if ('stage' in view) {
+    return {
+      ...projected,
+      current: { stage: view.stage, phase: null, other: false, boardPath: '' },
+    };
+  }
+  const entry = projected.nav.stages
+    .flatMap((stage) => stage.phases.map((phase) => ({ stage: stage.stage, phase })))
+    .find((candidate) => candidate.phase.path === view.board);
+  return {
+    ...projected,
+    current: {
+      stage: entry?.stage ?? null,
+      phase: entry?.phase.phase ?? null,
+      other: entry === undefined,
+      boardPath: view.board,
+    },
+  };
+}
+
+export function attachHost(board: TaskBoard, nav: TasksNav): HarnessHost {
+  let ws: Workspace | null = null;
+  let view: HarnessView = { board: '' };
+  let stops: (() => void)[] = [];
   let failOnce = false;
 
-  const cards = (): SharedTaskCard[] => {
-    const state = board.boardState;
-    const stageState = stage();
-    return [
-      ...(state?.cards ?? []),
-      ...(state?.pool.cards ?? []),
-      ...(stageState?.phases.flatMap((phase) => phase.cards) ?? []),
-      ...(stageState?.pool.cards ?? []),
-    ];
-  };
-  const find = (path: string): SharedTaskCard | undefined =>
-    cards().find((card) => card.path === path);
-  // Answering links a tracked card, as a real host does on its first edit.
-  const linked = (card: SharedTaskCard, changes: Partial<SharedTaskCard>): SharedTaskCard => {
-    const next: SharedTaskCard = { ...card, ...changes };
-    delete next.tracked;
-    return next;
-  };
-
-  /** The board's state after a dialog's change, as a host's refresh hands it back. */
-  const settle = (change: (state: SharedTaskBoardState) => void): void => {
-    const state = board.boardState;
-    if (!state) return;
-    const next = structuredClone(state);
-    change(next);
-    board.setState(next);
-  };
-
-  /** The manifest the board's state carries. */
-  const manifestOf = (state: SharedTaskBoardState): SharedTasksManifest => ({
-    version: 1,
-    frontmatterKey: 'column',
-    columns: state.columns,
-    kinds: state.kinds,
-    defaultColumn: state.defaultColumn,
-    doneColumn: state.doneColumn,
-    tags: state.tags,
-  });
-
-  /** One settings change against the board's manifest, refused as a host refuses it. */
-  const editManifest = (edit: SharedTaskManifestEditOp): Result<object> => {
-    const state = board.boardState;
-    if (!state) return fail('NOT_FOUND', 'No board');
-    const next = structuredClone(state);
-    const column = next.columns.find((candidate) => candidate.id === edit.id);
-    const kind = next.kinds.find((candidate) => candidate.id === edit.id);
-    switch (edit.op) {
-      case 'add-column':
-        if (column)
-          return fail('TASKS_COLUMN_ID_EXISTS', `A column with id “${edit.id}” already exists`);
-        next.columns.push({ id: edit.id, label: edit.label });
-        break;
-      case 'update-column':
-        if (!column) return fail('NOT_FOUND', `Task column with id ${edit.id} not found`);
-        if (edit.label !== undefined) column.label = edit.label;
-        if (edit.description === '') delete column.description;
-        else if (edit.description !== undefined) column.description = edit.description;
-        break;
-      case 'remove-column': {
-        if (!column) return fail('NOT_FOUND', `Task column with id ${edit.id} not found`);
-        if (next.columns.length === 1)
-          return fail('TASKS_LAST_COLUMN', 'The last column cannot be removed');
-        const carrying = next.cards.filter((card) => card.column === edit.id).length;
-        if (carrying > 0) {
-          return fail(
-            'TASKS_COLUMN_NOT_EMPTY',
-            `${carrying} card(s) still carr${carrying === 1 ? 'ies' : 'y'} “${edit.id}” — move them, then remove the column`
-          );
-        }
-        next.columns = next.columns.filter((candidate) => candidate.id !== edit.id);
-        break;
-      }
-      case 'set-default-column':
-        next.defaultColumn = edit.id;
-        break;
-      case 'set-done-column':
-        next.doneColumn = edit.id;
-        break;
-      case 'add-kind':
-        if (kind) return fail('TASKS_KIND_ID_EXISTS', `A kind with id “${edit.id}” already exists`);
-        next.kinds.push({
-          id: edit.id,
-          label: edit.label ?? edit.id,
-          badge: edit.badge ?? edit.id.slice(0, 1),
-          dir: `${edit.id}s`,
-          creatable: true,
-        });
-        break;
-      case 'update-kind':
-        if (!kind) return fail('NOT_FOUND', `Task kind with id ${edit.id} not found`);
-        if (edit.label !== undefined) kind.label = edit.label;
-        if (edit.badge !== undefined) kind.badge = edit.badge;
-        if (edit.creatable !== undefined) kind.creatable = edit.creatable;
-        break;
-      case 'remove-kind':
-        if (!kind) return fail('NOT_FOUND', `Task kind with id ${edit.id} not found`);
-        if (next.kinds.length === 1)
-          return fail('TASKS_LAST_KIND', 'The last kind cannot be removed');
-        next.kinds = next.kinds.filter((candidate) => candidate.id !== edit.id);
-        break;
+  /** The view, projected afresh onto the board and the strip, as a host's refresh hands it back. */
+  const refresh = (): void => {
+    if (!ws) return;
+    if ('stage' in view) {
+      const stage = stageOf(ws, view.stage);
+      if (stage) board.setStageState(stage);
+    } else {
+      const state = boardOf(ws, view.board);
+      if (state) board.setState(state);
     }
-    board.setState(next);
-    return ok({ manifest: manifestOf(next), warnings: [] });
+    const strip = navState(ws, view);
+    if (strip) nav.setState(strip);
   };
 
-  const answer = (op: AppOp<TaskBoardOps>): Result<object> => {
+  /** One card as it stands after an op. */
+  const cardAt = (path: string): SharedTaskCard | null => {
+    if (!ws) return null;
+    const resolved = resolveTasks(ws.snapshot);
+    return resolved?.ok
+      ? projectResolvedCard(ws.snapshot, resolved.tasks, path, factsOf(ws))
+      : null;
+  };
+  const withCard = (path: string): Result<object> => {
+    const card = cardAt(path);
+    return card ? ok({ card }) : fail('NOT_FOUND', `No card at ${path}`);
+  };
+
+  /** A core op: applied, written, and answered as the element asks. */
+  const applied = <K extends keyof TasksCoreOps & string>(
+    current: Workspace,
+    op: { type: K } & TasksCoreOps[K]['op']
+  ): AppApplyResult<TasksCoreOps, K> => {
+    const result = tasksCore.apply(current.snapshot, op);
+    if (result.ok) write(current, result.changes);
+    return result;
+  };
+
+  const refused = (): Result<object> | null => {
     if (failOnce) {
       failOnce = false;
       return fail('HARNESS_REFUSED', 'The harness refused this op');
     }
+    return ws ? null : fail('HARNESS_NO_FILES', 'The harness has no files to change.');
+  };
+
+  const answerBoard = (op: AppOp<TaskBoardOps>): Result<object> => {
+    const refusal = refused();
+    if (refusal || !ws) return refusal!;
     switch (op.type) {
+      // A host's own: a resolve keeps one side of a divergence; here, the facts drop it.
+      case 'resolve':
+        delete ws.fixed[op.path]?.diverged;
+        return withCard(op.path);
+      case 'scan-references':
+        return ok({ references: referencesTo(ws.snapshot, op.path) });
+      case 'read-file': {
+        const content = ws.snapshot.files[op.path];
+        return typeof content === 'string'
+          ? ok({ content })
+          : fail('NOT_FOUND', `No file at ${op.path}`);
+      }
+      case 'refresh-stage': {
+        const stage = stageOf(ws, op.stage);
+        return stage ? ok({ stage }) : fail('NOT_FOUND', `No stage ${op.stage}`);
+      }
       case 'move': {
-        const card = find(op.path);
-        if (!card) return fail('NOT_FOUND', `No card at ${op.path}`);
-        return ok({ card: linked(card, { column: op.column, dirty: true, changed: true }) });
+        const result = applied(ws, op);
+        return result.ok ? withCard(op.path) : result;
       }
       case 'move-file': {
-        const card = find(op.path);
-        const pool = board.boardState?.pool ?? stage()?.pool;
-        const kinds = board.boardState?.kinds ?? stage()?.kinds ?? [];
-        if (!card || !pool) return fail('NOT_FOUND', `No card at ${op.path}`);
-        const dir = taskKindById(kinds, card.kind)?.dir ?? `${card.kind}s`;
-        const name = card.path.slice(card.path.lastIndexOf('/') + 1);
-        const root = 'pool' in op.target ? pool.path : op.target.boardPath;
-        return ok({
-          card: linked(card, {
-            path: `${root}/${dir}/${name}`,
-            column: 'pool' in op.target ? null : op.target.column,
-            movedFrom: card.path,
-            changed: true,
-          }),
-        });
+        const result = applied(ws, op);
+        return result.ok ? withCard(result.path) : result;
       }
       case 'reorder-pool': {
-        const pool = board.boardState?.pool ?? stage()?.pool;
-        if (!pool) return fail('NOT_FOUND', 'No pool');
-        return ok({
-          pool: {
-            ...pool,
-            cards: orderPoolCards(pool.cards, op.paths),
-            order: { changed: true },
-          },
-        });
+        const result = applied(ws, op);
+        if (!result.ok) return result;
+        const pool =
+          'stage' in view ? stageOf(ws, view.stage)?.pool : boardOf(ws, view.board)?.pool;
+        return pool ? ok({ pool }) : fail('NOT_FOUND', 'No pool');
       }
-      case 'resolve': {
-        const card = find(op.path);
-        if (!card) return fail('NOT_FOUND', `No card at ${op.path}`);
-        const next = { ...card };
-        delete next.diverged;
-        return ok({ card: next });
-      }
-      case 'scan-references':
-        return ok({ references: [] });
-      case 'fix-references':
-        return ok({ fixed: 0 });
-      case 'read-file':
-        return ok({ content: files[op.path] ?? `# ${op.path}\n\n(no fixture text for this file)` });
-      case 'refresh-stage': {
-        const current = stage();
-        return current ? ok({ stage: current }) : fail('NOT_FOUND', 'No stage');
-      }
-      case 'edit-manifest':
-        return editManifest(op.edit);
       case 'create-card': {
-        const state = board.boardState;
-        if (!state) return fail('NOT_FOUND', 'No board');
-        const slug = slugifyTaskId(op.title).replace(/-/g, '_');
-        if (slug === '') {
-          return fail('TASKS_BRIEF_NAME_INVALID', 'The title must contain letters or numbers');
-        }
-        const dir = taskKindById(state.kinds, op.kind)?.dir ?? `${op.kind}s`;
-        const path = `${op.boardPath}/${dir}/${slug}.md`;
-        if (find(path)) return fail('TASKS_BRIEF_EXISTS', `“${slug}.md” already exists here`);
-        const card: SharedTaskCard = {
-          title: `${slug}.md`,
-          frontmatterTitle: op.title,
-          path,
-          kind: op.kind,
-          column: state.defaultColumn,
-          dirty: false,
-          changed: true,
-        };
-        settle((next) => next.cards.push(card));
-        return ok({ card });
+        // The core reads no clock: the host stamps the creation time.
+        const result = applied(ws, { ...op, now: new Date().toISOString() });
+        if (!result.ok) return result;
+        refresh();
+        return withCard(result.path);
       }
       case 'set-title':
-        if (!find(op.path)) return fail('NOT_FOUND', `No card at ${op.path}`);
-        settle((next) => {
-          for (const card of [...next.cards, ...next.pool.cards]) {
-            if (card.path !== op.path) continue;
-            if (op.title === null) delete card.frontmatterTitle;
-            else card.frontmatterTitle = op.title;
-            card.changed = true;
-          }
-        });
-        return ok();
       case 'set-tags':
-        if (!find(op.path)) return fail('NOT_FOUND', `No card at ${op.path}`);
-        settle((next) => {
-          for (const card of [...next.cards, ...next.pool.cards]) {
-            if (card.path !== op.path) continue;
-            card.tags = op.tags;
-            card.changed = true;
-          }
+      case 'add-tag':
+      case 'edit-manifest':
+      case 'fix-references': {
+        // These ops are the core's as the element asks them; the reply is the
+        // core's result without its changes.
+        const result = applied(
+          ws,
+          op as { type: typeof op.type } & TasksCoreOps[typeof op.type]['op']
+        );
+        if (!result.ok) return result;
+        refresh();
+        const { changes: _changes, ok: _ok, ...reply } = result as { ok: true; changes: unknown };
+        return ok(reply);
+      }
+    }
+  };
+
+  const answerNav = (op: AppOp<TasksNavOps>): Result<object> => {
+    const refusal = refused();
+    if (refusal || !ws) return refusal!;
+    switch (op.type) {
+      case 'close-candidates': {
+        const state = boardOf(ws, op.path);
+        return ok({
+          cards: (state?.cards ?? []).map((card) => ({
+            path: card.path,
+            title: card.frontmatterTitle ?? card.title,
+            column: card.column,
+          })),
         });
+      }
+      case 'create-stage-phase': {
+        const result = applied(ws, op);
+        if (!result.ok) return result;
+        // A host's page goes to the new phase.
+        view = { board: result.path };
+        refresh();
+        return ok({ stage: result.stage, phase: result.phase });
+      }
+      case 'set-current': {
+        const result = applied(ws, op);
+        if (!result.ok) return result;
+        refresh();
         return ok();
-      case 'add-tag': {
-        const registry = board.boardState?.tags ?? [];
-        if (registry.some((tag) => tag.toLowerCase() === op.tag.toLowerCase())) {
-          return ok({ tags: registry });
-        }
-        const tags = [...registry, op.tag];
-        settle((next) => (next.tags = tags));
-        return ok({ tags });
+      }
+      case 'close': {
+        const result = applied(ws, op);
+        if (!result.ok) return result;
+        view = { board: result.target.path };
+        refresh();
+        return ok({
+          target: { stage: result.target.stage, phase: result.target.phase },
+          moved: result.moved,
+          created: result.created,
+        });
       }
     }
   };
 
   const setAnswering = (on: boolean): void => {
-    stop?.();
-    stop = on ? answerOps<TaskBoardOps>(board, answer) : null;
+    for (const stop of stops) stop();
+    stops = on
+      ? [answerOps<TaskBoardOps>(board, answerBoard), answerOps<TasksNavOps>(nav, answerNav)]
+      : [];
   };
   setAnswering(true);
-  return { setAnswering, failNext: () => (failOnce = true) };
+  return {
+    show: (next, nextView) => {
+      ws = next;
+      view = nextView;
+      refresh();
+    },
+    setAnswering,
+    failNext: () => (failOnce = true),
+  };
 }

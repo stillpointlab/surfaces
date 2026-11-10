@@ -24,7 +24,7 @@ export type CardMoveTarget = { pool: true } | { boardPath: string; column: strin
 type Changes = { changes: FileChange[] };
 
 /** A card found by path: its entry and where it sits. */
-interface FoundCard {
+export interface FoundCard {
   entry: { path: string; kind: SharedTaskCardKind };
   location: 'board' | 'pool';
 }
@@ -34,14 +34,14 @@ const baseName = (path: string): string => path.slice(path.lastIndexOf('/') + 1)
 const isMarkdown = (path: string): boolean => /\.(md|markdown)$/i.test(path);
 
 /** The instance, or the refusal a host answers for a missing or broken manifest. */
-function resolved(snapshot: TasksSnapshot): Result<{ tasks: ResolvedTasks }> {
+export function resolvedTasks(snapshot: TasksSnapshot): Result<{ tasks: ResolvedTasks }> {
   return (
     resolveTasks(snapshot) ?? fail('TASKS_MANIFEST_NOT_FOUND', 'This repository has no tasks.yaml')
   );
 }
 
-/** The card at a path, where it sits; a moved-away path is no card. */
-function findCard(tasks: ResolvedTasks, path: string): FoundCard | null {
+/** The card at a path, its kind and where it sits; a moved-away path is no card. */
+export function findTaskCard(tasks: ResolvedTasks, path: string): FoundCard | null {
   if (tasks.movedAway.has(path)) return null;
   const { kinds } = tasks.manifest;
   const pooled = kindEntriesOf(tasks.pool, kinds).find((entry) => entry.path === path);
@@ -61,7 +61,7 @@ function cardWithContent(
   tasks: ResolvedTasks,
   path: string
 ): Result<FoundCard & { content: string }> {
-  const found = findCard(tasks, path);
+  const found = findTaskCard(tasks, path);
   if (!found) return cardNotFound(path);
   const content = snapshot.files[path];
   if (content === undefined || content === null) {
@@ -115,7 +115,7 @@ export function moveTaskCard(
   snapshot: TasksSnapshot,
   op: { path: string; column: string | null }
 ): Result<Changes> {
-  const instance = resolved(snapshot);
+  const instance = resolvedTasks(snapshot);
   if (!instance.ok) return instance;
   const { tasks } = instance;
   if (op.column !== null && !tasks.manifest.columns.some((column) => column.id === op.column)) {
@@ -144,11 +144,11 @@ export function moveTaskCardFile(
   snapshot: TasksSnapshot,
   op: { path: string; target: CardMoveTarget; coMoving?: Readonly<Record<string, string>> }
 ): Result<Changes & { path: string; location: 'board' | 'pool' }> {
-  const instance = resolved(snapshot);
+  const instance = resolvedTasks(snapshot);
   if (!instance.ok) return instance;
   const { tasks } = instance;
   const { manifest } = tasks;
-  const found = findCard(tasks, op.path);
+  const found = findTaskCard(tasks, op.path);
   if (!found) return cardNotFound(op.path);
   const { entry, location } = found;
 
@@ -249,7 +249,7 @@ export function reorderTaskPool(
   snapshot: TasksSnapshot,
   op: { paths: readonly string[] }
 ): Result<Changes> {
-  const instance = resolved(snapshot);
+  const instance = resolvedTasks(snapshot);
   if (!instance.ok) return instance;
   const { tasks } = instance;
   const valid = new Set(
@@ -278,7 +278,7 @@ export function setTaskCardTitle(
   snapshot: TasksSnapshot,
   op: { path: string; title: string | null }
 ): Result<Changes> {
-  const instance = resolved(snapshot);
+  const instance = resolvedTasks(snapshot);
   if (!instance.ok) return instance;
   const card = cardWithContent(snapshot, instance.tasks, op.path);
   if (!card.ok) return card;
@@ -291,7 +291,7 @@ export function setTaskCardTags(
   snapshot: TasksSnapshot,
   op: { path: string; tags: readonly string[] }
 ): Result<Changes> {
-  const instance = resolved(snapshot);
+  const instance = resolvedTasks(snapshot);
   if (!instance.ok) return instance;
   const { tasks } = instance;
   const registry = new Map(tasks.manifest.tags.map((tag) => [tag.toLowerCase(), tag]));
@@ -331,7 +331,7 @@ export function createTaskCard(
   snapshot: TasksSnapshot,
   op: { boardPath: string; title: string; kind: string; now: string }
 ): Result<Changes & { path: string }> {
-  const instance = resolved(snapshot);
+  const instance = resolvedTasks(snapshot);
   if (!instance.ok) return instance;
   const { tasks } = instance;
   const { manifest } = tasks;
