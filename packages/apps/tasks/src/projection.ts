@@ -58,8 +58,9 @@ export interface TasksSnapshot extends AppSnapshot {
   /**
    * Pending moves: each moved card's current path and the old paths it moved
    * from, the original path (the move's anchor) first, then any paths it
-   * passed through. An old path is hidden everywhere — a card is where it
-   * moved to.
+   * passed through. The anchor is hidden everywhere (the render, pool order,
+   * column counts, card lookup) — a card is where it moved to; the hops are
+   * for finding links to fix.
    */
   moves?: Readonly<Record<string, readonly string[]>>;
   /**
@@ -131,10 +132,18 @@ function nodesOf(snapshot: TasksSnapshot): TreeNode[] {
   return snapshot.paths.map((path) => ({ path, type: 'blob', sha: '' }));
 }
 
-/** Every old path of a pending move, except a path some card now holds. */
+/**
+ * The paths cards moved away from: each pending move's anchor, except a path
+ * some card now holds. A hop is not hidden: it was never upstream, so only a
+ * file created there since can hold it, and that file is a card.
+ */
 function movedAwayOf(snapshot: TasksSnapshot): Set<string> {
   const moves = snapshot.moves ?? {};
-  const hidden = new Set(Object.values(moves).flat());
+  const hidden = new Set(
+    Object.values(moves)
+      .map((old) => old[0])
+      .filter((anchor): anchor is string => anchor !== undefined)
+  );
   for (const current of Object.keys(moves)) hidden.delete(current);
   return hidden;
 }

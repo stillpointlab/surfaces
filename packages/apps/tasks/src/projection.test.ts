@@ -248,6 +248,19 @@ describe('projectTasksBoard', () => {
     expect(state!.cards.map((c) => c.path)).toEqual([NEW]);
   });
 
+  it('a hop is not hidden: a card created at it since shows', () => {
+    const HOP = `${PHASE}/briefs/hop.md`;
+    const NEW = `${PHASE}/briefs/renamed.md`;
+    const state = projectTasksBoard(
+      snapshot(
+        { [IDEA]: card('briefed'), [HOP]: card('briefed'), [NEW]: card('briefed') },
+        { moves: { [NEW]: [IDEA, HOP] } }
+      ),
+      PHASE
+    );
+    expect(state!.cards.map((c) => c.path)).toEqual([HOP, NEW]);
+  });
+
   it('a shape-valid phase with no folders is an empty board', () => {
     const state = projectTasksBoard(snapshot({}), 'docs/tasks/stage4/phase2');
     expect(state).toMatchObject({

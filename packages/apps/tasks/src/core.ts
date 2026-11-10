@@ -1,9 +1,9 @@
 /**
  * The tasks core as the app contract's `AppCore` (phase 7, tasks-rules): the
- * projections of `projection.ts`, the ops of `cardOps.ts` and the create plan
- * of `create.ts` behind `project`, `apply` and `seed`. A host may call either:
- * the contract when it is generic (the harness), the named functions when it is
- * not (Context Manager).
+ * projections of `projection.ts`, the ops of `cardOps.ts` and `manifestOps.ts`
+ * and the create plan of `create.ts` behind `project`, `apply` and `seed`. A
+ * host may call either: the contract when it is generic (the harness), the
+ * named functions when it is not (Context Manager).
  */
 import { fail } from '@stillpointlab/common-format/app';
 
@@ -17,12 +17,24 @@ import {
   setTaskCardTitle,
 } from './cardOps.js';
 import { planTasksCreate } from './create.js';
+import {
+  addTasksTag,
+  closeTasksStagePhase,
+  createTasksStagePhase,
+  editTasksManifest,
+  setTasksCurrent,
+} from './manifestOps.js';
 import { projectTasksBoard, projectTasksNav, projectTasksStage } from './projection.js';
 
 import type { CardMoveTarget } from './cardOps.js';
 import type { CreateTasksInput } from './create.js';
 import type { TasksHostFacts, TasksNavProjection, TasksSnapshot } from './projection.js';
-import type { SharedTaskBoardState, SharedTaskStageState } from './types.js';
+import type {
+  SharedTaskBoardState,
+  SharedTaskManifestEditOp,
+  SharedTasksManifest,
+  SharedTaskStageState,
+} from './types.js';
 import type { AppApplyResult, AppCore, AppCoreOp, Result } from '@stillpointlab/common-format/app';
 
 /** The states the tasks elements render. */
@@ -54,6 +66,25 @@ export type TasksCoreOps = {
     op: { path: string; referencingPaths: readonly string[] };
     result: { fixed: number };
   };
+  /** The registry after it; a tag already there (any casing) changes nothing. */
+  'add-tag': { op: { tag: string }; result: { tags: string[] } };
+  'edit-manifest': {
+    op: { edit: SharedTaskManifestEditOp };
+    result: { manifest: SharedTasksManifest; warnings: string[] };
+  };
+  'create-stage-phase': {
+    op: { kind: 'phase' | 'stage'; stage?: number };
+    result: { stage: number; phase: number; path: string };
+  };
+  'set-current': { op: { stage: number; phase: number }; result: object };
+  close: {
+    op: { kind: 'phase' | 'stage'; paths: readonly string[] };
+    result: {
+      target: { stage: number; phase: number; path: string };
+      moved: number;
+      created: boolean;
+    };
+  };
 };
 
 /** One op, narrowed by its type, to the named function that answers it. */
@@ -73,6 +104,16 @@ function applyOp(snapshot: TasksSnapshot, op: AppCoreOp<TasksCoreOps>): Result<o
       return createTaskCard(snapshot, op);
     case 'fix-references':
       return fixTaskReferences(snapshot, op);
+    case 'add-tag':
+      return addTasksTag(snapshot, op);
+    case 'edit-manifest':
+      return editTasksManifest(snapshot, op);
+    case 'create-stage-phase':
+      return createTasksStagePhase(snapshot, op);
+    case 'set-current':
+      return setTasksCurrent(snapshot, op);
+    case 'close':
+      return closeTasksStagePhase(snapshot, op);
     default:
       return fail('TASKS_UNKNOWN_OP', `The tasks app has no "${(op as { type: string }).type}" op`);
   }

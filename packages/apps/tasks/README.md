@@ -40,8 +40,10 @@ A host hands the core a `TasksSnapshot`, the app contract's `AppSnapshot` with t
   file, and the cards it has. `null` (or a missing path) is a file the host could not read.
 - `projections` (optional): cards the host holds parsed (`CardProjection`, as
   `parseCardProjection` makes it) and did not read, by path. A path in `files` wins.
-- `moves` (optional): pending moves, each card's current path and the old paths it moved from. An
-  old path is hidden from every state: a card is where it moved to.
+- `moves` (optional): pending moves, each card's current path and the old paths it moved from, the
+  original (the anchor) first, then the paths it passed through. The anchor is hidden everywhere
+  (every state, pool order, column counts, card lookup): a card is where it moved to. The paths
+  it passed through are for finding links to fix; a card created at one since still shows.
 
 **Projection.** `projectTasksBoard(snapshot, path, facts)` is one board,
 `projectTasksStage(snapshot, stage, facts)` one stage's phases as rows, and
@@ -89,6 +91,29 @@ any change.
   to where a moved card used to be, and `fixTaskReferences(snapshot, { path, referencingPaths })`
   points their links at its new path.
 
+The manifest ops write `tasks.yaml`, byte-preserving: comments, key order and quoting survive.
+
+- `addTasksTag(snapshot, { tag })` adds a tag to the registry and answers the registry after it; a
+  tag already there, in any casing, changes nothing.
+- `editTasksManifest(snapshot, { edit })` is one board-settings change (`add-column`,
+  `update-column`, `remove-column`, `set-default-column`, `set-done-column`, `add-kind`,
+  `update-kind`, `remove-kind`) and answers the `manifest` and `warnings` after it. Removing is
+  refused while anything uses what goes: a column some card carries (a card the host neither read
+  nor holds parsed counts as carrying it, so the host loads every board card for this one), the
+  manifest's explicit default or done column, a kind with files under its folder, and the last
+  column or kind. A shape the rewriter cannot patch safely, or a result that would not parse, is
+  refused (`TASKS_MANIFEST_UNPATCHABLE`, or the rewriter's own code) rather than guessed.
+- `createTasksStagePhase(snapshot, { kind, stage? })` points `current:` at the next phase of a
+  stage, or the next stage's phase 1, after the last in the nav, and answers its `stage`, `phase`
+  and `path`: a phase with no folders is already a board.
+- `setTasksCurrent(snapshot, { stage, phase })` points `current:` at a phase the nav shows.
+- `closeTasksStagePhase(snapshot, { kind, paths })` moves `current:` on from the pointer's phase
+  (to the next phase after it, or the next stage's phase 1) and moves the named cards there, each
+  keeping its column. The whole selection is checked first: a card must be on the closing phase,
+  not done, and not need attention. A card already under the target is skipped, so a close can run
+  again. The changes are the moves, then the manifest's write; it answers the `target`, how many
+  `moved`, and whether the target was `created`.
+
 **Creating tasks** is two steps, as for inventory: `planTasksCreate(input)` answers the manifest to
 seed (or refuses the repository root without `confirmRoot`, and a seed the app would not accept),
 and `placeTasksCreate(plan, { taken, reusable })` refuses a seed path, or a folder above it, that is
@@ -96,9 +121,10 @@ already a file.
 
 **The contract.** `tasksCore` is the same functions as the app contract's `AppCore`: views
 `board { path }`, `stage { stage }` and `nav`, the ops above (`move`, `move-file`, `reorder-pool`,
-`set-title`, `set-tags`, `create-card`, `fix-references`), and `seed` (`planTasksCreate`). The
-app-core test holds the ops to the contract's round trip, except reordering the pool and fixing
-references.
+`set-title`, `set-tags`, `create-card`, `fix-references`, `add-tag`, `edit-manifest`,
+`create-stage-phase`, `set-current`, `close`), and `seed` (`planTasksCreate`). The app-core test
+holds the ops to the contract's round trip, except reordering the pool and fixing references.
+`findTaskCard(tasks, path)` is a card's kind and where it sits, for a host that needs them.
 
 **Drafts.** When to rebase a diverged draft is the host's decision; the comparison is the core's.
 `metadataOnlyCheck(draft, base)` says whether a draft changes only its base's frontmatter, or
@@ -193,10 +219,13 @@ places it.
   phase's cards outside the done column, all checked, and asking `close` with the checked paths.
   It is kept attached while the strip re-renders.
 
-In the harness (`npm run dev`, "tasks"), fixtures cover every card state, the stage view, an empty
-board, this repository's own `docs/tasks/` as files alone, and each dialog open; an in-memory host
-answers the ops. The strip sits above the board in every fixture, with its own in-memory host, and
-the "Nav:" fixtures show a phase that is not current, no pointer, and the close dialog.
+In the harness (`npm run dev`, "tasks"), every fixture runs on the core: an in-memory host holds a
+folder's files, answers the board's and the strip's ops with `tasksCore.apply`, and re-projects,
+laying on the facts a host would (a card it changed is changed and linked, a moved column is dirty,
+a moved card names its anchor). The fixtures cover every card state (a hand-built folder, with the
+few facts no file shows), the stage view, an empty board, this repository's own `docs/tasks/`,
+and each dialog open. The strip sits above the board in every fixture, and the "Nav:" fixtures
+show a phase that is not current, a board outside the stages, no pointer, and the close dialog.
 
 ## The tasks folder
 

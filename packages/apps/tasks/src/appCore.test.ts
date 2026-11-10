@@ -272,7 +272,8 @@ describeAppCore('tasks', {
   ],
   // The ops through the contract. Not here: reordering the pool, which
   // regenerates order.yaml whole (its comments go; a recorded gap, as it has
-  // always been), and fixing references, which needs a pending move.
+  // always been), and fixing references, which needs a pending move. Removing
+  // a column or kind is a manifest rewrite the rewrites above already hold.
   core: {
     core: tasksCore,
     facts: {},
@@ -346,6 +347,48 @@ describeAppCore('tasks', {
           now: '2026-11-09T12:00:00.000Z',
         },
         view: { type: 'nav' },
+      },
+      {
+        name: 'add a tag to the registry',
+        fixture: 'configured',
+        op: { type: 'add-tag', tag: 'infra' },
+        view: { type: 'board', path: 'stage1/phase2' },
+      },
+      {
+        name: 'add a column',
+        fixture: 'configured',
+        op: { type: 'edit-manifest', edit: { op: 'add-column', id: 'review', label: 'Review' } },
+        view: { type: 'board', path: 'stage1/phase2' },
+      },
+      {
+        name: 'relabel a kind, keeping its comment',
+        fixture: 'configured',
+        op: { type: 'edit-manifest', edit: { op: 'update-kind', id: 'seed', label: 'Seed' } },
+        view: { type: 'nav' },
+      },
+      {
+        name: 'set the done column',
+        fixture: 'surfaces-shaped',
+        op: { type: 'edit-manifest', edit: { op: 'set-done-column', id: 'todo' } },
+        view: { type: 'board', path: 'stage2/phase3' },
+      },
+      {
+        name: 'create the next phase',
+        fixture: 'surfaces-shaped',
+        op: { type: 'create-stage-phase', kind: 'phase', stage: 2 },
+        view: { type: 'nav' },
+      },
+      {
+        name: 'point current at a phase',
+        fixture: 'surfaces-shaped',
+        op: { type: 'set-current', stage: 2, phase: 1 },
+        view: { type: 'nav' },
+      },
+      {
+        name: 'close a phase, bringing a card along',
+        fixture: 'surfaces-shaped',
+        op: { type: 'close', kind: 'phase', paths: ['stage2/phase3/specs/tasks-core.md'] },
+        view: { type: 'stage', stage: 2 },
       },
     ],
   },
