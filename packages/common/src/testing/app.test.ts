@@ -199,6 +199,10 @@ const kvCore: AppCore<KvViews, KvOps, null, { folder: string }> = {
   apply: (snapshot, op) => {
     const text = snapshot.files[op.path];
     if (typeof text !== 'string') return fail('KV_NO_FILE', `No file at ${op.path}`);
+    // A host fact beyond the files: a path the host holds.
+    if ((snapshot as AppSnapshot & { held?: string }).held === op.path) {
+      return fail('KV_HELD', `${op.path} is held`);
+    }
     switch (op.type) {
       case 'set': {
         const { key, value, broken } = op as KvOps['set']['op'];
@@ -270,6 +274,15 @@ describe('the round trip fails on a broken core', () => {
       value: '1',
     });
     expect(() => assertRoundTripReparses(coreOptions, roundTrip, refused)).toThrow(/KV_NO_FILE/);
+  });
+
+  it("an op's snapshot fields reach the core", () => {
+    const held = trip(
+      'held',
+      { type: 'set', path: 'notes/two.kv', key: 'b', value: 'twenty' },
+      { snapshot: { held: 'notes/two.kv' } }
+    );
+    expect(() => assertRoundTripReparses(coreOptions, roundTrip, held)).toThrow(/KV_HELD/);
   });
 
   it('a view that no longer projects', () => {

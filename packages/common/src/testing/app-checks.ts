@@ -133,6 +133,15 @@ export function fixtureSnapshot(files: AppFixture, manifestPath: string): AppSna
   return { manifestPath, paths: Object.keys(files), files };
 }
 
+/** The snapshot an op runs over: the fixture's, with the trip's host facts laid on. */
+function tripSnapshot(
+  trip: AppCoreRoundTrip,
+  files: AppFixture,
+  manifestPath: string
+): AppSnapshot {
+  return { ...fixtureSnapshot(files, manifestPath), ...trip.snapshot };
+}
+
 /** The op's changes over these files, failing when the core refuses it. */
 function applyTrip(
   options: AppCoreOptions,
@@ -140,7 +149,7 @@ function applyTrip(
   trip: AppCoreRoundTrip,
   files: AppFixture
 ): FileChange[] {
-  const result = core.core.apply(fixtureSnapshot(files, options.manifest), trip.op);
+  const result = core.core.apply(tripSnapshot(trip, files, options.manifest), trip.op);
   expect(
     result.ok,
     `"${trip.name}" was refused: ${result.ok ? '' : `${result.code}: ${result.message}`}`
@@ -171,12 +180,16 @@ export function assertRoundTripProjects(
   trip: AppCoreRoundTrip
 ): void {
   const files = fixtureFiles(options, trip.fixture);
-  const before = core.core.project(fixtureSnapshot(files, options.manifest), trip.view, core.facts);
+  const before = core.core.project(
+    tripSnapshot(trip, files, options.manifest),
+    trip.view,
+    core.facts
+  );
   expect(before, `"${trip.name}": the view does not project before the op`).not.toBeNull();
   const changes = applyTrip(options, core, trip, files);
   expect(changes.length, `"${trip.name}" changed nothing`).toBeGreaterThan(0);
   const after = core.core.project(
-    fixtureSnapshot(written(files, changes), options.manifest),
+    tripSnapshot(trip, written(files, changes), options.manifest),
     trip.view,
     core.facts
   );

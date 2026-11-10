@@ -228,60 +228,6 @@ export function detectBoards(
   return boards;
 }
 
-/**
- * Stewardship warnings (ADR-0028 decision 4): markdown inside a detected
- * board folder or the pool that no declared kind projects is invisible to
- * the view — a removed or misspelled kind's folder would otherwise lose its
- * cards without a trace. One warning per offending folder, with a count.
- * Files are attributed to the DEEPEST board/pool base containing them (an
- * unconventional board at the docs root must not claim its nested phases'
- * files), and anything outside every base — templates beside the manifest,
- * the pool's order file — is no concern of this pass.
- */
-export function collectUnprojectedFileWarnings(
-  nodes: TreeNode[],
-  manifestPath: string,
-  kinds: readonly SharedTaskKindDescriptor[],
-  appOnlyPaths?: Iterable<string>
-): string[] {
-  const appOnly = [...(appOnlyPaths ?? [])];
-  const bases = [
-    ...detectBoards(nodes, manifestPath, kinds, appOnly).map((board) => board.path),
-    poolPath(manifestPath),
-  ];
-  const declaredDirs = new Set(kinds.map((kind) => kind.dir));
-  const markdownPaths = new Set([
-    ...nodes
-      .filter((node) => node.type === 'blob' && MARKDOWN_PATTERN.test(node.path))
-      .map((node) => node.path),
-    ...appOnly.filter((path) => MARKDOWN_PATTERN.test(path)),
-  ]);
-
-  const offendersByFolder = new Map<string, number>();
-  for (const path of markdownPaths) {
-    let base: string | null = null;
-    for (const candidate of bases) {
-      const contains = candidate === '' || path.startsWith(`${candidate}/`);
-      if (contains && (base === null || candidate.length > base.length)) base = candidate;
-    }
-    if (base === null) continue;
-    const relative = base === '' ? path : path.slice(base.length + 1);
-    const segments = relative.split('/');
-    if (segments.length > 1 && declaredDirs.has(segments[0])) continue; // a card
-    const folder = segments.length > 1 ? joinPath(base, segments[0]) : base;
-    offendersByFolder.set(folder, (offendersByFolder.get(folder) ?? 0) + 1);
-  }
-
-  return [...offendersByFolder.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([folder, count]) => {
-      const files = `${count} markdown file${count === 1 ? '' : 's'}`;
-      return bases.includes(folder)
-        ? `'${folder}/' holds ${files} outside any kind folder (not shown on the board)`
-        : `'${folder}/' is not a declared kind folder (${files} not shown)`;
-    });
-}
-
 /** The conventional path of a stage/phase under the manifest's directory. */
 export function stagePhasePath(docsRoot: string, stage: number, phase: number): string {
   return joinPath(docsRoot, `stage${stage}/phase${phase}`);

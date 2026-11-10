@@ -10,7 +10,7 @@ import { fail, ok } from '@stillpointlab/common-format/app';
 import { kindEntriesOf, synthesizeBoardForPath } from './boardDetection.js';
 import { readColumn, rewriteFrontmatter } from './frontmatter.js';
 import { referencesPath, rewriteRelativeLinks } from './linkRewrite.js';
-import { formatOrderFile, parseOrderFileDetailed } from './pool.js';
+import { parseOrderFileDetailed, rewriteOrderFile } from './pool.js';
 import { resolveTasks } from './projection.js';
 import { taskKindById } from './types.js';
 
@@ -236,7 +236,10 @@ export function moveTaskCardFile(
         changes.push({
           kind: 'write',
           path: tasks.pool.orderPath,
-          content: formatOrderFile(order.filter((path) => path !== op.path)),
+          content: rewriteOrderFile(
+            orderContent,
+            order.filter((path) => path !== op.path)
+          ),
         });
       }
     }
@@ -268,7 +271,7 @@ export function reorderTaskPool(
     seen.add(path);
   }
   const { orderPath } = tasks.pool;
-  const content = formatOrderFile([...op.paths]);
+  const content = rewriteOrderFile(snapshot.files[orderPath], op.paths);
   const exists = snapshot.paths.includes(orderPath);
   return ok({ changes: [{ kind: exists ? 'write' : 'create', path: orderPath, content }] });
 }

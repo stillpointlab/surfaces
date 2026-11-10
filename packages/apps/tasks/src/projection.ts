@@ -8,7 +8,6 @@
 import { fail, ok } from '@stillpointlab/common-format/app';
 
 import {
-  collectUnprojectedFileWarnings,
   detectBoards,
   detectPool,
   kindEntriesOf,
@@ -111,7 +110,7 @@ export interface TasksHostFacts {
 export interface ResolvedTasks {
   manifestPath: string;
   manifest: SharedTasksManifest;
-  /** Parse warnings, then markdown no declared kind projects (ADR-0028 decision 4). */
+  /** The manifest's parse warnings. */
   manifestWarnings: string[];
   /** Detected boards plus the synthesized ones, by path. */
   boards: SharedTaskBoardDescriptor[];
@@ -170,10 +169,7 @@ export function resolveTasks(snapshot: TasksSnapshot): Result<{ tasks: ResolvedT
     tasks: {
       manifestPath,
       manifest,
-      manifestWarnings: [
-        ...parsed.warnings,
-        ...collectUnprojectedFileWarnings(nodes, manifestPath, manifest.kinds),
-      ],
+      manifestWarnings: parsed.warnings,
       boards: withSynthesizedBoards(
         detectBoards(nodes, manifestPath, manifest.kinds),
         manifest,

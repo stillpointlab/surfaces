@@ -10,7 +10,7 @@ entry (`.`) exports:
   `appendManifestListEntry`, `patchManifestEntryKey`, `removeManifestListEntry`,
   `patchManifestTopLevelScalar` and `appendManifestTag` for the manifest; `rewriteRelativeLinks`
   for a moved card's links;
-- seeds: `tasksManifestSeedContent`; and the pool's `formatOrderFile`;
+- seeds: `tasksManifestSeedContent`; and the pool's `formatOrderFile` and `rewriteOrderFile`;
 - the lifecycle: `tasksLifecycle`, the `AppLifecycle` a host mounts a tasks folder with (its scope,
   and the boards its tree shows);
 - no exceptions for rules: the manifest patches answer `Result<{ content }>` from
@@ -81,8 +81,8 @@ any change.
   destination, a created card whose first check-in is in flight, and undoing a move whose check-in
   is in flight. It answers the new `path` and `location`; the move's own bookkeeping (what to
   delete at check-in) is the host's.
-- `reorderTaskPool(snapshot, { paths })` writes (or creates) the order file. It regenerates the
-  file, so its comments do not survive.
+- `reorderTaskPool(snapshot, { paths })` writes (or creates) the order file through
+  `rewriteOrderFile`, which keeps its comments and blank lines (see Pool order).
 - `setTaskCardTitle` and `setTaskCardTags` rewrite one key; tags must be in the registry.
 - `createTaskCard(snapshot, { boardPath, title, kind, now })` names the card from its title and
   creates it from its kind's template (a snapshot file) or a frontmatter stub, with the title and
@@ -123,7 +123,8 @@ already a file.
 `board { path }`, `stage { stage }` and `nav`, the ops above (`move`, `move-file`, `reorder-pool`,
 `set-title`, `set-tags`, `create-card`, `fix-references`, `add-tag`, `edit-manifest`,
 `create-stage-phase`, `set-current`, `close`), and `seed` (`planTasksCreate`). The app-core test
-holds the ops to the contract's round trip, except reordering the pool and fixing references.
+holds every op to the contract's round trip; fixing references runs over a snapshot with a pending
+move, laid on through the op's `snapshot`.
 `findTaskCard(tasks, path)` is a card's kind and where it sits, for a host that needs them.
 
 **Drafts.** When to rebase a diverged draft is the host's decision; the comparison is the core's.
@@ -258,8 +259,11 @@ docs/tasks/
   same kind folders. It shows as a shared first column on every board. Being in the pool is a
   location, not a column: assigning a card moves the file.
 - **Pool order.** `unassigned/order.yaml` is a YAML list of repository paths, highest priority
-  first. Paths it does not list sort last, by path. The app regenerates this file whole when it
-  reorders the pool, so comments in it do not survive a reorder.
+  first. Paths it does not list sort last, by path. A reorder refills the file's item lines in
+  the new order, each path keeping its trailing comment, and leaves comment and blank lines where
+  they are, so a group heading heads whatever ranks below it. A path that leaves the pool loses its
+  line; a new one goes after the last item. Only a file the app cannot read line by line (a flow or
+  nested list) is regenerated.
 
 ## `tasks.yaml`
 
@@ -359,9 +363,10 @@ Moving a card, changing its tags, moving `current`, editing columns or kinds and
 rewrites of the existing text. Only the lines that change are touched; comments, key order, other
 keys, line endings and the final newline stay as they were. Ids never change through the app. A
 manifest shape the app cannot patch safely is refused with a message to edit the file by hand. The
-pool's `order.yaml` is the one file the app writes whole.
+pool's `order.yaml` keeps its comments and blank lines too: a reorder refills its item lines in the
+new order, and only a file it cannot read line by line is regenerated.
 
-The app never writes files that are not cards. Markdown inside a board or the pool that sits outside
-every kind folder (a `README.md` beside the kind folders, say) is reported by
-`collectUnprojectedFileWarnings` (ADR-0028 decision 4); Context Manager expects to relax that rule,
-since agents routinely leave such files.
+The app never writes files that are not cards, and it does not warn about them either: markdown
+inside a board or the pool that sits outside every kind folder (a `README.md` beside the kind
+folders, an agent's notes) is left alone. ADR-0028 decision 4 asked for a warning per such folder;
+agents leave these files routinely, so Context Manager relaxed it.

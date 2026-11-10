@@ -5,12 +5,7 @@
 // anchor at the given manifest's directory. Moved from Context Manager's
 // `services/tasks/lifecycle.ts`, without the host's own fields.
 
-import {
-  collectUnprojectedFileWarnings,
-  detectBoards,
-  detectPool,
-  kindPathsOf,
-} from './boardDetection.js';
+import { detectBoards, detectPool, kindPathsOf } from './boardDetection.js';
 import { parseTasksManifest, validateManifestAgainstTree } from './manifest.js';
 import { BUILTIN_TASK_KINDS } from './types.js';
 
@@ -46,13 +41,10 @@ export const tasksLifecycle: AppLifecycle<TasksInstanceDetail> = {
       scope.add(path);
     }
     scope.add(pool.orderPath);
-    // Stewardship (ADR-0028 decision 4): markdown in scope that no declared
-    // kind projects warns here too, so a host's tree notice carries it.
-    return {
-      ok: true,
-      scope,
-      warnings: [...parsed.warnings, ...collectUnprojectedFileWarnings(nodes, manifestPath, kinds)],
-    };
+    // Files no kind projects (a README beside the kind folders, an agent's
+    // helper output) are left alone and not warned about: ADR-0028 decision 4,
+    // as Context Manager relaxed it.
+    return { ok: true, scope, warnings: parsed.warnings };
   },
   // A tasks.yaml carries no title of its own, so every instance is "Tasks" and
   // the host tells twins apart. Boards must survive a manifest that does not

@@ -236,12 +236,17 @@ describe('editTasksManifest', () => {
   });
 
   it('answers the warnings the manifest after it reads with', () => {
-    // Markdown in a folder no kind projects warns until a kind claims the folder.
-    const s = snapshot({ [`${PHASE1}/drafts/stray.md`]: '# Stray\n' });
-    const before = resolveTasks(s);
-    expect(before?.ok && before.tasks.manifestWarnings.join(' ')).toContain('drafts');
+    const s = snapshot({ [MANIFEST]: `${MANIFEST_TEXT}extra: 1\n` });
     const result = edit(s, { op: 'add-kind', id: 'draft' });
-    expect(result.ok && result.warnings).toEqual([]);
+    expect(result.ok && result.warnings).toEqual(["unknown key 'extra' is ignored"]);
+  });
+
+  it('does not warn about markdown no kind projects', () => {
+    const s = snapshot({ [`${PHASE1}/drafts/stray.md`]: '# Stray\n' });
+    expect(edit(s, { op: 'add-column', id: 'review', label: 'Review' })).toMatchObject({
+      ok: true,
+      warnings: [],
+    });
   });
 });
 
