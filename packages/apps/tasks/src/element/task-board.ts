@@ -12,15 +12,14 @@ import { taskKindById } from '../types.js';
 import { boardStyles } from './board.styles';
 import { BoardDialogs } from './dialogs.js';
 
+import type { TaskBoardOps } from '../elementOps.js';
 import type {
   SharedTaskBoardState,
   SharedTaskCard,
   SharedTaskHousekeepingFile,
   SharedTaskKindDescriptor,
-  SharedTaskManifestEditOp,
   SharedTaskPoolState,
   SharedTaskStageState,
-  SharedTasksManifest,
 } from '../types.js';
 import type { AppElement } from '@stillpointlab/common-format/app';
 
@@ -33,46 +32,7 @@ const DOUBLE_CLICK_MS = 400;
 // but a distinct sentinel keeps column moves and file moves unmistakable).
 const POOL_COLUMN_ID = '__pool__';
 
-/**
- * The ops the board asks its host for (ADR-0037): each names the card by its
- * repo path, never by a host id, and each reply is what the host's endpoint
- * answers. A failure carries the endpoint's error code and message.
- */
-export type TaskBoardOps = {
-  move: { op: { path: string; column: string | null }; reply: { card: SharedTaskCard } };
-  'move-file': {
-    op: { path: string; target: { pool: true } | { boardPath: string; column: string } };
-    reply: { card: SharedTaskCard };
-  };
-  'reorder-pool': { op: { paths: string[] }; reply: { pool: SharedTaskPoolState } };
-  resolve: {
-    op: { path: string; mode: 'take-latest' | 'rebase-metadata' };
-    reply: { card: SharedTaskCard };
-  };
-  'scan-references': { op: { path: string }; reply: { references: string[] } };
-  'fix-references': {
-    op: { path: string; referencingPaths: string[] };
-    reply: { fixed: number };
-  };
-  'read-file': { op: { path: string }; reply: { content: string } };
-  'refresh-stage': { op: { stage: number }; reply: { stage: SharedTaskStageState } };
-  /** One settings change: a column or kind added, changed or removed, or a picker set. */
-  'edit-manifest': {
-    op: { edit: SharedTaskManifestEditOp };
-    reply: { manifest: SharedTasksManifest; warnings: string[] };
-  };
-  /** A new card of a creatable kind, named from its title, on a board (or the pool). */
-  'create-card': {
-    op: { boardPath: string; title: string; kind: string };
-    reply: { card: SharedTaskCard };
-  };
-  /** A card's frontmatter title, or `null` to remove it. */
-  'set-title': { op: { path: string; title: string | null }; reply: object };
-  /** A card's tags, from the registry. */
-  'set-tags': { op: { path: string; tags: string[] }; reply: object };
-  /** A tag added to the registry in `tasks.yaml`; the reply is the registry after it. */
-  'add-tag': { op: { tag: string }; reply: { tags: string[] } };
-};
+export type { TaskBoardOps };
 
 /** The `checkin-request` event's detail: everything with an uncommitted change. */
 export interface TaskBoardCheckinRequest {

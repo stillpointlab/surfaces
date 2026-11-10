@@ -16,6 +16,7 @@ import { html, render } from '@stillpointlab/common-format/html';
 
 import { navStyles } from './nav.styles';
 
+import type { TasksNavCloseCandidate, TasksNavOps } from '../elementOps.js';
 import type { SharedTasksNav } from '../types.js';
 import type { AppElement } from '@stillpointlab/common-format/app';
 import type { SafeHtml } from '@stillpointlab/common-format/html';
@@ -50,30 +51,7 @@ export interface TasksNavLinks {
   board(path: string): string;
 }
 
-/** A card the close dialog offers: an unfinished card of the pointer phase. */
-export interface TasksNavCloseCandidate {
-  path: string;
-  title: string;
-  column: string | null;
-}
-
-/** The ops the strip asks its host for. */
-export type TasksNavOps = {
-  /** The next phase of a stage, or the next stage at phase 1. */
-  'create-stage-phase': {
-    op: { kind: 'phase' | 'stage'; stage?: number };
-    reply: { stage: number; phase: number };
-  };
-  /** Point `tasks.yaml`'s `current:` at a phase. */
-  'set-current': { op: { stage: number; phase: number }; reply: object };
-  /** Every card on a phase's board, for the close dialog to offer. */
-  'close-candidates': { op: { path: string }; reply: { cards: TasksNavCloseCandidate[] } };
-  /** Close the pointer phase or stage, bringing the named cards along. */
-  close: {
-    op: { kind: 'phase' | 'stage'; paths: string[] };
-    reply: { target: { stage: number; phase: number }; moved: number; created?: boolean };
-  };
-};
+export type { TasksNavCloseCandidate, TasksNavOps };
 
 /** Raised (bubbling) with `{ href }`: the strip asks the host to go to one of its links. */
 export const NAVIGATE_EVENT = 'navigate';
