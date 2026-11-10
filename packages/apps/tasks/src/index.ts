@@ -15,3 +15,6 @@ export * from './manifestSeed.js';
 export * from './lifecycle.js';
 export * from './projection.js';
 export * from './rebase.js';
+export * from './cardOps.js';
+export * from './create.js';
+export * from './core.js';

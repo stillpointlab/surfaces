@@ -62,6 +62,44 @@ with no facts is titled by its file name and has no local work. Ids are never fa
 types carry none, and a host lays its own ids over the states. `columnOfContent(content, manifest)`
 is the column a card's content renders in, for a host working out `versionColumn`.
 
+Two more lists tell the ops what only the host knows: `created`, the cards created in the host
+that have no upstream file yet, and `inFlight`, the cards whose check-in pull request is open.
+
+**Ops.** Each op function takes the snapshot and the op in the shape the board asks for it, naming
+cards by path, and answers the `changes` to write (contract `FileChange`s) or a refusal with the
+codes and messages Context Manager's endpoints have always sent. Every refusal is decided before
+any change.
+
+- `moveTaskCard(snapshot, { path, column })` rewrites the column key (`null` drops it). A pool card
+  has no column, and a rewrite that would break a valid frontmatter block is refused.
+- `moveTaskCardFile(snapshot, { path, target, coMoving? })` moves the file to the pool or to a
+  board's column: one `move` change, the column key rewritten and the file's relative links
+  re-rooted (`coMoving` names files moving in the same batch, whose links between them stay). A
+  card leaving the pool also answers the order file without it. It refuses an occupied
+  destination, a created card whose first check-in is in flight, and undoing a move whose check-in
+  is in flight. It answers the new `path` and `location`; the move's own bookkeeping (what to
+  delete at check-in) is the host's.
+- `reorderTaskPool(snapshot, { paths })` writes (or creates) the order file. It regenerates the
+  file, so its comments do not survive.
+- `setTaskCardTitle` and `setTaskCardTags` rewrite one key; tags must be in the registry.
+- `createTaskCard(snapshot, { boardPath, title, kind, now })` names the card from its title and
+  creates it from its kind's template (a snapshot file) or a frontmatter stub, with the title and
+  `now` seeded in: the core reads no clock. It answers the new `path`.
+- `referencesTo(snapshot, path)` lists the markdown files among the snapshot's contents that link
+  to where a moved card used to be, and `fixTaskReferences(snapshot, { path, referencingPaths })`
+  points their links at its new path.
+
+**Creating tasks** is two steps, as for inventory: `planTasksCreate(input)` answers the manifest to
+seed (or refuses the repository root without `confirmRoot`, and a seed the app would not accept),
+and `placeTasksCreate(plan, { taken, reusable })` refuses a seed path, or a folder above it, that is
+already a file.
+
+**The contract.** `tasksCore` is the same functions as the app contract's `AppCore`: views
+`board { path }`, `stage { stage }` and `nav`, the ops above (`move`, `move-file`, `reorder-pool`,
+`set-title`, `set-tags`, `create-card`, `fix-references`), and `seed` (`planTasksCreate`). The
+app-core test holds the ops to the contract's round trip, except reordering the pool and fixing
+references.
+
 **Drafts.** When to rebase a diverged draft is the host's decision; the comparison is the core's.
 `metadataOnlyCheck(draft, base)` says whether a draft changes only its base's frontmatter, or
 answers the reconstruction the host formats its own way and compares with the draft.

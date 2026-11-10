@@ -6,6 +6,7 @@ import {
   detectPool,
   kindPathsOf,
 } from './boardDetection.js';
+import { tasksCore } from './core.js';
 import { parseFrontmatter, rewriteFrontmatter } from './frontmatter.js';
 import { tasksLifecycle } from './lifecycle.js';
 import { rewriteRelativeLinks } from './linkRewrite.js';
@@ -17,6 +18,7 @@ import {
   removeManifestListEntry,
   rewriteManifestCurrent,
 } from './manifestRewrite.js';
+import { parseOrderFileDetailed } from './pool.js';
 
 import type { TreeNode } from './types.js';
 import type { Result } from '@stillpointlab/common-format/app';
@@ -268,4 +270,83 @@ describeAppCore('tasks', {
       reparses: manifestParses,
     },
   ],
+  // The ops through the contract. Not here: reordering the pool, which
+  // regenerates order.yaml whole (its comments go; a recorded gap, as it has
+  // always been), and fixing references, which needs a pending move.
+  core: {
+    core: tasksCore,
+    facts: {},
+    reparses: (path, text) =>
+      path.endsWith('tasks.yaml')
+        ? manifestParses(text)
+        : path.endsWith('order.yaml')
+          ? !parseOrderFileDetailed(text).invalid
+          : cardParses(text),
+    ops: [
+      {
+        name: 'move a card to a column',
+        fixture: 'configured',
+        op: { type: 'move', path: card, column: 'done' },
+        view: { type: 'board', path: 'stage1/phase2' },
+      },
+      {
+        name: 'move a card that has no frontmatter',
+        fixture: 'configured',
+        op: { type: 'move', path: 'stage1/phase2/specs/no-frontmatter.md', column: 'done' },
+        view: { type: 'board', path: 'stage1/phase2' },
+      },
+      {
+        name: "move a card's file to the pool, relinking it",
+        fixture: 'configured',
+        op: { type: 'move-file', path: card, target: { pool: true } },
+        view: { type: 'board', path: 'stage1/phase2' },
+      },
+      {
+        name: "move a card's file to an empty phase",
+        fixture: 'minimal',
+        op: {
+          type: 'move-file',
+          path: 'stage1/phase1/specs/first.md',
+          target: { boardPath: 'stage1/phase2', column: 'done' },
+        },
+        view: { type: 'stage', stage: 1 },
+      },
+      {
+        name: "set a card's title",
+        fixture: 'configured',
+        op: { type: 'set-title', path: card, title: 'Move the core' },
+        view: { type: 'board', path: 'stage1/phase2' },
+      },
+      {
+        name: "set a card's tags",
+        fixture: 'configured',
+        op: { type: 'set-tags', path: card, tags: ['CODE', 'docs'] },
+        view: { type: 'board', path: 'stage1/phase2' },
+      },
+      {
+        name: 'create a card from its template',
+        fixture: 'configured',
+        op: {
+          type: 'create-card',
+          boardPath: 'stage1/phase2',
+          title: 'Write the walks',
+          kind: 'spec',
+          now: '2026-11-09T12:00:00.000Z',
+        },
+        view: { type: 'board', path: 'stage1/phase2' },
+      },
+      {
+        name: 'create a card from a stub, in the pool',
+        fixture: 'configured',
+        op: {
+          type: 'create-card',
+          boardPath: 'unassigned',
+          title: 'An idea',
+          kind: 'seed',
+          now: '2026-11-09T12:00:00.000Z',
+        },
+        view: { type: 'nav' },
+      },
+    ],
+  },
 });
