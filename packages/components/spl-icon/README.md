@@ -22,7 +22,8 @@ import '@stillpointlab/spl-icon-component';
 
 ## Icons
 
-`dots-vertical`, `back-arrow`, `edit-pencil`, `gear`, `profile`, `ai-model`, `plus-circle`, `trash`, `logout`, `more-horizontal`, `close`, `task`, `inventory`, `folder`, `document`, `copy`, `download`, `mail`, `bold`, `italic`, `strikethrough`, `code`, `code-block`, `quote`, `list-bulleted`, `list-numbered`, `link`, `table`, `chevron-down`, `arrow-up`, `arrow-down`, `arrow-left`, `arrow-right`.
+`dots-vertical`, `back-arrow`, `edit-pencil`, `gear`, `profile`, `ai-model`, `plus-circle`, `trash`, `logout`, `more-horizontal`, `close`, `task`, `inventory`, `folder`, `document`, `copy`, `download`, `mail`, `bold`, `italic`, `strikethrough`, `code`, `code-block`, `quote`, `list-bulleted`, `list-numbered`, `link`, `table`, `chevron-down`, `arrow-up`, `arrow-down`, `arrow-left`, `arrow-right`, and `spinner`, a loading ring that turns (and stays still when the
+reader prefers reduced motion).
 
 An unknown name has no mask, so the element draws a filled square.
 

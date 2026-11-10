@@ -189,7 +189,7 @@ describe('projectInventorySpace', () => {
     });
     expect(space?.zones.find((zone) => zone.slug === 'office')).toMatchObject({
       itemCount: 0,
-      parseError: 'room file content is unavailable',
+      parseError: 'zone file content is unavailable',
     });
     const office = projectInventoryZone(house({ 'rooms/office.yaml': null }), 'office', NO_FACTS);
     expect(office?.zone).toMatchObject({ writable: false, items: [] });
