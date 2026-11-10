@@ -6,7 +6,7 @@ tags: [apps, host-contract, code]
 
 # Spec: the registration and one op route
 
-_The [generic app host brief](../briefs/generic_app_host.md), desired outcomes 2 and 3. After
+_The [generic app host brief](../../phase1/briefs/generic_app_host.md), desired outcomes 2 and 3. After
 [app-module](app-module.md). Two steps, each one Context Manager PR: inventory, then tasks._
 
 ## High-level goal
@@ -18,7 +18,7 @@ elements ask them, by path. Each app's per-op endpoints retire in the PR that sw
 
 ## Related context
 
-- The [spike](../spikes/generic-app-host.md), §3: the five steps both services already run, and
+- The [spike](../../phase1/spikes/generic-app-host.md), §3: the five steps both services already run, and
   what tasks adds (moves, write bases, rebase).
 - Context Manager's `RepoViewAdapter` and its `RepoViewName` union
   (`services/git/repoViewLifecycle.types.ts`); the services' op paths (`changeZone` and `write` in
@@ -134,10 +134,10 @@ behind them go. `runManifestOp`'s link-then-rerun becomes step 3 above. What sta
 ## Non-goals
 
 - Host ops through the generic route: they keep their endpoints. Moving them is
-  [the minimum ADR](app-host-adr.md)'s question.
-- The pages themselves: [one-view-page](one-view-page.md).
-- Create and check-in: [create-from-the-app](create-from-the-app.md) and
-  [checkin-endpoint](checkin-endpoint.md).
+  [the minimum ADR](../../phase5/specs/app-host-adr.md)'s question.
+- The pages themselves: [one-view-page](../../phase3/specs/one-view-page.md).
+- Create and check-in: [create-from-the-app](../../phase4/specs/create-from-the-app.md) and
+  [checkin-endpoint](../../phase4/specs/checkin-endpoint.md).
 
 ## Acceptance / completion checklist
 

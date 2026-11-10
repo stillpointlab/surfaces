@@ -6,7 +6,7 @@ tags: [apps, host-contract, docs]
 
 # Spec: the minimum, written down
 
-_The [generic app host brief](../briefs/generic_app_host.md), desired outcome 7. The stage's last
+_The [generic app host brief](../../phase1/briefs/generic_app_host.md), desired outcome 7. The stage's last
 spec: it records what the others leave._
 
 ## High-level goal
@@ -23,7 +23,7 @@ has agreed, not whatever happened to be left.
   - ADR-0025 (view instances): its adapter seam is now the registration;
   - ADR-0038 (the inventory elements): its page and op answers are now generic;
   - ADR-0028 (mounts, as amended this stage).
-- The candidates the [spike](../spikes/generic-app-host.md) listed for the minimum:
+- The candidates the [spike](../../phase1/spikes/generic-app-host.md) listed for the minimum:
   - the registrations and their hooks (`load`, `facts`, `overlay`, `move`, `pages`, `checkin`);
   - tasks' refresh job and PR-state cache;
   - tasks' host ops that write (`resolve`) or scan (`scan-references`), on their own endpoints;

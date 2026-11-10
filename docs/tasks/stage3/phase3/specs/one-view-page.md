@@ -6,8 +6,8 @@ tags: [apps, host-contract, code]
 
 # Spec: one view page
 
-_The [generic app host brief](../briefs/generic_app_host.md), desired outcome 4. After
-[one-op-route](one-op-route.md), whose registration it extends. Inventory, then tasks._
+_The [generic app host brief](../../phase1/briefs/generic_app_host.md), desired outcome 4. After
+[one-op-route](../../phase2/specs/one-op-route.md), whose registration it extends. Inventory, then tasks._
 
 ## High-level goal
 
@@ -19,7 +19,7 @@ build entries go.
 
 ## Related context
 
-- The [spike](../spikes/generic-app-host.md), §7.
+- The [spike](../../phase1/spikes/generic-app-host.md), §7.
 - Context Manager's pages:
   - routes in `routers/web/project.routes.ts`: tasks' board, stage and phase; inventory's space and
     zone, plus its two exports;
@@ -74,7 +74,7 @@ interface ClientAppEntry {
 
 - reads the embedded state and the view;
 - `load`s and `mount`s the app;
-- answers core ops through the route from [one-op-route](one-op-route.md);
+- answers core ops through the route from [one-op-route](../../phase2/specs/one-op-route.md);
 - answers host ops through the entry's handlers;
 - wires the entry's requests.
 
@@ -97,7 +97,7 @@ into tasks' `mount`. Inventory's links (zone pages, exports, the editor) move in
 - **Server-rendered first paint stays:** the state is embedded as today, and the element renders on
   mount.
 - **The refresh button and check-in stay host requests.** Their endpoints are tasks' refresh and
-  [checkin-endpoint](checkin-endpoint.md).
+  [checkin-endpoint](../../phase4/specs/checkin-endpoint.md).
 
 ## Non-goals
 

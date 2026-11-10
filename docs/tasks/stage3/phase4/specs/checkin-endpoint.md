@@ -6,8 +6,8 @@ tags: [apps, host-contract, code]
 
 # Spec: one check-in endpoint and job
 
-_The [generic app host brief](../briefs/generic_app_host.md), desired outcome 6: option C. Can land
-any time after [one-op-route](one-op-route.md)'s registry._
+_The [generic app host brief](../../phase1/briefs/generic_app_host.md), desired outcome 6: option C. Can land
+any time after [one-op-route](../../phase2/specs/one-op-route.md)'s registry._
 
 ## High-level goal
 
@@ -18,7 +18,7 @@ seed.
 
 ## Related context
 
-- The [spike](../spikes/generic-app-host.md), §6, and the seed: both services run the same five
+- The [spike](../../phase1/spikes/generic-app-host.md), §6, and the seed: both services run the same five
   steps, and tasks adds moves, frontmatter-only conflict labels and selection.
 - Context Manager today:
   - the routes: `POST /tasks/:instance/checkin` and `POST /inventory/:instance/checkin`;
