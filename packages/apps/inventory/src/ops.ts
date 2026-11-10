@@ -103,7 +103,7 @@ function writableZone(snapshot: InventorySnapshot, path: string): Result<Writabl
   if (!zone.writable) {
     return fail(
       'INVENTORY_ROOM_READ_ONLY',
-      zone.readOnlyReason ?? zone.parseError ?? 'The room file cannot be edited by the app'
+      zone.readOnlyReason ?? zone.parseError ?? 'The zone file cannot be edited by the app'
     );
   }
   const content = snapshotContent(snapshot, path);
@@ -118,7 +118,7 @@ function itemEditFailure(result: ItemEditResult & { ok: false }, id: string): Fa
   if (result.notFound) {
     // Hand-deleted since the state was read (spec inventory_edit_item #1): an
     // element asks its host to reload on this code.
-    return fail('INVENTORY_ITEM_NOT_FOUND', `No item with id '${id}' exists in this room`);
+    return fail('INVENTORY_ITEM_NOT_FOUND', `No item with id '${id}' exists in this zone`);
   }
   return fail('INVENTORY_ITEM_READ_ONLY', result.reason ?? 'The item cannot be edited by the app');
 }

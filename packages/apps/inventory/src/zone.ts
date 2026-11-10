@@ -384,8 +384,7 @@ export function parseZoneFile(
   if (raw === null || raw === undefined) {
     return { ok: true, items: [], attention: [], warnings: [] };
   }
-  // A message users see: its wording stays as it was when the names became zone.
-  if (!isPlainObject(raw)) return { ok: false, error: 'room file must be a YAML mapping' };
+  if (!isPlainObject(raw)) return { ok: false, error: 'zone file must be a YAML mapping' };
 
   const warnings: string[] = [];
   for (const key of Object.keys(raw)) {

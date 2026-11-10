@@ -7,6 +7,7 @@ import type { HarnessElements, HarnessFormat } from '../../../../tooling/harness
 const TAG = 'spl-icon';
 
 const ICONS = [
+  'spinner',
   'dots-vertical',
   'back-arrow',
   'edit-pencil',

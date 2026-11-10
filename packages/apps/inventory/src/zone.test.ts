@@ -70,7 +70,7 @@ describe('parseZoneFile', () => {
     expect(parseZoneFile('items: [unclosed').ok).toBe(false);
     expect(parseZoneFile('- just\n- a list\n')).toEqual({
       ok: false,
-      error: 'room file must be a YAML mapping',
+      error: 'zone file must be a YAML mapping',
     });
     expect(parseZoneFile('items: not-a-sequence\n')).toEqual({
       ok: false,

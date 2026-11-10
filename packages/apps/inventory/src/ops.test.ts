@@ -105,7 +105,7 @@ describe('addInventoryItem', () => {
     ).toMatchObject({
       ok: false,
       code: 'INVENTORY_ROOM_READ_ONLY',
-      message: 'room file content is unavailable',
+      message: 'zone file content is unavailable',
     });
   });
 
@@ -249,7 +249,7 @@ describe('updateInventoryItem', () => {
     ).toMatchObject({
       ok: false,
       code: 'INVENTORY_ITEM_NOT_FOUND',
-      message: "No item with id 'ghost' exists in this room",
+      message: "No item with id 'ghost' exists in this zone",
     });
   });
 

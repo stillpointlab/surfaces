@@ -124,7 +124,7 @@ function resolveZone(
   };
   // The wording users see stays as it was when the names became zone.
   if (content === null) {
-    return { ...base, writable: false, parseError: 'room file content is unavailable' };
+    return { ...base, writable: false, parseError: 'zone file content is unavailable' };
   }
 
   const parsed = parseZoneFile(content, schema);

@@ -93,9 +93,8 @@ export function demoteDuplicateIds(zones: SharedInventoryZone[]): void {
         continue;
       }
       const elsewhere = holders.filter((slug) => slug !== zone.slug);
-      // A reason users see: its wording stays as it was when the names became zone.
       const where =
-        elsewhere.length > 0 ? `also in ${[...new Set(elsewhere)].join(', ')}` : 'in this room';
+        elsewhere.length > 0 ? `also in ${[...new Set(elsewhere)].join(', ')}` : 'in this zone';
       zone.needsAttention.push({
         id: item.id,
         title: item.title,
