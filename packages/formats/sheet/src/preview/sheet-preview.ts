@@ -20,8 +20,7 @@ import {
   type SheetPresentation,
 } from '../presentation/presentation';
 import { snapshotSuccessfulModel } from '../shared/model';
-import { renderTable } from '../shared/render';
-import { tableStyles } from '../shared/table.styles';
+import { mountSurface, renderTable } from '../shared/render';
 
 import type { ParsedSheetDocument } from '../document';
 import type { PreviewElement } from '@stillpointlab/common-format';
@@ -151,8 +150,6 @@ export class SheetPreview extends HTMLElement implements PreviewElement {
   }
 
   private renderRaw(): void {
-    const style = document.createElement('style');
-    style.textContent = tableStyles;
     const surface = document.createElement('div');
     surface.className = 'sheet-surface sheet-surface--raw';
     if (!this.model.ok) {
@@ -169,7 +166,7 @@ export class SheetPreview extends HTMLElement implements PreviewElement {
     body.className = 'sheet-surface__raw';
     body.append(this.raw.element);
     surface.append(body);
-    this.root.replaceChildren(style, surface);
+    mountSurface(this.root, surface);
     const view = this.raw;
     const cycle = this.ready.begin();
     void view.whenReady().then(() => this.ready.settle(cycle));

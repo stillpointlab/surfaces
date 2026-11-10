@@ -53,10 +53,10 @@ import {
   createAddressedHead,
   createCell,
   createInvalidPresentationNotice,
+  mountSurface,
   renderTable,
 } from '../shared/render';
 import { createSheetStyleIndex, type SheetStyleIndex } from '../shared/style-index';
-import { tableStyles } from '../shared/table.styles';
 import {
   createSheetValueFormatIndex,
   formatSheetCellValue,
@@ -588,8 +588,6 @@ export class SheetEditor extends HTMLElement implements EditorElement {
     }
 
     this.reportPresentationIssues();
-    const style = document.createElement('style');
-    style.textContent = tableStyles;
 
     const surface = document.createElement('div');
     surface.className =
@@ -654,7 +652,7 @@ export class SheetEditor extends HTMLElement implements EditorElement {
       surface.append(notice);
     }
 
-    this.root.replaceChildren(style, surface);
+    mountSurface(this.root, surface);
     this.applySelection(false);
     if (this.draft) this.mountDraftControl();
   }
@@ -817,8 +815,6 @@ export class SheetEditor extends HTMLElement implements EditorElement {
       shown.before(this.createRawToolbar(true), ...(this.notice ? [this.notice] : []));
       return;
     }
-    const style = document.createElement('style');
-    style.textContent = tableStyles;
     const surface = document.createElement('div');
     surface.className = 'sheet-surface sheet-surface--raw';
     // The grid listens on the whole shadow root; keep the raw view's typing,
@@ -837,7 +833,7 @@ export class SheetEditor extends HTMLElement implements EditorElement {
     body.className = 'sheet-surface__raw';
     body.append(this.raw.element);
     surface.append(this.createRawToolbar(true), ...(this.notice ? [this.notice] : []), body);
-    this.root.replaceChildren(style, surface);
+    mountSurface(this.root, surface);
   }
 
   private createToolbarButton(command: SheetToolbarCommand, label: string): HTMLButtonElement {

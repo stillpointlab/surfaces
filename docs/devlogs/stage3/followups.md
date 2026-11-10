@@ -13,3 +13,6 @@ backlog pool as seeds.
   passes alone and on a re-run. It failed that way three times during stage 2's last phase. The
   test makes 101 edits and 101 undos through the editor's DOM in jsdom, so its time grows with
   machine load; a longer timeout for it, or fewer DOM steps per edit, would steady it.
+  - Closed 2026-11-10: the sheet's stylesheet now stays mounted across renders (re-inserting it
+    re-parsed 11 KB of CSS on every committed edit), which brings the test from about 1.8 s to
+    1.2 s alone, and the test gets a 20 s timeout. Two full checks after it passed.
