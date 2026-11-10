@@ -10,3 +10,6 @@ Video, audio, PDF, 3D objects and materials, and custom containers like slides a
 each as a format that starts preview-only and gains an editor when a generation model makes editing
 worth it, the way image began. A spritesheet is a container format (the `.sheet` envelope precedent)
 unless the unit of work turns out to be a folder, in which case it is an app.
+
+Image has no raw view yet. SVG is text, so a source view can follow under the raw view convention
+(stage 1 follow-ups, phase 5).

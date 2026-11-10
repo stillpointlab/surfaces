@@ -11,6 +11,9 @@ during this stage's setup, each entry struck with where it went.
   cannot map) is likely to be relaxed in Context Manager. Agents routinely leave READMEs and helper
   files beside cards, so tasks' unprojected-file warnings are noise. Inventory never warned and keeps
   not warning; `describeAppCore` does not check it. The ADR change is Context Manager's.
+  - Closed 2026-11-10 (Jamie: remove the warning; #69): `collectUnprojectedFileWarnings` is gone, so
+    markdown no kind projects is left alone without a warning. Context Manager amends ADR-0028 in
+    its adoption.
 - 2026-11-03 (inventory core): `appendItem` ends its output with a line break when it appends at
   the end of a file that had none. Context Manager tests this on purpose ("adds a newline first when
   the file does not end with one"), and an insert before trailing lines keeps the absence. The move
@@ -33,11 +36,15 @@ during this stage's setup, each entry struck with where it went.
   This repository's own order file carries grouping comments that a reorder in the app would drop.
   It breaks ADR-0028 decision 1 for that one file; the move keeps the behaviour, and a rewrite that
   keeps comments comes after the tasks adoption.
+  - Closed 2026-11-10 (#69): `rewriteOrderFile` refills the item lines in the new order and leaves
+    comments and blank lines in place; only a file it cannot read line by line is regenerated.
 - 2026-11-07 (shared components; kept as they are by the spec): the `spinner` icon does not exist.
   Two Context Manager dashboard pages ask for `icon-name="spinner"`, which has no mask, so it draws
   a filled square.
+  - Closed 2026-11-10 (#70): `spinner` is a turning ring, still under reduced motion.
 - 2026-11-07 (shared components): `<spl-icon>` always renders `role="button"` and `tabindex="0"`,
   even when it is decorative, so decorative icons are keyboard stops announced as buttons.
+  - Moved 2026-11-10 to the seed [icons that are not buttons](../../tasks/unassigned/seeds/icons-that-are-not-buttons.md).
 - 2026-11-07 (shared components): `<spl-icon>` interpolates its attributes into `innerHTML`. Its
   callers pass fixed names and labels, apart from Context Manager's `conversation-indicator`, whose
   label comes from admin-configured provider and model names. `<modal-dialog>`'s title got this fix;
@@ -48,11 +55,13 @@ during this stage's setup, each entry struck with where it went.
 - 2026-11-07 (shared components): `md-icon` holds 18 of `<spl-icon>`'s names as inline SVG. md could
   use the component now that it lives here, but the two differ (`md-icon` is not a button, and its
   sizes differ).
+  - Dropped 2026-11-10 (Jamie): the two differ in role and sizes, and the payoff is small.
 - 2026-11-07 (result types for app cores): only the functions that threw now answer a `Result`. The
   cores' older results keep shapes of their own: `parseInventoryManifest` and the tasks manifest
   parse (`{ ok: false, errors }`), the room writer (`reason`, `notFound`), and the lifecycles'
   `validateAndScope` (`errors`, kept on purpose since a manifest can be wrong in several ways at
   once). Converging them changes their callers in Context Manager, so it is its own step.
+  - Moved 2026-11-10 to the seed [one result shape across the cores](../../tasks/unassigned/seeds/results-everywhere.md).
 - 2026-11-07 (app contract): `project` and `apply` from the August `AppModule` design are not
   named in `common-format/app`. The rules they would hold are still in Context Manager's services,
   so naming them waits for the pass that extracts those rules, after phase 6.
@@ -77,28 +86,39 @@ during this stage's setup, each entry struck with where it went.
   escaping each value with `escapeHtml` from `common-format/html` (it no longer has its own). Moving
   it onto `html` and `render` is mechanical but touches most of its 1,400 lines. Its file-level
   exception to the `innerHTML` lint rule is the reminder.
+  - Moved 2026-11-10 to the seed [the task board on `html`](../../tasks/unassigned/seeds/task-board-on-html.md).
 - 2026-11-08 (html-safe-templates): the formats are outside the `innerHTML` lint rule. Eleven of
   their element modules set markup directly (md's editor, toolbar, icon and preview; code's editor,
   preview and diff; xmdl's editor and preview; sheet's editor; image's preview), mostly static
   scaffolding around an engine. A pass over them, onto `html` and `render` with the rule widened to
   `packages/formats`, is its own step.
+  - Moved 2026-11-10 to the seed [the formats under the markup rule](../../tasks/unassigned/seeds/formats-under-the-markup-rule.md).
 - 2026-11-08 (zone-vocabulary): two messages from the core still say room to users: a zone file
   that is not a mapping ("room file must be a YAML mapping") and a duplicate id's reason ("in this
   room"). The rename left them alone because it changes no behaviour, and each is commented. Saying
   zone is a wording change that the inventory walks would need to check, so it is its own step. The
   `rooms/` folder rename is still the seed-sized question the spec records.
+  - Closed 2026-11-10 (#70): the core's user-facing messages say zone, five in all. The folder rename is
+    the next entry's.
 - 2026-11-08 (phase 6 close): repositories still keep their zones in a `rooms/` folder beside
   `inventory.yaml`, and Context Manager's routes and API paths say room. Renaming the folder means a
   migration across existing repositories: detection would read both folders, and a check-in or a
   one-off pull request would move the files. The routes would need redirects. The question is
   seed-sized and has no card yet.
+  - Moved 2026-11-10 to the seed [inventory's `zones/` folder](../../tasks/unassigned/seeds/inventory-zones-folder.md).
 - 2026-11-09 (inventory-rules): the inventory elements' op types stay loose
   (`Record<string, unknown>` for an item and its changes). The harness casts them to the core's
   `AddInventoryItemInput` and `UpdateInventoryItemInput`. Tightening them touches the element's form
   code.
+  - Moved 2026-11-10 to the seed [typed inventory element ops](../../tasks/unassigned/seeds/inventory-element-op-types.md).
 - 2026-11-10 (tasks-rules step 2): `fix-references` is not in `describeAppCore`'s round trip for
   tasks, since it needs a pending move and the fixtures' snapshots have none. `reorder-pool` is left
   out too, for the 2026-11-04 entry's reason.
+  - Closed 2026-11-10 (#69): the round trip takes an op's `snapshot` fields, and fix-references, a
+    reorder and a pool prune joined it: every tasks op is held to it.
 - 2026-11-10 (tasks-rules step 3): the task board harness on `tasksCore` was checked with throwaway
   node and jsdom tests, not clicked through in a browser. The next harness change should drive it in
   Chromium, light and dark, as phase 6 did for inventory.
+  - Closed 2026-11-10: driven in headless Chromium before the stage close, every fixture in light and
+    dark with no console errors, and the board's and the strip's ops through the core (40 checks,
+    recorded on #69).
