@@ -30,20 +30,35 @@ export interface TableRenderOptions {
   presentation: SheetPresentation;
 }
 
+/**
+ * Put `surface` in the root after the table stylesheet. The stylesheet stays
+ * mounted across renders: a style element re-inserted is parsed again, and the
+ * editor renders on every committed edit.
+ */
+export function mountSurface(root: ShadowRoot, surface: Node): void {
+  const first = root.firstElementChild;
+  if (first instanceof HTMLStyleElement && first.dataset.sheetStyles !== undefined) {
+    while (first.nextSibling) first.nextSibling.remove();
+    root.append(surface);
+    return;
+  }
+  const style = document.createElement('style');
+  style.dataset.sheetStyles = '';
+  style.textContent = tableStyles;
+  root.replaceChildren(style, surface);
+}
+
 export function renderTable(
   root: ShadowRoot,
   model: CsvParseResult,
   options: TableRenderOptions
 ): void {
-  const style = document.createElement('style');
-  style.textContent = tableStyles;
-
   const surface = document.createElement('div');
   surface.className = `sheet-surface${options.addressed ? ' sheet-surface--addressed' : ''}`;
 
   if (!model.ok) {
     surface.append(createMessage(model.error.message, 'error'));
-    root.replaceChildren(style, surface);
+    mountSurface(root, surface);
     return;
   }
 
@@ -62,7 +77,7 @@ export function renderTable(
   if (model.totalRows === 0 || model.maxColumns === 0) {
     surface.append(createMessage(options.emptyMessage, 'empty'));
     if (!validation.ok) surface.append(createInvalidPresentationNotice());
-    root.replaceChildren(style, surface);
+    mountSurface(root, surface);
     return;
   }
 
@@ -137,7 +152,7 @@ export function renderTable(
   }
   if (describedBy.length > 0) scroll.setAttribute('aria-describedby', describedBy.join(' '));
 
-  root.replaceChildren(style, surface);
+  mountSurface(root, surface);
 }
 
 export function appendColumnGroups(

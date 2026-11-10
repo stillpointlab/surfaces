@@ -258,7 +258,9 @@ describe('sheet-editor CSV quick editing', () => {
     expect(listener).toHaveBeenCalledTimes(3);
   });
 
-  it('bounds committed transaction history to the latest 100 edits', () => {
+  // 101 edits and 101 undos through the DOM, each a render: about a second
+  // alone, and several times that under a full parallel run.
+  it('bounds committed transaction history to the latest 100 edits', { timeout: 20_000 }, () => {
     const element = create('0');
     for (let index = 1; index <= 101; index += 1) {
       pointerDown(dataCell(element, 0, 0));
