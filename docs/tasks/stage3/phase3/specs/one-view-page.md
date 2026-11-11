@@ -7,7 +7,7 @@ tags: [apps, host-contract, code]
 # Spec: one view page
 
 _The [generic app host brief](../../phase1/briefs/generic_app_host.md), desired outcome 4. After
-[one-op-route](../../phase2/specs/one-op-route.md), whose registration it extends. Inventory, then tasks._
+[one-op-route](one-op-route.md), whose registration it extends. Inventory, then tasks._
 
 ## High-level goal
 
@@ -74,7 +74,7 @@ interface ClientAppEntry {
 
 - reads the embedded state and the view;
 - `load`s and `mount`s the app;
-- answers core ops through the route from [one-op-route](../../phase2/specs/one-op-route.md);
+- answers core ops through the route from [one-op-route](one-op-route.md);
 - answers host ops through the entry's handlers;
 - wires the entry's requests.
 

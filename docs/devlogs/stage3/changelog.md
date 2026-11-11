@@ -82,3 +82,68 @@ files, +1,407/−29. Two Context Manager PRs moved and closed backlog cards.
 - The pool was projected through the tasks core after the move: 39 cards, no warnings.
 - Stage 2's session transcript, through the `stage2-complete` tag, was backed up to Context Manager
   with its 95 output files linked.
+
+---
+
+## Phase 2: The app module, and inventory through one op route (`stage3-phase2-complete`)
+
+Range: `stage3-phase1-complete..stage3-phase2-complete` (`37fb615..20771ae`), 2026-11-11: two
+merges here (the phase 1 close and the app module), 46 files, +1,051/−374. Context Manager's two
+PRs carry the rest: context-manager#1128 (+99/−60) and context-manager#1134 (+1,947/−1,599).
+
+### Shipped
+
+- [app-module](../../tasks/stage3/phase2/specs/app-module.md)
+  ([#79](https://github.com/stillpointlab/surfaces/pull/79)), in three commits:
+  - **Results everywhere:** the lifecycle's validation, both manifest parsers and the inventory zone
+    writer answer `Result`, with every manifest error kept in `details`.
+  - **DOM-free op maps:** the elements' op lists moved to `elementOps.ts` in each app, and
+    inventory's item ops use the core's own input types.
+  - **The module:** `AppModule` in `common-format/app` (`coreOps`, `hostOps`, `toCoreOp`, `reply`,
+    `refusalClass`), with `inventoryModule` and `tasksModule`. One in-memory host
+    (`tooling/harness/memory-host.ts`) answers either app through its module, so the harness has
+    no per-app answering code left.
+- Context Manager adopted the module (context-manager#1128): one `refusalStatus` maps a refusal's
+  class to 404, 409 or 400, replacing both apps' status tables.
+- [one-op-route](../../tasks/stage3/phase3/specs/one-op-route.md), step 1 (context-manager#1134):
+  - the app registry, which the repo-view lifecycle now reads its adapters from;
+  - a shared instance file loader;
+  - the generic host and `POST …/views/:instance/ops`;
+  - one seed helper for both apps.
+
+  Inventory's four op endpoints and the service's op methods are gone; its page sends every core op
+  to the route unchanged. Step 2 (tasks) and the spec moved to phase 3.
+
+### Decisions
+
+- **Codes go out as the core answers them.** For inventory that changed four answers:
+  - an item op on a missing zone is 404 `INVENTORY_ZONE_NOT_FOUND` with the core's message;
+  - every op on a gone manifest is 404 `INVENTORY_MANIFEST_NOT_FOUND`;
+  - a link that yields no good is 409 `APP_FILE_NOT_LINKED`;
+  - add zone answers 200 with the space only (the page never read the slug).
+- **The host checks every change is inside the instance before it links anything.** A test caught
+  the host linking first.
+- **Two departures from the spec, open until Jamie's review of the whole stage** (Jamie: "fine for
+  now"):
+  - the op's fields are still bounded in Context Manager, by the app's `opSchema`, because the core
+    trusts typed input;
+  - the registration is a constant (module, flag, adapter) plus a per-app `AppHostEntry` of hooks
+    bound where the services are built.
+
+### Testing & review
+
+- Tests here: 1,897 → 1,929. Both harnesses were driven headlessly in Chromium, light and dark:
+  inventory 52 checks, tasks 40.
+- Context Manager: 4,441 tests after the adoption, 4,456 after step 1. The op cases the inventory
+  service's tests covered now run through the host and the registry.
+- **Walks, run after each Context Manager PR merged its pin:**
+  - #1128: inventory 38/38. Tasks passed everywhere except walk 29, which failed once and passed on
+    a rerun. Its refresh synced a second after the walk's push, and GitHub still served the old head.
+  - #1134: inventory 38/38. Tasks passed everywhere except walk 06, which failed once and passed when
+    the suite resumed from it. The walk waits a fixed 3 s after Refresh, and the sync finished
+    half a second later.
+
+  Both failures were timing in the walks, not the changes. Each walk could poll instead of waiting a
+  fixed time.
+
+- This phase's transcript waits for the stage close, with the rest of stage 3's.
