@@ -7,7 +7,7 @@ tags: [apps, host-contract, code]
 # Spec: one check-in endpoint and job
 
 _The [generic app host brief](../../phase1/briefs/generic_app_host.md), desired outcome 6: option C. Can land
-any time after [one-op-route](../../phase2/specs/one-op-route.md)'s registry._
+any time after [one-op-route](../../phase3/specs/one-op-route.md)'s registry._
 
 ## High-level goal
 

@@ -1,5 +1,7 @@
 ---
-column: todo
+column: done
+pr: 79
+completed: 2026-11-11
 created: 2026-11-10T14:53:28-07:00
 tags: [apps, host-contract, common, code]
 ---
@@ -7,7 +9,7 @@ tags: [apps, host-contract, common, code]
 # Spec: the app module
 
 _The [generic app host brief](../../phase1/briefs/generic_app_host.md), desired outcome 1. The first spec:
-[one-op-route](one-op-route.md) and every spec after it register these modules._
+[one-op-route](../../phase3/specs/one-op-route.md) and every spec after it register these modules._
 
 ## High-level goal
 
@@ -110,7 +112,7 @@ their per-app reply switches go.
   - Not-found refusals carry the core's message instead of Context Manager's `NotFoundError`
     wording.
 
-  [one-op-route](one-op-route.md) checks the client and the walks for either before switching. If
+  [one-op-route](../../phase3/specs/one-op-route.md) checks the client and the walks for either before switching. If
   something relies on the old forms, the module maps them back.
 
 - **The module is a value, not a class:** `inventoryModule` and `tasksModule`, exported from each
@@ -120,23 +122,23 @@ their per-app reply switches go.
 
 ## Non-goals
 
-- Context Manager running the modules: that is [one-op-route](one-op-route.md).
+- Context Manager running the modules: that is [one-op-route](../../phase3/specs/one-op-route.md).
 - The create form: [create-from-the-app](../../phase4/specs/create-from-the-app.md).
 - Any change to what the elements ask or render.
 
 ## Acceptance / completion checklist
 
-- [ ] `AppModule` and `RefusalClass` are exported from `common-format/app`, which still imports
+- [x] `AppModule` and `RefusalClass` are exported from `common-format/app`, which still imports
       nothing else from `common`'s runtime.
-- [ ] `inventoryModule` and `tasksModule` exist, and every element op is either a core op or a
+- [x] `inventoryModule` and `tasksModule` exist, and every element op is either a core op or a
       host op of its module.
-- [ ] Both harness hosts run on the generic memory host with no per-app reply code. A headless drive
+- [x] Both harness hosts run on the generic memory host with no per-app reply code. A headless drive
       of both harnesses in Chromium passes, as stage 2's did.
-- [ ] `validateAndScope`, both manifest parses and the zone writer answer `Result`.
-- [ ] The inventory element ops use the core's input types, with no casts.
-- [ ] Context Manager is green on the new pin, every refusal code keeps its status, and both walk
+- [x] `validateAndScope`, both manifest parses and the zone writer answer `Result`.
+- [x] The inventory element ops use the core's input types, with no casts.
+- [x] Context Manager is green on the new pin, every refusal code keeps its status, and both walk
       suites were run.
-- [ ] `npm run check` green here.
+- [x] `npm run check` green here.
 
 ## Implementation plan
 

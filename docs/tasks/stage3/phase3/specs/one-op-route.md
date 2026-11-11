@@ -1,5 +1,5 @@
 ---
-column: todo
+column: in-progress
 created: 2026-11-10T14:53:28-07:00
 tags: [apps, host-contract, code]
 ---
@@ -7,7 +7,17 @@ tags: [apps, host-contract, code]
 # Spec: the registration and one op route
 
 _The [generic app host brief](../../phase1/briefs/generic_app_host.md), desired outcomes 2 and 3. After
-[app-module](app-module.md). Two steps, each one Context Manager PR: inventory, then tasks._
+[app-module](../../phase2/specs/app-module.md). Two steps, each one Context Manager PR: inventory, then tasks._
+
+**Step 1 is done** (context-manager#1134, stage 3 phase 2): inventory runs through the registry, the
+host and the route. Step 2, tasks, is this phase's. Step 1 departed from this spec in two places,
+both open until Jamie's review of the whole stage:
+
+- **The op's fields are bounded in Context Manager.** Each app's host entry may carry an `opSchema`;
+  inventory's keeps the retired endpoints' bounds, because the core trusts typed input.
+- **The registration is two pieces.** A constant (module, flag, adapter) that the lifecycle reads,
+  and an `AppHostEntry` (`opSchema`, `load`, `facts`, `overlay`, `move`) bound where the services
+  are built.
 
 ## High-level goal
 
@@ -116,7 +126,7 @@ behind them go. `runManifestOp`'s link-then-rerun becomes step 3 above. What sta
 
 ## Clarifications
 
-- **Codes go out as the core answers them** ([app-module](app-module.md)). Two things change:
+- **Codes go out as the core answers them** ([app-module](../../phase2/specs/app-module.md)). Two things change:
   - tasks' `MANIFEST_UNPATCHABLE` becomes `TASKS_MANIFEST_UNPATCHABLE` or `TASKS_ID_IMMUTABLE`;
   - not-found refusals carry the core's message.
 
@@ -135,7 +145,7 @@ behind them go. `runManifestOp`'s link-then-rerun becomes step 3 above. What sta
 
 - Host ops through the generic route: they keep their endpoints. Moving them is
   [the minimum ADR](../../phase5/specs/app-host-adr.md)'s question.
-- The pages themselves: [one-view-page](../../phase3/specs/one-view-page.md).
+- The pages themselves: [one-view-page](one-view-page.md).
 - Create and check-in: [create-from-the-app](../../phase4/specs/create-from-the-app.md) and
   [checkin-endpoint](../../phase4/specs/checkin-endpoint.md).
 
@@ -153,5 +163,6 @@ behind them go. `runManifestOp`'s link-then-rerun becomes step 3 above. What sta
 
 ## Implementation plan
 
-1. Context Manager PR: the registry, host, route and seed helper, inventory switched, walked.
+1. Context Manager PR: the registry, host, route and seed helper, inventory switched, walked
+   (done: context-manager#1134).
 2. Context Manager PR: tasks switched, walked.
