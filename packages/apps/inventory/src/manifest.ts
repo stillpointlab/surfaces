@@ -1,3 +1,4 @@
+import { manifestFailure } from '@stillpointlab/common-format/app';
 import { MAX_SHEET_DECIMAL_PLACES } from '@stillpointlab/sheet-format/presentation';
 import { parse as parseYaml } from 'yaml';
 import { z } from 'zod';
@@ -16,6 +17,7 @@ import type {
   SharedInventoryManifestV1,
   SharedInventoryManifestV2,
 } from './types.js';
+import type { ManifestFailure } from '@stillpointlab/common-format/app';
 
 /**
  * Version-discriminated `inventory.yaml` parsing. V1 intentionally retains
@@ -226,9 +228,23 @@ const manifestV2InputSchema = z
 const KNOWN_V1_TOP_LEVEL_KEYS = new Set(['version', 'label', 'currency', 'fields', 'containers']);
 const KNOWN_V1_FIELD_KEYS = new Set(['id', 'label', 'type']);
 
+/**
+ * A parsed manifest, or `INVENTORY_MANIFEST_INVALID` with every error in
+ * `details`. A refusal keeps the version the file declares, when it declares
+ * one, so a reader can recover a version 1 inventory.
+ */
 export type InventoryManifestParseResult =
   | { ok: true; manifest: SharedInventoryManifest; warnings: string[] }
-  | { ok: false; errors: string[]; declaredVersion?: number };
+  | (ManifestFailure & { declaredVersion?: number });
+
+/** A refusal of `inventory.yaml`, keeping the declared version when there is one. */
+function invalidInventoryManifest(
+  errors: string[],
+  declaredVersion?: number
+): ManifestFailure & { declaredVersion?: number } {
+  const failure = manifestFailure('INVENTORY_MANIFEST_INVALID', 'inventory.yaml', errors);
+  return declaredVersion === undefined ? failure : { ...failure, declaredVersion };
+}
 
 function collectLegacyUnknownKeyWarnings(raw: Record<string, unknown>): string[] {
   const warnings: string[] = [];
@@ -269,14 +285,10 @@ export function parseInventoryManifest(content: string): InventoryManifestParseR
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     const declaredVersion = sourceVersionEvidence(content);
-    return {
-      ok: false,
-      errors: [`YAML parse error: ${message}`],
-      ...(declaredVersion !== undefined ? { declaredVersion } : {}),
-    };
+    return invalidInventoryManifest([`YAML parse error: ${message}`], declaredVersion);
   }
   if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
-    return { ok: false, errors: ['manifest must be a YAML mapping'] };
+    return invalidInventoryManifest(['manifest must be a YAML mapping']);
   }
 
   const record = raw as Record<string, unknown>;
@@ -288,7 +300,7 @@ export function parseInventoryManifest(content: string): InventoryManifestParseR
   if (record.version === 1) {
     const parsed = legacyManifestSchema.safeParse(record);
     if (!parsed.success) {
-      return { ok: false, errors: formatIssues(parsed.error), declaredVersion: 1 };
+      return invalidInventoryManifest(formatIssues(parsed.error), 1);
     }
     return {
       ok: true,
@@ -300,7 +312,7 @@ export function parseInventoryManifest(content: string): InventoryManifestParseR
   if (record.version === 2) {
     const parsed = manifestV2InputSchema.safeParse(record);
     if (!parsed.success) {
-      return { ok: false, errors: formatIssues(parsed.error), declaredVersion: 2 };
+      return invalidInventoryManifest(formatIssues(parsed.error), 2);
     }
     return { ok: true, manifest: parsed.data, warnings: [] };
   }
@@ -309,9 +321,5 @@ export function parseInventoryManifest(content: string): InventoryManifestParseR
     declaredVersion === undefined
       ? 'version: expected 1 or 2'
       : `version: ${declaredVersion} is not supported`;
-  return {
-    ok: false,
-    errors: [versionMessage],
-    ...(declaredVersion !== undefined ? { declaredVersion } : {}),
-  };
+  return invalidInventoryManifest([versionMessage], declaredVersion);
 }

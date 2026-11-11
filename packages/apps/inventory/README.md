@@ -69,6 +69,13 @@ inventory's refusal.
 `seed` (`planInventoryCreate`). The harness's host goes through it; Context Manager calls the named
 functions. The app-core test holds every op to the contract's round trip.
 
+**The module.** `inventoryModule` is the app as a host runs it (`AppModule`): the four ops above are
+the core's, and `link-editor` is the host's. An item op is answered with the zone after it, a new
+zone with the overview. Refusals keep the statuses Context Manager's endpoints send: a missing
+zone is not found, an item gone since the state was read is a conflict. The elements' op map
+(`InventoryOps`) lives in `elementOps.ts`, DOM-free, and types an item and its edit with the core's
+`AddInventoryItemInput` and `UpdateInventoryItemInput`.
+
 ## Element
 
 `@stillpointlab/inventory-app/element` registers two elements. It imports `./types`, `./paths`,
@@ -114,8 +121,8 @@ wherever it lands.
 
 In the harness (`npm run dev`, "inventory"), two example inventories in `dev/examples/` run on the
 core: a configured workshop and a legacy house (with a duplicate id, a read-only item, a read-only
-file and a parse error). An in-memory host keeps their files, answers every op with the core's
-rules, writes the changes back and re-projects, so an edit shows on each example fixture until the
+file and a parse error). The harness's memory host keeps their files, answers every op through
+`inventoryModule`, writes the changes back and re-projects, so an edit shows on each example fixture until the
 page reloads. Hand-built fixtures cover the cases files alone do not show (local changes, a disabled
 space, no inventory, hostile strings) and the element tests' states; the host refuses their ops.
 The controls switch the host off or make it refuse the next op.

@@ -52,7 +52,7 @@ export function planInventoryCreate(input: CreateInventoryInput): Result<Invento
   const manifestContent = manifestSeedContent(seed);
   const validation = parseInventoryManifest(manifestContent);
   if (!validation.ok || validation.manifest.version !== 2) {
-    const errors = validation.ok ? ['the generated manifest is not version 2'] : validation.errors;
+    const errors = validation.ok ? ['the generated manifest is not version 2'] : validation.details;
     return fail('INVENTORY_MANIFEST_INVALID', errors.join('; '));
   }
 

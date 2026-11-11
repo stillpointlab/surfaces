@@ -1,14 +1,14 @@
-// An in-memory host for the harness: it keeps an inventory's files in memory,
-// answers the elements' ops with the inventory core's `apply` (the app
-// contract's), writes the changes back and re-projects with its `project`.
-// There are no drafts, check-in or repository: a changed file is marked dirty,
-// as a host marks it until check-in. A hand-built state has no files, so its
-// ops are refused.
+// The harness's inventory host: an inventory's files in memory, answered
+// through the inventory module by the harness's one memory host. There are no
+// drafts, check-in or repository: a changed file is marked dirty, as a host
+// marks it until check-in. A hand-built state has no files, so its ops are
+// refused.
 import { answerOps, fail, ok } from '@stillpointlab/common-format/app';
 
+import { memoryAnswer } from '../../../../tooling/harness/memory-host';
 import { inventoryCore } from '../src/core.js';
+import { inventoryModule } from '../src/module.js';
 
-import type { InventoryCoreOps } from '../src/core.js';
 import type { InventoryOps } from '../src/element/index.js';
 import type { InventoryHostFacts, InventorySnapshot } from '../src/space.js';
 import type {
@@ -16,7 +16,7 @@ import type {
   SharedInventorySpace,
   SharedInventoryZoneState,
 } from '../src/types.js';
-import type { AppCoreOp, AppOp, FileChange, Result } from '@stillpointlab/common-format/app';
+import type { AppOp, FileChange, Result } from '@stillpointlab/common-format/app';
 
 export interface Workspace {
   snapshot: { manifestPath: string; paths: string[]; files: Record<string, string | null> };
@@ -86,31 +86,25 @@ export function attachHost(elements: readonly HTMLElement[]): HarnessHost {
   let stops: (() => void)[] = [];
   let failCode: string | null = null;
 
+  const inMemory = memoryAnswer({
+    module: inventoryModule,
+    workspace: () =>
+      ws && {
+        snapshot: ws.snapshot,
+        facts: () => facts(ws!),
+        write: (changes) => write(ws!, changes),
+      },
+    // Linking is a host's own business: the harness's editor is an anchor.
+    hostOps: { 'link-editor': (op) => ok({ href: `#editor:${op.path as string}` }) },
+  });
+
   const answer = (op: AppOp<InventoryOps>): Result<object> => {
     if (failCode !== null) {
       const code = failCode;
       failCode = null;
       return fail(code, `The harness refused this op (${code})`);
     }
-    // Linking is a host's own business: the harness's editor is an anchor.
-    if (op.type === 'link-editor') return ok({ href: `#editor:${op.path}` });
-    if (!ws) {
-      return fail(
-        'HARNESS_NO_FILES',
-        'This state is hand-built: the harness has no files to change.'
-      );
-    }
-    // The elements' ops are the core's: their `item` and `changes` are the
-    // bodies a host's endpoints take, which are the core's inputs.
-    const result = inventoryCore.apply(ws.snapshot, op as AppCoreOp<InventoryCoreOps>);
-    if (!result.ok) return result;
-    write(ws, result.changes);
-    if (op.type === 'add-zone') {
-      const space = spaceOf(ws);
-      return space ? ok({ space }) : fail('NOT_FOUND', 'The inventory is gone');
-    }
-    const state = zoneOf(ws, op.path);
-    return state ? ok({ state }) : fail('NOT_FOUND', `No zone at ${op.path}`);
+    return inMemory(op);
   };
 
   const setAnswering = (on: boolean): void => {

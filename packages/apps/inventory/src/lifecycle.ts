@@ -13,7 +13,7 @@ export const inventoryLifecycle: AppLifecycle = {
   manifestName: 'inventory.yaml',
   validateAndScope: (content, nodes, manifestPath) => {
     const parsed = parseInventoryManifest(content);
-    if (!parsed.ok) return { ok: false, errors: parsed.errors };
+    if (!parsed.ok) return parsed;
     const detection = detectInventoryAt(manifestPath, nodes);
     const scope = new Set<string>([
       detection.manifestPath,

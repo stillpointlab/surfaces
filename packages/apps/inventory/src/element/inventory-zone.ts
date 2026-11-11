@@ -34,7 +34,7 @@ import {
 } from './render.js';
 import { CHECKIN_REQUEST_EVENT, RELOAD_REQUEST_EVENT } from './types.js';
 
-import type { InventoryOps } from './types.js';
+import type { InventoryItemChanges, InventoryItemInput, InventoryOps } from './types.js';
 import type {
   SharedInventoryFieldV2,
   SharedInventoryItem,
@@ -438,7 +438,7 @@ export class InventoryZone extends InventoryElement<ZoneState> implements AppEle
       fieldValues[input.dataset.fieldId!] = value;
     }
 
-    let item: Record<string, unknown> = {
+    let item: InventoryItemInput = {
       title,
       ...(Object.keys(fieldValues).length > 0 ? { fieldValues } : {}),
     };
@@ -531,7 +531,7 @@ export class InventoryZone extends InventoryElement<ZoneState> implements AppEle
     if (!item || !state || state.schema.mode === 'invalid') return;
     const formHost = this.formHost();
     const error = formHost.querySelector<HTMLElement>('#inventory-item-error');
-    let changes: Record<string, unknown>;
+    let changes: InventoryItemChanges;
     if (state.schema.mode === 'configured') {
       const collected = collectConfiguredChanges(formHost, item, state.schema);
       if (collected.error) {

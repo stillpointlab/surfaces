@@ -15,7 +15,7 @@ import {
 
 import { editorRecoveryHtml } from './render.js';
 
-import type { InventoryLinks } from './types.js';
+import type { InventoryItemChanges, InventoryLinks } from './types.js';
 import type {
   SharedInventoryExtraField,
   SharedInventoryFieldV2,
@@ -337,13 +337,13 @@ export function handleExtraTypeChange(target: HTMLElement): void {
 export function collectLegacyChanges(
   form: HTMLElement,
   item: SharedInventoryItem
-): Record<string, unknown> {
+): InventoryItemChanges {
   const value = (name: string): string =>
     (form.querySelector<HTMLInputElement>(`input[name="${name}"]`)?.value ?? '').trim();
-  const changes: Record<string, unknown> = {};
+  const changes: InventoryItemChanges = {};
   const title = value('title');
   if (title !== item.title) changes.title = title;
-  const numeric = (name: string, current: number | undefined): void => {
+  const numeric = (name: 'value', current: number | undefined): void => {
     const raw = value(name);
     const next = raw === '' ? null : Number(raw);
     if (next === null ? current !== undefined : next !== current) changes[name] = next;
@@ -388,8 +388,8 @@ export function collectConfiguredChanges(
   form: HTMLElement,
   item: SharedInventoryItem,
   schema: ConfiguredSchema
-): { changes?: Record<string, unknown>; error?: { message: string; input?: HTMLElement } } {
-  const changes: Record<string, unknown> = {};
+): { changes?: InventoryItemChanges; error?: { message: string; input?: HTMLElement } } {
+  const changes: InventoryItemChanges = {};
   const titleInput = form.querySelector<HTMLInputElement>('input[name="title"]');
   const title = titleInput?.value.trim() ?? '';
   if (title === '')

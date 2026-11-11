@@ -6,7 +6,11 @@
 // `services/tasks/lifecycle.ts`, without the host's own fields.
 
 import { detectBoards, detectPool, kindPathsOf } from './boardDetection.js';
-import { parseTasksManifest, validateManifestAgainstTree } from './manifest.js';
+import {
+  invalidTasksManifest,
+  parseTasksManifest,
+  validateManifestAgainstTree,
+} from './manifest.js';
 import { BUILTIN_TASK_KINDS } from './types.js';
 
 import type { SharedTaskBoardDescriptor } from './types.js';
@@ -22,9 +26,9 @@ export const tasksLifecycle: AppLifecycle<TasksInstanceDetail> = {
   manifestName: 'tasks.yaml',
   validateAndScope: (content, nodes, manifestPath) => {
     const parsed = parseTasksManifest(content);
-    if (!parsed.ok) return { ok: false, errors: parsed.errors };
+    if (!parsed.ok) return parsed;
     const treeErrors = validateManifestAgainstTree(parsed.manifest, nodes);
-    if (treeErrors.length > 0) return { ok: false, errors: treeErrors };
+    if (treeErrors.length > 0) return invalidTasksManifest(treeErrors);
 
     const kinds = parsed.manifest.kinds;
     const scope = new Set<string>([

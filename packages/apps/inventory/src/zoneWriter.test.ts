@@ -262,7 +262,8 @@ describe('appendItem', () => {
     const result = appendItem('items: [a]\n', { id: 'x', title: 'X' });
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.reason).toMatch(/flow/);
+    expect(result.code).toBe('INVENTORY_ROOM_READ_ONLY');
+    expect(result.message).toMatch(/flow/);
   });
 
   it('what the writer emits it can always re-scan', () => {
@@ -377,15 +378,16 @@ describe('patchItem', () => {
 
   it('reports an unknown id as notFound', () => {
     const result = patchItem(KITCHEN, 'ghost', { value: 1 });
-    expect(result).toEqual({ ok: false, notFound: true });
+    expect(result).toMatchObject({ ok: false, code: 'INVENTORY_ITEM_NOT_FOUND' });
   });
 
   it('refuses a per-item read-only entry with its reason', () => {
     const content = 'items:\n  - id: a\n    title: *name\n';
     const result = patchItem(content, 'a', { value: 1 });
     expect(result.ok).toBe(false);
-    if (result.ok || result.notFound) return;
-    expect(result.reason).toMatch(/aliases/);
+    if (result.ok) return;
+    expect(result.code).toBe('INVENTORY_ITEM_READ_ONLY');
+    expect(result.message).toMatch(/aliases/);
   });
 
   it('round-trips: parse(patch(file)) reflects exactly the edits', () => {
@@ -472,7 +474,10 @@ describe('deleteItem', () => {
   });
 
   it('reports an unknown id as notFound', () => {
-    expect(deleteItem(KITCHEN, 'ghost')).toEqual({ ok: false, notFound: true });
+    expect(deleteItem(KITCHEN, 'ghost')).toMatchObject({
+      ok: false,
+      code: 'INVENTORY_ITEM_NOT_FOUND',
+    });
   });
 });
 

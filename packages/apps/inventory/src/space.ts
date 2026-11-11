@@ -93,7 +93,7 @@ function resolveSchema(content: string | null): {
   if (parsed.declaredVersion === 1) {
     return {
       schema: { mode: 'legacy', manifest: LEGACY_RECOVERY_MANIFEST },
-      manifestErrors: parsed.errors,
+      manifestErrors: parsed.details,
       warnings: [],
     };
   }
@@ -101,7 +101,7 @@ function resolveSchema(content: string | null): {
     schema: {
       mode: 'invalid',
       ...(parsed.declaredVersion !== undefined ? { declaredVersion: parsed.declaredVersion } : {}),
-      errors: parsed.errors,
+      errors: parsed.details,
     },
     manifestErrors: [],
     warnings: [],

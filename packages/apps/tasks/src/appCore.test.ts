@@ -152,7 +152,7 @@ const surfacesShaped = {
 /** Mount the way Context Manager's tasks lifecycle derives the scope. */
 function mount(files: AppFixture, manifestPath: string): AppMountResult {
   const parsed = parseTasksManifest(files[manifestPath] ?? '');
-  if (!parsed.ok) return { ok: false, errors: parsed.errors };
+  if (!parsed.ok) return { ok: false, errors: parsed.details };
   const nodes: TreeNode[] = Object.keys(files).map((path) => ({ path, type: 'blob' }));
   const treeErrors = validateManifestAgainstTree(parsed.manifest, nodes);
   if (treeErrors.length > 0) return { ok: false, errors: treeErrors };

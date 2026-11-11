@@ -145,7 +145,7 @@ describe('parseInventoryManifest', () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.declaredVersion).toBe(2);
-    expect(result.errors.join(' ')).toContain(path);
+    expect(result.details.join(' ')).toContain(path);
   });
 
   it.each([
@@ -184,7 +184,7 @@ describe('parseInventoryManifest', () => {
     const result = parseInventoryManifest(yaml);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.errors.join(' ')).toContain(message);
+    expect(result.details.join(' ')).toContain(message);
   });
 
   it.each([
@@ -238,7 +238,7 @@ describe('parseInventoryManifest', () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.declaredVersion).toBe(2);
-    expect(result.errors.join(' ')).toContain(message);
+    expect(result.details.join(' ')).toContain(message);
   });
 
   it('enforces the configured field cap before zone parsing', () => {
@@ -249,31 +249,33 @@ describe('parseInventoryManifest', () => {
     const result = parseInventoryManifest(`version: 2\nfields:\n${fields}\n`);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.errors.join(' ')).toContain('100');
+    expect(result.details.join(' ')).toContain('100');
   });
 
   it('carries version evidence on validation and YAML failures', () => {
     const future = parseInventoryManifest('version: 99\n');
     expect(future).toEqual({
       ok: false,
+      code: 'INVENTORY_MANIFEST_INVALID',
+      message: 'Invalid inventory.yaml: version: 99 is not supported',
       declaredVersion: 99,
-      errors: ['version: 99 is not supported'],
+      details: ['version: 99 is not supported'],
     });
     const brokenV2 = parseInventoryManifest('version: 2\nfields: [unclosed');
     expect(brokenV2.ok).toBe(false);
     if (brokenV2.ok) return;
     expect(brokenV2.declaredVersion).toBe(2);
-    expect(brokenV2.errors[0]).toMatch(/YAML parse error/);
+    expect(brokenV2.details[0]).toMatch(/YAML parse error/);
   });
 
   it('rejects non-mapping and unrecognized-version documents neutrally', () => {
-    expect(parseInventoryManifest('- a list')).toEqual({
+    expect(parseInventoryManifest('- a list')).toMatchObject({
       ok: false,
-      errors: ['manifest must be a YAML mapping'],
+      details: ['manifest must be a YAML mapping'],
     });
-    expect(parseInventoryManifest('label: Missing version\n')).toEqual({
+    expect(parseInventoryManifest('label: Missing version\n')).toMatchObject({
       ok: false,
-      errors: ['version: expected 1 or 2'],
+      details: ['version: expected 1 or 2'],
     });
   });
 });

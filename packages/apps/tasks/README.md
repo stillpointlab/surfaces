@@ -127,6 +127,14 @@ holds every op to the contract's round trip; fixing references runs over a snaps
 move, laid on through the op's `snapshot`.
 `findTaskCard(tasks, path)` is a card's kind and where it sits, for a host that needs them.
 
+**The module.** `tasksModule` is the app as a host runs it (`AppModule`): the twelve ops above are
+the core's, and the host answers `resolve`, `scan-references`, `read-file`, `refresh-stage` and
+`close-candidates` itself. Its replies are what the board and the strip settle on: a card for a
+move or a new card, the pool of the view on screen for a reorder, the stage and phase for a new
+one. `create-card` is stamped with the host's time. Refusals keep the statuses Context Manager's
+endpoints send. The op maps both elements ask with (`TaskBoardOps`, `TasksNavOps`) live in
+`elementOps.ts`, DOM-free, and the element entry re-exports them.
+
 **Drafts.** When to rebase a diverged draft is the host's decision; the comparison is the core's.
 `metadataOnlyCheck(draft, base)` says whether a draft changes only its base's frontmatter, or
 answers the reconstruction the host formats its own way and compares with the draft.
@@ -220,8 +228,9 @@ places it.
   phase's cards outside the done column, all checked, and asking `close` with the checked paths.
   It is kept attached while the strip re-renders.
 
-In the harness (`npm run dev`, "tasks"), every fixture runs on the core: an in-memory host holds a
-folder's files, answers the board's and the strip's ops with `tasksCore.apply`, and re-projects,
+In the harness (`npm run dev`, "tasks"), every fixture runs on the core: the harness's memory host
+holds a folder's files, answers the board's and the strip's ops through `tasksModule`, and
+re-projects,
 laying on the facts a host would (a card it changed is changed and linked, a moved column is dirty,
 a moved card names its anchor). The fixtures cover every card state (a hand-built folder, with the
 few facts no file shows), the stage view, an empty board, this repository's own `docs/tasks/`,
