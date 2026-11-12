@@ -20,12 +20,24 @@ backlog pool as seeds.
   `RELOAD_REQUEST_EVENT` (it is declared in `tasks-nav.ts`; inventory's element entry exports its
   own). Context Manager's tasks app wires `'reload-request'` by name (context-manager#1157).
   Exporting it from the element entry is one line, and Context Manager can then import it.
+  - Closed 2026-11-12: exported from the element entry
+    ([#84](https://github.com/stillpointlab/surfaces/pull/84)), and Context Manager's tasks app
+    imports it (context-manager#1167).
 - 2026-11-12 (stage 3 phase 4 close): each app page's JavaScript grew 10–14 kB in Context Manager
   (context-manager#1162), because each app's `./element` entry now carries its create form and its
   checks, and the app page loads the whole entry. A separate `./create-element` entry would keep
   the form off the app pages and still load on demand in the create dialog. Worth doing if the
   growth matters.
+  - Closed 2026-11-12: the forms moved to `./create-element`
+    ([#84](https://github.com/stillpointlab/surfaces/pull/84)), which Context Manager's create
+    dialog loads on demand (context-manager#1167). The app chunks are back to 58.00 kB (inventory)
+    and 78.97 kB (tasks).
 - 2026-11-12 (stage 3 phase 4 close): Context Manager keeps the old check-in job names
   (`GIT_TASKS_CHECKIN`, `GIT_INVENTORY_CHECKIN`) as aliases of `GIT_APP_CHECKIN`, with their labels
   and the board's listener, for one release (`LEGACY_CHECKIN_JOBS`, context-manager#1163). Remove
   them after the first production release that carries `GIT_APP_CHECKIN`.
+  - Closed 2026-11-12: removed in context-manager#1167, once #1163 was live in production.
+
+Reviewed at stage close, 2026-11-12 (phase 6,
+[drain-followups](../../tasks/stage3/phase6/specs/drain-followups.md)): every entry above is
+closed. Nothing moved to the backlog pool.

@@ -1,7 +1,7 @@
 # Stage 3: The Generic App Host Changelog
 
-- **Dates:** 2026-11-10 – TBD
-- **Stage Tag:** TBD _(filled with `stage3-complete` at stage close)_
+- **Dates:** 2026-11-10 – 2026-11-12
+- **Stage Tag:** `stage3-complete` _(created on the merge of the stage close PR)_
 
 > Agent-drafted from evidence (merged PRs, git history, task cards). Appended per phase at phase
 > close. Regenerable at any time; see [devlogs](../README.md). Reflections do NOT belong here — they
@@ -11,7 +11,8 @@
 > Context Manager runs any app through one path (one op route, one page, one check-in endpoint),
 > driven by an app module and a per-app registration, so that inventory and tasks are named only in
 > their registrations and the few hooks that are truly theirs. Phase 1 holds the spike, the brief
-> and the specs; the work runs in phases 2–5.
+> and the specs; the work runs in phases 2–5. A sixth phase drained the stage's follow-ups before
+> it closed (Jamie).
 
 ---
 
@@ -302,4 +303,113 @@ Manager's two PRs carry the rest: context-manager#1162 (+1,012/−2,505) and #11
   - **#1163**, merged with main after #1162: inventory 38/38, and tasks walks 01–27 and 29 on the
     first try. That covers every check-in walk through `GIT_APP_CHECKIN`. An earlier run, on the
     branch before #1162 merged, was stopped so the walks would test the merged code.
-- This phase's transcript is backed up to Context Manager at the close.
+- This phase's transcript was backed up to Context Manager at the close (`conv_W5v4a2LXWbNn`).
+
+---
+
+## Phase 5: The minimum, written down (`stage3-phase5-complete`)
+
+No merges here: the phase's one spec is a Context Manager record, context-manager#1166. It was
+written after phase 4 and refreshed after phase 6, so it records the stage as finished.
+
+### Shipped
+
+- [app-host-adr](../../tasks/stage3/phase5/specs/app-host-adr.md): Context Manager's **ADR-0040,
+  "Apps through one host"** (context-manager#1166). It holds:
+  - the app module and the three registration entries per app (server registration, host entry,
+    client entry);
+  - the host's five steps;
+  - the six generic routes, the one page, create and check-in;
+  - the minimum that still names an app, each item with its reason and what would move it;
+  - an "adding an app" checklist, and the count below.
+
+  ADR-0025, ADR-0037 and ADR-0038 point to it. ADR-0037 was not in the spec, but it is the tasks
+  twin of ADR-0038.
+
+### Decisions
+
+- **Its own record**, answering the brief's last open question; the three older records point to it.
+- **Proposed, not Accepted:** it moves to Accepted when Jamie agrees the minimum it lists, which
+  the spec asks for. That agreement is open at the stage close.
+- **The departures stay listed for Jamie's review of the whole stage.** The ADR lists every
+  departure from the stage's specs in one place, with the two phase 6 resolved.
+
+### The count
+
+The same script read both commits. It counts:
+
+- non-test `.ts` and `.ejs` lines per area;
+- `router.<verb>` blocks, by the app their path names;
+- shared lines naming an app's id, flag, jobs or services.
+
+|                             | Before (`98608e57`, 2026-11-10) | After (`50b1d44b`, 2026-11-12)     |
+| --------------------------- | ------------------------------- | ---------------------------------- |
+| Wholly an app's             | 8,413 lines                     | 5,850 lines                        |
+| App endpoints               | 35                              | 5 (tasks 3, inventory's 2 exports) |
+| App mentions in shared code | 198 lines in 17 files           | 87 lines in 15 files               |
+| The generic host            | —                               | 1,776 lines                        |
+
+Most of what is left is the two check-in services (1,302 lines), tasks' board service (1,572) and
+the client halves (1,382). The spike's "about 9,100 lines" was tallied by hand from the same areas.
+
+---
+
+## Phase 6: The follow-ups drained (`stage3-phase6-complete`)
+
+Range: `stage3-phase4-complete..stage3-phase6-complete` (`31d498a..80d08af`), 2026-11-12: two
+merges here (the phase 4 close and [#84](https://github.com/stillpointlab/surfaces/pull/84)), 22
+files, +299/−50. Context Manager carried the rest: context-manager#1167 (merged), and the ADR
+refresh on #1166.
+
+### Shipped
+
+- [drain-followups](../../tasks/stage3/phase6/specs/drain-followups.md). Jamie asked to drain the
+  stage's follow-ups before it closed, rather than carry them forward:
+  1. **Tasks' reload event:** `@stillpointlab/tasks-app/element` exports `RELOAD_REQUEST_EVENT`
+     ([#84](https://github.com/stillpointlab/surfaces/pull/84)), and Context Manager imports it.
+  2. **The create forms off the app pages:** each app's form moved to a new `./create-element`
+     entry ([#84](https://github.com/stillpointlab/surfaces/pull/84)). Context Manager's create
+     dialog loads it on demand, so the app chunks are back to 58.00 kB (inventory) and 78.97 kB
+     (tasks).
+  3. **One enable route:** `POST …/views/enable { app, manifestPath }` replaces the two per-app
+     enable routes. The app's own flag gates it.
+  4. **The legacy check-in job names removed**, once context-manager#1163 was live in production.
+  5. **Walks that poll:**
+     - tasks walk 06 waits for the repo sync job instead of a fixed 3 s;
+     - walk 29 waits for GitHub's API to serve its pushed head before Refresh.
+
+     These were phase 2's two one-off walk failures.
+
+  Items 3–5 and the pin are context-manager#1167.
+
+- The follow-up log is drained: every entry closed.
+
+### Testing & review
+
+- Tests here: 1,973 → 1,978, from a guard per app that `./element` neither exports nor registers
+  the form. The harness's create fixtures were driven again in Chromium: 14/14.
+- Context Manager: all 4,707 tests pass after a full build.
+- **Walks for #1167:**
+  - inventory 38/38;
+  - tasks walks 01–26 on the first try;
+  - walk 27 was interrupted by a GitHub 502 on its merge. The merge had landed on scratch `main`,
+    but GitHub left #702 open.
+  - With Jamie's OK: #702 was closed by hand, and the PR a first rerun had opened (#703) was merged
+    and the repo refreshed. Walks 27 and 29 then passed.
+- This phase's transcript is backed up at the stage close, with the rest of the stage's.
+
+---
+
+## Stage totals
+
+- `313930f..80d08af` (`stage2-complete` to the last merge before the close): 25 commits, 11 of them
+  merges on `main`, 120 files, +4,900/−440. Eleven PRs merged here, #74 to #84.
+- Tests: 1,897 at stage 2's close to 1,978.
+- Context Manager carried the host side in eleven PRs: context-manager#1118 and #1120 (the backlog
+  review), #1128, #1134, #1142, #1153, #1157, #1162, #1163, #1167, and #1166 (ADR-0040).
+- **Every Context Manager code PR was walked**, both suites, after a full build and `e2e:reset`.
+  Every walk failure was the walks' timing or GitHub's, never the change:
+  - phase 2's two fixed waits, now polls;
+  - phase 6's 502.
+- **The app-named code:** 8,413 → 5,850 lines, 35 → 5 endpoints (phase 5).
+- No token or cost figures were collected.

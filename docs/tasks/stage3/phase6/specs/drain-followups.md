@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 'stillpointlab/context-manager#1167'
+completed: 2026-11-12
 created: 2026-11-12T15:30:00-07:00
 tags: [apps, host-contract, code]
 ---
@@ -42,13 +44,15 @@ ADR's minimum. Anything that can't be closed goes to the backlog pool as a seed 
 
 ## Acceptance / completion checklist
 
-- [ ] Items 1 and 2 merged here, with tests, and the harness still driving both create fixtures.
-- [ ] Items 1–3 (and 4 and 5 if they land) in one Context Manager PR, with both walk suites.
-- [ ] The follow-up log has each entry closed or moved to a seed.
-- [ ] ADR-0040's count and minimum refreshed after the Context Manager PR merges.
+- [x] Items 1 and 2 merged here, with tests, and the harness still driving both create fixtures
+      ([#84](https://github.com/stillpointlab/surfaces/pull/84)).
+- [x] Items 1–5 in one Context Manager PR, with both walk suites (context-manager#1167).
+- [x] The follow-up log has each entry closed or moved to a seed (all closed).
+- [x] ADR-0040's count and minimum refreshed after the Context Manager PR merges.
 
 ## Implementation plan
 
-1. Surfaces PR: items 1 and 2, and this spec.
-2. Context Manager PR: the pin, items 1–3, item 4 once released, item 5; walked.
+1. Surfaces PR: items 1 and 2, and this spec (done: #84).
+2. Context Manager PR: the pin, items 1–3, item 4 once released, item 5; walked (done:
+   context-manager#1167).
 3. ADR-0040 (context-manager#1166) refreshed; then the stage close drains the log.
