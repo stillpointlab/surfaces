@@ -9,7 +9,7 @@ import {
 } from '@stillpointlab/common-format/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { CREATE_VALIDITY_EVENT } from './inventory-create.js';
+import { CREATE_VALIDITY_EVENT } from './create.js';
 
 import type { InventoryCreate, InventoryCreateOps } from './inventory-create.js';
 import type { AppOp, Result } from '@stillpointlab/common-format/app';

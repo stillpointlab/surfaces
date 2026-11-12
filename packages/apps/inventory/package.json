@@ -39,6 +39,11 @@
       "types": "./dist/element.d.ts",
       "import": "./dist/element.js",
       "require": "./dist/element.cjs"
+    },
+    "./create-element": {
+      "types": "./dist/create-element.d.ts",
+      "import": "./dist/create-element.js",
+      "require": "./dist/create-element.cjs"
     }
   },
   "files": [

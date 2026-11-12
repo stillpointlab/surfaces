@@ -24,7 +24,7 @@ the folder and currency defaults, the field-id and currency patterns), and `./ty
 types. A client that needs only those imports them there: `.` builds the manifest's zod schemas at
 module scope, which a bundler cannot drop. `./create` is the create form's checks
 (`checkInventoryCreate`, with the limits and defaults the form shows); it imports only `./paths`.
-`./element` is the app's three elements (below).
+`./element` is the app's two elements, and `./create-element` its create form (below).
 
 The core was moved as-is from Context Manager (source commit `373a20ae`), and the elements followed
 (source commit `b73e3c59`). The rules that assemble a space and answer its ops followed in stage 2
@@ -81,8 +81,8 @@ zone is not found, an item gone since the state was read is a conflict. The elem
 
 ## Element
 
-`@stillpointlab/inventory-app/element` registers three elements. It imports `./types`, `./paths`,
-`./create`,
+`@stillpointlab/inventory-app/element` registers two elements, and `./create-element` the create
+form. They import `./types`, `./paths`, `./create`,
 `@stillpointlab/sheet-format/presentation` (number and currency formatting), `common-format/app`,
 `common-format/elements`, `common-format/html` and `@stillpointlab/modal-dialog-component`, never
 the core's root.
@@ -93,7 +93,7 @@ the core's root.
 - **`<spl-inventory-zone>`**: one zone's items (configured, legacy or neutral columns), a filter,
   quick add, the CSV export, and an item dialog (a `<modal-dialog>` inside the element) for editing
   fields and Other data or deleting the item. `setState(zone)` takes a `SharedInventoryZoneState`.
-- **`<spl-inventory-create>`**: the create form (below).
+- **`<spl-inventory-create>`**: the create form, from `./create-element` (below).
 
 All three settle (`whenReady()`, the `ready` attribute) once they have rendered a state, render in light
 DOM, and build their markup with `html` from `common-format/html`, so repository text is escaped
@@ -134,7 +134,8 @@ The controls switch the host off or make it refuse the next op.
 
 ### The create form
 
-`<spl-inventory-create>` is the inventory's own fields for a create: its name, its first zones, its
+`@stillpointlab/inventory-app/create-element` registers `<spl-inventory-create>`, apart from `./element` so a page that
+only shows the app does not load it. `<spl-inventory-create>` is the inventory's own fields for a create: its name, its first zones, its
 initial columns (with a currency code for Currency columns) and a total. A host lays it out in its
 create dialog beside the folder, which every app has, and answers its op.
 

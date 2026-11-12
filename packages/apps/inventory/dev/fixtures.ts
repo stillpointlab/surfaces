@@ -9,6 +9,7 @@
 // notifications show in the event log. Links are `#` anchors: the zone, export
 // and editor URLs belong to a host.
 import '../src/element/index.js';
+import '../src/element/create.js';
 import './host.css';
 
 import { answerCreate, CREATE_TARGETS } from '../../../../tooling/harness/create-host';
@@ -39,12 +40,8 @@ import type {
   HarnessFormat,
 } from '../../../../tooling/harness/types';
 import type { InventoryCreateFields } from '../src/createRules.js';
-import type {
-  InventoryCreate,
-  InventoryLinks,
-  InventoryOverview,
-  InventoryZone,
-} from '../src/element/index.js';
+import type { InventoryCreate } from '../src/element/create.js';
+import type { InventoryLinks, InventoryOverview, InventoryZone } from '../src/element/index.js';
 import type { SharedInventoryZoneState, SharedInventorySpace } from '../src/types.js';
 
 const OVERVIEW = 'spl-inventory-overview';
