@@ -5,6 +5,7 @@
  */
 import { fail, ok, placeNewFiles } from '@stillpointlab/common-format/app';
 
+import { checkTasksCreate } from './createRules.js';
 import { parseTasksManifest, TASKS_MANIFEST_FILENAME } from './manifest.js';
 import { tasksManifestSeedContent } from './manifestSeed.js';
 
@@ -27,7 +28,9 @@ export interface TasksCreatePlan {
 
 /**
  * The manifest to seed, or a refusal: the repository root without consent
- * (ADR-0028 decision 3), or a seed the app itself would not accept.
+ * (ADR-0028 decision 3), columns and kinds the form would refuse
+ * (`checkTasksCreate`, the same checks), or a seed the app itself would not
+ * accept.
  */
 export function planTasksCreate(input: CreateTasksInput): Result<TasksCreatePlan> {
   if (input.folder === '' && input.confirmRoot !== true) {
@@ -36,6 +39,8 @@ export function planTasksCreate(input: CreateTasksInput): Result<TasksCreatePlan
       'Creating at the repository root means this repo can only ever hold this one app view — pass confirmRoot to proceed'
     );
   }
+  const checked = checkTasksCreate(input);
+  if (!checked.ok) return checked;
   const manifestPath =
     input.folder === '' ? TASKS_MANIFEST_FILENAME : `${input.folder}/${TASKS_MANIFEST_FILENAME}`;
   const content = tasksManifestSeedContent({ columns: input.columns, kinds: input.kinds });

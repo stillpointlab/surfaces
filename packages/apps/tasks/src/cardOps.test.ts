@@ -418,7 +418,7 @@ describe('creating tasks', () => {
   });
 
   it('refuses a seed the app would not accept', () => {
-    expect(refusal(planTasksCreate({ ...input, columns: [] }))).toBe('TASKS_MANIFEST_INVALID');
+    expect(refusal(planTasksCreate({ ...input, columns: [] }))).toBe('TASKS_COLUMNS_REQUIRED');
   });
 
   it('places the plan, refusing a file in the way and reusing an earlier attempt’s', () => {

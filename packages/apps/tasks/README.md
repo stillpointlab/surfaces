@@ -25,6 +25,10 @@ manifest's zod schemas at module scope, which a bundler cannot drop):
 - `./paths`: the naming rules (`slugifyTaskId`, `TASKS_SLUG_PATTERN`, `TASKS_ID_MAX_LENGTH`,
   `TASKS_DEFAULT_FOLDER`).
 
+A third, `./create`, is the create form's checks (`checkTasksCreate`, with the limits and default
+columns and kinds the form shows). It imports only `./paths` and `./types`, and `planTasksCreate`
+runs the same checks, so the form and the plan cannot drift.
+
 It was moved as-is from Context Manager (source commit `30428c3c`), where the host side stays:
 drafts, check-in, the pool and board services, routes and the task board. The rest of this README
 is the file format, drawn from Context Manager's ADR-0014, ADR-0020, ADR-0021 and ADR-0027.
@@ -148,7 +152,8 @@ cannot carry) or `content` (the draft edits the body). `keys` is `trackedCardKey
 
 `@stillpointlab/tasks-app/element` registers `<spl-task-board>`: the Kanban board over one phase
 folder, or (with `variant="stage"`) every phase of a stage as swimlanes, with the backlog pool beside
-it; and `<spl-tasks-nav>`, the stage/phase tab strip (below). It imports `./types`, `./paths`, `common-format/app`, `common-format/elements`,
+it; `<spl-tasks-nav>`, the stage/phase tab strip; and `<spl-tasks-create>`, the create form (both
+below). It imports `./types`, `./paths`, `./create`, `common-format/app`, `common-format/elements`,
 `common-format/html`, `common-format/pointer-drag` and `@stillpointlab/modal-dialog-component`, never
 the core's root.
 
@@ -236,6 +241,30 @@ a moved card names its anchor). The fixtures cover every card state (a hand-buil
 few facts no file shows), the stage view, an empty board, this repository's own `docs/tasks/`,
 and each dialog open. The strip sits above the board in every fixture, and the "Nav:" fixtures
 show a phase that is not current, a board outside the stages, no pointer, and the close dialog.
+
+### The create form
+
+`<spl-tasks-create>` is a manifest's own fields for a create: its columns (label, id and an
+optional description) and kinds (label and id). Each id follows its label until it is edited by
+hand, and the form says ids are permanent once created. A host lays it out in its create dialog
+beside the folder and the root consent, which it owns, and answers its op.
+
+- **State in.** `setState({ columns?, kinds? })` starts the form over with those labels; left out,
+  Todo, In progress and Done, and Task.
+- **`value()`** answers `{ input }`, the create's columns and kinds (`TasksCreateFields`), or the
+  first problem `checkTasksCreate` finds. An untouched spare row is left out.
+- **`submit()`** shows the first problem in the form's error line, or asks `create { input }` and
+  shows a refusal the host answers. Enter in a text field submits.
+- **`showError(failure)`** shows a host's own refusal in the error line, marking the row its
+  `details[0]` names (`{ field: 'columns' | 'kinds', index }`). `clearError()` hides it. `focus()`
+  focuses the first column.
+- **`create-validity { valid }`** bubbles whenever the fields go from valid to invalid or back.
+- The ids and classes are those of Context Manager's dialog, which the form replaces
+  (`#create-tasks-columns`, `#create-tasks-kinds`, `#create-tasks-error` and the rest).
+
+The harness's "Create" fixture answers the form with `tasksCore.seed`, in the folder the "Create
+in" control chose (a folder, the repository root, or the root with consent), and shows the new
+manifest's first board.
 
 ## The tasks folder
 

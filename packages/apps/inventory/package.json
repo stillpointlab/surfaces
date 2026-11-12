@@ -30,6 +30,11 @@
       "import": "./dist/paths.js",
       "require": "./dist/paths.cjs"
     },
+    "./create": {
+      "types": "./dist/create.d.ts",
+      "import": "./dist/create.js",
+      "require": "./dist/create.cjs"
+    },
     "./element": {
       "types": "./dist/element.d.ts",
       "import": "./dist/element.js",

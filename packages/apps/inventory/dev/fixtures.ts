@@ -1,5 +1,5 @@
-// The inventory elements in the surfaces harness (`npm run dev`). Both elements
-// are mounted; a fixture shows the one it fills and hides the other. The
+// The inventory elements in the surfaces harness (`npm run dev`). The three
+// elements are mounted; a fixture shows the one it fills and hides the others. The
 // example fixtures run on the core: an in-memory host holds the examples'
 // files, answers the elements' ops with the core's rules and re-projects, so
 // an edit shows on every example fixture until the page reloads. The
@@ -11,8 +11,11 @@
 import '../src/element/index.js';
 import './host.css';
 
+import { answerCreate, CREATE_TARGETS } from '../../../../tooling/harness/create-host';
+import { inventoryCore } from '../src/core.js';
+
 import { exampleSnapshot } from './example.js';
-import { attachHost, spaceOf, workspace, zoneOf } from './host.js';
+import { attachHost, createdWorkspace, spaceOf, workspace, zoneOf } from './host.js';
 import {
   attentionZone,
   brokenZone,
@@ -35,11 +38,18 @@ import type {
   HarnessFixture,
   HarnessFormat,
 } from '../../../../tooling/harness/types';
-import type { InventoryLinks, InventoryOverview, InventoryZone } from '../src/element/index.js';
+import type { InventoryCreateFields } from '../src/createRules.js';
+import type {
+  InventoryCreate,
+  InventoryLinks,
+  InventoryOverview,
+  InventoryZone,
+} from '../src/element/index.js';
 import type { SharedInventoryZoneState, SharedInventorySpace } from '../src/types.js';
 
 const OVERVIEW = 'spl-inventory-overview';
 const ZONE = 'spl-inventory-zone';
+const CREATE = 'spl-inventory-create';
 
 /** The manifests and the workshop's garage are "linked": the rest ask `link-editor`. */
 const LINKS: InventoryLinks = {
@@ -58,10 +68,17 @@ const WORKSPACES = {
 
 let host: HarnessHost | null = null;
 let answering = true;
+let createTarget = CREATE_TARGETS['a folder']!;
+let stopCreate: (() => void) | null = null;
 
-function prepare(elements: HarnessElements): { overview: InventoryOverview; zone: InventoryZone } {
+function prepare(elements: HarnessElements): {
+  overview: InventoryOverview;
+  zone: InventoryZone;
+  create: InventoryCreate;
+} {
   const overview = elements.extras[OVERVIEW] as InventoryOverview;
   const zone = elements.extras[ZONE] as InventoryZone;
+  const create = elements.extras[CREATE] as InventoryCreate;
   for (const el of [overview, zone]) {
     el.links = LINKS;
     const pane = el.parentElement;
@@ -70,16 +87,30 @@ function prepare(elements: HarnessElements): { overview: InventoryOverview; zone
   }
   host ??= attachHost([overview, zone]);
   host.setAnswering(answering);
-  return { overview, zone };
+  if (create.parentElement) create.parentElement.style.height = 'auto';
+  // The create form is answered by the core's seed, like a host's create endpoint.
+  stopCreate ??= answerCreate<InventoryCreateFields>(create, {
+    seed: (input) => inventoryCore.seed(input),
+    target: () => createTarget,
+    created: (plan) => {
+      const ws = createdWorkspace(plan);
+      host!.use(ws);
+      only(overview, zone, create);
+      overview.setState(spaceOf(ws));
+    },
+  });
+  return { overview, zone, create };
 }
 
-/** Show one element's block and hide the other's. */
-function only(shown: HTMLElement, hidden: HTMLElement): void {
+/** Show one element's block and hide the others'. */
+function only(shown: HTMLElement, ...hidden: HTMLElement[]): void {
   const block = (el: HTMLElement): HTMLElement | null => el.closest('.extra');
   const showBlock = block(shown);
-  const hideBlock = block(hidden);
   if (showBlock) showBlock.hidden = false;
-  if (hideBlock) hideBlock.hidden = true;
+  for (const el of hidden) {
+    const hideBlock = block(el);
+    if (hideBlock) hideBlock.hidden = true;
+  }
 }
 
 const overviewFixture = (
@@ -88,8 +119,8 @@ const overviewFixture = (
 ): HarnessFixture => ({
   content: '',
   apply: (elements) => {
-    const { overview, zone } = prepare(elements);
-    only(overview, zone);
+    const { overview, zone, create } = prepare(elements);
+    only(overview, zone, create);
     host!.use(ws);
     overview.setState(state());
   },
@@ -101,8 +132,8 @@ const zoneFixture = (
 ): HarnessFixture => ({
   content: '',
   apply: (elements) => {
-    const { overview, zone } = prepare(elements);
-    only(zone, overview);
+    const { overview, zone, create } = prepare(elements);
+    only(zone, overview, create);
     host!.use(ws);
     zone.setState(state());
   },
@@ -116,7 +147,7 @@ const exampleZone = (ws: Workspace, path: string): HarnessFixture =>
   zoneFixture(() => zoneOf(ws, path)!, ws);
 
 export default {
-  elements: { extra: [OVERVIEW, ZONE] },
+  elements: { extra: [OVERVIEW, ZONE, CREATE] },
   controls: [
     {
       kind: 'toggle',
@@ -136,8 +167,24 @@ export default {
         if (value === 'item not found') host?.failNext('INVENTORY_ITEM_NOT_FOUND');
       },
     },
+    {
+      kind: 'select',
+      label: 'Create in',
+      options: ['a folder', 'the repository root'],
+      apply: (_elements, value) => {
+        createTarget = CREATE_TARGETS[value] ?? createTarget;
+      },
+    },
   ],
   fixtures: {
+    Create: {
+      content: '',
+      apply: (elements) => {
+        const { overview, zone, create } = prepare(elements);
+        only(create, overview, zone);
+        create.setState({});
+      },
+    },
     'Example workshop (configured)': exampleOverview(WORKSPACES.workshop),
     'Example workshop: garage': exampleZone(WORKSPACES.workshop, 'workshop/rooms/garage.yaml'),
     'Example workshop: work bench': exampleZone(WORKSPACES.workshop, 'workshop/rooms/bench.yaml'),

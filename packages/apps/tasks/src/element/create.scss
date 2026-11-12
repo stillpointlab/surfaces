@@ -1,0 +1,54 @@
+@use 'common/src/styles/tokens' as *;
+
+// `<spl-tasks-create>`, injected into its light DOM. The host styles the form
+// classes it renders (`form-field`, `form-label`, `form-input`, `form-help`,
+// `form-message`, `button`); see the README's Element section. Moved from
+// Context Manager's create dialog.
+
+spl-tasks-create {
+  display: block;
+
+  .create-tasks-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  .create-tasks-row {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  .create-tasks-row-line {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  .create-tasks-id-input {
+    max-width: 11rem;
+    font-family: monospace;
+  }
+
+  .create-tasks-description-input {
+    font-size: 0.85rem;
+  }
+
+  .create-tasks-remove {
+    flex: none;
+    padding: 0 $spacing-sm;
+    border: 1px solid $border-light;
+    border-radius: $border-radius-md;
+    background: transparent;
+    color: $text-muted;
+    font-size: 1.1rem;
+    line-height: 2;
+    cursor: pointer;
+
+    &:hover {
+      color: $error-color;
+      border-color: $error-color;
+    }
+  }
+}

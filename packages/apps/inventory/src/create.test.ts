@@ -90,9 +90,29 @@ describe('planInventoryCreate', () => {
   });
 
   it('refuses a manifest that would not parse as version 2', () => {
-    expect(planInventoryCreate({ label: 'Home', total: { field: 'nowhere' } })).toMatchObject({
+    const fields = [
+      {
+        id: 'value',
+        label: 'Value',
+        type: 'number' as const,
+        format: { kind: 'currency' as const, currency: 'USD', decimalPlaces: 99 },
+      },
+    ];
+    expect(planInventoryCreate({ label: 'Home', fields })).toMatchObject({
       ok: false,
       code: 'INVENTORY_MANIFEST_INVALID',
+    });
+  });
+
+  it("refuses what the form refuses, with the form's message (checkInventoryCreate)", () => {
+    expect(planInventoryCreate({ label: 'Home', total: { field: 'nowhere' } })).toMatchObject({
+      ok: false,
+      code: 'INVENTORY_TOTAL_INVALID',
+      message: 'Total must reference a Number or Currency column.',
+    });
+    expect(planInventoryCreate({ label: '' })).toMatchObject({
+      ok: false,
+      code: 'INVENTORY_LABEL_REQUIRED',
     });
   });
 
@@ -111,7 +131,8 @@ describe('planInventoryCreate', () => {
     expect(planInventoryCreate({ label: 'Home', zones: ['Front Room', 'front-room'] })).toEqual({
       ok: false,
       code: 'INVENTORY_ROOM_NAME_DUPLICATE',
-      message: 'Two zones would both be named “front-room.yaml”',
+      message: 'Two zones would both be saved as “front-room.yaml”.',
+      details: [{ field: 'zones', index: 1 }],
     });
   });
 });

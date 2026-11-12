@@ -72,6 +72,13 @@ function write(ws: Workspace, changes: readonly FileChange[]): void {
   }
 }
 
+/** A just-created inventory: the seeded files, each a new local change. */
+export function createdWorkspace(plan: { manifestPath: string; files: FileChange[] }): Workspace {
+  const ws = workspace({ manifestPath: plan.manifestPath, paths: [], files: {} });
+  write(ws, plan.files);
+  return ws;
+}
+
 export interface HarnessHost {
   /** The files the host answers from (`null` for a hand-built state): set with each fixture. */
   use(ws: Workspace | null): void;

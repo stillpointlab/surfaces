@@ -1,0 +1,74 @@
+@use 'common/src/styles/tokens' as *;
+
+// `<spl-inventory-create>`, injected into its light DOM. The host styles the
+// form classes it renders (`form-field`, `form-label`, `form-input`,
+// `form-help`, `form-message`, `button`); see the README's Element section.
+// Moved from Context Manager's create dialog.
+
+spl-inventory-create {
+  display: block;
+
+  .form-field[hidden] {
+    // A host's .form-field display rule would otherwise show the conditional
+    // Currency and Multiply fields.
+    display: none;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .create-inventory-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  .create-inventory-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  .create-inventory-column-row {
+    display: grid;
+    grid-template-columns: minmax(10rem, 1fr) minmax(7rem, auto) minmax(5rem, auto) auto;
+
+    label {
+      min-width: 0;
+    }
+  }
+
+  .create-inventory-column-id {
+    color: $text-muted;
+    font-size: 0.8rem;
+    overflow-wrap: anywhere;
+  }
+
+  .create-inventory-remove {
+    flex: none;
+    padding: 0 $spacing-sm;
+    border: 1px solid $border-light;
+    border-radius: $border-radius-md;
+    background: transparent;
+    color: $text-muted;
+    font-size: 1.1rem;
+    line-height: 2;
+    cursor: pointer;
+
+    &:hover {
+      color: $error-color;
+      border-color: $error-color;
+    }
+  }
+
+  .create-inventory-currency-input {
+    max-width: 8rem;
+    text-transform: uppercase;
+  }
+}
