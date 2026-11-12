@@ -16,3 +16,7 @@ backlog pool as seeds.
   - Closed 2026-11-10: the sheet's stylesheet now stays mounted across renders (re-inserting it
     re-parsed 11 KB of CSS on every committed edit), which brings the test from about 1.8 s to
     1.2 s alone, and the test gets a 20 s timeout. Two full checks after it passed.
+- 2026-11-12 (stage 3 phase 3 close): `@stillpointlab/tasks-app/element` does not export
+  `RELOAD_REQUEST_EVENT` (it is declared in `tasks-nav.ts`; inventory's element entry exports its
+  own). Context Manager's tasks app wires `'reload-request'` by name (context-manager#1157).
+  Exporting it from the element entry is one line, and Context Manager can then import it.

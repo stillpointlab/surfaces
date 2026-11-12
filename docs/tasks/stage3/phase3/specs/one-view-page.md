@@ -1,5 +1,7 @@
 ---
-column: todo
+column: done
+pr: 'stillpointlab/context-manager#1157'
+completed: 2026-11-12
 created: 2026-11-10T14:53:28-07:00
 tags: [apps, host-contract, code]
 ---
@@ -8,6 +10,27 @@ tags: [apps, host-contract, code]
 
 _The [generic app host brief](../../phase1/briefs/generic_app_host.md), desired outcome 4. After
 [one-op-route](one-op-route.md), whose registration it extends. Inventory, then tasks._
+
+**Both steps are done:** inventory (context-manager#1153) and tasks (context-manager#1157). Every app
+page is served by one handler, one template (`app-view.ejs`) and one page script, at today's URLs.
+The steps departed from this spec in five places, all open until Jamie's review of the whole stage
+(Jamie: "fine for now"):
+
+- **`load()` returns the app's whole client half** (`mount`, `hostOps`, `requests`), not just the
+  element bundle. The tree and preview import the registry for labels and icons; with `mount` and
+  the host ops on the entry, the app's code would be in their bundles.
+- **`mount` returns `{ learn?, opView? }`, not the elements.** The page answers ops and requests on
+  its root, from before the app mounts. `learn(reply, op)` lets the app take what it needs from a
+  core op's answer; `opView(op)` names the view a core op's reply needs (tasks' `reorder-pool`).
+- **Pages resolve, not just name a view.** A page's `resolve` gets the checked params and query, the
+  instance's base URL and manifest path, and `project(view)`. It answers `{ view, extras? }` or
+  `{ redirect, permanent? }`. Tasks' pages read the nav first: to choose the landing board or
+  redirect to it, to place a phase that is not in the nav, and to embed the strip's state beside the
+  board as `extras`. Inventory's pages are one line each.
+- **The generic read also replaces tasks' `GET …/nav`,** not only `GET board` and
+  `GET stage-state`. The core's nav view is exactly that endpoint's answer.
+- **Tasks wires `'reload-request'` by name.** `RELOAD_REQUEST_EVENT` is not exported from
+  `@stillpointlab/tasks-app/element` (a [follow-up](../../../../devlogs/stage3/followups.md)).
 
 ## High-level goal
 
@@ -107,15 +130,15 @@ into tasks' `mount`. Inventory's links (zone pages, exports, the editor) move in
 
 ## Acceptance / completion checklist
 
-- [ ] One route handler and one template serve every app page at its current URL. The generic read
+- [x] One route handler and one template serve every app page at its current URL. The generic read
       replaces tasks' two reads.
-- [ ] One page script mounts any registered app. The two page scripts and Vite entries are gone.
-- [ ] The tree and preview take labels and icons from the client registry.
-- [ ] Bundle sizes for each app page are recorded before and after.
-- [ ] Both walk suites pass after each app switches, with no selector changes.
+- [x] One page script mounts any registered app. The two page scripts and Vite entries are gone.
+- [x] The tree and preview take labels and icons from the client registry.
+- [x] Bundle sizes for each app page are recorded before and after.
+- [x] Both walk suites pass after each app switches, with no selector changes.
 
 ## Implementation plan
 
 1. Context Manager PR: the handler, template, page script and client registry, with inventory
-   switched, walked.
-2. Context Manager PR: tasks switched, walked.
+   switched, walked (done: context-manager#1153).
+2. Context Manager PR: tasks switched, walked (done: context-manager#1157).
