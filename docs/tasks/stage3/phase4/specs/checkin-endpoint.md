@@ -1,5 +1,7 @@
 ---
-column: todo
+column: done
+pr: 'stillpointlab/context-manager#1163'
+completed: 2026-11-12
 created: 2026-11-10T14:53:28-07:00
 tags: [apps, host-contract, code]
 ---
@@ -61,10 +63,17 @@ seed.
 
 ## Acceptance / completion checklist
 
-- [ ] One route and one job type check in either app through the registration.
-- [ ] The two routes, two job types and their schemas are gone, or aliased with a stated removal.
-- [ ] Both walk suites pass.
+- [x] One route and one job type check in either app through the registration.
+- [x] The two routes, two job types and their schemas are gone, or aliased with a stated removal.
+- [x] Both walk suites pass.
+
+**Done** (context-manager#1163). The old job names, `GIT_TASKS_CHECKIN` and
+`GIT_INVENTORY_CHECKIN`, stay registered as aliases of the one handler for one release, with their
+labels, so a check-in queued in production at deploy time still runs. They go after the first
+production release that carries `GIT_APP_CHECKIN` (a
+[follow-up](../../../../devlogs/stage3/followups.md)). The job's `app` rides its events and the job
+listing, so a page labels a check-in by its app and the board refreshes on its own.
 
 ## Implementation plan
 
-1. Context Manager PR, walked.
+1. Context Manager PR, walked (done: context-manager#1163).

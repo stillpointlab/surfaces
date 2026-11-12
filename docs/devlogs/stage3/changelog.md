@@ -218,3 +218,88 @@ context-manager#1142 (+1,320/−2,348), #1153 (+1,568/−927) and #1157 (+2,577/
   the first try, and no walk needed a selector change.
 - This phase's transcript is backed up to Context Manager at the close, once context-manager#1157
   merges.
+
+---
+
+## Phase 4: Create from the app, and one check-in (`stage3-phase4-complete`)
+
+Range: `stage3-phase3-complete..stage3-phase4-complete` (`57f0d2e..31d498a`), 2026-11-12: one merge
+here ([#82](https://github.com/stillpointlab/surfaces/pull/82)), 29 files, +2,039/−61. Context
+Manager's two PRs carry the rest: context-manager#1162 (+1,012/−2,505) and #1163 (+730/−367).
+
+### Shipped
+
+- [create-from-the-app](../../tasks/stage3/phase4/specs/create-from-the-app.md), in two steps:
+  - **Here** ([#82](https://github.com/stillpointlab/surfaces/pull/82)):
+    - **`./create` in each app:** `checkInventoryCreate` and `checkTasksCreate`, the create dialogs'
+      checks with their copy, DOM-free and zod-free. Each core's plan runs them first, so the form
+      and the plan cannot drift.
+    - **`<spl-inventory-create>` and `<spl-tasks-create>`**, from each element entry: the app's own
+      fields, with the dialogs' markup, ids and copy.
+    - **Harness:** a "Create" fixture per app, answered through `core.seed` in the folder a
+      control picks.
+  - **Context Manager** (context-manager#1162):
+    - `POST …/views/create` and `AppHostService.create`: the registration's input bounds, the
+      core's `seed`, then the host's checks, placement and seeding;
+    - one create dialog around the app's form, with the app's ids;
+    - the tree's Create items from the client registry.
+
+    Both dialogs, their markup and both create endpoints are gone.
+- [checkin-endpoint](../../tasks/stage3/phase4/specs/checkin-endpoint.md) (context-manager#1163):
+  - `POST …/views/:instance/checkin`, with each app's own body and its unchanged check-in service
+    behind an `AppCheckin`;
+  - one job type, `GIT_APP_CHECKIN`, with `app` in its payload;
+  - one handler that leaves each app's notifications in its own words;
+  - the job's app on its events and the job listing, so pages label check-ins by app and the
+    board refreshes only on its own.
+
+  The two routes, job constants and handlers are gone.
+
+### Decisions
+
+- **Six departures from create-from-the-app, open until Jamie's review of the whole stage.** They are
+  listed in [the spec](../../tasks/stage3/phase4/specs/create-from-the-app.md):
+  - the form is an app element with one op, `create`;
+  - the error line is the form's;
+  - the validity event is `create-validity`;
+  - the Create button stays enabled;
+  - the folder field's copy is Context Manager's;
+  - the registration's create block holds a `place` hook.
+- **One create rule for both apps.** An enabled instance of the same app whose scope overlaps
+  refuses with `<APP>_ALREADY_EXISTS` ("This repository already has <noun> at …"), which was
+  inventory's rule. A repeated tasks create used to answer the existing instance and is now refused.
+  A partial attempt still resumes for both.
+- **The plans refuse with the form's codes and messages.** Through the API that changes a few
+  codes, such as `INVENTORY_TOTAL_INVALID` and `TASKS_COLUMNS_REQUIRED`. Every one of them was
+  already a 400.
+- **The flag gates create and check-in.** Both are 404s while an app's flag is off, like its ops.
+- **The old check-in job names stay one release** as aliases of the one handler, so a check-in
+  queued in production at deploy time still runs. Removing them is a
+  [follow-up](followups.md).
+
+### Testing & review
+
+- Tests here: 1,929 → 1,973. Both create fixtures were driven headlessly in Chromium, light and
+  dark: 14/14 checks.
+- Context Manager's tests: 4,683 after #1162, 4,696 after #1163 merged with it.
+- **Bundle sizes** after #1162:
+
+  | Page               | Before   | After    |
+  | ------------------ | -------- | -------- |
+  | Project page entry | 66.59 kB | 56.89 kB |
+  | Inventory page     | 60.74 kB | 74.28 kB |
+  | Tasks page         | 81.66 kB | 91.90 kB |
+
+  The create forms ride each app's element chunk, which the dialog loads on demand. Keeping them
+  off the app pages is a [follow-up](followups.md).
+
+- **Walks**, after a full build and `e2e:reset`:
+  - **#1162:** inventory 38/38; walks 06 and 08 drive the new dialog by the old ids, with no
+    selector changes. Tasks walks 01–27 and 29 all passed on the first try. A recorded drive of the
+    tasks create dialog passed 15/15: the root warning and its consent, the server's overlap
+    refusal and a create that lands on the new board. No walk creates a tasks instance. The drive's
+    first run scored 13/15 on two mistakes in the drive itself.
+  - **#1163**, merged with main after #1162: inventory 38/38, and tasks walks 01–27 and 29 on the
+    first try. That covers every check-in walk through `GIT_APP_CHECKIN`. An earlier run, on the
+    branch before #1162 merged, was stopped so the walks would test the merged code.
+- This phase's transcript is backed up to Context Manager at the close.
