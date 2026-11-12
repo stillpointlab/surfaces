@@ -1,5 +1,7 @@
 ---
-column: todo
+column: done
+pr: 'stillpointlab/context-manager#1162'
+completed: 2026-11-12
 created: 2026-11-10T14:53:28-07:00
 tags: [apps, host-contract, code]
 ---
@@ -8,6 +10,27 @@ tags: [apps, host-contract, code]
 
 _The [generic app host brief](../../phase1/briefs/generic_app_host.md), desired outcome 5. After
 [one-view-page](../../phase3/specs/one-view-page.md), whose client registry it extends._
+
+**Both steps are done:** the forms and their shared checks here
+([#82](https://github.com/stillpointlab/surfaces/pull/82)), and Context Manager's one dialog and
+one create route (context-manager#1162). The steps departed from this spec in six places, all open
+until Jamie's review of the whole stage:
+
+- **The form is an app element with one op, `create`,** not only a `value()` to read. That is how it
+  passes the element contract, and Enter submits from inside it. `value()` is still there.
+- **The error line is the form's**, with the dialogs' old ids. The host shows its own refusals (a
+  bad folder, a path that is taken) there through `showError`.
+- **The validity event is `create-validity { valid }`, not `change`.** The inputs' native `change`
+  events bubble out of the light DOM and would be mixed with it.
+- **The Create button stays enabled.** Inventory walk 06 submits invalid fields and reads the
+  message, so the form checks on submit, as the dialogs did.
+- **The folder field's copy is Context Manager's**, in its client registry: the help text, the
+  example, the default folder and tasks' root warning. The folder is the host's field.
+- **Each registration's `create` holds a `place` hook** beside its input schema and noun, because
+  the core's `seed` does not place files and each app's "path exists" refusal has its own code.
+
+One cost is recorded as a [follow-up](../../../../devlogs/stage3/followups.md): each app page's
+JavaScript grew 10–14 kB, because the element entry now carries the create form.
 
 ## High-level goal
 
@@ -79,13 +102,15 @@ zod. The form imports it, and so does the core's plan, so the two cannot drift.
 
 ## Acceptance / completion checklist
 
-- [ ] Both create forms ship from their element entries, pass the element contract, and share
+- [x] Both create forms ship from their element entries, pass the element contract, and share
       their checks with the plans through `./create`.
-- [ ] The harness has a "Create" fixture for each app, answering through the core's `seed`.
-- [ ] One dialog and one endpoint create either app, and the two dialogs and endpoints are gone.
-- [ ] Both walk suites pass, with no selector changes.
+- [x] The harness has a "Create" fixture for each app, answering through the core's `seed`.
+- [x] One dialog and one endpoint create either app, and the two dialogs and endpoints are gone.
+- [x] Both walk suites pass, with no selector changes.
 
 ## Implementation plan
 
-1. Surfaces PR: the `./create` entries, both forms, tests and harness fixtures.
-2. Context Manager PR: the dialog, the endpoint and the registry entries, walked.
+1. Surfaces PR: the `./create` entries, both forms, tests and harness fixtures (done:
+   [#82](https://github.com/stillpointlab/surfaces/pull/82)).
+2. Context Manager PR: the dialog, the endpoint and the registry entries, walked (done:
+   context-manager#1162).
