@@ -8,20 +8,27 @@
 // or make it refuse the next op. Requests the elements raise show in the event
 // log. The "Dialog:" fixtures open each of the board's dialogs on the
 // workshop. The strip's links are `#` anchors: where a phase lives is a host's.
+// The "Create" fixture answers the create form with the core's `seed`, in the
+// folder the "Create in" control chose, and shows the new manifest's first board.
 import '../src/element/index.js';
+
+import { answerCreate, CREATE_TARGETS } from '../../../../tooling/harness/create-host';
+import { tasksCore } from '../src/core.js';
 
 import { attachHost } from './host.js';
 import { repoWorkspace } from './repo.js';
 import { emptyWorkshop, WORKSHOP_BOARD, workshop } from './workshop.js';
-import { navOf } from './workspace.js';
+import { navOf, workspace } from './workspace.js';
 
 import type { HarnessHost, HarnessView } from './host.js';
 import type { Workspace } from './workspace.js';
 import type { HarnessElements, HarnessFormat } from '../../../../tooling/harness/types';
-import type { TaskBoard, TasksNav, TasksNavLinks } from '../src/element/index.js';
+import type { TasksCreateFields } from '../src/createRules.js';
+import type { TaskBoard, TasksCreate, TasksNav, TasksNavLinks } from '../src/element/index.js';
 
 const TAG = 'spl-task-board';
 const NAV_TAG = 'spl-tasks-nav';
+const CREATE_TAG = 'spl-tasks-create';
 const NAV_LINKS: TasksNavLinks = {
   stage: (stage) => `#stage/${stage}`,
   phase: (stage, phase) => `#stage/${stage}/phase/${phase}`,
@@ -38,6 +45,36 @@ const WORKSPACES = {
 
 let host: HarnessHost | null = null;
 let answering = true;
+let createTarget = CREATE_TARGETS['a folder']!;
+let stopCreate: (() => void) | null = null;
+
+/** Show the create form, or the board and strip; the other blocks hide. */
+function showCreate(elements: HarnessElements, on: boolean): void {
+  for (const tag of [TAG, NAV_TAG, CREATE_TAG]) {
+    const block = elements.extras[tag]?.closest<HTMLElement>('.extra');
+    if (block) block.hidden = (tag === CREATE_TAG) !== on;
+  }
+}
+
+/** The create form, answered by the core's seed like a host's create endpoint. */
+function createOf(elements: HarnessElements): TasksCreate {
+  const form = elements.extras[CREATE_TAG] as TasksCreate;
+  if (form.parentElement) form.parentElement.style.height = 'auto';
+  stopCreate ??= answerCreate<TasksCreateFields>(form, {
+    seed: (input) => tasksCore.seed(input),
+    target: () => createTarget,
+    created: (plan) => {
+      const files = Object.fromEntries(
+        plan.files.map((file) => [file.path, (file as { content: string }).content])
+      );
+      const ws = workspace(plan.manifestPath, {}, { edited: files });
+      const first = navOf(ws)?.nav.stages[0]?.phases[0]?.path;
+      showCreate(elements, false);
+      show(elements, ws, first !== undefined ? { board: first } : undefined);
+    },
+  });
+  return form;
+}
 
 /**
  * The board and the strip, with the host attached once. A host page makes the
@@ -78,6 +115,7 @@ function variant(el: TaskBoard, value: 'board' | 'stage'): void {
 
 /** Show a workspace's view; the board defaults to the phase `current:` points at. */
 function show(elements: HarnessElements, ws: Workspace, view?: HarnessView): TaskBoard {
+  showCreate(elements, false);
   const board = elementsOf(elements);
   const shown: HarnessView = view ?? { board: navOf(ws)?.currentPointerPath ?? WORKSHOP_BOARD };
   variant(board, 'stage' in shown ? 'stage' : 'board');
@@ -107,7 +145,7 @@ function menuItem(el: TaskBoard, itemId: string): void {
 }
 
 export default {
-  elements: { extra: [NAV_TAG, TAG] },
+  elements: { extra: [NAV_TAG, TAG, CREATE_TAG] },
   controls: [
     {
       kind: 'toggle',
@@ -125,8 +163,24 @@ export default {
         if (on) host?.failNext();
       },
     },
+    {
+      kind: 'select',
+      label: 'Create in',
+      options: Object.keys(CREATE_TARGETS),
+      apply: (_elements, value) => {
+        createTarget = CREATE_TARGETS[value] ?? createTarget;
+      },
+    },
   ],
   fixtures: {
+    Create: {
+      content: '',
+      apply: (elements) => {
+        elementsOf(elements);
+        showCreate(elements, true);
+        createOf(elements).setState({});
+      },
+    },
     'Every card state': fixture(() => WORKSPACES.workshop, { board: WORKSHOP_BOARD }),
     'This repository': fixture(() => WORKSPACES.repo),
     'Empty board': fixture(() => WORKSPACES.empty, { board: WORKSHOP_BOARD }),

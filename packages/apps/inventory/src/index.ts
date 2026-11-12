@@ -16,6 +16,7 @@ export * from './lifecycle.js';
 export * from './space.js';
 export * from './ops.js';
 export * from './create.js';
+export * from './createRules.js';
 export * from './core.js';
 export * from './elementOps.js';
 export * from './module.js';

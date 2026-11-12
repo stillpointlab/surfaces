@@ -22,7 +22,9 @@ root entry (`.`) exports:
 Two more entries import nothing: `./paths` exports the path rules alone (`slugifyInventoryName`,
 the folder and currency defaults, the field-id and currency patterns), and `./types` the shared
 types. A client that needs only those imports them there: `.` builds the manifest's zod schemas at
-module scope, which a bundler cannot drop. `./element` is the app's two elements (below).
+module scope, which a bundler cannot drop. `./create` is the create form's checks
+(`checkInventoryCreate`, with the limits and defaults the form shows); it imports only `./paths`.
+`./element` is the app's three elements (below).
 
 The core was moved as-is from Context Manager (source commit `373a20ae`), and the elements followed
 (source commit `b73e3c59`). The rules that assemble a space and answer its ops followed in stage 2
@@ -57,8 +59,9 @@ answers the new `slug` and `path`, and `addInventoryItem` the new `id`. An edit 
 nothing answers no changes. How a change is written (a draft, a new file) is the host's.
 
 **Creating an inventory** is two steps, so a host can check what only it knows between them:
-`planInventoryCreate(input)` answers the manifest and zone files to seed (or refuses an invalid
-manifest, the repository root, and zone titles that name no file or the same file), and
+`planInventoryCreate(input)` answers the manifest and zone files to seed, or refuses: first what
+the create form refuses (`checkInventoryCreate` from `./create`, the same checks with the same
+messages, so the two cannot drift), then an invalid manifest and the repository root. And
 `placeInventoryCreate(plan, { taken, reusable })` refuses a seed path, or a folder above one, that
 is already a file. `reusable` names files an earlier, unfinished attempt at the same create left
 behind; they are skipped, so a retry finishes the job. It is the contract's `placeNewFiles` with
@@ -78,7 +81,8 @@ zone is not found, an item gone since the state was read is a conflict. The elem
 
 ## Element
 
-`@stillpointlab/inventory-app/element` registers two elements. It imports `./types`, `./paths`,
+`@stillpointlab/inventory-app/element` registers three elements. It imports `./types`, `./paths`,
+`./create`,
 `@stillpointlab/sheet-format/presentation` (number and currency formatting), `common-format/app`,
 `common-format/elements`, `common-format/html` and `@stillpointlab/modal-dialog-component`, never
 the core's root.
@@ -89,8 +93,9 @@ the core's root.
 - **`<spl-inventory-zone>`**: one zone's items (configured, legacy or neutral columns), a filter,
   quick add, the CSV export, and an item dialog (a `<modal-dialog>` inside the element) for editing
   fields and Other data or deleting the item. `setState(zone)` takes a `SharedInventoryZoneState`.
+- **`<spl-inventory-create>`**: the create form (below).
 
-Both settle (`whenReady()`, the `ready` attribute) once they have rendered a state, render in light
+All three settle (`whenReady()`, the `ready` attribute) once they have rendered a state, render in light
 DOM, and build their markup with `html` from `common-format/html`, so repository text is escaped
 wherever it lands.
 
@@ -126,6 +131,29 @@ file and a parse error). The harness's memory host keeps their files, answers ev
 page reloads. Hand-built fixtures cover the cases files alone do not show (local changes, a disabled
 space, no inventory, hostile strings) and the element tests' states; the host refuses their ops.
 The controls switch the host off or make it refuse the next op.
+
+### The create form
+
+`<spl-inventory-create>` is the inventory's own fields for a create: its name, its first zones, its
+initial columns (with a currency code for Currency columns) and a total. A host lays it out in its
+create dialog beside the folder, which every app has, and answers its op.
+
+- **State in.** `setState({ label?, zones? })` starts the form over with those values; `{}` is an
+  empty form with one blank zone and one blank column.
+- **`value()`** answers `{ input }`, the create's input without the folder (`InventoryCreateFields`),
+  or the first problem `checkInventoryCreate` finds. Blank rows are left out.
+- **`submit()`** shows the first problem in the form's error line, or asks `create { input }` and
+  shows a refusal the host answers. Enter in a text field submits. `create`'s reply is the host's to
+  choose; the form reads only whether it failed.
+- **`showError(failure)`** shows a host's own refusal (a bad folder, a path that is taken) in the
+  error line, marking the field its `details[0]` names (`{ field: 'label' }`, `{ field: 'zones',
+index }` and so on). `clearError()` hides it. `focus()` focuses the name.
+- **`create-validity { valid }`** bubbles whenever the fields go from valid to invalid or back.
+- The ids and classes are those of Context Manager's dialog, which the form replaces
+  (`#create-inventory-label`, `#create-inventory-zones`, `#create-inventory-error` and the rest).
+
+The harness's "Create" fixture answers the form with `inventoryCore.seed`, in the folder the
+"Create in" control chose, and shows the new inventory's overview.
 
 ## Inventory repository format
 

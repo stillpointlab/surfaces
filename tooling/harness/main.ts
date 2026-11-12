@@ -54,6 +54,7 @@ const WATCHED_EVENTS = [
   'open-options-menu',
   'notification',
   'reload-request',
+  'create-validity',
 ] as const;
 
 let current: { name: string; format: HarnessFormat; elements: HarnessElements } | null = null;
@@ -91,6 +92,8 @@ function wire(el: HTMLElement, tag: string): void {
         summary = ` (${op.type ?? '?'}${op.path ? ` ${op.path}` : ''})`;
       } else if (detail && typeof detail === 'object' && 'message' in detail) {
         summary = ` (${String((detail as { message: unknown }).message)})`;
+      } else if (detail && typeof detail === 'object' && 'valid' in detail) {
+        summary = ` (${(detail as { valid: boolean }).valid ? 'valid' : 'invalid'})`;
       } else if (detail && typeof detail === 'object' && 'reason' in detail) {
         const { view, reason } = detail as { view: string; reason: string };
         summary = ` (${view}, ${reason})`;

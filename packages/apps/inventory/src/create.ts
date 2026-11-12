@@ -7,27 +7,24 @@
  */
 import { fail, ok, placeNewFiles } from '@stillpointlab/common-format/app';
 
+import { checkInventoryCreate } from './createRules.js';
 import { INVENTORY_MANIFEST_FILENAME, INVENTORY_ROOMS_DIR } from './detection.js';
 import { parseInventoryManifest } from './manifest.js';
 import { manifestSeedContent } from './manifestSeed.js';
 import { INVENTORY_DEFAULT_FOLDER } from './paths.js';
 import { slugifyZoneTitle, zoneSeedContent } from './zoneSeed.js';
 
+import type { InventoryCreateFields } from './createRules.js';
 import type { InventoryManifestSeed } from './manifestSeed.js';
 import type { FileChange, Result } from '@stillpointlab/common-format/app';
 
 /**
- * What the create dialog collects. Everything but the label has a default,
- * so the smallest create is a name.
+ * What a create asks for: the form's fields (`./create`) and the folder.
+ * Everything but the label has a default, so the smallest create is a name.
  */
-export interface CreateInventoryInput {
-  label: string;
+export interface CreateInventoryInput extends InventoryCreateFields {
   /** Target folder; the repository root (`''`) is refused. Defaults to `inventory`. */
   folder?: string;
-  fields?: InventoryManifestSeed['fields'];
-  total?: InventoryManifestSeed['total'];
-  /** Zone titles, each seeded under the `rooms/` folder (the storage name). */
-  zones?: string[];
 }
 
 /** A create's files: the manifest first, then the zones in the order given. */
@@ -38,12 +35,14 @@ export interface InventoryCreatePlan {
 }
 
 /**
- * The files a create seeds, or why it cannot: an invalid manifest, the
- * repository root, or zone titles that name no file or the same file.
- * Filenames are settled before anything is written, so a bad title never
- * seeds half an inventory.
+ * The files a create seeds, or why it cannot: fields the form would refuse
+ * (`checkInventoryCreate`, the same checks), an invalid manifest, or the
+ * repository root. Filenames are settled before anything is written, so a bad
+ * title never seeds half an inventory.
  */
 export function planInventoryCreate(input: CreateInventoryInput): Result<InventoryCreatePlan> {
+  const checked = checkInventoryCreate(input);
+  if (!checked.ok) return checked;
   const seed: InventoryManifestSeed = {
     label: input.label,
     ...(input.fields !== undefined ? { fields: input.fields } : {}),
@@ -72,19 +71,11 @@ export function planInventoryCreate(input: CreateInventoryInput): Result<Invento
   const files: InventoryCreatePlan['files'] = [
     { kind: 'create', path: manifestPath, content: manifestContent },
   ];
-  const slugs = new Set<string>();
+  // Every title names a distinct file: `checkInventoryCreate` refused the rest.
   for (const title of input.zones ?? []) {
-    const slug = slugifyZoneTitle(title);
-    if (slug === '') {
-      return fail('INVENTORY_ROOM_NAME_INVALID', 'A zone title must contain letters or numbers');
-    }
-    if (slugs.has(slug)) {
-      return fail('INVENTORY_ROOM_NAME_DUPLICATE', `Two zones would both be named “${slug}.yaml”`);
-    }
-    slugs.add(slug);
     files.push({
       kind: 'create',
-      path: `${roomsDir}/${slug}.yaml`,
+      path: `${roomsDir}/${slugifyZoneTitle(title)}.yaml`,
       content: zoneSeedContent(title),
     });
   }
