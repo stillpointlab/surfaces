@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 'stillpointlab/context-manager#1142'
+completed: 2026-11-12
 created: 2026-11-10T14:53:28-07:00
 tags: [apps, host-contract, code]
 ---
@@ -9,9 +11,9 @@ tags: [apps, host-contract, code]
 _The [generic app host brief](../../phase1/briefs/generic_app_host.md), desired outcomes 2 and 3. After
 [app-module](../../phase2/specs/app-module.md). Two steps, each one Context Manager PR: inventory, then tasks._
 
-**Step 1 is done** (context-manager#1134, stage 3 phase 2): inventory runs through the registry, the
-host and the route. Step 2, tasks, is this phase's. Step 1 departed from this spec in two places,
-both open until Jamie's review of the whole stage:
+**Both steps are done:** inventory (context-manager#1134, stage 3 phase 2) and tasks
+(context-manager#1142, phase 3). Step 2 kept to the spec. Step 1 departed from it in two places, both
+open until Jamie's review of the whole stage:
 
 - **The op's fields are bounded in Context Manager.** Each app's host entry may carry an `opSchema`;
   inventory's keeps the retired endpoints' bounds, because the core trusts typed input.
@@ -151,18 +153,18 @@ behind them go. `runManifestOp`'s link-then-rerun becomes step 3 above. What sta
 
 ## Acceptance / completion checklist
 
-- [ ] The registry holds both apps, the lifecycle reads its adapters from it, and `RepoViewName`
+- [x] The registry holds both apps, the lifecycle reads its adapters from it, and `RepoViewName`
       is its keys.
-- [ ] One route and one host answer every core op of both apps. The 16 op endpoints are gone, along
+- [x] One route and one host answer every core op of both apps. The 16 op endpoints are gone, along
       with the service methods only they called.
-- [ ] Refusal statuses match today's for every code, except the two named changes.
-- [ ] The service tests that covered op paths now cover the host, through the registry, with the
+- [x] Refusal statuses match today's for every code, except the two named changes.
+- [x] The service tests that covered op paths now cover the host, through the registry, with the
       same cases. A host test checks link-on-first-change, fail-closed, `create`, a refused `move`
       and the scope check.
-- [ ] Both walk suites pass after each step.
+- [x] Both walk suites pass after each step.
 
 ## Implementation plan
 
 1. Context Manager PR: the registry, host, route and seed helper, inventory switched, walked
    (done: context-manager#1134).
-2. Context Manager PR: tasks switched, walked.
+2. Context Manager PR: tasks switched, walked (done: context-manager#1142).
