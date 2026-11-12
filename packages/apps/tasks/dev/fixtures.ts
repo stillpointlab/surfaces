@@ -11,6 +11,7 @@
 // The "Create" fixture answers the create form with the core's `seed`, in the
 // folder the "Create in" control chose, and shows the new manifest's first board.
 import '../src/element/index.js';
+import '../src/element/create.js';
 
 import { answerCreate, CREATE_TARGETS } from '../../../../tooling/harness/create-host';
 import { tasksCore } from '../src/core.js';
@@ -24,7 +25,8 @@ import type { HarnessHost, HarnessView } from './host.js';
 import type { Workspace } from './workspace.js';
 import type { HarnessElements, HarnessFormat } from '../../../../tooling/harness/types';
 import type { TasksCreateFields } from '../src/createRules.js';
-import type { TaskBoard, TasksCreate, TasksNav, TasksNavLinks } from '../src/element/index.js';
+import type { TasksCreate } from '../src/element/create.js';
+import type { TaskBoard, TasksNav, TasksNavLinks } from '../src/element/index.js';
 
 const TAG = 'spl-task-board';
 const NAV_TAG = 'spl-tasks-nav';

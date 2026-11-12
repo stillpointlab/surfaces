@@ -9,7 +9,7 @@ import {
 } from '@stillpointlab/common-format/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { CREATE_VALIDITY_EVENT } from './tasks-create.js';
+import { CREATE_VALIDITY_EVENT } from './create.js';
 
 import type { TasksCreate, TasksCreateOps, TasksCreateState } from './tasks-create.js';
 import type { AppOp, Result } from '@stillpointlab/common-format/app';

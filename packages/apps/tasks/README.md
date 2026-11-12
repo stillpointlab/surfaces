@@ -152,8 +152,8 @@ cannot carry) or `content` (the draft edits the body). `keys` is `trackedCardKey
 
 `@stillpointlab/tasks-app/element` registers `<spl-task-board>`: the Kanban board over one phase
 folder, or (with `variant="stage"`) every phase of a stage as swimlanes, with the backlog pool beside
-it; `<spl-tasks-nav>`, the stage/phase tab strip; and `<spl-tasks-create>`, the create form (both
-below). It imports `./types`, `./paths`, `./create`, `common-format/app`, `common-format/elements`,
+it; and `<spl-tasks-nav>`, the stage/phase tab strip (below). `./create-element` registers
+`<spl-tasks-create>`, the create form (below). They import `./types`, `./paths`, `./create`, `common-format/app`, `common-format/elements`,
 `common-format/html`, `common-format/pointer-drag` and `@stillpointlab/modal-dialog-component`, never
 the core's root.
 
@@ -227,7 +227,7 @@ places it.
   | `close`              | `kind`, `paths`  | `{ target: { stage, phase }, moved, created? }` |
 
 - **Requests:** `navigate { href }` (a phase or board chosen, or one just created or closed to),
-  `reload-request` (after Set current), `notification`, and `open-options-menu` from "Close…",
+  `reload-request` (after Set current; `RELOAD_REQUEST_EVENT`), `notification`, and `open-options-menu` from "Close…",
   answered with `options-menu-select` (`close-phase` or `close-stage`) on the strip.
 - **The close dialog** comes with it: a `<modal-dialog id="close-dialog">` listing the pointer
   phase's cards outside the done column, all checked, and asking `close` with the checked paths.
@@ -244,7 +244,8 @@ show a phase that is not current, a board outside the stages, no pointer, and th
 
 ### The create form
 
-`<spl-tasks-create>` is a manifest's own fields for a create: its columns (label, id and an
+`@stillpointlab/tasks-app/create-element` registers `<spl-tasks-create>`, apart from `./element` so a page that
+only shows the app does not load it. `<spl-tasks-create>` is a manifest's own fields for a create: its columns (label, id and an
 optional description) and kinds (label and id). Each id follows its label until it is edited by
 hand, and the form says ids are permanent once created. A host lays it out in its create dialog
 beside the folder and the root consent, which it owns, and answers its op.
