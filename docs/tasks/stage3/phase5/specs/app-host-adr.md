@@ -1,5 +1,7 @@
 ---
-column: todo
+column: done
+pr: 'stillpointlab/context-manager#1166'
+completed: 2026-11-12
 created: 2026-11-10T14:53:28-07:00
 tags: [apps, host-contract, docs]
 ---
@@ -53,10 +55,16 @@ has agreed, not whatever happened to be left.
 
 ## Acceptance / completion checklist
 
-- [ ] The ADR is merged in Context Manager, with ADR-0025 and ADR-0038 amended to point to it.
-- [ ] Jamie has agreed the minimum it lists.
-- [ ] The before and after counts are recorded in it and in the stage changelog.
+- [x] The ADR is merged in Context Manager, with ADR-0025 and ADR-0038 amended to point to it
+      (ADR-0037 too, as the tasks twin of ADR-0038).
+- [ ] Jamie has agreed the minimum it lists. _Open at the stage close: ADR-0040 merged as
+      Proposed, and moves to Accepted when Jamie agrees its minimum._
+- [x] The before and after counts are recorded in it and in the stage changelog.
+
+**Done:** ADR-0040, "Apps through one host" (context-manager#1166). It was refreshed after
+[drain-followups](../../phase6/specs/drain-followups.md) so that it records what was left: the
+per-app enable routes moved out of the minimum, and the count was taken at `50b1d44b`.
 
 ## Implementation plan
 
-1. Context Manager PR: the ADR and the two amendments.
+1. Context Manager PR: the ADR and the two amendments (done: context-manager#1166).
