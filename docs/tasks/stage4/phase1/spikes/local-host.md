@@ -252,8 +252,9 @@ With those, Electron is no rewrite, and Tauri stays possible either way.
 Write the stage 4 brief around **a local host in this repository**, in this order:
 
 1. **Files and formats.** The format descriptors and registry, the host's file tree (the
-   [tree spike](host-file-tree.md)), and the server with `list`, `get`, `put` and the watcher. The result: `npm run serve -- <path>` opens a
-   folder, previews any file and edits and saves the ones with editors.
+   [tree spike](host-file-tree.md)), and the server with `list`, `get`, `put` and the watcher.
+   The result: `npm run serve -- <path>` opens a folder, previews any file and edits and saves
+   the ones with editors.
 2. **Git.** Status in the tree, a diff against `HEAD`, and commit of chosen files.
 3. **Apps.** The runner over the port, instances in the tree, and the app shells, inventory
    first. The bounds, pages and metadata move into the modules as the host needs them.
@@ -273,12 +274,11 @@ what is still open.
   with the `bin` named `surfaces`.
 - **Check-in's branch:** offer a new branch.
 - **The tree:** its own spike first, the [host file tree](host-file-tree.md).
-- **Moves:** still open. `git status --porcelain=v2` reports a rename only once it is staged; an
-  unstaged move is a deleted file and an untracked one (tested in a scratch repository, git on
-  Fedora 44). So either the host stages a move (`git mv`), or it keeps its own record of pending
-  moves to fill `TasksSnapshot.moves`.
-- **The format descriptor:** still open. It says what a format is to a host, so it may want an
-  ADR in Context Manager when Context Manager adopts it.
+- **Moves:** the host stages them (`git mv`). `git status --porcelain=v2` reports a rename only
+  once it is staged; an unstaged move is a deleted file and an untracked one (tested in a
+  scratch repository, git on Fedora 44).
+- **The format descriptor:** still open; the brief sets out what it is and the two questions
+  about it.
 
 ## References
 

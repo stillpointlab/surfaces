@@ -142,10 +142,17 @@ Context Manager's trees but the conventions.**
    the part worth keeping the same, and they are about 150 lines written against this
    repository's `html` and `render`. Context Manager's `TreeBase` and its three trees stay as
    they are.
+
 4. **Hold the line in the spec.** The list under finding 7 ("not needed") is the tree's
    non-goals. Each one that the local host later wants is its own decision, taken when it is
    wanted. The estimate is 350–450 lines with styles; a tree heading past twice that is the sign
    to stop and look again.
+
+   Decided since (Jamie, 2026-11-13): the explorer creates, renames and deletes files. That
+   takes "a menu" and "file operations" off the list, and keeps the tree as described: it
+   raises a request for a menu on a row, and the host owns the menu, its dialogs and the
+   writes. Rename is a dialog, so "rename in place" stays a non-goal.
+
 5. **Do not plan a shared tree.** If Context Manager's `repo-tree` and this one should ever
    converge, the evidence will be the second consumer, and it is cheaper to compare two working
    trees then than to design one for both now. The context picker stays separate for the same
