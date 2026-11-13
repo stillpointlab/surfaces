@@ -217,12 +217,42 @@ the local host to use it:
 Nothing in the last column has to happen for the local host to work, so Context Manager can
 adopt each piece when it suits, with its walks.
 
+### 8. Keeping a desktop shell clean
+
+The core runs in the server (Jamie, 2026-11-13). A desktop app later must not undo that choice,
+and the two likely shells differ:
+
+- **Electron's** main process is Node, so the server runs there as it is and the window loads
+  the client. The page can keep talking to it over loopback HTTP, or over Electron's own channel
+  so that no port is open.
+- **Tauri's** backend is Rust, with no Node. Either the Node server ships beside it as a bundled
+  binary, or the runner runs in the page over Rust commands for files and git.
+
+Neither was built for this spike; this is from how the two platforms work. Three rules keep both
+open, and each is cheap if it holds from the first commit:
+
+1. **The runner is isomorphic.** It is DOM-free and Node-free and reads only the storage port,
+   as the cores already are. `fs`, `child_process`, the HTTP server and the watcher appear only
+   in the port's implementation and the server's entry.
+2. **The page reaches its host through one client interface** (list, get, put, a URL for a
+   path, status, op, project, create, check-in, watch), never through `fetch` of its own. HTTP
+   with server-sent events is the first implementation. A desktop shell adds a second without
+   touching the page.
+3. **The server is a library first.** `createHost({ root })` answers requests; the `bin` wraps
+   it with a listener. Electron imports the library.
+
+Two smaller ones follow: the client builds to static files that load from disk as well as from
+the server, and binary media gets its URL from the host (`<image-preview>` takes a URL), since
+a desktop shell serves files under its own scheme.
+
+With those, Electron is no rewrite, and Tauri stays possible either way.
+
 ## Recommendation
 
 Write the stage 4 brief around **a local host in this repository**, in this order:
 
-1. **Files and formats.** The format descriptors and registry, a file tree component, and the
-   server with `list`, `get`, `put` and the watcher. The result: `npm run serve -- <path>` opens a
+1. **Files and formats.** The format descriptors and registry, the host's file tree (the
+   [tree spike](host-file-tree.md)), and the server with `list`, `get`, `put` and the watcher. The result: `npm run serve -- <path>` opens a
    folder, previews any file and edits and saves the ones with editors.
 2. **Git.** Status in the tree, a diff against `HEAD`, and commit of chosen files.
 3. **Apps.** The runner over the port, instances in the tree, and the app shells, inventory
@@ -233,24 +263,22 @@ Write the stage 4 brief around **a local host in this repository**, in this orde
 Deferred: everything GitHub (PR state, opening a PR, divergence), Electron, publishing to npm,
 the shared check-in core and the one runner in Context Manager.
 
-### Open questions for the brief
+### The open questions, answered
 
-- **Where the core runs.** In the server, as in Context Manager (the runner is then the piece
-  Context Manager could adopt, and a command line or an agent can ask ops too), or in the page,
-  with the server only a file API (a smaller server, but a board's every card crosses to the
-  page). This spike leans to the server.
-- **Moves.** `git status --porcelain=v2` reports a rename only once it is staged; an unstaged
-  move is a deleted file and an untracked one (tested in a scratch repository, git on Fedora 44).
-  So either the host stages a move (`git mv`), or it keeps its own record of pending moves to
-  fill `TasksSnapshot.moves`.
-- **Where it lives and what it is called:** a new workspace (`packages/hosts/local`?) and the
-  `bin` name. The root package already holds `@stillpointlab/surfaces`.
-- **Check-in's branch.** Commit to the current branch only, or offer a new branch as Context
-  Manager does?
-- **The tree.** Context Manager's `repo-tree.ts` (953 lines) knows goods and import states. A
-  new, smaller component here, which Context Manager may or may not adopt?
-- **The format descriptor** is user- and agent-facing in the README sense (what a format is to a
-  host), so it may want its own brief or an ADR in Context Manager when it adopts it.
+Jamie's answers on PR 87 (2026-11-13); the [brief](../briefs/local_host.md) carries them and
+what is still open.
+
+- **Where the core runs:** in the server, kept clean for a desktop shell (finding 8).
+- **Where it lives and what it is called:** `packages/hosts/local`, so other hosts have a place,
+  with the `bin` named `surfaces`.
+- **Check-in's branch:** offer a new branch.
+- **The tree:** its own spike first, the [host file tree](host-file-tree.md).
+- **Moves:** still open. `git status --porcelain=v2` reports a rename only once it is staged; an
+  unstaged move is a deleted file and an untracked one (tested in a scratch repository, git on
+  Fedora 44). So either the host stages a move (`git mv`), or it keeps its own record of pending
+  moves to fill `TasksSnapshot.moves`.
+- **The format descriptor:** still open. It says what a format is to a host, so it may want an
+  ADR in Context Manager when Context Manager adopts it.
 
 ## References
 
