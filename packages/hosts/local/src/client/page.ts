@@ -4,8 +4,10 @@
 //
 // The wiring, for the specs that build on it:
 // - `tree-select` and `tree-activate` open files; `tree-toggle` keeps the open
-//   folders; `tree-menu` is not listened to yet (file-operations adds its
-//   listener beside these, in `wire`).
+//   folders; `tree-menu` opens the host's menu (`menu/`) with the row's entries
+//   from `file-ops/`, in `wire`. Another kind of row adds its entries there.
+// - `menu` is the page's one options menu: anything that asks for a menu opens
+//   it with `menu.open({ x, y, entries })`.
 // - `navigate` is the one way to open something: it asks before unsaved edits are
 //   lost, writes the address, and tells the pane. A new view (`#/diff/<path>`) is
 //   an entry in `address.ts` and a case in the pane.
@@ -17,6 +19,9 @@ import { html, render } from '@stillpointlab/common-format/html';
 
 import { formatAddress, parseAddress } from './address';
 import { createConfirm } from './confirm';
+import { createFileOps } from './file-ops/file-ops';
+import { indexListing } from './file-ops/paths';
+import { HostMenu } from './menu/menu';
 import { pageStyles } from './page.styles';
 import { FilePane } from './pane';
 import { readOpenFolders, writeOpenFolders } from './stored';
@@ -25,9 +30,15 @@ import { words } from './words';
 
 import type { Address, View } from './address';
 import type { Confirm } from './confirm';
+import type { FileOps } from './file-ops/file-ops';
 import type { HostClient, HostEvent } from './host-client';
 import type { PaneState } from './pane';
-import type { HostFileTree, TreeEventDetail, TreeMark } from './tree/host-file-tree';
+import type {
+  HostFileTree,
+  TreeEventDetail,
+  TreeMark,
+  TreeMenuDetail,
+} from './tree/host-file-tree';
 import type { FolderNode } from '@stillpointlab/common-format/app';
 import type { FormatDescriptor, FormatRegistry } from '@stillpointlab/common-format/format';
 
@@ -44,6 +55,10 @@ export interface HostPage {
   readonly tree: HostFileTree;
   readonly pane: FilePane;
   readonly confirm: Confirm;
+  /** The page's one options menu. */
+  readonly menu: HostMenu;
+  /** Create, rename and delete: the explorer's entries, dialogs and writes. */
+  readonly fileOps: FileOps;
   /** Settles once the first listing and the first address have been handled. */
   readonly ready: Promise<void>;
   /** Open what an address names, asking first when edits would be lost; false if declined. */
@@ -90,6 +105,8 @@ export function startPage(options: PageOptions): HostPage {
   let rootId: string | null = null;
   let folderName = '';
   let nodes: FolderNode[] = [];
+  let truncated = false;
+  let listingIndex: ReturnType<typeof indexListing> | null = null;
 
   const pane: FilePane = new FilePane(host.querySelector<HTMLElement>('.pane')!, {
     client,
@@ -223,6 +240,8 @@ export function startPage(options: PageOptions): HostPage {
         try {
           const [list, status] = await Promise.all([client.list(), client.status()]);
           nodes = list.nodes;
+          truncated = list.truncated;
+          listingIndex = null;
           tree.setNodes(nodes, marksOf(status));
           note.hidden = !list.truncated;
           note.textContent = list.truncated ? words.explorerTruncated(nodes.length) : '';
@@ -269,6 +288,28 @@ export function startPage(options: PageOptions): HostPage {
     if (!opened) tree.selected = pane.current?.path ?? null;
   }
 
+  const menu = new HostMenu(host);
+  const fileOps = createFileOps(host, {
+    client,
+    tree,
+    pane,
+    listing: () => (listingIndex ??= indexListing(nodes, truncated)),
+    refresh,
+    navigate: (address, how, focus) => navigate(address, how, focus),
+    showAddress: (state) => writeAddress(state, 'replace'),
+  });
+
+  function openMenu(detail: TreeMenuDetail): void {
+    menu.open({
+      x: detail.x,
+      y: detail.y,
+      entries: fileOps.entriesFor(detail),
+      label: words.menu.label(detail.path),
+      // Back to the row it was asked on; for the space under the rows, to what had focus.
+      ...(detail.path === '' ? {} : { returnFocus: () => void fileOps.focusRow(detail.path) }),
+    });
+  }
+
   function wire(): void {
     tree.addEventListener(
       'tree-select',
@@ -278,6 +319,11 @@ export function startPage(options: PageOptions): HostPage {
     tree.addEventListener(
       'tree-activate',
       (event) => void openFromTree((event as CustomEvent<TreeEventDetail>).detail, 'edit'),
+      { signal }
+    );
+    tree.addEventListener(
+      'tree-menu',
+      (event) => openMenu((event as CustomEvent<TreeMenuDetail>).detail),
       { signal }
     );
     tree.addEventListener(
@@ -346,12 +392,16 @@ export function startPage(options: PageOptions): HostPage {
     tree,
     pane,
     confirm,
+    menu,
+    fileOps,
     ready,
     navigate,
     refresh,
     destroy() {
       controller.abort();
       unwatch();
+      menu.destroy();
+      fileOps.destroy();
     },
   };
 }

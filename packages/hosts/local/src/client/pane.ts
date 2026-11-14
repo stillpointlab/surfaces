@@ -9,6 +9,11 @@
 // newest request waits, so holding an arrow key in the tree reads two files, not
 // one per row. Every step of an open checks it is still the newest after each
 // await, so a late answer for a file no longer wanted never lands.
+//
+// The explorer's own renames and deletes go through `followWrite`: the open file
+// follows a rename (keeping its element and its edits) or closes on a delete, and
+// a change event for the write, which may arrive before the write's answer, waits
+// until it has, so the page's own write raises no banner.
 
 import { fileNameOf } from '@stillpointlab/common-format/format';
 import { html, render } from '@stillpointlab/common-format/html';
@@ -44,6 +49,8 @@ export interface PaneOptions {
 }
 
 type Banner = { kind: 'changed'; version: string | null } | { kind: 'deleted' };
+
+type PutResult = Awaited<ReturnType<HostClient['put']>>;
 
 /** What is open. With no element the pane shows a message for the path instead. */
 interface Session {
@@ -90,6 +97,8 @@ export class FilePane {
   private loading: OpenRequest | null = null;
   private running: Promise<void> | null = null;
   private saving: Promise<unknown> | null = null;
+  /** The page's own moves and deletes, until the open file has followed each. */
+  private readonly writes = new Set<Promise<void>>();
   private checking = false;
   private recheck = false;
 
@@ -240,14 +249,72 @@ export class FilePane {
     try {
       do {
         this.recheck = false;
-        // A save's own change is compared with the version it answers.
-        while (this.saving) await this.saving.catch(() => undefined);
+        // A save's own change is compared with the version it answers, and a
+        // move's or a delete's waits until the open file has followed it.
+        while (this.saving || this.writes.size > 0) {
+          await this.saving?.catch(() => undefined);
+          await Promise.all(this.writes);
+        }
         if (this.session !== s) return;
         await this.check(s);
       } while (this.recheck && this.session === s);
     } finally {
       this.checking = false;
     }
+  }
+
+  /** The version the open file was read or saved at, when `path` is the open file. */
+  versionOf(path: string): string | null {
+    return this.session?.path === path ? this.session.version : null;
+  }
+
+  /**
+   * The page's own write that moves or deletes files. Once it lands, the open
+   * file follows it: `where` answers where the open path went, `null` when it was
+   * deleted, or `undefined` when the write left it alone. Answers the write's
+   * result.
+   */
+  followWrite(
+    write: Promise<PutResult>,
+    where: (path: string) => string | null | undefined
+  ): Promise<PutResult> {
+    const landed = write.then((result) => {
+      if (result.ok) this.follow(where);
+      return result;
+    });
+    const tracked: Promise<void> = landed.then(
+      () => void this.writes.delete(tracked),
+      () => void this.writes.delete(tracked)
+    );
+    this.writes.add(tracked);
+    return landed;
+  }
+
+  /** Move the open file to where the write put it, or close it if the write deleted it. */
+  private follow(where: (path: string) => string | null | undefined): void {
+    const s = this.session;
+    if (!s) return;
+    const to = where(s.path);
+    if (to === undefined) return;
+    if (to === null) {
+      this.close();
+      return;
+    }
+    // A move keeps the bytes, so the version the session holds is still the file's.
+    s.path = to;
+    const { registry } = this.options;
+    const format = registry.find(to) ?? registry.fallback;
+    if (s.element && s.format && s.format === format) {
+      // The same format: the element stays. With no edits it is handed the new
+      // path, which a format may read (code's language, an image's URL).
+      if (!s.dirty) this.apply(s.format, s.element, to, s.text);
+    } else if (!s.dirty) {
+      // Another format, or a message: open the file again where it is now.
+      void this.open(to, s.view, { force: true });
+    }
+    // With edits under another format, the element and its edits stay until the
+    // file is opened again; saving writes to the new path.
+    this.renderChrome();
   }
 
   // ---- opening ----

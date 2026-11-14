@@ -5,7 +5,8 @@ pane that opens the selected file in its format's preview or editor, saving to d
 nothing here needs Context Manager. See the
 [local host brief](../../../docs/tasks/stage4/phase1/briefs/local_host.md), the
 [host-server spec](../../../docs/tasks/stage4/phase2/specs/host-server.md) and the
-[host-page spec](../../../docs/tasks/stage4/phase2/specs/host-page.md).
+[host-page spec](../../../docs/tasks/stage4/phase2/specs/host-page.md) and the
+[file-operations spec](../../../docs/tasks/stage4/phase2/specs/file-operations.md).
 
 ## Running it
 
@@ -39,6 +40,8 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
 | `stored.ts`      | The open folders in `localStorage`, by the root's id                                     |
 | `words.ts`       | Everything the page says                                                                 |
 | `tree/`          | `<host-file-tree>`                                                                       |
+| `menu/`          | `HostMenu`: the page's one options menu, entries opened at a point                       |
+| `file-ops/`      | Create, rename and delete: a row's menu entries, the dialogs, the checks and the writes  |
 
 - **The address** names what is open: `#/file/<path>` for the preview, `#/edit/<path>` for the
   editor, each segment percent-encoded. Back and forward work, and a reload opens the same file.
@@ -46,6 +49,23 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
   opened or last saved at. A change on disk to the open file is read again and compared by
   version: with no unsaved edits it shows in place; with edits a banner offers Reload, and Save
   asks before it writes over the newer file. Leaving unsaved edits asks first.
+- **Files are created, renamed and deleted** from a row's menu (right click, the row's `⋯`
+  button, the ContextMenu key or Shift+F10): New file… on a folder and on the space under the
+  rows, Rename… and Delete… on a file or a folder. Each write is one `put`, so renaming or
+  deleting a folder is one `move` or `delete` per file under it, all or nothing; a rename is a
+  `move` without content, so any file keeps its bytes. A path is checked before it is sent (not
+  empty, no name after a last slash, no `..` segment, no leading slash, nothing listed there or
+  above it, a folder not moved into itself) and the server's refusal shows in the same place.
+  The open file follows a rename with its unsaved edits, and closes on a delete, which warns
+  first when it has edits; a `move` or `delete` of the open file carries its version as `base`.
+  A folder listed with nothing under it (a submodule, a nested repository), a folder holding
+  one, and every folder while the list is cut (`truncated`) cannot be renamed or deleted here.
+- **The menu** (`page.menu`) is the host's only one: `menu.open({ x, y, entries, label? })`
+  shows `{ label, action, danger?, disabled?, title? }` entries at a point in the viewport,
+  kept inside it, and replaces anything open. Escape, Tab, a click outside, a scroll and a
+  resize close it; Escape, Tab and a choice give focus back (`returnFocus`, or what had focus).
+  A row's entries are `page.fileOps.entriesFor({ path, kind })`; another kind of row, or an
+  app's request, adds its own in the page's `tree-menu` listener.
 - **Markdown is untrusted:** the page installs a renderer that sanitizes with DOMPurify before any
   md element mounts.
 - **The content security policy** (`PAGE_POLICY` in `src/server/page.ts`, and the same `<meta>` in
