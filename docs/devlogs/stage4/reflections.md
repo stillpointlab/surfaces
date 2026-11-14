@@ -1,6 +1,6 @@
 # Stage 4: The Local Host for Files, Formats and Git Reflections
 
-**Date:** _to be filled by Jamie_
+**Date:** _to be filled by Jamie, in the PR that follows the stage close_
 
 > Human-led, written at stage close. Agents review (typos, unsubstantiated claims) and may propose
 > attributed notes for the agent-observations section, but never draft or rewrite the human's prose;

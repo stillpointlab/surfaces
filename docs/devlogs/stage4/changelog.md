@@ -1,7 +1,8 @@
 # Stage 4: The Local Host for Files, Formats and Git Changelog
 
 - **Dates:** 2026-11-12 – 2026-11-14
-- **Stage Tag:** `stage4-complete` _(created on the merge of the stage close PR)_
+- **Stage Tag:** `stage4-complete` _(created on the merge of Jamie's reflections PR, which follows
+  the stage close PR)_
 
 > Agent-drafted from evidence (merged PRs, git history, task cards). Appended per phase at phase
 > close. Regenerable at any time; see [devlogs](../README.md). Reflections do NOT belong here — they
@@ -285,9 +286,10 @@ against its pin commit).
 
 ## Stage totals
 
-- `e1db06c..RANGE_END` (`stage3-complete` to the last merge before the close): COMMITS commits,
-  MERGES of them merges on `main`, FILES files, +ADDED/−REMOVED. PRS.
-- Code and tooling: 136 files, +16,774/−89. The local host is a new package,
+- `e1db06c..650c689` (`stage3-complete` to the last merge before the close): 68 commits, 10 of
+  them merges on `main`, 163 files, +20,365/−109. Nineteen PRs merged here, #86 to #100 and #103
+  to #106; ten of them (#89, #91 to #94, #96 to #100) reached main in one merge.
+- Under `packages/` and `tooling/`: 136 files, +16,774/−89. The local host is a new package,
   `packages/hosts/local`: about 7,600 lines of source without its tests and styles.
 - Tests: 1,978 at stage 3's close to 2,632.
 - Context Manager carried the adoption in one PR, context-manager#1186, walked twice.
