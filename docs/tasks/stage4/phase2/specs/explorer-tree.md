@@ -6,8 +6,8 @@ tags: [dev-tooling, code]
 
 # Spec: the explorer's tree
 
-_The [local host brief](../briefs/local_host.md), outcome 1, and the [host file tree
-spike](../spikes/host-file-tree.md), whose recommendation Jamie accepted (2026-11-13). Stage 4,
+_The [local host brief](../../phase1/briefs/local_host.md), outcome 1, and the [host file tree
+spike](../../phase1/spikes/host-file-tree.md), whose recommendation Jamie accepted (2026-11-13). Stage 4,
 phase 2, first wave: it runs beside [format-descriptors](format-descriptors.md) and
 [host-server](host-server.md). One PR here._
 
@@ -28,9 +28,9 @@ did. It loads nothing, changes nothing, and owns no menu or dialog.
 
 - **Owns:** `packages/hosts/local/src/client/tree/` (the element, its styles, its tests) and
   `packages/hosts/local/dev/fixtures.ts`.
-- **Shares with parallel specs:** the package scaffold, which [host-server](host-server.md)
-  creates. If that has not merged, create only the folders this spec owns and leave
-  `package.json` to it. One line in `tooling/harness/main.ts` (the glob).
+- **Starts from the scaffold:** the package, its place in the tooling and the harness's glob are
+  the first commit of [host-server](host-server.md)'s PR, and this work starts from that commit.
+  It adds no file outside the folders it owns (changed 2026-11-13, when the phase opened).
 - **Does not import:** anything from the server, or `common-format/host`.
 
 ## Technical requirement
@@ -72,6 +72,11 @@ Events, all bubbling and composed, with `detail.path` and `detail.kind` (`'file'
 A menu is asked for by a right click, the ContextMenu key, Shift+F10, or the row's own button
 (shown on hover and on focus).
 
+A right click on the empty space under the rows asks for one as well, for the served folder,
+which has no row: `detail.path` is `''` and `detail.kind` is `'folder'`.
+[file-operations](file-operations.md) answers it with New file… (added 2026-11-13, when the phase
+opened).
+
 ### Rows
 
 - Folders come before files; each group is sorted by name, with numbers in order.
@@ -96,7 +101,7 @@ double click activates even though the first click selected the row.
 
 ### In the harness
 
-The harness's glob gains `packages/hosts/*/dev/fixtures.ts`. The fixture mounts the tree as an
+The harness's glob takes `packages/hosts/*/dev/fixtures.ts` (the scaffold adds the line). The fixture mounts the tree as an
 extra element with: a small folder, a deep folder, statuses on files, a locked and an unlocked
 app, and hostile names.
 

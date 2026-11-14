@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 87
+completed: 2026-11-13
 created: 2026-11-13T16:45:00-07:00
 tags: [apps, formats, host-contract, dev-tooling, major-feature]
 ---
@@ -213,15 +215,16 @@ Each spec is one work package: what it owns, what it reads and must not change, 
 run beside. The claude agent hands a wave to sub-agents, reviews and merges each PR, and starts
 the next wave. Specs in the same wave can run at the same time.
 
-**Stage 4: the host for files, formats and git** (specs in `stage4/phase1/specs/`)
+**Stage 4: the host for files, formats and git** (specs in `stage4/phase1/specs/` until their
+phase opens; phase 2's moved to `stage4/phase2/specs/` on 2026-11-13)
 
 | Phase | Wave | Spec                                                                         | PRs |
 | ----- | ---- | ---------------------------------------------------------------------------- | --- |
-| 2     | 1    | [format-descriptors](../specs/format-descriptors.md)                         | 1   |
-| 2     | 1    | [host-server](../specs/host-server.md)                                       | 1   |
-| 2     | 1    | [explorer-tree](../specs/explorer-tree.md)                                   | 1   |
-| 2     | 2    | [host-page](../specs/host-page.md)                                           | 1   |
-| 2     | 3    | [file-operations](../specs/file-operations.md)                               | 1   |
+| 2     | 1    | [format-descriptors](../../phase2/specs/format-descriptors.md)               | 1   |
+| 2     | 1    | [host-server](../../phase2/specs/host-server.md)                             | 1   |
+| 2     | 1    | [explorer-tree](../../phase2/specs/explorer-tree.md)                         | 1   |
+| 2     | 2    | [host-page](../../phase2/specs/host-page.md)                                 | 1   |
+| 2     | 3    | [file-operations](../../phase2/specs/file-operations.md)                     | 1   |
 | 3     | 1    | [git-in-the-host](../specs/git-in-the-host.md)                               | 2   |
 | 4     | 1    | [context-manager-adopts-formats](../specs/context-manager-adopts-formats.md) | 1   |
 

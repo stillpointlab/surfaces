@@ -7,7 +7,7 @@ tags: [formats, host-contract, code]
 # Spec: Context Manager adopts the format registry
 
 _The [local host brief](../briefs/local_host.md), outcome 6. Stage 4, phase 4, the stage's last:
-after [format-descriptors](format-descriptors.md) has merged. One Context Manager PR, with both
+after [format-descriptors](../../phase2/specs/format-descriptors.md) has merged. One Context Manager PR, with both
 walk suites._
 
 ## High-level goal

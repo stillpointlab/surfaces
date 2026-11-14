@@ -6,7 +6,7 @@ tags: [dev-tooling, code]
 
 # Spec: create, rename and delete in the explorer
 
-_The [local host brief](../briefs/local_host.md), outcome 1. Stage 4, phase 2, third wave: after
+_The [local host brief](../../phase1/briefs/local_host.md), outcome 1. Stage 4, phase 2, third wave: after
 [host-page](host-page.md). One PR here._
 
 ## High-level goal
@@ -45,6 +45,9 @@ dependency on Context Manager's `options-menu`.
 | a folder                       | New file…, Rename…, Delete… |
 | the empty space under the rows | New file…                   |
 
+The empty space arrives as a `tree-menu` whose path is `''`; its New file… starts with an empty
+path.
+
 ### The dialogs
 
 Each is a `<modal-dialog>` with one field or one message, and Enter confirms.
@@ -75,7 +78,7 @@ server's message.
 - **A new folder** is made by creating a file inside it. Empty folders are not listed
   ([host-server](host-server.md)), so there is no "New folder".
 - **Moves are not staged here.** Staging a move or a delete is
-  [git-in-the-host](git-in-the-host.md), which changes the server's `put`, not this page.
+  [git-in-the-host](../../phase1/specs/git-in-the-host.md), which changes the server's `put`, not this page.
 - **An app's scope** is not special yet. The lock arrives with
   [apps-in-the-local-host](../../../stage5/phase1/specs/apps-in-the-local-host.md).
 - **Nothing is undone here.** [undo-journal](../../../stage5/phase1/specs/undo-journal.md) adds
