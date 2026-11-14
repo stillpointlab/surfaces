@@ -14,8 +14,9 @@ tags: [dev-tooling, host-contract, code]
 
 The [local host](local-host.md) needs an explorer: the folder's contents in a tree on the left.
 Context Manager already has trees, for digital goods and for repository files, with a lot of
-behaviour built for Context Manager, and a context picker that shows trees in several places. Jamie's caution (2026-11-13): this is a classic "one
-component to rule them all" situation, and trees are complex enough to become tar pits.
+behaviour built for Context Manager, and a context picker that shows trees in several places.
+Jamie's caution (2026-11-13): this is a classic "one component to rule them all" situation, and
+trees are complex enough to become tar pits.
 
 So: does the local host move one of Context Manager's trees here, share a base with them, or
 build its own? Does the context picker change the answer? And where is the line that keeps it
