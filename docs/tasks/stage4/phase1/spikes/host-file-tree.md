@@ -153,11 +153,12 @@ Context Manager's trees but the conventions.**
    raises a request for a menu on a row, and the host owns the menu, its dialogs and the
    writes. Rename is a dialog, so "rename in place" stays a non-goal.
 
-   Also since, as Jamie's lean: an app is one row where its folder would be, and an option on
-   the row expands it to list its files (the [brief](../briefs/local_host.md), outcome 1). The
-   tree needs nothing new for that. The host leaves the app's children out of the nodes it
-   gives the tree until the row is expanded, and the option is one more entry in the menu the
-   host owns.
+   Also since: an app's scope is locked by default, and shows as one row named for the app
+   where its folder would be. An option on the row unlocks it, which lists its folders and
+   files under that row; a lock item hides them again (the
+   [brief](../briefs/local_host.md), outcome 1). The tree needs nothing new for that. The host
+   leaves the app's children out of the nodes it gives the tree while the scope is locked, the
+   two options are entries in the menu the host owns, and "unlocked" is one more mark on a row.
 
 5. **Do not plan a shared tree.** If Context Manager's `repo-tree` and this one should ever
    converge, the evidence will be the second consumer, and it is cheaper to compare two working

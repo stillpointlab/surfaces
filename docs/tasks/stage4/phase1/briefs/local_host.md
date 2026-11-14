@@ -95,16 +95,21 @@ with the packages' sources reloading; `surfaces [path]` runs it anywhere.
    depend on the banner having arrived.
 
    Inside an app's scope (the folder its manifest mounts), the app is the only writer by
-   default. Jamie's lean for how that looks (2026-11-13):
-   - the app is one row in the explorer, where its folder would be, and its files are not
-     listed;
-   - selecting the row opens the app at its default page;
-   - an option on the row expands it, which lists its files and unlocks them: their editors,
-     and the explorer's create, rename and delete, work as they do anywhere else.
+   default. How that looks (Jamie, 2026-11-13):
+   - **Locked,** the app is one row in the explorer, where its folder would be, named for the
+     app. Its files are not listed. Selecting the row opens the app at its default page.
+   - **Unlocking** is an option on the row, and it asks first. A draft of the words: "Show this
+     app's files? Changes made to them skip the app's rules, and the app may report problems
+     until they are fixed." (Show files, Cancel).
+   - **Unlocked,** that row is still the app's entry point: it keeps the app's name and still
+     opens the app. Under it are the scope's folders and files, which act as any others do:
+     they open in their editors, and the explorer creates, renames and deletes there.
+   - **Locking again** is a lock item on the row, not a matter of collapsing it. Locking hides
+     the files again, and can validate what was changed on the way.
 
-   A link to a file in a scope that is not expanded opens the file in its preview. The server
-   enforces the lock, not only the page: a write to a locked scope that does not come through
-   the app's runner is refused.
+   A link to a file in a locked scope opens the file in its preview. The server enforces the
+   lock, not only the page: a write to a locked scope that does not come through the app's
+   runner is refused.
 
 2. **Git.** The explorer marks changed, new, moved and deleted files. A changed file shows its
    diff against `HEAD`. The host stages its own moves and deletes, so git reports them as such.
@@ -181,15 +186,13 @@ Each is for the spec that meets it, unless Jamie answers first:
   The harness's `HarnessFormat.elements` already names each format's tags; the descriptor would
   replace that field, so the harness reads it too.
 
-- **The escape hatch's details.** Expanding the app's row is the way out (outcome 1). Open:
-  - whether expanding asks first. The lean is yes, once per app in a run, since it is the step
-    that lets a person break the app's files. A draft of the words: "Show this app's files?
-    Changes made to them skip the app's rules, and the app may report problems until they are
-    fixed." (Show files, Cancel);
-  - whether collapsing the row locks the scope again (the lean: yes, so what the tree shows and
-    what the server allows are the same thing);
-  - how a file in an expanded scope is told apart from the app's row, which still opens the
-    app.
+- **The lock's details.** Unlocking and locking an app's scope are decided (outcome 1). Open:
+  - **what locking validates.** The lean: it runs the app's own projection over the scope and
+    shows the problems it reports, and it locks either way, since the app shows the same
+    problems when it opens and a lock that refused would leave the scope open;
+  - **where the lock item is.** The lean: an entry in the row's menu, with a mark on the row
+    while the scope is unlocked, so the tree gains no buttons on its rows;
+  - **whether an unlocked scope outlives the run** (the lean: no, every run starts locked).
 
   Context Manager differs here today: its tree lists an app's files, and a card or a zone file
   opens in its format's editor. Whether it takes the lock when it adopts is for that phase.
