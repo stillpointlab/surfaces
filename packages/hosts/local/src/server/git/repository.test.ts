@@ -100,6 +100,10 @@ describe('start and info', () => {
     });
     expect(await access(repo, noGit).info()).toEqual({ state: 'no-git', branch: null });
     expect((await access(join(repo, 'sub'), noGit).start()).state).toBe('no-git');
+    // A worktree's `.git` is a file, and counts.
+    const tree = join(folder.path, 'tree');
+    git(repo, env, 'worktree', 'add', '-q', '-b', 'side', tree);
+    expect((await access(tree, noGit).start()).state).toBe('no-git');
   });
 
   it('outside a repository the routes refuse, status is {}, and a base is refused', async () => {
