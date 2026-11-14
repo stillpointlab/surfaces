@@ -42,8 +42,19 @@ whether the root is inside a work tree (`git rev-parse --show-toplevel` and `--s
 served root may be a folder inside a repository: every path the host shows stays relative to the
 served root, and git is given the prefix.
 
-No `git` on the machine, or no repository: `status()` answers `{}`, the routes below answer
-`HOST_NOT_A_REPOSITORY`, and the page hides the diff and commit controls.
+The host is in one of three states, decided once at start and answered by `GET /api/git` as
+`{ state, branch }`:
+
+| State           | When                                      | What the page does                                                                                       |
+| --------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `repository`    | `git` runs and the root is in a work tree | marks, the Changes view and Commit; `branch` is the current branch, or `null` when detached              |
+| `no-repository` | `git` runs and the root is not in one     | none of them, and no notice: the folder is just a folder                                                 |
+| `no-git`        | `git` cannot be run                       | none of them, and one line in the explorer's header: "git was not found, so changes and commit are off." |
+
+Outside `repository`, `status()` answers `{}` and the routes below refuse with
+`HOST_NOT_A_REPOSITORY` or `HOST_GIT_NOT_FOUND`. Nothing else changes: files list, open, save,
+and are created, renamed and deleted as before, and a write stages nothing. The host does not
+look for `git` again during the run.
 
 ### Step 1: status, diff and staging
 
@@ -115,7 +126,9 @@ without a commit, and anything that needs the network.
       repository; staging a move and a delete, of clean and of changed files; `HEAD` text.
 - [ ] Commit tests: chosen paths only, with other staged work left alone; a new branch; each
       refusal; a failing hook leaves the tree as it was.
-- [ ] A folder with no repository, and a machine path with no `git`, both serve without errors.
+- [ ] A folder with no repository serves with no git controls and no notice. With `git` off the
+      `PATH`, a repository serves with the notice, the walk listing, and working file
+      operations.
 - [ ] By hand: edit, rename and delete files, see the marks and a diff, commit on a new branch,
       and read the result with `git log --stat`.
 - [ ] `npm run check` is green.

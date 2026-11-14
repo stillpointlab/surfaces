@@ -83,6 +83,10 @@ besides the watcher and the `bin`.
   files missing from disk left out, so ignored files stay out. Elsewhere: a walk that skips
   `.git` and `node_modules`. Folder nodes are derived from the file paths, so an empty folder is
   not listed.
+- **Which listing.** At start the port asks `git` once whether the root is inside a work tree.
+  If `git` cannot be run, or the root is not in one, it uses the walk, and the `bin` says which
+  on the terminal: "git was not found; listing every file" or "not a git repository". Without
+  `git`, a repository's ignored files are listed, since only git knows what is ignored.
 - **Paths** are relative to the root with `/` separators, as the app contract's are.
 - **Confinement.** A path is refused when it is absolute, has a `..`, `.git`, empty or NUL
   segment, or a backslash; or when the real path of its nearest existing ancestor is outside the
