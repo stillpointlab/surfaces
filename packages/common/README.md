@@ -82,6 +82,17 @@ reusable })` whether they fit among a host's paths.
   the end of the file) sets the `addsFinalNewline` gap, recorded in the follow-ups. A separate entry, so it never loads the element suites.
 - **YAML helpers** (`@stillpointlab/common-format/yaml`). `formatYamlScalar`: a scalar written plain
   when YAML reads it back as the same value, otherwise JSON-quoted. DOM-free, for the app cores.
+- **The host contract** (`@stillpointlab/common-format/host`), types only, so it is DOM-free and
+  Node-free:
+  - `StoragePort`: what a host's storage answers. `list()` the folder's `FolderNode`s, `get(path)` a
+    text file with an opaque `version` (the local host's is a SHA-256 of the bytes), `put(changes)`
+    all or none, and `status()` per path (`FileStatus`: `changed`, `new`, `moved`, `deleted`).
+  - `PortChange`: an app's `FileChange` with an optional `base`, the version the writer read (a
+    mismatch refuses the whole `put`), plus a `delete`, and a `move` without `content` that keeps the
+    file's bytes. `HostRefusalCode` names the `HOST_` codes a port refuses with.
+  - What a host's server sends a page: `HostEvent` (`changed` with paths, or `listed`),
+    `HostListing` and `HostRoot`. The local host's routes are in
+    [`packages/hosts/local`](../hosts/local/README.md).
 - **Tokens.** `src/styles/_tokens.scss`: the `--spl-*` color custom properties with defaults, plus
   spacing and radius scales. Formats pull them in with `@use 'common/src/styles/tokens' as *;`
   (the style generator adds `packages/` to the Sass load path).

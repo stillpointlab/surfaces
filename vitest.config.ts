@@ -9,6 +9,7 @@ export default defineConfig({
       'packages/components/*/vitest.config.ts',
       'packages/formats/*/vitest.config.ts',
       'packages/apps/*/vitest.config.ts',
+      'packages/hosts/*/vitest.config.ts',
     ],
   },
 });

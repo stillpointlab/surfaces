@@ -1,0 +1,30 @@
+{
+  "name": "@stillpointlab/local-host",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The local host: a server over a folder that opens its files in their formats and mounts its apps, with nothing from Context Manager.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "surfaces": "./bin/surfaces.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js"
+    }
+  },
+  "scripts": {
+    "gen:styles": "node ../../../tooling/gen-styles.mjs .",
+    "build": "npm run gen:styles && tsup",
+    "typecheck": "npm run gen:styles && tsc --noEmit && tsc --noEmit -p tsconfig.client.json",
+    "test": "npm run gen:styles && vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@stillpointlab/common-format": "*",
+    "@stillpointlab/spl-icon-component": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0"
+  }
+}
