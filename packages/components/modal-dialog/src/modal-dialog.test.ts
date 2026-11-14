@@ -139,6 +139,49 @@ describe('ModalDialog focus on open', () => {
   });
 });
 
+describe('ModalDialog close-on-overlay-click', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  function closedCount(dialog: ModalDialog): () => number {
+    let count = 0;
+    dialog.addEventListener('modal-closed', () => (count += 1));
+    return () => count;
+  }
+
+  it('closes on a click on the scrim', async () => {
+    const { dialog } = mount('<button id="ok">OK</button>');
+    dialog.setAttribute('close-on-overlay-click', '');
+    const closed = closedCount(dialog);
+    await openAndSettle(dialog);
+    dialog.shadowRoot!.querySelector<HTMLElement>('.modal-overlay')!.click();
+    expect(closed()).toBe(1);
+  });
+
+  it('stays open on a click inside the dialog, a slotted button included', async () => {
+    const { dialog, body } = mount('<button id="ok">OK</button>');
+    dialog.setAttribute('close-on-overlay-click', '');
+    const closed = closedCount(dialog);
+    await openAndSettle(dialog);
+    let clicked = 0;
+    const button = body.querySelector<HTMLButtonElement>('#ok')!;
+    button.addEventListener('click', () => (clicked += 1));
+    button.click();
+    dialog.shadowRoot!.querySelector<HTMLElement>('.modal-body')!.click();
+    expect(clicked).toBe(1);
+    expect(closed()).toBe(0);
+  });
+
+  it('stays open on a click on the scrim without the attribute', async () => {
+    const { dialog } = mount('<button id="ok">OK</button>');
+    const closed = closedCount(dialog);
+    await openAndSettle(dialog);
+    dialog.shadowRoot!.querySelector<HTMLElement>('.modal-overlay')!.click();
+    expect(closed()).toBe(0);
+  });
+});
+
 describe('ModalDialog title', () => {
   afterEach(() => {
     document.body.innerHTML = '';
