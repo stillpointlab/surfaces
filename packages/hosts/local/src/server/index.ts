@@ -7,6 +7,7 @@ export { createStaticPage, PAGE_HEADERS, PAGE_POLICY } from './page';
 export type { PageHandler } from './page';
 export { createNodePort, versionOf } from './port';
 export type { NodePort, NodePortOptions, PortStart } from './port';
+export type { GitStart, HostGitAccess, StageResult } from './git/repository';
 export { createFolderWatcher } from './watcher';
 export type { FolderWatcher, FolderWatcherOptions } from './watcher';
 export { nodeListener } from './node-http';

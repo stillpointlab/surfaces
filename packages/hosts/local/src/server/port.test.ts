@@ -57,7 +57,12 @@ describe('list', () => {
     rmSync(join(root, 'deleted.md'));
 
     const p = port(root);
-    expect(await p.start()).toEqual({ listing: 'git', gitFound: true, looksLikeRepository: false });
+    expect(await p.start()).toEqual({
+      listing: 'git',
+      gitFound: true,
+      looksLikeRepository: false,
+      git: 'repository',
+    });
     expect(paths(await p.list())).toEqual([
       'f .gitignore',
       'f a.md',
@@ -117,6 +122,7 @@ describe('list', () => {
       listing: 'walk',
       gitFound: true,
       looksLikeRepository: false,
+      git: 'no-repository',
     });
     expect(paths(await p.list())).toEqual([
       'f .gitignore',
@@ -138,6 +144,7 @@ describe('list', () => {
       listing: 'walk',
       gitFound: false,
       looksLikeRepository: true,
+      git: 'no-git',
     });
     expect(paths(await p.list())).toEqual([
       'f .gitignore',

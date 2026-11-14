@@ -5,8 +5,9 @@ pane that opens the selected file in its format's preview or editor, saving to d
 nothing here needs Context Manager. See the
 [local host brief](../../../docs/tasks/stage4/phase1/briefs/local_host.md), the
 [host-server spec](../../../docs/tasks/stage4/phase2/specs/host-server.md) and the
-[host-page spec](../../../docs/tasks/stage4/phase2/specs/host-page.md) and the
-[file-operations spec](../../../docs/tasks/stage4/phase2/specs/file-operations.md).
+[host-page spec](../../../docs/tasks/stage4/phase2/specs/host-page.md), the
+[file-operations spec](../../../docs/tasks/stage4/phase2/specs/file-operations.md) and
+[git in the host](../../../docs/tasks/stage4/phase3/specs/git-in-the-host.md).
 
 ## Running it
 
@@ -32,11 +33,11 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
 | `main.ts`        | The entry: the HTTP client, the five formats, md's sanitizing renderer                   |
 | `host-client.ts` | `HostClient` and `createHttpClient`: the only module that calls `fetch` or `EventSource` |
 | `page.ts`        | `startPage`: the layout, the tree's events, the address, the host's events               |
-| `pane.ts`        | `FilePane`: what is open, opening, saving, and a change on disk                          |
+| `pane.ts`        | `FilePane`: what is open, opening, saving, a change on disk, and the Changes view        |
 | `registry.ts`    | md, xmdl, sheet, image and code, in that order, with code as the fallback                |
 | `markdown.ts`    | The renderer `<md-preview>` is given: markdown-it, then DOMPurify                        |
 | `confirm.ts`     | One confirmation helper over `<modal-dialog>`                                            |
-| `address.ts`     | `#/file/<path>` and `#/edit/<path>`                                                      |
+| `address.ts`     | `#/file/<path>`, `#/edit/<path>` and `#/diff/<path>`                                     |
 | `stored.ts`      | The open folders in `localStorage`, by the root's id                                     |
 | `words.ts`       | Everything the page says                                                                 |
 | `tree/`          | `<host-file-tree>`                                                                       |
@@ -44,7 +45,17 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
 | `file-ops/`      | Create, rename and delete: a row's menu entries, the dialogs, the checks and the writes  |
 
 - **The address** names what is open: `#/file/<path>` for the preview, `#/edit/<path>` for the
-  editor, each segment percent-encoded. Back and forward work, and a reload opens the same file.
+  editor and `#/diff/<path>` for the Changes view, each segment percent-encoded. Back and
+  forward work, and a reload opens the same file.
+- **Git.** The page asks `GET /api/git` once. In a repository the tree's marks are the
+  statuses (`GET /api/status`), read again on a `changed` or `status` event, and a `changed` or
+  `moved` file in a format that takes text offers **Changes** beside Preview and Edit: `<code-diff>`
+  with the text at `HEAD` on the left (`GET /api/base`; a moved file's under its old path) and
+  the file on the right, read again when either moves. The switch comes and goes with the
+  status without touching the editor or its edits; a Changes view whose file stops being changed
+  (a commit) goes to the preview. An image has no Changes. When git was not found and the folder
+  looks like a repository, the explorer says "git was not found, so changes and commit are
+  off."; outside a repository the page shows nothing of git and calls none of its routes.
 - **Saving** (Save, Ctrl+S, Cmd+S) sends one `write` whose `base` is the version the file was
   opened or last saved at. A change on disk to the open file is read again and compared by
   version: with no unsaved edits it shows in place; with edits a banner offers Reload, and Save
@@ -84,36 +95,42 @@ shell can serve the same handler under its own scheme. `createNodePort({ root })
 
 ## Routes
 
-| Route                  | Answers                                                                              |
-| ---------------------- | ------------------------------------------------------------------------------------ |
-| `GET /api/list`        | `{ nodes, truncated }`: every file and folder; past 20,000 nodes cut, and saying so  |
-| `GET /api/file?path=`  | `{ ok: true, text, version }`, or a refusal                                          |
-| `GET /api/raw?path=`   | the bytes, typed by extension, with `nosniff` and `Content-Security-Policy: sandbox` |
-| `PUT /api/files`       | body `{ changes: PortChange[] }`; `{ ok: true, versions }`, or a refusal             |
-| `GET /api/status`      | `{}` until git-in-the-host                                                           |
-| `GET /api/root`        | `{ name, id }`: the folder's name, and a SHA-256 of its real path                    |
-| `GET /api/events`      | server-sent events (below)                                                           |
-| `GET /`, `GET /<file>` | the page: `dist/client`, or Vite in development mode (any path outside `/api/`)      |
+| Route                  | Answers                                                                                     |
+| ---------------------- | ------------------------------------------------------------------------------------------- |
+| `GET /api/list`        | `{ nodes, truncated }`: every file and folder; past 20,000 nodes cut, and saying so         |
+| `GET /api/file?path=`  | `{ ok: true, text, version }`, or a refusal                                                 |
+| `GET /api/raw?path=`   | the bytes, typed by extension, with `nosniff` and `Content-Security-Policy: sandbox`        |
+| `PUT /api/files`       | body `{ changes: PortChange[] }`; `{ ok: true, versions }`, or a refusal                    |
+| `GET /api/status`      | `{ [path]: status }`: what differs from `HEAD`, deleted files included (`{}` outside git)   |
+| `GET /api/git`         | `{ state, branch }`: `repository`, `no-repository` or `no-git`; `branch` `null` if detached |
+| `GET /api/changes`     | `{ ok: true, changes }`, each `{ path, status, from? }` (`from` for a moved file)           |
+| `GET /api/base?path=`  | `{ ok: true, text }`: the file's text at `HEAD`, under its old path when it moved           |
+| `GET /api/root`        | `{ name, id }`: the folder's name, and a SHA-256 of its real path                           |
+| `GET /api/events`      | server-sent events (below)                                                                  |
+| `GET /`, `GET /<file>` | the page: `dist/client`, or Vite in development mode (any path outside `/api/`)             |
 
 A path is relative to the root with `/` separators, in the `path` query (percent-encoded as any
 query value). A version is a SHA-256 of the file's bytes, as hex; only equality matters.
 
 **Refusals** are `{ ok: false, code, message }`:
 
-| Status | Codes                                                                                    |
-| ------ | ---------------------------------------------------------------------------------------- |
-| 404    | `HOST_FILE_NOT_FOUND`, and `HOST_NO_ROUTE` for a route that does not exist               |
-| 409    | `HOST_PATH_EXISTS`, `HOST_FILE_CHANGED`                                                  |
-| 400    | `HOST_PATH_OUTSIDE_ROOT`, `HOST_NOT_TEXT`, `HOST_FILE_TOO_LARGE`, `HOST_BAD_REQUEST`     |
-| 403    | `HOST_FORBIDDEN`: the `Host`, `Origin` or `Sec-Fetch-Site` checks below                  |
-| 405    | `HOST_METHOD_NOT_ALLOWED`, with an `Allow` header                                        |
-| 413    | `HOST_BODY_TOO_LARGE`: a `PUT` body over 64 MiB                                          |
-| 500    | `HOST_WRITE_FAILED`: a write failed part way (a full disk); what it wrote was taken back |
+| Status | Codes                                                                                                                     |
+| ------ | ------------------------------------------------------------------------------------------------------------------------- |
+| 404    | `HOST_FILE_NOT_FOUND`, and `HOST_NO_ROUTE` for a route that does not exist                                                |
+| 409    | `HOST_PATH_EXISTS`, `HOST_FILE_CHANGED`; `HOST_NOT_A_REPOSITORY`, `HOST_GIT_NOT_FOUND` (a git route outside `repository`) |
+| 400    | `HOST_PATH_OUTSIDE_ROOT`, `HOST_NOT_TEXT`, `HOST_FILE_TOO_LARGE`, `HOST_BAD_REQUEST`                                      |
+| 403    | `HOST_FORBIDDEN`: the `Host`, `Origin` or `Sec-Fetch-Site` checks below                                                   |
+| 405    | `HOST_METHOD_NOT_ALLOWED`, with an `Allow` header                                                                         |
+| 413    | `HOST_BODY_TOO_LARGE`: a `PUT` body over 64 MiB                                                                           |
+| 500    | `HOST_WRITE_FAILED`: a write failed part way (a full disk); what it wrote was taken back                                  |
+| 500    | `HOST_GIT_FAILED`: git ran and failed (its message says why)                                                              |
 
 **Events** are unnamed server-sent events, one JSON object per `data:` line:
-`{"type":"changed","paths":[...]}` (these files' contents changed, appeared or went) and
-`{"type":"listed"}` (the set of paths changed, so the list is stale). The stream opens with
-`retry: 1000` and sends a comment every 25 seconds. The server's own writes are reported too.
+`{"type":"changed","paths":[...]}` (these files' contents changed, appeared or went),
+`{"type":"listed"}` (the set of paths changed, so the list is stale) and `{"type":"status"}`
+(git's `HEAD` or index changed: a commit, a stage or a switch, the host's own staging
+included, so the statuses are stale). The stream opens with `retry: 1000` and sends a comment
+every 25 seconds. The server's own writes are reported too.
 
 ## `put`
 
@@ -127,6 +144,13 @@ query value). A version is a SHA-256 of the file's bytes, as hex; only equality 
   what the first wrote.
 - A `write` through a symbolic link writes the link's target and keeps the link; a `move` or a
   `delete` acts on the link itself. A `move` without `content` keeps the file's bytes.
+- **In a repository, a `move` or `delete` of a tracked file is staged** once it is written, as
+  `git mv` and `git rm` would have: the old path's index entry goes to the new path, or is
+  removed (`git update-index --index-info`, one call for the whole `put`). So git reports a
+  rename however much the file was edited, edits that were not staged stay unstaged, and a file
+  moved into an ignored folder stays tracked. An untracked file, a file in conflict, a `write`
+  and a `create` stage nothing. If staging fails (another git holds `index.lock`), the write
+  stands, `put` succeeds, and the host warns on its terminal.
 
 ## Safety
 
@@ -145,6 +169,29 @@ query value). A version is a SHA-256 of the file's bytes, as hex; only equality 
   request whose `Origin` is another, and any the browser marks `Sec-Fetch-Site: cross-site` or
   `same-site` (except a navigation), is refused.
 
+## Git
+
+`src/server/git/`: `run.ts` runs `git` (an argument list, a timeout, `GIT_OPTIONAL_LOCKS=0` for
+reads, standard input when asked); `repository.ts` is the host's git (`createGit`, the port's
+`git`); `status.ts` reads `git status --porcelain=v2 -z` into changes; `stage.ts` plans the
+staging. Nothing else runs git.
+
+- **Three states, decided once at start** (`GET /api/git`): `repository` when git runs and the
+  root is in a work tree; `no-git` when git cannot be run and a `.git` entry (a folder or a
+  file) is in the root or above it; `no-repository` otherwise. Outside `repository` the status
+  is `{}`, the git routes refuse, and a write stages nothing.
+- **A served root inside a repository** sees only its own paths, relative to itself. A rename
+  across its edge is half of one: in from outside is `new`, out to elsewhere is `deleted`.
+- **The statuses:** untracked, added and intent-to-add files are `new`; a staged rename is
+  `moved` on its new path (a move made with plain `mv` is a deletion and a new file until it is
+  staged); a file gone from disk or removed from the index is `deleted`; a modified, type-changed
+  or conflicted file is `changed`; a file added and then deleted from disk is left out.
+  Submodules are left out.
+- **`HEAD` text** is the blob as committed (`git cat-file blob`), with no filters run, so
+  nothing reaches the network. A symbolic link, a blob that is not text, and one over 2 MiB are
+  refused as `HOST_NOT_TEXT` and `HOST_FILE_TOO_LARGE`.
+- **Paths are literal** (`--literal-pathspecs`): a file named `*.md` is that file.
+
 ## The listing and the watcher
 
 - In a git work tree the list is `git ls-files --cached --others --exclude-standard`, with files
@@ -154,4 +201,7 @@ query value). A version is a SHA-256 of the file's bytes, as hex; only equality 
 - The watcher watches each folder that holds a listed file (not the root recursively, which on
   Linux watches each file by itself and loses one replaced by a rename), joins bursts within
   100 ms, and lists again when a name comes or goes. `watchNames(folder, names, onChange)` watches
-  names in a folder outside the root, for git's `HEAD` and `index`.
+  names in a folder outside the root: in a repository, `HEAD` and `index` in git's own folder
+  (`git rev-parse --absolute-git-dir`: a worktree's own, and above a served subfolder), which
+  sends `status`. The host's own reads never write the index, so reading after the event raises
+  no other.

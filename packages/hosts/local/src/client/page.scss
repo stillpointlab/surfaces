@@ -52,6 +52,10 @@ modal-dialog:not(:defined) {
   font-size: 0.8125rem;
 }
 
+.explorer-note-line {
+  display: block;
+}
+
 host-file-tree {
   flex: 1 1 auto;
   min-height: 0;
@@ -111,12 +115,15 @@ host-file-tree {
     border-radius: 0;
   }
 
+  .button + .button {
+    margin-left: -1px;
+  }
+
   .button:first-child {
     border-radius: $border-radius-md 0 0 $border-radius-md;
   }
 
   .button:last-child {
-    margin-left: -1px;
     border-radius: 0 $border-radius-md $border-radius-md 0;
   }
 

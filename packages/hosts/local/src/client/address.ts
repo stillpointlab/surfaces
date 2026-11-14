@@ -1,17 +1,18 @@
 // The address names what is open, in the fragment: `#/file/<path>` for a file's
-// preview and `#/edit/<path>` for its editor. Each segment of the path is
-// percent-encoded, so a name with `#`, `%`, `?` or a space survives the round
-// trip. A later view (the git spec's `#/diff/<path>`) is one more entry in VIEWS.
+// preview, `#/edit/<path>` for its editor and `#/diff/<path>` for its changes
+// since the last commit. Each segment of the path is percent-encoded, so a name
+// with `#`, `%`, `?` or a space survives the round trip. A later view is one more
+// entry in VIEWS.
 
-export type View = 'preview' | 'edit';
+export type View = 'preview' | 'edit' | 'diff';
 
 export interface Address {
   view: View;
   path: string;
 }
 
-const VIEWS: Record<string, View> = { file: 'preview', edit: 'edit' };
-const PREFIXES: Record<View, string> = { preview: 'file', edit: 'edit' };
+const VIEWS: Record<string, View> = { file: 'preview', edit: 'edit', diff: 'diff' };
+const PREFIXES: Record<View, string> = { preview: 'file', edit: 'edit', diff: 'diff' };
 
 /** The fragment for an address, with its `#`. */
 export function formatAddress(address: Address): string {

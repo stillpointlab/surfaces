@@ -6,6 +6,7 @@ describe('the address', () => {
   it.each([
     ['README.md', 'preview', '#/file/README.md'],
     ['docs/notes.md', 'edit', '#/edit/docs/notes.md'],
+    ['docs/notes.md', 'diff', '#/diff/docs/notes.md'],
     ['a b/#c?d%e.md', 'preview', '#/file/a%20b/%23c%3Fd%25e.md'],
     ['<script>/ünïcode.md', 'edit', '#/edit/%3Cscript%3E/%C3%BCn%C3%AFcode.md'],
   ] as const)('round-trips %s in the %s', (path, view, hash) => {

@@ -2,7 +2,8 @@
 // given folder, with a timeout. Reads pass `GIT_OPTIONAL_LOCKS=0`, so a status or
 // a listing never takes the index lock from a person's own git.
 //
-// The host-server spec uses it to list; git-in-the-host grows this folder.
+// The listing uses it, and so does the rest of this folder (`repository.ts`), which
+// is the only other code that runs git.
 
 import { execFile } from 'node:child_process';
 
@@ -20,6 +21,8 @@ export interface GitOptions {
   env?: NodeJS.ProcessEnv;
   /** A read: sets `GIT_OPTIONAL_LOCKS=0`. */
   read?: boolean;
+  /** What git reads on its standard input (`update-index --index-info`). */
+  input?: string | Buffer;
   timeoutMs?: number;
 }
 
@@ -27,7 +30,7 @@ export function runGit(args: readonly string[], options: GitOptions): Promise<Gi
   const env = { ...(options.env ?? process.env) };
   if (options.read) env.GIT_OPTIONAL_LOCKS = '0';
   return new Promise((resolve) => {
-    execFile(
+    const child = execFile(
       'git',
       args,
       {
@@ -52,5 +55,10 @@ export function runGit(args: readonly string[], options: GitOptions): Promise<Gi
         });
       }
     );
+    if (options.input !== undefined) {
+      // A git that exits before reading it all (a bad argument) closes the pipe.
+      child.stdin?.on('error', () => undefined);
+      child.stdin?.end(options.input);
+    }
   });
 }

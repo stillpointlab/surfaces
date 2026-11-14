@@ -3,7 +3,8 @@
 // word for word; the pane's messages for a file it cannot open are the host-page
 // spec's table. A confirmation is a question and, where the draft has one, the
 // sentence after it: together they are the draft's words. The explorer's menu and
-// dialogs are the file-operations spec's, where it has words for them.
+// dialogs are the file-operations spec's, where it has words for them. The git
+// notice is the git-in-the-host spec's; the Changes view's messages are drafts.
 
 export interface Confirmation {
   question: string;
@@ -17,11 +18,14 @@ export const words = {
   explorerTruncated: (shown: number) =>
     `Showing the first ${shown.toLocaleString('en')} files and folders.`,
   explorerFailed: (message: string) => `The folder could not be listed: ${message}`,
+  /** The git-in-the-host spec's notice, for a folder that looks like a repository with no git. */
+  gitNotFound: 'git was not found, so changes and commit are off.',
 
   nothingOpen: 'Select a file in the explorer.',
   loading: 'Opening…',
   preview: 'Preview',
   edit: 'Edit',
+  changes: 'Changes',
   save: 'Save',
   unsaved: 'Unsaved edits',
 
@@ -37,6 +41,14 @@ export const words = {
   /** Any other refusal: the server's own message says why. */
   cannotOpenOther: (message: string) => `This file could not be opened. ${message}`,
   loadFailed: 'The format for this file could not be loaded.',
+
+  /** The Changes view, when the last commit's side cannot be shown. */
+  diff: {
+    notInHead: 'This file is not in the last commit, so there is nothing to compare it with.',
+    HOST_NOT_TEXT: 'The last commit’s version of this file is not text, so it cannot be compared.',
+    HOST_FILE_TOO_LARGE: 'The last commit’s version of this file is too large to compare here.',
+    failed: (message: string) => `The last commit’s version could not be read. ${message}`,
+  },
 
   /** The open file went from disk while it had no unsaved edits. */
   deletedOnDisk: 'This file was deleted on disk.',

@@ -12,6 +12,11 @@
 //   lost, writes the address, and tells the pane. A new view (`#/diff/<path>`) is
 //   an entry in `address.ts` and a case in the pane.
 // - `refresh` lists the folder again, as a `listed` event does.
+// - git: the page asks `client.git()` once. In `repository` the statuses mark the
+//   tree and tell the pane which files offer the Changes view (`statusOf`); a
+//   `status` event reads them again. In `no-git` the explorer's note says git was
+//   not found. Outside `repository` nothing calls the git routes. The Commit
+//   button (step 2 of git-in-the-host) goes in `.explorer-header`.
 
 import '@stillpointlab/modal-dialog-component';
 import { fileNameOf } from '@stillpointlab/common-format/format';
@@ -31,7 +36,7 @@ import { words } from './words';
 import type { Address, View } from './address';
 import type { Confirm } from './confirm';
 import type { FileOps } from './file-ops/file-ops';
-import type { HostClient, HostEvent } from './host-client';
+import type { HostClient, HostEvent, HostGit } from './host-client';
 import type { PaneState } from './pane';
 import type {
   HostFileTree,
@@ -41,6 +46,7 @@ import type {
 } from './tree/host-file-tree';
 import type { FolderNode } from '@stillpointlab/common-format/app';
 import type { FormatDescriptor, FormatRegistry } from '@stillpointlab/common-format/format';
+import type { FileStatus } from '@stillpointlab/common-format/host';
 
 export interface PageOptions {
   client: HostClient;
@@ -49,6 +55,8 @@ export interface PageOptions {
   prepare?: (format: FormatDescriptor) => Promise<void>;
   /** Where the page renders: `document.body` by default. */
   root?: HTMLElement;
+  /** The Changes view's element: `<code-diff>` by default (a test hands a fake). */
+  diff?: { tag: string; load(): Promise<unknown> };
 }
 
 export interface HostPage {
@@ -107,18 +115,36 @@ export function startPage(options: PageOptions): HostPage {
   let nodes: FolderNode[] = [];
   let truncated = false;
   let listingIndex: ReturnType<typeof indexListing> | null = null;
+  /** The folder's git, once asked; `null` until then, or if the host could not say. */
+  let git: HostGit | null = null;
+  /** The last statuses read, by path. */
+  let statuses: Record<string, FileStatus> = {};
+  /** The explorer's note: one line each for git and the listing. */
+  const notes: { git: string | null; list: string | null } = { git: null, list: null };
 
   const pane: FilePane = new FilePane(host.querySelector<HTMLElement>('.pane')!, {
     client,
     registry,
     confirm,
     prepare: options.prepare,
-    onViewRequest: (view) => {
+    diff: options.diff,
+    onViewRequest: (view, how = 'push') => {
       const current = pane.current;
-      if (current) void navigate({ path: current.path, view });
+      if (current) void navigate({ path: current.path, view }, how);
     },
+    statusOf: (path) =>
+      git?.state === 'repository' && Object.hasOwn(statuses, path) ? statuses[path] : undefined,
     onState: showState,
   });
+
+  function showNote(): void {
+    const lines = [notes.git, notes.list].filter((line): line is string => line !== null);
+    note.hidden = lines.length === 0;
+    render(
+      note,
+      html`${lines.map((line) => html`<span class="explorer-note-line">${line}</span>`)}`
+    );
+  }
 
   // ---- the address ----
 
@@ -242,22 +268,28 @@ export function startPage(options: PageOptions): HostPage {
           nodes = list.nodes;
           truncated = list.truncated;
           listingIndex = null;
+          statuses = status;
           tree.setNodes(nodes, marksOf(status));
-          note.hidden = !list.truncated;
-          note.textContent = list.truncated ? words.explorerTruncated(nodes.length) : '';
+          notes.list = list.truncated ? words.explorerTruncated(nodes.length) : null;
+          pane.statusChanged();
         } catch (error) {
-          note.hidden = false;
-          note.textContent = words.explorerFailed(String(error));
+          notes.list = words.explorerFailed(String(error));
         }
+        showNote();
       } while (listAgain);
     })().finally(() => (listing = null));
     return listing;
   }
 
-  /** Statuses only, for a change that leaves the paths as they were. */
-  async function refreshMarks(): Promise<void> {
+  /**
+   * Statuses only, for a change that leaves the paths as they were; `head` when
+   * git's `HEAD` or index moved, so the Changes view reads its two sides again.
+   */
+  async function refreshMarks(head = false): Promise<void> {
     try {
-      tree.setNodes(nodes, marksOf(await client.status()));
+      statuses = await client.status();
+      tree.setNodes(nodes, marksOf(statuses));
+      pane.statusChanged({ head });
     } catch {
       // the next listing tries again
     }
@@ -276,6 +308,8 @@ export function startPage(options: PageOptions): HostPage {
     } else if (event.type === 'changed') {
       void pane.fileChanged(event.paths);
       void refreshMarks();
+    } else if (event.type === 'status') {
+      void refreshMarks(true);
     }
   }
 
@@ -366,8 +400,20 @@ export function startPage(options: PageOptions): HostPage {
   const unwatch = client.watch(onHostEvent);
 
   const ready = (async () => {
+    const asked = (async () => {
+      try {
+        git = await client.git();
+      } catch {
+        git = null;
+      }
+      notes.git = git?.state === 'no-git' ? words.gitNotFound : null;
+    })();
+    let listed: () => void = () => undefined;
+    const firstListing = new Promise<void>((done) => (listed = done));
     const opening = (async () => {
       const address = parseAddress(location.hash);
+      // The Changes view is offered by status, so it waits for the first statuses.
+      if (address?.view === 'diff') await firstListing;
       if (address) await openAddress(address);
     })();
     try {
@@ -378,10 +424,12 @@ export function startPage(options: PageOptions): HostPage {
       rootName.title = root.name;
       showState(pane.current);
     } catch (error) {
-      note.hidden = false;
-      note.textContent = words.explorerFailed(String(error));
+      notes.list = words.explorerFailed(String(error));
+      showNote();
     }
+    await asked;
     await refresh();
+    listed();
     if (rootId !== null) tree.openPaths = readOpenFolders(rootId);
     const address = parseAddress(location.hash);
     if (address) tree.reveal(address.path);

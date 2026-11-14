@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createHost } from './host';
 import { LIST_LIMIT } from './limits';
 import { versionOf } from './port';
-import { eventReader, gitEnv, makeRepository, tempFolder, writeFiles } from './test-support';
+import { eventReader, git, gitEnv, makeRepository, tempFolder, writeFiles } from './test-support';
 
 import type { LocalHost } from './host';
 
@@ -188,7 +188,7 @@ describe('the routes', () => {
     }
   });
 
-  it('GET /api/status answers {} until git arrives', async () => {
+  it('GET /api/status answers {} outside a repository', async () => {
     expect(await (await request('/api/status')).json()).toEqual({});
   });
 
@@ -357,5 +357,143 @@ describe('events', () => {
     await reader.read();
     await host.close();
     expect((await reader.read()).done).toBe(true);
+  });
+});
+
+describe('git', () => {
+  let env: NodeJS.ProcessEnv;
+  let repo: string;
+
+  beforeEach(() => {
+    env = gitEnv(folder.path);
+    repo = join(folder.path, 'repo');
+    makeRepository(repo, env, { 'a.md': 'a\n', 'docs/b.md': 'b\n', 'sub/s.md': 's\n' });
+  });
+
+  async function listen() {
+    const events = eventReader(await request('/api/events'));
+    await events.opened;
+    return events;
+  }
+
+  const json = async (path: string): Promise<unknown> => (await request(path)).json();
+
+  it('GET /api/git, /api/changes, /api/base and /api/status in a repository', async () => {
+    await start(repo, env).ready();
+    writeFileSync(join(repo, 'a.md'), 'edited\n');
+    writeFiles(repo, { 'n.md': 'n' });
+    expect((await put([{ kind: 'move', from: 'docs/b.md', path: 'docs/c.md' }])).status).toBe(200);
+    rmSync(join(repo, 'sub', 's.md'));
+
+    expect(await json('/api/git')).toEqual({ state: 'repository', branch: 'main' });
+    expect(await json('/api/changes')).toEqual({
+      ok: true,
+      changes: [
+        { path: 'a.md', status: 'changed' },
+        { path: 'docs/c.md', status: 'moved', from: 'docs/b.md' },
+        { path: 'n.md', status: 'new' },
+        { path: 'sub/s.md', status: 'deleted' },
+      ],
+    });
+    expect(await json('/api/status')).toEqual({
+      'a.md': 'changed',
+      'docs/c.md': 'moved',
+      'n.md': 'new',
+      'sub/s.md': 'deleted',
+    });
+    expect(await json('/api/base?path=a.md')).toEqual({ ok: true, text: 'a\n' });
+    expect(await json('/api/base?path=docs%2Fc.md')).toEqual({ ok: true, text: 'b\n' });
+    const missing = await request('/api/base?path=n.md');
+    expect(missing.status).toBe(404);
+    expect(await missing.json()).toMatchObject({ ok: false, code: 'HOST_FILE_NOT_FOUND' });
+  });
+
+  it('a served subfolder answers its own paths', async () => {
+    await start(join(repo, 'sub'), env).ready();
+    writeFileSync(join(repo, 'a.md'), 'edited outside the served folder\n');
+    writeFileSync(join(repo, 'sub', 's.md'), 'edited\n');
+    expect(await json('/api/changes')).toEqual({
+      ok: true,
+      changes: [{ path: 's.md', status: 'changed' }],
+    });
+    expect(await json('/api/base?path=s.md')).toEqual({ ok: true, text: 's\n' });
+  });
+
+  it('outside a repository the routes refuse with 409, and /api/git says why', async () => {
+    await start().ready();
+    expect(await json('/api/git')).toEqual({ state: 'no-repository', branch: null });
+    for (const route of ['/api/changes', '/api/base?path=a.md']) {
+      const response = await request(route);
+      expect(response.status).toBe(409);
+      expect(await response.json()).toMatchObject({ ok: false, code: 'HOST_NOT_A_REPOSITORY' });
+    }
+  });
+
+  it('with git off the PATH a repository is served, walked, written, and says so', async () => {
+    const noGit = { ...env, PATH: join(folder.path, 'no-bin') };
+    expect((await start(repo, noGit).ready()).listing).toBe('walk');
+    expect(await json('/api/git')).toEqual({ state: 'no-git', branch: null });
+    const response = await request('/api/changes');
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ code: 'HOST_GIT_NOT_FOUND' });
+    expect(await json('/api/status')).toEqual({});
+    expect((await put([{ kind: 'move', from: 'a.md', path: 'moved.md' }])).status).toBe(200);
+    expect(git(repo, env, 'diff', '--cached', '--name-status')).toBe('');
+    const listed = (await json('/api/list')) as { nodes: { path: string }[] };
+    expect(listed.nodes.map((n) => n.path)).toContain('moved.md');
+  });
+
+  it('sends status when the host stages, and after a commit or a stage in a terminal', async () => {
+    await start(repo, env).ready();
+    const events = await listen();
+    expect((await put([{ kind: 'delete', path: 'a.md' }])).status).toBe(200);
+    expect(await events.next((e) => e.type === 'status')).toEqual({ type: 'status' });
+
+    git(repo, env, 'commit', '-q', '-m', 'delete a');
+    expect(await events.next((e) => e.type === 'status')).toEqual({ type: 'status' });
+    expect(await json('/api/status')).toEqual({});
+
+    writeFileSync(join(repo, 'docs', 'b.md'), 'edited\n');
+    git(repo, env, 'add', 'docs/b.md');
+    expect(await events.next((e) => e.type === 'status')).toEqual({ type: 'status' });
+    git(repo, env, 'switch', '-q', '-c', 'elsewhere');
+    expect(await events.next((e) => e.type === 'status')).toEqual({ type: 'status' });
+    await events.close();
+  });
+
+  it('reading the status after a status event raises no other (no loop)', async () => {
+    await start(repo, env).ready();
+    const events = await listen();
+    expect((await put([{ kind: 'move', from: 'a.md', path: 'b.md' }])).status).toBe(200);
+    expect(await events.next((e) => e.type === 'status')).toEqual({ type: 'status' });
+    // What the page does on that event, a few times over.
+    for (let i = 0; i < 3; i += 1) {
+      await json('/api/status');
+      await json('/api/changes');
+      await json('/api/base?path=b.md');
+    }
+    await expect(events.next((e) => e.type === 'status', 1500)).rejects.toThrow(
+      /no matching event/
+    );
+    await events.close();
+  });
+
+  it('watches git’s own folder for a served subfolder and for a worktree', async () => {
+    await start(join(repo, 'sub'), env).ready();
+    let events = await listen();
+    git(repo, env, 'rm', '-q', 'a.md');
+    expect(await events.next((e) => e.type === 'status')).toEqual({ type: 'status' });
+    await events.close();
+    await host.close();
+
+    const tree = join(folder.path, 'tree');
+    git(repo, env, 'worktree', 'add', '-q', '-b', 'side', tree);
+    await start(tree, env).ready();
+    events = await listen();
+    expect((await put([{ kind: 'delete', path: 'docs/b.md' }])).status).toBe(200);
+    expect(await events.next((e) => e.type === 'status')).toEqual({ type: 'status' });
+    expect(git(tree, env, 'diff', '--cached', '--name-status')).toBe('D\tdocs/b.md\n');
+    expect(await json('/api/git')).toEqual({ state: 'repository', branch: 'side' });
+    await events.close();
   });
 });
