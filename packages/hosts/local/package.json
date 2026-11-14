@@ -15,14 +15,23 @@
     }
   },
   "scripts": {
-    "gen:styles": "node ../../../tooling/gen-styles.mjs .",
-    "build": "npm run gen:styles && tsup",
+    "gen:styles": "node ../../../tooling/gen-styles.mjs",
+    "build": "npm run gen:styles && npm run build:server && npm run build:client",
+    "build:server": "tsup",
+    "build:client": "vite build",
     "typecheck": "npm run gen:styles && tsc --noEmit && tsc --noEmit -p tsconfig.client.json",
     "test": "npm run gen:styles && vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@stillpointlab/code-format": "*",
     "@stillpointlab/common-format": "*",
-    "@stillpointlab/spl-icon-component": "*"
+    "@stillpointlab/image-format": "*",
+    "@stillpointlab/md-format": "*",
+    "@stillpointlab/modal-dialog-component": "*",
+    "@stillpointlab/sheet-format": "*",
+    "@stillpointlab/spl-icon-component": "*",
+    "@stillpointlab/xmdl-format": "*",
+    "dompurify": "^3.4.17"
   },
   "devDependencies": {
     "@types/node": "^24.0.0"
