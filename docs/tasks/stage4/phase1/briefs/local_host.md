@@ -243,12 +243,11 @@ against what stage 4 made.
 
 ## Open questions
 
-Each is for the spec that meets it, unless Jamie answers first:
+None is left for Jamie. The two that were open have a home:
 
-- **The lock in Context Manager:** whether its server enforces the lock, set out with a lean in
+- **The lock in Context Manager** is decided (2026-11-13): every page load starts locked, and
+  the server refuses a draft to a locked app's file. Where that check stands is in
   [context-manager-adopts-apps](../../../stage5/phase1/specs/context-manager-adopts-apps.md).
-  Decided (Jamie, 2026-11-13): there, every page load starts locked.
-
-The descriptor's place in Context Manager, open until now, is
-[context-manager-adopts-formats](../specs/context-manager-adopts-formats.md): one table from
-content types to format ids, and an amendment to ADR-0009.
+- **The descriptor's place in Context Manager** is
+  [context-manager-adopts-formats](../specs/context-manager-adopts-formats.md): one table from
+  content types to format ids, and an amendment to ADR-0009.

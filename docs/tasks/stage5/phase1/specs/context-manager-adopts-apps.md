@@ -75,8 +75,31 @@ files.
   app's files are hidden.
 - **Every page load starts locked** (Jamie, 2026-11-13: the aim is to discourage editing an
   app's files directly). The unlocked state is the browser tab's and is gone on a reload.
+- **The server enforces it** (Jamie, 2026-11-13). A draft to a path inside an enabled app's
+  scope is refused unless the request says the scope is unlocked. The page sends that only from
+  an unlocked tab; any other caller has to ask for the exception on purpose. The server keeps
+  no unlocked state.
 
-Whether the server refuses a draft in a locked scope is open (below).
+Where the check can stand, read in Context Manager at `a2bc7cba`:
+
+- **What enabling stores.** One row in `repoViewInstance`: the connection, the view type and the
+  manifest's path (`RepoViewLifecycleService.enable`). The scope is derived, never stored: it
+  is the manifest's folder and everything under it (`scopeRoot` in
+  `services/git/viewScope.ts`, ADR-0025 decision 3).
+- **What a good knows.** Its git origin, in its metadata: the connection and the path
+  (`gitOriginOf`).
+- **So the check needs no new storage.** For a good with a git origin, read the connection's
+  instances (`getViewInstancesByConnectionId`) and ask whether one's scope root is at or above
+  the path. That is the lookup `VIEW_SCOPE_OVERLAP` already makes when an app is enabled.
+- **Not inside the draft write.** `DraftService.saveDraft` is also how the apps write: the app
+  host (`appHost.ts`), tasks' board service (three calls) and the lifecycle's upstream
+  reconcile. The check belongs at the entries a person or an agent reaches: the editor's save
+  (`DigitalGoodService`, through `saveDraftFor`) and the draft saved with a new conversation
+  (`project.routes.ts`).
+
+Step 4 starts by listing every such entry. Not yet read: the paths that write a version without
+a draft, the MCP tools that write, import, and how an app-only good (one with no upstream yet)
+records its path.
 
 ## Clarifications
 
@@ -85,24 +108,6 @@ Whether the server refuses a draft in a locked scope is open (below).
   that step's PR, and the ADR is refreshed once at the end.
 - **Not adopted here:** the runner, the storage port, the undo journal, and the explorer's
   tree. The brief keeps the runner and the check-in shared core out of scope.
-
-## Open questions
-
-For Jamie, before step 4 starts:
-
-- **Whether Context Manager's server enforces the lock.** If it does not, only the page does:
-  the tree hides the files and the editor opens as a preview. Anything that is not that page
-  can still save a draft to an app's file: a call to the API, an agent through MCP, or the good
-  page reached another way. That discourages a person and stops nothing else.
-
-  The lean, changed after Jamie's question: the server refuses a draft to a path inside an
-  enabled app's scope unless the request says the scope is unlocked. The page sends that only
-  from an unlocked tab. The server keeps no unlocked state, so it fits many users, and every
-  other caller has to ask for the exception on purpose. The app's own writes go through the
-  app host and are not refused.
-
-  Not yet checked: where the draft save can look up an enabled instance's scope, and what else
-  writes to such a path (import, auto-rebase). Step 4 starts by reading that.
 
 ## Non-goals
 
@@ -125,4 +130,4 @@ For Jamie, before step 4 starts:
 1. PR: bounds, pages and copy.
 2. PR: the shells.
 3. PR: the check-in review.
-4. PR: the lock, once its two questions are answered.
+4. PR: the lock, after listing every entry that writes to an app's file.
