@@ -1,11 +1,12 @@
-// This format in the surfaces harness (`npm run dev`). The fixtures are the
-// edge cases the tests know about, each applied through the sheet-specific
-// setters (presentation options, `.sheet` documents, call-site overrides).
-import '../src/editor';
+// This format in the surfaces harness (`npm run dev`), mounted through its
+// descriptor. The fixtures are the edge cases the tests know about: a plain CSV
+// or `.sheet` file goes through the descriptor's `apply`, as a host's would, and
+// a fixture with a presentation option or a call-site override drives the
+// sheet-specific setters itself. `<sheet-grid>` is an extra.
 import '../src/grid';
-import '../src/preview';
 
 import { parseSheetDocument } from '../src/document';
+import { sheetFormat } from '../src/format';
 
 import type { HarnessElements, HarnessFormat } from '../../../../tooling/harness/types';
 import type { SheetEditor } from '../src/editor';
@@ -232,6 +233,9 @@ const sheetFixtures: Record<string, SheetFixture> = {
   '.sheet over-limit formatting': { source: '', documentSource: overLimitFormatDocument },
 };
 
+const pathOf = (fixture: SheetFixture) =>
+  fixture.documentSource !== undefined ? 'fixture.sheet' : 'fixture.csv';
+
 function applySheet(elements: HarnessElements, fixture: SheetFixture): void {
   const editor = elements.editor as SheetEditor | null;
   const preview = elements.preview as SheetPreview | null;
@@ -242,21 +246,32 @@ function applySheet(elements: HarnessElements, fixture: SheetFixture): void {
     const options = { presentation: fixture.documentOverride };
     // The preview and editor take the text, so an invalid envelope shows its source
     // and error; the grid has no raw view and takes the parsed document.
-    preview?.setDocumentSource(fixture.documentSource, options);
-    editor?.setDocumentSource(fixture.documentSource, options);
+    if (options.presentation === undefined) {
+      const file = { path: pathOf(fixture), text: fixture.documentSource };
+      for (const el of [preview, editor]) if (el) sheetFormat.apply(el, file);
+    } else {
+      preview?.setDocumentSource(fixture.documentSource, options);
+      editor?.setDocumentSource(fixture.documentSource, options);
+    }
     const parsed = parseSheetDocument(fixture.documentSource);
     if (parsed.ok) grid?.setDocument(parsed.document, options);
     else grid?.setContent('');
     return;
   }
   const options = { presentation: fixture.presentation };
-  preview?.setContent(fixture.source, options);
+  if (options.presentation === undefined) {
+    const file = { path: pathOf(fixture), text: fixture.source };
+    for (const el of [preview, editor]) if (el) sheetFormat.apply(el, file);
+  } else {
+    preview?.setContent(fixture.source, options);
+    editor?.setContent(fixture.source, options);
+  }
   grid?.setContent(fixture.source, options);
-  editor?.setContent(fixture.source, options);
 }
 
 export default {
-  elements: { editor: 'sheet-editor', preview: 'sheet-preview', extra: ['sheet-grid'] },
+  format: sheetFormat,
+  elements: { extra: ['sheet-grid'] },
   // The preview is driven with the same presentation as the editor by each
   // fixture; a plain setContent mirror would drop it.
   mirror: false,
@@ -265,6 +280,7 @@ export default {
       name,
       {
         content: fixture.documentSource ?? fixture.source,
+        path: pathOf(fixture),
         apply: (elements: HarnessElements) => applySheet(elements, fixture),
       },
     ])

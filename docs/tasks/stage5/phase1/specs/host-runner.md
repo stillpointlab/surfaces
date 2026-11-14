@@ -26,7 +26,7 @@ will be the same function over a folder.
 - `tooling/harness/memory-host.ts` (65 lines): today's runner.
 - Context Manager's `services/apps/appHost.ts`: `runOp`'s steps, `checkChanges` (the scope check),
   and `AppFilesService.loadInstance` (the generic loader). Read them; do not import them. -
-  `StoragePort` ([host-server](../../../stage4/phase1/specs/host-server.md)); `bounds`
+  `StoragePort` ([host-server](../../../stage4/phase2/specs/host-server.md)); `bounds`
   ([app-module-grows](app-module-grows.md)).
 
 ## Work package

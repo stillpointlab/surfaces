@@ -1,12 +1,13 @@
 ---
-column: todo
+column: in-progress
+pr: 94
 created: 2026-11-13T18:36:00-07:00
 tags: [dev-tooling, formats, code, major-feature]
 ---
 
 # Spec: the local host's page
 
-_The [local host brief](../briefs/local_host.md), outcome 1. Stage 4, phase 2, second wave: after
+_The [local host brief](../../phase1/briefs/local_host.md), outcome 1. Stage 4, phase 2, second wave: after
 [format-descriptors](format-descriptors.md), [host-server](host-server.md) and
 [explorer-tree](explorer-tree.md) have merged. One PR here._
 
@@ -40,6 +41,8 @@ made on disk shows in the page.
 export type HostEvent = { type: 'changed'; paths: string[] } | { type: 'listed' };
 
 export interface HostClient {
+  /** The served folder: its name, and the id the page keys stored state by. */
+  root(): Promise<{ name: string; id: string }>;
   list(): Promise<{ nodes: FolderNode[]; truncated: boolean }>;
   get(path: string): Promise<Result<{ text: string; version: string }>>;
   /** A URL an element can load the file from. */
@@ -57,7 +60,7 @@ Later specs add methods here, never a second way to reach the server.
 ### The layout
 
 - **Left:** `<host-file-tree>`, fed by `list()` and `status()`, and again on a `listed` event.
-  The open folders are kept in `localStorage` by root, read and written inside `try`.
+  The open folders are kept in `localStorage` by the root's `id`, read and written inside `try`.
 - **Right:** the pane. Its header shows the path, a **Preview / Edit** switch when the format has
   an editor, a **Save** button and an unsaved mark. Its body holds one element.
 - **The address** names what is open, in the fragment: `#/file/<path>` for the preview and
@@ -129,7 +132,7 @@ its own save raises nothing.
 - **Confirmations** are one helper over `<modal-dialog>`, not `window.confirm`.
 - **Light and dark** follow `prefers-color-scheme`, with the shared tokens.
 - **The raw view and keymap modes** are the elements' own; the page adds no control for them.
-- **`status()` is empty** until [git-in-the-host](git-in-the-host.md); the tree shows no marks.
+- **`status()` is empty** until [git-in-the-host](../../phase3/specs/git-in-the-host.md); the tree shows no marks.
 
 ## Non-goals
 
@@ -137,6 +140,24 @@ its own save raises nothing.
 - Tabs, split panes, search, and a resizable explorer.
 - Apps in the tree. A manifest is a file like any other until
   [apps-in-the-local-host](../../../stage5/phase1/specs/apps-in-the-local-host.md).
+
+## As built
+
+_[#94](https://github.com/stillpointlab/surfaces/pull/94), 2026-11-14._
+
+- **The sanitizer is DOMPurify.**
+- **The content security policy** allows scripts from the host's own origin alone, with no
+  `eval`. Styles also allow `'unsafe-inline'`, because the editors and every element write a
+  `<style>` into a shadow root at run time. It is a header and a `<meta>` in `index.html`.
+- **`npm run serve` is development mode;** the `surfaces` command serves the built client and
+  never loads Vite. In development mode every request outside `/api/` passes the server's own
+  checks before Vite sees it, its HMR socket included.
+- **The request checks moved into `createRequestCheck`,** unchanged, so both modes use them.
+- **`HostClient.urlFor` appends a revision** the server ignores, so a changed image is fetched
+  again.
+- **A format that takes a URL is not read on open.**
+- **The deleted-on-disk banner has no Reload button.**
+- **Words the brief does not give** are drafts in `words.ts`, with the brief's own.
 
 ## Acceptance / completion checklist
 

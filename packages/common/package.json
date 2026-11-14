@@ -24,6 +24,11 @@
       "import": "./dist/app.js",
       "require": "./dist/app.cjs"
     },
+    "./format": {
+      "types": "./dist/format.d.ts",
+      "import": "./dist/format.js",
+      "require": "./dist/format.cjs"
+    },
     "./pointer-drag": {
       "types": "./dist/pointer-drag.d.ts",
       "import": "./dist/pointer-drag.js",
@@ -43,6 +48,11 @@
       "types": "./dist/frontmatter.d.ts",
       "import": "./dist/frontmatter.js",
       "require": "./dist/frontmatter.cjs"
+    },
+    "./host": {
+      "types": "./dist/host.d.ts",
+      "import": "./dist/host.js",
+      "require": "./dist/host.cjs"
     },
     "./testing": {
       "types": "./dist/testing.d.ts",

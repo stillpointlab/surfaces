@@ -1,6 +1,5 @@
-// This format in the surfaces harness (`npm run dev`).
-import '../src/editor';
-import '../src/preview';
+// This format in the surfaces harness (`npm run dev`), mounted through its descriptor.
+import { xmdlFormat } from '../src/format';
 
 import type { HarnessFormat } from '../../../../tooling/harness/types';
 
@@ -37,7 +36,7 @@ params:
 `;
 
 export default {
-  elements: { editor: 'xmdl-editor', preview: 'xmdl-preview' },
+  format: xmdlFormat,
   fixtures: {
     'Brief template': brief,
     'Several params': several,

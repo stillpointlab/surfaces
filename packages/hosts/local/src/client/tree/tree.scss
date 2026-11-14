@@ -1,0 +1,165 @@
+@use 'common/src/styles/tokens' as *;
+
+// The element scrolls; the page gives it a size (a height, or a flex or grid cell
+// with `min-height: 0`). The list is at least as tall, so the space under the last
+// row belongs to the tree: a right click there asks for the served folder's menu.
+:host {
+  display: block;
+  min-height: 0;
+  overflow: auto;
+  color: $text-primary;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tree {
+  box-sizing: border-box;
+  min-height: 100%;
+  padding-block: $spacing-xs;
+}
+
+[role='treeitem'] {
+  outline: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 0 $spacing-xs 0 calc(#{$spacing-xs} + var(--depth, 0) * 1rem);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    background: $background-hover;
+  }
+}
+
+[aria-selected='true'] > .row {
+  background: $background-hover;
+}
+
+:host(:focus-within) [aria-selected='true'] > .row {
+  background: $hover-gray;
+}
+
+[role='treeitem']:focus-visible > .row {
+  outline: 2px solid $focus-ring;
+  outline-offset: -2px;
+}
+
+.twisty {
+  flex: none;
+  width: 1rem;
+  color: $text-muted;
+  text-align: center;
+}
+
+// A chevron drawn with two borders (no glyph: sass would add a byte order mark to
+// a stylesheet with a character outside ASCII, and that breaks its first rule).
+[aria-expanded] > .row > .twisty::before {
+  content: '';
+  display: inline-block;
+  width: 0.35rem;
+  height: 0.35rem;
+  margin-bottom: 0.1rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.1s;
+}
+
+[aria-expanded='true'] > .row > .twisty::before {
+  transform: rotate(45deg);
+}
+
+// Spaces in a name keep their width, a long name ends in an ellipsis, and a
+// right-to-left name reads in its own direction but lines up with the others.
+.name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: pre;
+}
+
+[data-kind='app'] > .row > .name {
+  font-weight: 600;
+}
+
+.app-icon {
+  flex: none;
+  color: $text-muted;
+}
+
+.unlocked {
+  flex: none;
+  padding: 0 $spacing-xs;
+  border: 1px solid $warning-border;
+  border-radius: $border-radius-sm;
+  background: $warning-bg;
+  color: $warning-color;
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
+
+.status {
+  flex: none;
+  width: 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+
+  &[data-status='changed'] {
+    color: $warning-color;
+  }
+  &[data-status='new'] {
+    color: $success-color;
+  }
+  &[data-status='moved'] {
+    color: $info-color;
+  }
+  &[data-status='deleted'] {
+    color: $error-color;
+  }
+}
+
+.dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-inline: 5px;
+  border-radius: 50%;
+  background: $warning-color;
+}
+
+// The row's own menu button: shown on hover and when the row has focus. It is
+// never a tab stop; the keyboard asks for the menu with the ContextMenu key.
+.menu {
+  flex: none;
+  padding: 0 $spacing-xs;
+  border: 0;
+  border-radius: $border-radius-sm;
+  background: transparent;
+  color: $text-muted;
+  cursor: pointer;
+  visibility: hidden;
+
+  &:hover {
+    background: $background-secondary;
+    color: $text-primary;
+  }
+}
+
+.row:hover > .menu,
+[role='treeitem']:focus > .row > .menu {
+  visibility: visible;
+}

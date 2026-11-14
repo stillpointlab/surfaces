@@ -1,12 +1,13 @@
 ---
-column: todo
+column: in-progress
+pr: 96
 created: 2026-11-13T18:38:00-07:00
 tags: [dev-tooling, code]
 ---
 
 # Spec: create, rename and delete in the explorer
 
-_The [local host brief](../briefs/local_host.md), outcome 1. Stage 4, phase 2, third wave: after
+_The [local host brief](../../phase1/briefs/local_host.md), outcome 1. Stage 4, phase 2, third wave: after
 [host-page](host-page.md). One PR here._
 
 ## High-level goal
@@ -45,6 +46,9 @@ dependency on Context Manager's `options-menu`.
 | a folder                       | New file…, Rename…, Delete… |
 | the empty space under the rows | New file…                   |
 
+The empty space arrives as a `tree-menu` whose path is `''`; its New file… starts with an empty
+path.
+
 ### The dialogs
 
 Each is a `<modal-dialog>` with one field or one message, and Enter confirms.
@@ -75,7 +79,7 @@ server's message.
 - **A new folder** is made by creating a file inside it. Empty folders are not listed
   ([host-server](host-server.md)), so there is no "New folder".
 - **Moves are not staged here.** Staging a move or a delete is
-  [git-in-the-host](git-in-the-host.md), which changes the server's `put`, not this page.
+  [git-in-the-host](../../phase3/specs/git-in-the-host.md), which changes the server's `put`, not this page.
 - **An app's scope** is not special yet. The lock arrives with
   [apps-in-the-local-host](../../../stage5/phase1/specs/apps-in-the-local-host.md).
 - **Nothing is undone here.** [undo-journal](../../../stage5/phase1/specs/undo-journal.md) adds
@@ -85,6 +89,23 @@ server's message.
 
 Rename in place, drag and drop, several rows at once, copy and paste, duplicate, and a trash
 folder.
+
+## As built
+
+_[#96](https://github.com/stillpointlab/surfaces/pull/96), 2026-11-14._
+
+- **The menu is `HostMenu`:** `open({ x, y, entries, label?, returnFocus? })`, with entries
+  `{ label, action, danger?, disabled?, title? }`. It knows nothing about files.
+- **A nested repository or submodule** has its three entries disabled, and so do a folder's
+  Rename… and Delete… while the listing is cut.
+- **A folder is not renamed into itself or onto an existing folder.** A change of case only is
+  left to the server.
+- **Two more path checks:** a path ending in a slash, and a file standing where a folder would
+  go.
+- **The open file follows its folder's rename and delete,** as it does its own
+  (`pane.followWrite`).
+- **"Delete X and the 1 file in it?"** says "file" for one.
+- **The dialogs' titles, buttons and messages** are drafts in `words.ts`.
 
 ## Acceptance / completion checklist
 

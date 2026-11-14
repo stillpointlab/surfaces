@@ -15,6 +15,19 @@ editor surfaces.
 - `@stillpointlab/sheet-editor/editor` — registers `<sheet-editor>`, an interactive CSV and `.sheet`
   grid
 - `@stillpointlab/sheet-editor` — registers and exports the grid, preview, and editor elements
+- `@stillpointlab/sheet-format/format` — the format descriptor, `sheetFormat`; registers nothing
+
+## The format descriptor
+
+`@stillpointlab/sheet-format/format` exports `sheetFormat`, which a host registers (see
+`@stillpointlab/common-format/format`): it opens `.csv` and `.sheet`, needs the file's text, and
+`apply` hands a `.sheet` file to `setDocumentSource` and anything else to `setContent`. Presentation
+overrides are a caller's own, beyond the descriptor. Importing it defines no element and loads no
+engine; `load()` resolves to the package's own `./preview` or `./editor` module, so an element is
+never defined twice. The build splits so that it can: `format.js` imports `preview.js` and
+`editor.js` themselves, and shared code goes to `dist/chunks/`, which `sideEffects` lists.
+`src/entries.test.ts` keeps the entry light, and `src/format.test.ts` runs
+`describeFormatDescriptor` over it.
 
 ## Usage
 

@@ -1,9 +1,9 @@
-// This format in the surfaces harness (`npm run dev`). Preview only: a fixture's
-// content is the image source, applied with `setSource`.
-import '../src/preview';
+// This format in the surfaces harness (`npm run dev`), mounted through its
+// descriptor. Preview only: a fixture's content is the image's URL, and its path's
+// file name the alternative text.
+import { imageFormat } from '../src/format';
 
 import type { HarnessFormat } from '../../../../tooling/harness/types';
-import type { ImagePreviewElement } from '@stillpointlab/common-format';
 
 const svg = (body: string, size = '') =>
   `data:image/svg+xml,${encodeURIComponent(
@@ -14,13 +14,14 @@ const scene =
   "<rect width='640' height='360' fill='#f4f7fb'/><circle cx='220' cy='160' r='72' fill='#4f8cff'/><path d='M80 300h480L410 145 300 245l-60-64z' fill='#234'/>";
 
 export default {
-  elements: { preview: 'image-preview' },
-  apply: ({ preview }, content) =>
-    (preview as ImagePreviewElement | null)?.setSource(content, 'Fixture image'),
+  format: imageFormat,
   fixtures: {
-    'SVG scene (data URI)': svg(scene),
-    'SVG with fixed size': svg(scene, " width='320' height='180'"),
-    'Missing image': '/no-such-image.webp',
-    'No source': '',
+    'SVG scene (data URI)': { path: 'scene.svg', content: svg(scene) },
+    'SVG with fixed size': {
+      path: 'scene-fixed.svg',
+      content: svg(scene, " width='320' height='180'"),
+    },
+    'Missing image': { path: 'no-such-image.webp', content: '/no-such-image.webp' },
+    'No source': { path: 'empty.png', content: '' },
   },
 } satisfies HarnessFormat;

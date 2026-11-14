@@ -12,6 +12,7 @@ const scanned = [
   join(root, 'packages/components'),
   join(root, 'packages/formats'),
   join(root, 'packages/apps'),
+  join(root, 'packages/hosts'),
   join(root, 'tooling/template'),
 ];
 

@@ -1,12 +1,13 @@
 ---
-column: todo
+column: in-progress
+pr: 91
 created: 2026-11-13T18:32:00-07:00
 tags: [dev-tooling, host-contract, code, major-feature]
 ---
 
 # Spec: the local host's server
 
-_The [local host brief](../briefs/local_host.md), outcome 1. Stage 4, phase 2, first wave: it runs
+_The [local host brief](../../phase1/briefs/local_host.md), outcome 1. Stage 4, phase 2, first wave: it runs
 beside [format-descriptors](format-descriptors.md) and [explorer-tree](explorer-tree.md). One PR
 here._
 
@@ -18,7 +19,7 @@ about a page yet: [host-page](host-page.md) builds on its API.
 
 ## Related context
 
-- The [local host spike](../spikes/local-host.md), finding 6 (the storage port, safety) and
+- The [local host spike](../../phase1/spikes/local-host.md), finding 6 (the storage port, safety) and
   finding 8 (a desktop shell stays a wrapper).
 - The brief's constraints: the server is a library first; bound to loopback; no path outside the
   served root.
@@ -30,6 +31,11 @@ about a page yet: [host-page](host-page.md) builds on its API.
   new entry in `common`, `@stillpointlab/common-format/host`
   (`packages/common/src/host/`). The root `package.json` gains the `packages/hosts/*` workspace
   and a `serve` script.
+- **The scaffold comes first.** The repository's tooling takes the new folder in: the root's
+  Vitest projects, the ESLint globs, `gen-styles`, `check-tokens` and the harness's glob. The
+  claude agent lands that with the empty package as this PR's first commit, and the first wave's
+  three specs start from it, so none of them shares a file with another (added 2026-11-13, when
+  the phase opened).
 - **Does not change:** `packages/common/src/app.ts`.
 - **Hands on to:** host-page, which reads `StoragePort`, `PortChange`, `FileStatus` and the HTTP
   routes below exactly as written here.
@@ -115,11 +121,16 @@ tested).
 | `GET /api/file?path=` | `{ text, version }`, or a refusal                                     |
 | `GET /api/raw?path=`  | the file's bytes, for a format that takes a URL                       |
 | `PUT /api/files`      | body `{ changes }`; `{ versions }`, or a refusal                      |
-| `GET /api/status`     | `{}` until [git-in-the-host](git-in-the-host.md)                      |
+| `GET /api/status`     | `{}` until [git-in-the-host](../../phase3/specs/git-in-the-host.md)   |
 | `GET /api/events`     | server-sent events, below                                             |
+| `GET /api/root`       | `{ name, id }`, below                                                 |
 
 - **A refusal** is `{ ok: false, code, message }` with status 404, 409 or 400: not found, a
   conflict (`HOST_PATH_EXISTS`, `HOST_FILE_CHANGED`), or anything else.
+- **`/api/root`** names what is served: `name` is the folder's own name, and `id` is a hash of
+  its real path. A page keys what it stores by the `id`, since two runs on one port serve
+  different folders (added 2026-11-13, when the phase opened: [host-page](host-page.md) keeps the
+  open folders by root, and no route said which root it was).
 - **`/api/raw`** sends the type for the extension, `X-Content-Type-Options: nosniff` and
   `Content-Security-Policy: sandbox`, so a file opened in its own tab cannot script the host's
   origin.
@@ -149,7 +160,7 @@ needs. Until host-page lands, `/` answers a one-line page naming the root.
 ## Clarifications
 
 - **Git is used for the listing only** in this spec. Status, diff and commit are
-  [git-in-the-host](git-in-the-host.md).
+  [git-in-the-host](../../phase3/specs/git-in-the-host.md).
 - **`delete` is on the port from the start,** for [file-operations](file-operations.md) and
   [undo-journal](../../../stage5/phase1/specs/undo-journal.md). The app contract's `FileChange` is
   unchanged.
@@ -163,6 +174,33 @@ needs. Until host-page lands, `/` answers a one-line page naming the root.
 - The page, the client interface and development mode with Vite: [host-page](host-page.md).
 - Apps, check-in and undo.
 - Publishing the package, and Windows paths.
+
+## As built
+
+_[#91](https://github.com/stillpointlab/surfaces/pull/91), 2026-11-14. Where the work departed from
+the text above, this section is what the later specs read._
+
+- **The watcher is one plain watch per folder that holds a listed file,** not `fs.watch`
+  recursive. On Linux the recursive watch stops reporting a file once an editor or git has
+  replaced it by a rename, and it watches every file and folder, `node_modules` included.
+  `watchNames(folder, names, onChange)` watches names in any folder, the root's or not.
+- **`PortChange` has a `move` without `content`,** which keeps the file's bytes, so a file that
+  is not text can be renamed.
+- **The page's origin may be either loopback name** (`127.0.0.1` or `localhost`, same port), as
+  the `Host` rule already allowed.
+- **Two more request checks:** an `Origin` that is not the host's is refused on any method, and
+  a request another site started (`Sec-Fetch-Site`) is refused unless it is a navigation.
+- **More refusal codes:** `HOST_WRITE_FAILED` (500, a write that failed half way and was taken
+  back), `HOST_BAD_REQUEST` (400), `HOST_FORBIDDEN` (403), `HOST_NO_ROUTE` (404),
+  `HOST_METHOD_NOT_ALLOWED` (405), `HOST_BODY_TOO_LARGE` (413), `HOST_ERROR` (500) and
+  `HOST_CLOSED` (503).
+- **A success body carries `ok: true`,** so it is a `Result` as it stands.
+- **The path rule also refuses** a `.` segment, and git's folder in any case and in the
+  spellings other file systems fold to it.
+- **A submodule or nested repository** is one `tree` node with nothing under it.
+- **One `put` at a time:** a write lock per port. A path may appear once in a call.
+- **`createHost` answers `LocalHost`:** `Host` with `port` and `ready()`, and options `env` and
+  `warn`.
 
 ## Acceptance / completion checklist
 

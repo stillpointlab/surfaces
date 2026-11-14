@@ -50,6 +50,21 @@ that might need it (such as a raw view) and pay only for the element module, a f
 `src/entries.test.ts` keeps it so. `findLanguage(name)` resolves asynchronously for the
 same reason.
 
+## The format descriptor
+
+`@stillpointlab/code-format/format` exports `codeFormat`, which a host registers (see
+`@stillpointlab/common-format/format`), and `languageFromPath(path)`, the language a path implies by
+its extension (`app.py` → `Python`) or `null`. It opens every extension with a language (the table
+started as Context Manager's), needs the file's text, and `apply` sets `language` from the path, or
+removes it when the path has none, then calls `setContent`. That removal is how a host's fallback
+shows any other text file as plain text, so register `code` last and as the registry's `fallback`:
+it opens `.md` and `.markdown` too, which `md` should win. Importing it defines no element and loads
+no engine; `load()` resolves to the package's own `./preview` or `./editor` module, so an element is
+never defined twice. The build splits so that it can: `format.js` imports `preview.js` and
+`editor.js` themselves, and shared code goes to `dist/chunks/`, which `sideEffects` lists.
+`src/entries.test.ts` keeps the entry light, and `src/format.test.ts` runs
+`describeFormatDescriptor` over it.
+
 ## Keyboard modes
 
 `<code-editor>` exposes a formal, optional keymap API for hosts that want to persist or coordinate

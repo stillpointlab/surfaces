@@ -1,12 +1,13 @@
 ---
-column: todo
+column: in-progress
+pr: 98
 created: 2026-11-13T18:40:00-07:00
 tags: [dev-tooling, code, major-feature]
 ---
 
 # Spec: git in the local host
 
-_The [local host brief](../briefs/local_host.md), outcome 2. Stage 4, phase 3. Two steps, each one
+_The [local host brief](../../phase1/briefs/local_host.md), outcome 2. Stage 4, phase 3. Two steps, each one
 PR here: status and diff, then commit._
 
 ## High-level goal
@@ -18,19 +19,51 @@ works as before, with none of this.
 
 ## Related context
 
-- The [local host spike](../spikes/local-host.md), finding 6: git stands in for drafts and
+- The [local host spike](../../phase1/spikes/local-host.md), finding 6: git stands in for drafts and
   check-in. Its answered questions: moves and deletes are staged, and how.
-- `StoragePort.status()` and `FileStatus` ([host-server](host-server.md)); the tree's marks
-  ([explorer-tree](explorer-tree.md)); `<code-diff>` and `DiffElement`
+- `StoragePort.status()` and `FileStatus` ([host-server](../../phase2/specs/host-server.md)); the tree's marks
+  ([explorer-tree](../../phase2/specs/explorer-tree.md)); `<code-diff>` and `DiffElement`
   (`packages/formats/code`, `packages/common/src/contracts.ts`).
 
 ## Work package
 
 - **Owns:** `packages/hosts/local/src/server/git/` (the only module that runs `git`), its routes,
-  the `HostClient` methods for them, and the page's diff view and commit dialog.
+  the `HostClient` methods for them, the `status` member of `HostEvent`, and the page's diff view
+  and commit dialog.
 - **Changes:** the Node port's `put` (staging) and `status()`; the watcher (two paths under
   `.git`).
 - **Step 2 depends on step 1.** Nothing else runs beside either.
+
+## What phase 2 built (read before the text below)
+
+_Added 2026-11-14 by the claude agent, from reading this spec against the host as built
+([#91](https://github.com/stillpointlab/surfaces/pull/91)–[#96](https://github.com/stillpointlab/surfaces/pull/96)).
+Where it differs from the text below, this section holds._
+
+- **`src/server/git/run.ts` exists.** It is the one function that runs `git`, with an argument
+  list, a timeout and `GIT_OPTIONAL_LOCKS=0` for reads; the listing uses it. This spec's module
+  joins it.
+- **The watcher has no recursive watch.** It watches folders, and
+  `watchNames(folder, names, onChange)` is the hook for `HEAD` and `index`. Ask git for the
+  folder (`git rev-parse --absolute-git-dir`): for a worktree and a submodule it is not
+  `<root>/.git`. The hook holds through git's `index.lock` to `index` rename.
+- **`HostEvent` is in `common-format/host`** and gains the `status` member there. This spec owns
+  that line.
+- **`status()` cannot carry a move's old path,** and a deleted file has no row. The commit
+  dialog and the button's count therefore read a route of their own: `GET /api/changes` answers
+  `{ changes }`, each `{ path, status, from? }`, deleted files included. `status()` stays as it
+  is, for the tree's marks.
+- **The page's moves have no content** (`{ kind: 'move', from, path }`), and a folder rename or
+  delete is many changes in one `put`. Stage them in one `git` call, not one per file.
+- **Staging comes after the write.** If the write succeeded and staging fails, the write stands
+  and `put` still answers success; the host warns on its terminal, and the marks show what git
+  sees.
+- **In the page:** a view is an entry in `address.ts` and a case in the pane's `load`; the
+  Commit button goes in `.explorer-header`, which needs to become a flex row; the no-git notice
+  goes in `.explorer-note`, which is there and hidden; a method is added to `HostClient` in
+  `host-client.ts` and to the fake in `test-support.ts`. A write that moves or deletes the open
+  file goes through `pane.followWrite`.
+- **`createHost` takes `env`,** which is how a test takes `git` off the `PATH`.
 
 ## Technical requirement
 
@@ -128,6 +161,38 @@ id and branch.
 
 Stage and unstage by hand, discard a change, amend, stash, history, blame, branch switching
 without a commit, and anything that needs the network.
+
+## As built
+
+_[#98](https://github.com/stillpointlab/surfaces/pull/98) (step 1) and
+[#99](https://github.com/stillpointlab/surfaces/pull/99) (step 2), 2026-11-14. The commands in
+the text above were tried against git 2.56 before they were relied on, and several changed._
+
+- **Staging moves the index entry,** as `git mv` does (`git update-index --index-info`), and a
+  delete removes it. `git add -A -- <from> <to>` staged a heavily edited moved file as a deletion
+  and an addition, exited 1 for a target `.gitignore` covers, and was fatal for an untracked
+  source. An edit to a moved file stays unstaged.
+- **The commit runs no `git add -A` or `git add -u`.** `git commit --only` takes the chosen paths
+  as they are in the working tree. Only a chosen file git does not track is added first, with
+  `--intent-to-add`, and taken out again if the commit fails.
+- **A move is one change:** the server names both of its paths whichever the request gives.
+- **A conflicted path is refused, in a merge or not.** Outside one, git commits the markers.
+- **Paths go to git on stdin and the message in a file,** never as arguments.
+- **`HEAD` text is read with `ls-tree` and `cat-file`,** not `git show`, so its size is known
+  first and no filter runs.
+- **Routes:** `GET /api/git`, `GET /api/changes` (`{ ok, changes }`), `GET /api/base`, and
+  `POST /api/commit`, which answers `{ commit, short, branch }`.
+- **Refusal codes:** `HOST_NOT_A_REPOSITORY`, `HOST_GIT_NOT_FOUND`, `HOST_NOT_CHANGED`,
+  `HOST_PATH_CONFLICTED`, `HOST_GIT_IN_PROGRESS`, `HOST_DETACHED_HEAD`, `HOST_BRANCH_EXISTS`
+  (409); `HOST_COMMIT_NO_PATHS`, `HOST_COMMIT_NO_MESSAGE`, `HOST_BRANCH_INVALID` (400); and
+  `HOST_GIT_FAILED` (500) with git's own words.
+- **A commit that fails on a new branch is undone,** and the message says which branch the
+  person is on.
+- **A commit runs for at most 60 seconds,** with no terminal and stdin closed, and its whole
+  process group is stopped after that.
+- **A commit and a `put` run under one write lock.**
+- **The Changes view is offered for any format that takes text,** sheets included.
+- **The dialog has a summary and optional details,** joined into the one `message`.
 
 ## Acceptance / completion checklist
 

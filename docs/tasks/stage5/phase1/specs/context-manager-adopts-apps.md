@@ -112,7 +112,7 @@ records its path.
 ## Non-goals
 
 - The format registry, which Context Manager adopted at the end of stage 4
-  ([context-manager-adopts-formats](../../../stage4/phase1/specs/context-manager-adopts-formats.md)).
+  ([context-manager-adopts-formats](../../../stage4/phase4/specs/context-manager-adopts-formats.md)).
 - Any change to Context Manager's storage, check-in services or board service.
 - New features in either app.
 

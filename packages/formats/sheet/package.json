@@ -19,7 +19,8 @@
     "./dist/grid.js",
     "./dist/grid.cjs",
     "./dist/preview.js",
-    "./dist/preview.cjs"
+    "./dist/preview.cjs",
+    "./dist/chunks/*"
   ],
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -64,6 +65,11 @@
       "types": "./dist/interaction.d.ts",
       "import": "./dist/interaction.js",
       "require": "./dist/interaction.cjs"
+    },
+    "./format": {
+      "types": "./dist/format.d.ts",
+      "import": "./dist/format.js",
+      "require": "./dist/format.cjs"
     }
   },
   "files": [
@@ -74,7 +80,8 @@
     "presentation.d.ts",
     "document.d.ts",
     "editor.d.ts",
-    "interaction.d.ts"
+    "interaction.d.ts",
+    "format.d.ts"
   ],
   "scripts": {
     "gen:styles": "node ../../../tooling/gen-styles.mjs .",

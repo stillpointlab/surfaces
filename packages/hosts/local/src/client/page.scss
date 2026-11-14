@@ -1,0 +1,614 @@
+@use 'common/src/styles/tokens' as *;
+
+// The page's layout: the explorer in a column on the left, the pane filling the
+// rest. Every colour is a token; the host's values for them are theme.css.
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  color: $text-primary;
+  background: $background-primary;
+  font-family: system-ui, sans-serif;
+}
+
+modal-dialog:not(:defined) {
+  display: none;
+}
+
+.host-page {
+  display: grid;
+  grid-template-columns: minmax(12rem, 18rem) minmax(0, 1fr);
+  height: 100vh;
+  height: 100dvh;
+}
+
+.explorer {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid $border-light;
+  background: $background-secondary;
+}
+
+.explorer-header {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  min-height: 2.5rem;
+  box-sizing: border-box;
+  padding: $spacing-xs $spacing-md;
+  border-bottom: 1px solid $border-light;
+}
+
+.explorer-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// The Commit button and the number of changed files on it.
+.explorer-commit {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.explorer-commit-count {
+  min-width: 1.25em;
+  padding: 0 $spacing-xs;
+  border-radius: $border-radius-sm;
+  background: $background-hover;
+  color: $text-primary;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+// The notice after a commit: a live region, there and empty until a commit.
+.commit-notice {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-xs $spacing-md;
+  border-bottom: 1px solid $border-light;
+  color: $success-color;
+  background: $success-bg;
+  font-size: 0.8125rem;
+
+  &:empty {
+    padding: 0;
+    border: 0;
+  }
+}
+
+.commit-notice-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.commit-notice-close {
+  flex: none;
+  padding: 0 $spacing-xs;
+  border: 0;
+  border-radius: $border-radius-sm;
+  color: inherit;
+  background: none;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover {
+    background: $background-hover;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $focus-ring;
+    outline-offset: 1px;
+  }
+}
+
+.explorer-note {
+  margin: 0;
+  padding: $spacing-xs $spacing-md;
+  border-bottom: 1px solid $warning-border;
+  color: $warning-color;
+  background: $warning-bg;
+  font-size: 0.8125rem;
+}
+
+.explorer-note-line {
+  display: block;
+}
+
+host-file-tree {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.pane-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: $spacing-sm;
+  min-height: 2.5rem;
+  padding: 0 $spacing-md;
+  border-bottom: 1px solid $border-light;
+  background: $header-bg;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.pane-path {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-family: ui-monospace, monospace;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pane-unsaved {
+  flex: none;
+  color: $primary-blue;
+  font-size: 0.75rem;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.pane-views {
+  display: inline-flex;
+  flex: none;
+
+  &[hidden] {
+    display: none;
+  }
+
+  .button {
+    border-radius: 0;
+  }
+
+  .button + .button {
+    margin-left: -1px;
+  }
+
+  .button:first-child {
+    border-radius: $border-radius-md 0 0 $border-radius-md;
+  }
+
+  .button:last-child {
+    border-radius: 0 $border-radius-md $border-radius-md 0;
+  }
+
+  .button[aria-pressed='true'] {
+    color: $text-primary;
+    background: $background-hover;
+    font-weight: 600;
+  }
+}
+
+.button {
+  padding: $spacing-xs $spacing-md;
+  border: 1px solid $border-dark;
+  border-radius: $border-radius-md;
+  color: $text-secondary;
+  background: $background-primary;
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: $background-hover;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $focus-ring;
+    outline-offset: 1px;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.button-primary {
+  border-color: $button-bg;
+  color: $button-text;
+  background: $button-bg;
+
+  &:hover:not(:disabled) {
+    background: $button-bg;
+    filter: brightness(1.1);
+  }
+}
+
+.pane-banner {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid $warning-border;
+  color: $warning-color;
+  background: $warning-bg;
+  font-size: 0.875rem;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.pane-banner-text {
+  flex: 1 1 auto;
+}
+
+.pane-error {
+  flex: none;
+  margin: 0;
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid $error-border;
+  color: $error-color;
+  background: $error-bg;
+  font-size: 0.875rem;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.pane-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+
+  // The element fills the pane; an editor scrolls inside itself.
+  > :not(.pane-message) {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  // The two previews that read as a document get a margin; editors, code and
+  // grids fill the pane to its edges.
+  > md-preview,
+  > xmdl-preview {
+    padding: $spacing-lg $spacing-xl;
+  }
+}
+
+.pane-message {
+  margin: $spacing-xl;
+  color: $text-muted;
+}
+
+.confirm-detail {
+  margin: 0;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+}
+
+.button-danger {
+  border-color: $error-border;
+  color: $error-color;
+  background: $error-bg;
+  font-weight: 600;
+
+  &:hover:not(:disabled) {
+    background: $error-bg;
+    filter: brightness(1.1);
+  }
+}
+
+// The host's one options menu (menu/menu.ts): fixed at the point it was asked
+// for, above the page and below a dialog.
+.host-menu {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  min-width: 10rem;
+  max-width: min(20rem, calc(100vw - 8px));
+  padding: $spacing-xs 0;
+  border: 1px solid $border-light;
+  border-radius: $border-radius-md;
+  background: $surface-overlay;
+  box-shadow: $popover-shadow;
+  font-size: 0.875rem;
+
+  &[hidden] {
+    display: none;
+  }
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.host-menu-item {
+  padding: $spacing-xs $spacing-md;
+  border: 0;
+  color: $text-primary;
+  background: none;
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    background: $background-hover;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $focus-ring;
+    outline-offset: -2px;
+  }
+
+  &[aria-disabled='true'] {
+    color: $text-muted;
+    cursor: not-allowed;
+  }
+}
+
+.host-menu-danger:not([aria-disabled='true']) {
+  color: $error-color;
+}
+
+// The explorer's dialogs (file-ops/dialog.ts): one field or one message, and the
+// message for a refusal under it.
+.file-op-body {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.file-op-label {
+  color: $text-muted;
+  font-size: 0.8125rem;
+}
+
+.file-op-path {
+  box-sizing: border-box;
+  width: 100%;
+  padding: $spacing-xs $spacing-sm;
+  border: 1px solid $border-dark;
+  border-radius: $border-radius-md;
+  color: $text-primary;
+  background: $background-primary;
+  font-family: ui-monospace, monospace;
+  font-size: 0.875rem;
+
+  &:focus-visible {
+    outline: 2px solid $focus-ring;
+    outline-offset: 1px;
+  }
+
+  &[aria-invalid='true'] {
+    border-color: $error-border;
+  }
+}
+
+.file-op-error {
+  margin: 0;
+  color: $error-color;
+  font-size: 0.8125rem;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+// The commit dialog (commit/dialog.ts): the files, the message, the branch, and a
+// refusal under them.
+.commit-body {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.commit-message {
+  margin: 0;
+}
+
+.commit-files,
+.commit-branch {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  min-width: 0;
+  margin: 0 0 $spacing-sm;
+  padding: 0;
+  border: 0;
+}
+
+.commit-legend {
+  padding: 0;
+  margin-bottom: $spacing-xs;
+  color: $text-muted;
+  font-size: 0.8125rem;
+}
+
+.commit-files-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+  font-size: 0.875rem;
+}
+
+.commit-count {
+  color: $text-muted;
+  font-size: 0.8125rem;
+}
+
+.commit-list {
+  max-height: min(40vh, 18rem);
+  margin: 0;
+  padding: $spacing-xs 0;
+  overflow-y: auto;
+  border: 1px solid $border-light;
+  border-radius: $border-radius-md;
+  background: $background-primary;
+  list-style: none;
+}
+
+.commit-row-label {
+  display: flex;
+  align-items: baseline;
+  gap: $spacing-sm;
+  padding: 2px $spacing-sm;
+  font-size: 0.875rem;
+  cursor: pointer;
+
+  &:hover {
+    background: $background-hover;
+  }
+
+  input {
+    flex: none;
+    align-self: center;
+    margin: 0;
+  }
+}
+
+.commit-status {
+  flex: none;
+  width: 4.5em;
+  font-size: 0.75rem;
+  font-weight: 600;
+
+  &[data-status='changed'] {
+    color: $warning-color;
+  }
+  &[data-status='new'] {
+    color: $success-color;
+  }
+  &[data-status='moved'] {
+    color: $info-color;
+  }
+  &[data-status='deleted'] {
+    color: $error-color;
+  }
+}
+
+.commit-path {
+  min-width: 0;
+  font-family: ui-monospace, monospace;
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+
+.commit-label {
+  color: $text-muted;
+  font-size: 0.8125rem;
+}
+
+.commit-field {
+  box-sizing: border-box;
+  width: 100%;
+  padding: $spacing-xs $spacing-sm;
+  border: 1px solid $border-dark;
+  border-radius: $border-radius-md;
+  color: $text-primary;
+  background: $background-primary;
+  font: inherit;
+  font-size: 0.875rem;
+
+  &:focus-visible {
+    outline: 2px solid $focus-ring;
+    outline-offset: 1px;
+  }
+
+  &:read-only,
+  &:disabled {
+    opacity: 0.7;
+  }
+}
+
+.commit-details {
+  margin-bottom: $spacing-sm;
+  resize: vertical;
+}
+
+#commit-branch-name {
+  font-family: ui-monospace, monospace;
+}
+
+.commit-choice {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  font-size: 0.875rem;
+}
+
+.commit-note {
+  margin: 0;
+  color: $text-muted;
+  font-size: 0.8125rem;
+}
+
+.commit-unsaved {
+  padding: $spacing-xs $spacing-sm;
+  border: 1px solid $warning-border;
+  border-radius: $border-radius-md;
+  color: $warning-color;
+  background: $warning-bg;
+}
+
+// git's own words, which may be many lines: kept as they are, and scrolled.
+.commit-error {
+  max-height: 12rem;
+  margin: 0;
+  padding: $spacing-xs $spacing-sm;
+  overflow: auto;
+  border: 1px solid $error-border;
+  border-radius: $border-radius-md;
+  color: $error-color;
+  background: $error-bg;
+  font-family: ui-monospace, monospace;
+  font-size: 0.8125rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+
+  &[hidden] {
+    display: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $focus-ring;
+    outline-offset: 1px;
+  }
+}

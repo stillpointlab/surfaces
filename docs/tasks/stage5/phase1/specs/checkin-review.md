@@ -28,7 +28,7 @@ and a body. It asks its host one op, by path. In the local host that op is a com
     (`TaskBoardCheckinRequest`), each with a change label, grouped by phase on a stage view; a
     default title; in-flight marks on the board (`markCheckinInFlight`).
   - Both send Context Manager's public ids, and tasks also sends the board's path and stage.
-- The commit function in [git-in-the-host](../../../stage4/phase1/specs/git-in-the-host.md), and
+- The commit function in [git-in-the-host](../../../stage4/phase3/specs/git-in-the-host.md), and
   its commit dialog.
 - The placement rule in `packages/components/README.md`: a component is one an app element
   renders inside itself.

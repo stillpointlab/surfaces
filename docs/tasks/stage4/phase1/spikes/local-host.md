@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 87
+completed: 2026-11-13
 created: 2026-11-13T15:30:36-07:00
 tags: [apps, formats, host-contract, dev-tooling, major-feature]
 ---

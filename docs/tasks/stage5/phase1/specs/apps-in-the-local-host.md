@@ -25,8 +25,8 @@ writes until the person unlocks them. A new instance is created from the app's o
 - The brief's outcome 1, "Inside an app's scope": the lock, as Jamie decided it.
 - The runner ([host-runner](host-runner.md)), the shells ([app-shells](app-shells.md)), and the
   module's `meta`, `bounds` and `pages` ([app-module-grows](app-module-grows.md)).
-- The tree's app rows ([explorer-tree](../../../stage4/phase1/specs/explorer-tree.md)) and the
-  host's menu ([file-operations](../../../stage4/phase1/specs/file-operations.md)).
+- The tree's app rows ([explorer-tree](../../../stage4/phase2/specs/explorer-tree.md)) and the
+  host's menu ([file-operations](../../../stage4/phase2/specs/file-operations.md)).
 - Context Manager ADR-0028: one executor per path, and scopes never overlap.
 
 ## Work package

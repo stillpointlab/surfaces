@@ -20,10 +20,10 @@ export default [
   {
     files: [
       'packages/common/src/**/*.ts',
-      'packages/{components,formats,apps}/*/{src,dev}/**/*.ts',
+      'packages/{components,formats,apps,hosts}/*/{src,dev}/**/*.ts',
       'tooling/**/*.ts',
       '*.config.ts',
-      'packages/{components,formats,apps}/*/*.config.ts',
+      'packages/{components,formats,apps,hosts}/*/*.config.ts',
     ],
     languageOptions: {
       parser: tsparser,
@@ -68,10 +68,14 @@ export default [
     },
   },
   {
-    // Components and app elements set markup only through `render` from
-    // `@stillpointlab/common-format/html`, whose `html` template escapes every value.
-    // Tests may build fixtures however they like.
-    files: ['packages/components/*/src/**/*.ts', 'packages/apps/*/src/element/**/*.ts'],
+    // Components, app elements and a host's page set markup only through `render`
+    // from `@stillpointlab/common-format/html`, whose `html` template escapes every
+    // value. Tests may build fixtures however they like.
+    files: [
+      'packages/components/*/src/**/*.ts',
+      'packages/apps/*/src/element/**/*.ts',
+      'packages/hosts/*/src/client/**/*.ts',
+    ],
     ignores: ['**/*.test.ts'],
     rules: {
       'no-restricted-syntax': [
@@ -86,6 +90,37 @@ export default [
           selector: "CallExpression > MemberExpression.callee[property.name='insertAdjacentHTML']",
           message:
             'Set markup with render(target, html`…`) from @stillpointlab/common-format/html, which escapes every value.',
+        },
+      ],
+    },
+  },
+  {
+    // A host's page reaches its server through its `HostClient` alone: the HTTP
+    // client is the one module that may call `fetch` or open a stream, so a later
+    // spec adds a method there rather than a second way to the server.
+    files: ['packages/hosts/*/src/client/**/*.ts'],
+    ignores: ['packages/hosts/*/src/client/host-client.ts'],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        ...['fetch', 'EventSource', 'WebSocket', 'XMLHttpRequest'].map((name) => ({
+          name,
+          message: 'Reach the host through its HostClient (src/client/host-client.ts).',
+        })),
+      ],
+      'no-restricted-properties': [
+        'error',
+        ...['window', 'globalThis', 'self'].flatMap((object) =>
+          ['fetch', 'EventSource', 'WebSocket', 'XMLHttpRequest'].map((property) => ({
+            object,
+            property,
+            message: 'Reach the host through its HostClient (src/client/host-client.ts).',
+          }))
+        ),
+        {
+          object: 'navigator',
+          property: 'sendBeacon',
+          message: 'Reach the host through its HostClient (src/client/host-client.ts).',
         },
       ],
     },
