@@ -27,7 +27,10 @@ export interface StoragePort {
   get(path: string): Promise<Result<{ text: string; version: string }>>;
   /** Write all the changes or none. Answers the new version of each path written. */
   put(changes: readonly PortChange[]): Promise<Result<{ versions: Record<string, string> }>>;
-  /** What differs from the last commit, by path. Empty until git arrives. */
+  /**
+   * What differs from the last commit, by path, deleted files included. Empty
+   * when the folder is not a repository.
+   */
   status(): Promise<Record<string, FileStatus>>;
 }
 
@@ -40,8 +43,37 @@ export type HostRefusalCode =
   | 'HOST_FILE_TOO_LARGE'
   | 'HOST_PATH_OUTSIDE_ROOT';
 
-/** What a host's event stream sends: file contents changed, or the set of paths did. */
-export type HostEvent = { type: 'changed'; paths: string[] } | { type: 'listed' };
+/**
+ * What a host's event stream sends: file contents changed, the set of paths did,
+ * or what git reports may have (a commit, a stage, a switch: `HEAD` or the index
+ * moved), so the statuses are stale.
+ */
+export type HostEvent =
+  { type: 'changed'; paths: string[] } | { type: 'listed' } | { type: 'status' };
+
+/**
+ * Whether a host's folder is under git, decided once when it starts:
+ * `repository` (git runs and the folder is in a work tree), `no-repository` (it
+ * is not, whether or not git runs), or `no-git` (git cannot be run, and the
+ * folder looks like a repository).
+ */
+export type GitState = 'repository' | 'no-repository' | 'no-git';
+
+/** A host's git: its state, and the current branch (`null` when detached, or outside `repository`). */
+export interface HostGit {
+  state: GitState;
+  branch: string | null;
+}
+
+/**
+ * One file that differs from the last commit, deleted files included. A moved
+ * file carries the path it had (`from`), so a commit can name both.
+ */
+export interface HostChange {
+  path: string;
+  status: FileStatus;
+  from?: string;
+}
 
 /** A host's listing as its server answers it: cut, and saying so, past its limit. */
 export interface HostListing {
