@@ -13,6 +13,12 @@
 // - a request another site's page started is refused, by its `Origin` on any
 //   method, and by `Sec-Fetch-Site` when the browser sends it, except a
 //   navigation (a link to the host from elsewhere still opens it).
+//
+// In a git repository the watcher also watches `HEAD` and `index` in git's own
+// folder (a worktree's, or the one above a served subfolder), and the stream sends
+// `{ type: 'status' }` when either changes: a commit, a stage or a switch made in
+// a terminal, and the host's own staging. The host's reads never write the index
+// (`GIT_OPTIONAL_LOCKS=0`), so reading the status after the event raises no other.
 
 import { createHash } from 'node:crypto';
 import { constants, open } from 'node:fs/promises';
@@ -68,8 +74,11 @@ export function statusFor(code: string): number {
       return 404;
     case 'HOST_PATH_EXISTS':
     case 'HOST_FILE_CHANGED':
+    case 'HOST_NOT_A_REPOSITORY':
+    case 'HOST_GIT_NOT_FOUND':
       return 409;
     case 'HOST_WRITE_FAILED':
+    case 'HOST_GIT_FAILED':
       return 500;
     default:
       return 400;
@@ -196,7 +205,7 @@ export function createHost(options: HostOptions): LocalHost {
   const check = createRequestCheck(options.origin);
   const warn = options.warn ?? ((message: string) => console.warn(`surfaces: ${message}`));
 
-  const port = createNodePort({ root: options.root, env: options.env });
+  const port = createNodePort({ root: options.root, env: options.env, warn });
   const root = port.root;
   const rootAnswer: HostRoot = {
     name: basename(root) || root,
@@ -238,6 +247,10 @@ export function createHost(options: HostOptions): LocalHost {
   const ready = (async () => {
     const start = await port.start();
     await watcher.ready;
+    const git = await port.git.start();
+    if (git.state === 'repository' && !closed) {
+      watcher.watchNames(git.gitDir, ['HEAD', 'index'], () => broadcast({ type: 'status' }));
+    }
     return start;
   })();
   // A failure surfaces through `ready()`; it must not go unhandled if nobody asks.
@@ -289,6 +302,21 @@ export function createHost(options: HostOptions): LocalHost {
     },
     '/api/status': {
       GET: async () => json(await port.status()),
+    },
+    '/api/git': {
+      GET: async () => json(await port.git.info()),
+    },
+    '/api/changes': {
+      GET: async () => {
+        const answer = await port.git.changes();
+        return answer.ok ? json(answer) : refusal(answer);
+      },
+    },
+    '/api/base': {
+      GET: async (_request, url) => {
+        const answer = await port.git.base(pathParam(url));
+        return answer.ok ? json(answer) : refusal(answer);
+      },
     },
     '/api/root': {
       GET: async () => json(rootAnswer),

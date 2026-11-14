@@ -1,6 +1,10 @@
 // The storage port over a folder on disk: the only module besides the watcher,
 // git's and the `bin` that touches `node:fs` or runs a program.
 //
+// In a git repository, `put` stages its own moves and deletes once they are
+// written (`git/stage.ts`), and `status()` is git's (`git/repository.ts`). A
+// staging that fails leaves the write standing: `put` still succeeds, and warns.
+//
 // `put` is all or nothing, in three steps under one lock (two `put`s run one after
 // the other, so the second checks its bases against what the first wrote):
 //
@@ -35,14 +39,21 @@ import { basename, dirname, join } from 'node:path';
 
 import { fail, ok } from '@stillpointlab/common-format/app';
 
-import { runGit } from './git/run';
+import { createGit } from './git/repository';
 import { MAX_TEXT_BYTES } from './limits';
 import { gitPaths, toNodes, walkPaths } from './listing';
 import { isInside, locate, outsideRoot, pathProblem } from './paths';
+import { decodeText } from './text';
 
+import type { HostGitAccess } from './git/repository';
 import type { Location } from './paths';
 import type { Failure, FolderNode, Result } from '@stillpointlab/common-format/app';
-import type { FileStatus, PortChange, StoragePort } from '@stillpointlab/common-format/host';
+import type {
+  FileStatus,
+  GitState,
+  PortChange,
+  StoragePort,
+} from '@stillpointlab/common-format/host';
 
 /** How the port lists, decided once at start. */
 export interface PortStart {
@@ -54,11 +65,15 @@ export interface PortStart {
    * the root or a folder above it. `false` when `git` ran.
    */
   looksLikeRepository: boolean;
+  /** Whether the folder is under git, as `GET /api/git` answers it. */
+  git: GitState;
 }
 
 export interface NodePort extends StoragePort {
   /** The root's real path. */
   readonly root: string;
+  /** The folder's git: its state, changes, `HEAD` text and staging. */
+  readonly git: HostGitAccess;
   /** How the port lists. The first call asks `git`; later calls answer the same. */
   start(): Promise<PortStart>;
 }
@@ -68,6 +83,8 @@ export interface NodePortOptions {
   root: string;
   /** The environment `git` runs in; the process's own by default. */
   env?: NodeJS.ProcessEnv;
+  /** Something the port could not do but worked without (a staging that failed). The default prints it. */
+  warn?(message: string): void;
 }
 
 /** A SHA-256 of the bytes, as hex: a file's version. */
@@ -87,17 +104,6 @@ function errorCode(error: unknown): string | undefined {
 
 function tempName(folder: string, name: string): string {
   return join(folder, `.${name}.surfaces-tmp-${randomBytes(8).toString('hex')}`);
-}
-
-/** Not text: a NUL byte, or bytes that are not UTF-8. */
-function decodeText(bytes: Uint8Array): string | null {
-  if (bytes.includes(0)) return null;
-  try {
-    // `ignoreBOM` keeps a byte order mark in the text, so a write gives it back.
-    return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
-  } catch {
-    return null;
-  }
 }
 
 const notFound = (path: string): Failure =>
@@ -168,25 +174,26 @@ class WriteFailure extends Error {
 export function createNodePort(options: NodePortOptions): NodePort {
   const root = realpathSyncChecked(options.root);
   const env = options.env;
+  const warn = options.warn ?? ((message: string) => console.warn(`surfaces: ${message}`));
+  const git = createGit({ root, env, warn });
   let started: Promise<PortStart> | null = null;
   // Writes run one at a time: each `put` checks against what the one before wrote.
   let queue: Promise<unknown> = Promise.resolve();
 
   function start(): Promise<PortStart> {
-    started ??= (async () => {
-      const run = await runGit(['rev-parse', '--is-inside-work-tree'], {
-        cwd: root,
-        env,
-        read: true,
-      });
-      if (run.ok && run.stdout.toString('utf8').trim() === 'true') {
-        return { listing: 'git', gitFound: true, looksLikeRepository: false };
+    started ??= (async (): Promise<PortStart> => {
+      const at = await git.start();
+      if (at.state === 'repository') {
+        return { listing: 'git', gitFound: true, looksLikeRepository: false, git: 'repository' };
       }
-      const gitFound = run.ok || !run.missing;
+      if (at.state === 'no-git') {
+        return { listing: 'walk', gitFound: false, looksLikeRepository: true, git: 'no-git' };
+      }
       return {
         listing: 'walk',
-        gitFound,
-        looksLikeRepository: gitFound ? false : await hasGitEntryAbove(root),
+        gitFound: at.gitFound,
+        looksLikeRepository: false,
+        git: 'no-repository',
       };
     })();
     return started;
@@ -342,7 +349,10 @@ export function createNodePort(options: NodePortOptions): NodePort {
     const run = queue.then(async () => {
       const planned = await plan(changes);
       if (!Array.isArray(planned)) return planned;
-      return write(planned);
+      const written = await write(planned);
+      // Inside the lock, so the next call's staging reads the index this one left.
+      if (written.ok) await stage(changes);
+      return written;
     });
     queue = run.catch(() => undefined);
     return run;
@@ -515,11 +525,26 @@ export function createNodePort(options: NodePortOptions): NodePort {
     return ok({ versions });
   }
 
-  async function status(): Promise<Record<string, FileStatus>> {
-    return {};
+  /** Stage what a successful write moved or deleted; a failure is a warning, never a refusal. */
+  async function stage(changes: readonly PortChange[]): Promise<void> {
+    if (!changes.some((change) => change.kind === 'move' || change.kind === 'delete')) return;
+    try {
+      const staged = await git.stage(changes);
+      if (!staged.ok) {
+        warn(
+          `the files were written, but git could not stage the move or delete (${staged.message}); git will show them unstaged.`
+        );
+      }
+    } catch (error) {
+      warn(`the files were written, but staging them failed: ${String(error)}`);
+    }
   }
 
-  return { root, start, list, get, put, status };
+  function status(): Promise<Record<string, FileStatus>> {
+    return git.status();
+  }
+
+  return { root, git, start, list, get, put, status };
 }
 
 /** Remove `folder` and the folders above it while they are empty, up to the root. */
@@ -532,22 +557,6 @@ async function pruneEmpty(root: string, folder: string): Promise<void> {
       return;
     }
     at = dirname(at);
-  }
-}
-
-/** Whether a `.git` entry, a folder or a file, is in `folder` or any folder above it. */
-async function hasGitEntryAbove(folder: string): Promise<boolean> {
-  let at = folder;
-  for (;;) {
-    try {
-      await lstat(join(at, '.git'));
-      return true;
-    } catch {
-      // not here
-    }
-    const up = dirname(at);
-    if (up === at) return false;
-    at = up;
   }
 }
 
