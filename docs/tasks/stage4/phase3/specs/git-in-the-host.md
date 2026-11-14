@@ -1,5 +1,6 @@
 ---
-column: todo
+column: in-progress
+pr: 98
 created: 2026-11-13T18:40:00-07:00
 tags: [dev-tooling, code, major-feature]
 ---
@@ -160,6 +161,38 @@ id and branch.
 
 Stage and unstage by hand, discard a change, amend, stash, history, blame, branch switching
 without a commit, and anything that needs the network.
+
+## As built
+
+_[#98](https://github.com/stillpointlab/surfaces/pull/98) (step 1) and
+[#99](https://github.com/stillpointlab/surfaces/pull/99) (step 2), 2026-11-14. The commands in
+the text above were tried against git 2.56 before they were relied on, and several changed._
+
+- **Staging moves the index entry,** as `git mv` does (`git update-index --index-info`), and a
+  delete removes it. `git add -A -- <from> <to>` staged a heavily edited moved file as a deletion
+  and an addition, exited 1 for a target `.gitignore` covers, and was fatal for an untracked
+  source. An edit to a moved file stays unstaged.
+- **The commit runs no `git add -A` or `git add -u`.** `git commit --only` takes the chosen paths
+  as they are in the working tree. Only a chosen file git does not track is added first, with
+  `--intent-to-add`, and taken out again if the commit fails.
+- **A move is one change:** the server names both of its paths whichever the request gives.
+- **A conflicted path is refused, in a merge or not.** Outside one, git commits the markers.
+- **Paths go to git on stdin and the message in a file,** never as arguments.
+- **`HEAD` text is read with `ls-tree` and `cat-file`,** not `git show`, so its size is known
+  first and no filter runs.
+- **Routes:** `GET /api/git`, `GET /api/changes` (`{ ok, changes }`), `GET /api/base`, and
+  `POST /api/commit`, which answers `{ commit, short, branch }`.
+- **Refusal codes:** `HOST_NOT_A_REPOSITORY`, `HOST_GIT_NOT_FOUND`, `HOST_NOT_CHANGED`,
+  `HOST_PATH_CONFLICTED`, `HOST_GIT_IN_PROGRESS`, `HOST_DETACHED_HEAD`, `HOST_BRANCH_EXISTS`
+  (409); `HOST_COMMIT_NO_PATHS`, `HOST_COMMIT_NO_MESSAGE`, `HOST_BRANCH_INVALID` (400); and
+  `HOST_GIT_FAILED` (500) with git's own words.
+- **A commit that fails on a new branch is undone,** and the message says which branch the
+  person is on.
+- **A commit runs for at most 60 seconds,** with no terminal and stdin closed, and its whole
+  process group is stopped after that.
+- **A commit and a `put` run under one write lock.**
+- **The Changes view is offered for any format that takes text,** sheets included.
+- **The dialog has a summary and optional details,** joined into the one `message`.
 
 ## Acceptance / completion checklist
 

@@ -218,15 +218,15 @@ the next wave. Specs in the same wave can run at the same time.
 **Stage 4: the host for files, formats and git** (specs in `stage4/phase1/specs/` until their
 phase opens; phase 2's moved to `stage4/phase2/specs/` on 2026-11-13)
 
-| Phase | Wave | Spec                                                                         | PRs |
-| ----- | ---- | ---------------------------------------------------------------------------- | --- |
-| 2     | 1    | [format-descriptors](../../phase2/specs/format-descriptors.md)               | 1   |
-| 2     | 1    | [host-server](../../phase2/specs/host-server.md)                             | 1   |
-| 2     | 1    | [explorer-tree](../../phase2/specs/explorer-tree.md)                         | 1   |
-| 2     | 2    | [host-page](../../phase2/specs/host-page.md)                                 | 1   |
-| 2     | 3    | [file-operations](../../phase2/specs/file-operations.md)                     | 1   |
-| 3     | 1    | [git-in-the-host](../../phase3/specs/git-in-the-host.md)                     | 2   |
-| 4     | 1    | [context-manager-adopts-formats](../specs/context-manager-adopts-formats.md) | 1   |
+| Phase | Wave | Spec                                                                                   | PRs |
+| ----- | ---- | -------------------------------------------------------------------------------------- | --- |
+| 2     | 1    | [format-descriptors](../../phase2/specs/format-descriptors.md)                         | 1   |
+| 2     | 1    | [host-server](../../phase2/specs/host-server.md)                                       | 1   |
+| 2     | 1    | [explorer-tree](../../phase2/specs/explorer-tree.md)                                   | 1   |
+| 2     | 2    | [host-page](../../phase2/specs/host-page.md)                                           | 1   |
+| 2     | 3    | [file-operations](../../phase2/specs/file-operations.md)                               | 1   |
+| 3     | 1    | [git-in-the-host](../../phase3/specs/git-in-the-host.md)                               | 2   |
+| 4     | 1    | [context-manager-adopts-formats](../../phase4/specs/context-manager-adopts-formats.md) | 1   |
 
 **Stage 5: the apps in the host** (specs in `stage5/phase1/specs/`)
 
@@ -252,5 +252,5 @@ None is left for Jamie. The two that were open have a home:
   the server refuses a draft to a locked app's file. Where that check stands is in
   [context-manager-adopts-apps](../../../stage5/phase1/specs/context-manager-adopts-apps.md).
 - **The descriptor's place in Context Manager** is
-  [context-manager-adopts-formats](../specs/context-manager-adopts-formats.md): one table from
+  [context-manager-adopts-formats](../../phase4/specs/context-manager-adopts-formats.md): one table from
   content types to format ids, and an amendment to ADR-0009.

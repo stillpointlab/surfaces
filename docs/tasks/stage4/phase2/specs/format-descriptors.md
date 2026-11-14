@@ -149,7 +149,7 @@ format package:
 ## Non-goals
 
 - Content types. Mapping Context Manager's stored types onto format ids is
-  [context-manager-adopts-formats](../../phase1/specs/context-manager-adopts-formats.md).
+  [context-manager-adopts-formats](../../phase4/specs/context-manager-adopts-formats.md).
 - The diff element. `<code-diff>` stays an extra the host mounts by tag.
 - A handle the format supplies for itself. Jamie chose data and `apply` (2026-11-13).
 
