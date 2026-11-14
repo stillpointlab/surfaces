@@ -1,7 +1,7 @@
 # Stage 4: The Local Host for Files, Formats and Git Changelog
 
-- **Dates:** 2026-11-13 –
-- **Stage Tag:** TBD _(filled with `stage4-complete` at stage close)_
+- **Dates:** 2026-11-12 – 2026-11-14
+- **Stage Tag:** `stage4-complete` _(created on the merge of the stage close PR)_
 
 > Agent-drafted from evidence (merged PRs, git history, task cards). Appended per phase at phase
 > close. Regenerable at any time; see [devlogs](../README.md). Reflections do NOT belong here — they
@@ -280,3 +280,26 @@ against its pin commit).
 - Two entries in the [follow-up log](followups.md): `apply` cannot give a path's attributes
   without content, and the Context Manager pages the adoption did not move. Three more are in
   Context Manager's own log.
+
+---
+
+## Stage totals
+
+- `e1db06c..RANGE_END` (`stage3-complete` to the last merge before the close): COMMITS commits,
+  MERGES of them merges on `main`, FILES files, +ADDED/−REMOVED. PRS.
+- Code and tooling: 136 files, +16,774/−89. The local host is a new package,
+  `packages/hosts/local`: about 7,600 lines of source without its tests and styles.
+- Tests: 1,978 at stage 3's close to 2,632.
+- Context Manager carried the adoption in one PR, context-manager#1186, walked twice.
+- **How the work was done:** seven specs, each one work package. Eight Opus 5.5 sub-agent runs
+  implemented them (the git spec took two, and the adoption one), each in a worktree or clone
+  of its own, committing and never pushing. The orchestrating agent reviewed each, ran the
+  checks from a clean tree, integrated the stack, and wrote the closes.
+- **What reached main with no ruling from Jamie:** the departures listed in each spec's "As
+  built" section. He merged the stack and tried the host by hand; the calls stay open to him.
+- **Follow-ups:** 30 entries in the [follow-up log](followups.md), reviewed when stage 5 is set
+  up. The one that changes what a person's files look like: the md editor's save reflows a file.
+- **Stage 5** (apps, check-in and undo in the local host) has six draft specs in
+  `stage5/phase1/specs/`. They are read against what stage 4 built before any of them starts,
+  and Jamie revisits the stage first.
+- No token or cost figures were collected.
