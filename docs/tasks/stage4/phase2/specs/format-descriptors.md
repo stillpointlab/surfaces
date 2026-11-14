@@ -6,7 +6,7 @@ tags: [formats, common, host-contract, code]
 
 # Spec: format descriptors and the registry
 
-_The [local host brief](../briefs/local_host.md), outcome 1. Stage 4, phase 2, first wave: it runs
+_The [local host brief](../../phase1/briefs/local_host.md), outcome 1. Stage 4, phase 2, first wave: it runs
 beside [host-server](host-server.md) and [explorer-tree](explorer-tree.md). One PR here._
 
 ## High-level goal
@@ -17,7 +17,7 @@ descriptors and asks one registry "what opens this path", with no table of its o
 ## Related context
 
 - The brief's outcome 1 fixes the shape: data and one `apply(element, file)`.
-- The [local host spike](../spikes/local-host.md), finding 3: Context Manager decides today, in
+- The [local host spike](../../phase1/spikes/local-host.md), finding 3: Context Manager decides today, in
   `shared/utils/repoFileKind.utils.ts` (`classifyRepoFilePath`) and
   `shared/utils/codeLanguage.utils.ts` (`languageFromFilename`, `imageContentTypeFromFilename`).
 - The element contracts: `packages/common/src/contracts.ts`.
@@ -30,7 +30,9 @@ descriptors and asks one registry "what opens this path", with no table of its o
   of `packages/formats/{md,code,sheet,xmdl,image}`; the descriptor suite in
   `packages/common/src/testing/`; the harness's `types.ts` and `main.ts`.
 - **Does not change:** any element, or the contracts in `contracts.ts`.
-- **Shares with a parallel spec:** `tooling/harness/main.ts` (explorer-tree adds one glob line).
+- **Shares nothing with a parallel spec.** The harness's glob line for the hosts is in
+  [host-server](host-server.md)'s scaffold commit, which this work starts from (changed
+  2026-11-13, when the phase opened).
 
 ## Technical requirement
 
@@ -146,7 +148,7 @@ format package:
 ## Non-goals
 
 - Content types. Mapping Context Manager's stored types onto format ids is
-  [context-manager-adopts-formats](context-manager-adopts-formats.md).
+  [context-manager-adopts-formats](../../phase1/specs/context-manager-adopts-formats.md).
 - The diff element. `<code-diff>` stays an extra the host mounts by tag.
 - A handle the format supplies for itself. Jamie chose data and `apply` (2026-11-13).
 

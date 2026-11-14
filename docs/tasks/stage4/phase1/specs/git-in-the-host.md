@@ -20,8 +20,8 @@ works as before, with none of this.
 
 - The [local host spike](../spikes/local-host.md), finding 6: git stands in for drafts and
   check-in. Its answered questions: moves and deletes are staged, and how.
-- `StoragePort.status()` and `FileStatus` ([host-server](host-server.md)); the tree's marks
-  ([explorer-tree](explorer-tree.md)); `<code-diff>` and `DiffElement`
+- `StoragePort.status()` and `FileStatus` ([host-server](../../phase2/specs/host-server.md)); the tree's marks
+  ([explorer-tree](../../phase2/specs/explorer-tree.md)); `<code-diff>` and `DiffElement`
   (`packages/formats/code`, `packages/common/src/contracts.ts`).
 
 ## Work package

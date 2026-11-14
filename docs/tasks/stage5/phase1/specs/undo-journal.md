@@ -36,7 +36,7 @@ change), or undo across a restart.
 - The brief's outcome 5 and Jamie's decisions: in the server's memory; generous limits on steps
   and on size; editor saves left out at first; a commit does not clear it.
 - `StoragePort.put` with `PortChange` and `base`
-  ([host-server](../../../stage4/phase1/specs/host-server.md)); staging of moves and deletes
+  ([host-server](../../../stage4/phase2/specs/host-server.md)); staging of moves and deletes
   ([git-in-the-host](../../../stage4/phase1/specs/git-in-the-host.md)); the runner
   ([host-runner](host-runner.md)).
 
