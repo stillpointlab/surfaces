@@ -284,8 +284,11 @@ what is still open.
 - **Files in an app's scope:** locked for writes by default, with an escape hatch; they still
   open in their preview.
 - **Undo:** to be considered, with generous limits on the number of steps and the total size.
-- **The format descriptor:** still open; the brief sets out what it is and the two questions
-  about it.
+  The journal is in the server's memory, for the run.
+- **The format descriptor:** data and one `apply(element, file)` the format supplies. The host
+  creates and drives the element through the contracts; the format chooses its own setter.
+  Attributes alone were not enough: the sheet has a second setter for a `.sheet` document, and
+  the image takes a URL.
 
 ## References
 
