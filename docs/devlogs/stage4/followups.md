@@ -72,3 +72,10 @@ it opened: every entry was closed.
 - 2026-11-14 (phase 3's close): `packages/formats/md/README.md` still calls the package
   `@stillpointlab/md-editor`, its name before the monorepo, in its title, install line and
   examples.
+- 2026-11-14 (context-manager-adopts-formats): a descriptor's `apply` always sets the content,
+  so a host that renames an open file cannot ask it for the path's attributes alone (the code
+  language). Context Manager keeps one language branch for that. A way to re-derive a path's
+  attributes without content would remove it, and the local host's rename would use it too.
+- 2026-11-14 (context-manager-adopts-formats): Context Manager's public and library preview
+  pages and claim review do not mount through the descriptors yet. It is in Context Manager's
+  own follow-up log; the stage 5 adoption spec is the place to decide whether it joins.

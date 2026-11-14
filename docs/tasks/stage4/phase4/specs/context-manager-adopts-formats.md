@@ -1,5 +1,7 @@
 ---
-column: todo
+column: done
+pr: 'stillpointlab/context-manager#1186'
+completed: 2026-11-14
 created: 2026-11-13T18:56:00-07:00
 tags: [formats, host-contract, code]
 ---
@@ -98,12 +100,39 @@ What stays Context Manager's:
   stage 5.
 - Changing which content types exist, or how a good stores its type.
 
+## As built
+
+_context-manager#1186, 2026-11-14: the pin alone, then the adoption, by an Opus 5.5 sub-agent in the
+`context-manager-surfaces` clone. Its description lists every behaviour difference._
+
+- **The table is `src/shared/utils/formats.utils.ts`:** the registry, and rows from a repository
+  path kind and a stored content type to a format. The server uses it too.
+- **A good is handed to its format under a path its content type fixes:** the trimmed title, with
+  `.csv`, `.sheet` or `.xml` added when the title lacks it. The content type, not the title,
+  still picks the sheet's setter and XML's highlighting.
+- **`x.constructor` was an image, not code,** by the same accident of an object lookup. It is
+  unknown now, and goes to the safe-text probe.
+- **One read-only mount,** `src/client/utils/formatPreview.ts`, serves the preview pane for every
+  format. A mount that is superseded or whose host has left the page is dropped.
+- **The good page's editor is still rendered by the server,** with the tag the descriptor names,
+  and upgraded on load. `apply` runs only after `load()`.
+- **One language branch is left on the good page:** renaming a code good sets `language` by
+  hand, because `apply` would also replace the person's text.
+- **Not moved:** the public and library preview pages and claim review, which mount code and
+  sheets from server-rendered sources. The spec names the good page and `doc-preview` only.
+- **The registry and the five descriptors add 3.9 kB** (1.4 kB gzip) to the chunk every Context
+  Manager page shares, because its shared utils barrel exports them. The good page's entry and
+  the project page's entry are each smaller than before.
+- **The walks** ran twice, on the pin alone and on the adoption: inventory 38/38 and tasks 01–27
+  and 29, all on the first try. They open no code, sheet or image file, so the orchestrating
+  agent drove the preview pane and the good page over those in Chromium.
+
 ## Acceptance / completion checklist
 
-- [ ] No file in Context Manager maps an extension to a format or a language.
-- [ ] The good page and `doc-preview` hold no per-format setter branch.
-- [ ] ADR-0009 carries the amendment.
-- [ ] Both walk suites pass, and the PR lists any behaviour change.
+- [x] No file in Context Manager maps an extension to a format or a language.
+- [x] The good page and `doc-preview` hold no per-format setter branch.
+- [x] ADR-0009 carries the amendment.
+- [x] Both walk suites pass, and the PR lists any behaviour change.
 
 ## Implementation plan
 

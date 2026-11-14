@@ -220,3 +220,63 @@ The [adoption spec](../../tasks/stage4/phase4/specs/context-manager-adopts-forma
 walk suites on the new pin alone first, because every built entry changed shape; the order a
 host registers the formats in; the two paths that class differently; and the image types the
 descriptor does not carry.
+
+---
+
+## Phase 4: Context Manager adopts the format registry (`stage4-phase4-complete`)
+
+Range: `stage4-phase3-complete..stage4-phase4-complete`, 2026-11-14. Here: two fixes that reached
+main beside the stack (#90 and #95, listed under phase 3), a build fix, a seed, and two close
+PRs. The phase's code is one Context Manager PR, context-manager#1186 (29 files, +1,194/−573
+against its pin commit).
+
+### Shipped
+
+- Context Manager asks the registry which format opens a file and how to mount it
+  (context-manager#1186;
+  [spec](../../tasks/stage4/phase4/specs/context-manager-adopts-formats.md)): one table from its
+  path kinds and stored content types to the formats; `classifyRepoFilePath` over the registry;
+  the good page and the project page's preview pane mounting through each descriptor's `load`
+  and `apply`; 84 lines of extension tables gone; ADR-0009 amended. Its first commit is the pin
+  alone, past the change to every format package's build.
+- The md package's `./editor` entry exports nothing from the engine
+  ([#103](https://github.com/stillpointlab/surfaces/pull/103)). Jamie saw a warning from the
+  local host's build: the entry exported the schema, the parser and the serializer statically,
+  so the editor's lazy import of them deferred nothing. The md editor's chunk in the local host
+  went from 160 kB to 46 kB.
+- Phases 2 and 3 closed ([#104](https://github.com/stillpointlab/surfaces/pull/104)).
+- A seed for a revert option on a changed file
+  ([#105](https://github.com/stillpointlab/surfaces/pull/105)), from Jamie's first pass over
+  the local host.
+
+### Decisions
+
+- Jamie, 2026-11-14: he merged the stage's stack himself; the adoption's walks, `e2e:reset` and
+  scratch pushes were approved; the work runs to the stage's close, and stage 5 is revisited
+  with him before it starts.
+- Jamie tried the local host on `.md`, `.ts`, `.sheet` and `.csv` files and found it working.
+  A revert option for a changed file is the one thing he asked for; it is a seed, since neither
+  stage 4's git spec nor stage 5's undo journal covers it.
+- The agents' calls in the adoption, recorded in the spec's "As built" section and open to
+  Jamie's ruling: a good's path takes the extension its content type fixes; the public and
+  library previews and claim review were left as they are.
+
+### Testing & review
+
+- Tests here: 2,628 → 2,632 (three for `<modal-dialog>`, one for the md entry).
+- Context Manager: the packages build, typecheck, lint and all 4,852 tests pass.
+- **Walks for context-manager#1186**, after a full build and `e2e:reset`, run twice: on the pin
+  alone and on the adoption. Each time inventory was 38/38 and tasks walks 01–27 and 29 passed
+  on the first try.
+- The walks open no code, sheet or image file. The orchestrating agent drove the adoption build
+  in Chromium: the preview pane on markdown, JSON, YAML, CSV, `.sheet` and unknown text, and
+  the good page on a file of each of the first five kinds linked from the repository. An XMDL
+  file, an image, the public previews and a rename of a code good were not driven.
+- The transcript for phases 2 and 3 was backed up at their close. This phase's is backed up at
+  the stage's close.
+
+### Deferred
+
+- Two entries in the [follow-up log](followups.md): `apply` cannot give a path's attributes
+  without content, and the Context Manager pages the adoption did not move. Three more are in
+  Context Manager's own log.
