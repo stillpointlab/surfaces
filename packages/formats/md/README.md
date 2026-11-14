@@ -135,6 +135,17 @@ From `@stillpointlab/md-editor/markdown`:
 - types: `MarkdownIt`, `MarkdownItPlugin`, `CreateMarkdownItOptions`,
   `MarkdownSourceSelectionOptions`
 
+## The format descriptor
+
+`@stillpointlab/md-format/format` exports `mdFormat`, which a host registers (see
+`@stillpointlab/common-format/format`): it opens `.md` and `.markdown`, needs the file's text, and
+`apply` calls `setContent`. Register it before `code`, which opens the same extensions. Importing it
+defines no element and loads no engine; `load()` resolves to the package's own `./preview` or
+`./editor` module, so an element is never defined twice. The build splits so that it can:
+`format.js` imports `preview.js` and `editor.js` themselves, and shared code goes to `dist/chunks/`,
+which `sideEffects` lists. `src/entries.test.ts` keeps the entry light, and `src/format.test.ts`
+runs `describeFormatDescriptor` over it.
+
 ## Development
 
 Use Node.js 24.15+ on the 24.x line for development. Node.js 22.22.2+ on the

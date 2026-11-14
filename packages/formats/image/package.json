@@ -11,7 +11,8 @@
     "./dist/index.js",
     "./dist/index.cjs",
     "./dist/preview.js",
-    "./dist/preview.cjs"
+    "./dist/preview.cjs",
+    "./dist/chunks/*"
   ],
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -26,11 +27,17 @@
       "types": "./dist/preview.d.ts",
       "import": "./dist/preview.js",
       "require": "./dist/preview.cjs"
+    },
+    "./format": {
+      "types": "./dist/format.d.ts",
+      "import": "./dist/format.js",
+      "require": "./dist/format.cjs"
     }
   },
   "files": [
     "dist",
-    "preview.d.ts"
+    "preview.d.ts",
+    "format.d.ts"
   ],
   "scripts": {
     "gen:styles": "node ../../../tooling/gen-styles.mjs .",
