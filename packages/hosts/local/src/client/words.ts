@@ -2,7 +2,8 @@
 // banner and the confirmations are the local host brief's drafts (outcome 1),
 // word for word; the pane's messages for a file it cannot open are the host-page
 // spec's table. A confirmation is a question and, where the draft has one, the
-// sentence after it: together they are the draft's words.
+// sentence after it: together they are the draft's words. The explorer's menu and
+// dialogs are the file-operations spec's, where it has words for them.
 
 export interface Confirmation {
   question: string;
@@ -72,6 +73,47 @@ export const words = {
     confirm: 'Create it',
     cancel: 'Cancel',
   } satisfies Confirmation,
+
+  /** The explorer's menu on a row (the file-operations spec's table). */
+  menu: {
+    label: (path: string) =>
+      path === '' ? 'Options for the served folder' : `Options for ${path}`,
+    newFile: 'New file…',
+    rename: 'Rename…',
+    delete: 'Delete…',
+    /** Why a folder's writes are off: not in the spec, which leaves these to the page. */
+    separate: 'A separate repository (a submodule or a nested one): change it there.',
+    holdsSeparate: 'This folder holds a separate repository, which cannot be moved from here.',
+    truncated: 'The folder is too large to list in full, so its files are not all known here.',
+  },
+
+  /**
+   * The explorer's dialogs. The delete questions are the spec's words; the titles,
+   * the buttons and the checks' messages are the page's own.
+   */
+  fileOps: {
+    pathLabel: 'Path',
+    cancel: 'Cancel',
+    newFile: { title: 'New file', confirm: 'Create' },
+    rename: { title: 'Rename', confirm: 'Rename' },
+    deleteConfirm: 'Delete',
+    deleteFile: (name: string) => `Delete ${name}?`,
+    deleteFolder: (name: string, count: number) =>
+      `Delete ${name} and the ${count} ${count === 1 ? 'file' : 'files'} in it?`,
+    deleteUnsaved: (name: string) => `${name} has unsaved edits. Delete it anyway?`,
+    /** A folder's delete when the open file, with unsaved edits, is inside it. */
+    deleteUnsavedInside: (name: string) => `${name} has unsaved edits, which will be lost.`,
+    check: {
+      empty: 'Enter a path.',
+      noName: 'Enter a name after the last slash.',
+      leadingSlash: 'Start the path inside the served folder, without a leading slash.',
+      dotDot: 'A path cannot have a “..” segment.',
+      insideItself: 'A folder cannot move inside itself.',
+      fileExists: (path: string) => `There is already a file at ${path}.`,
+      folderExists: (path: string) => `There is already a folder at ${path}.`,
+      fileInTheWay: (path: string) => `${path} is a file, so it cannot hold another.`,
+    },
+  },
 } as const;
 
 /** The pane's message for a refusal it met opening a file, by code. */
