@@ -95,10 +95,16 @@ with the packages' sources reloading; `surfaces [path]` runs it anywhere.
    depend on the banner having arrived.
 
    Inside an app's scope (the folder its manifest mounts), the app is the only writer by
-   default. A file there opens in its preview. Its editor, and the explorer's create, rename
-   and delete, are off until the person unlocks that scope. The server enforces the lock, not
-   only the page: a write to a locked scope that does not come through the app's runner is
-   refused.
+   default. Jamie's lean for how that looks (2026-11-13):
+   - the app is one row in the explorer, where its folder would be, and its files are not
+     listed;
+   - selecting the row opens the app at its default page;
+   - an option on the row expands it, which lists its files and unlocks them: their editors,
+     and the explorer's create, rename and delete, work as they do anywhere else.
+
+   A link to a file in a scope that is not expanded opens the file in its preview. The server
+   enforces the lock, not only the page: a write to a locked scope that does not come through
+   the app's runner is refused.
 
 2. **Git.** The explorer marks changed, new, moved and deleted files. A changed file shows its
    diff against `HEAD`. The host stages its own moves and deletes, so git reports them as such.
@@ -175,15 +181,18 @@ Each is for the spec that meets it, unless Jamie answers first:
   The harness's `HarnessFormat.elements` already names each format's tags; the descriptor would
   replace that field, so the harness reads it too.
 
-- **The escape hatch's form.** Decided: an app's scope is locked for writes, and there is a way
-  out. Open: what the way out is. The lean is an **Unlock** action on the instance's row in the
-  explorer, for that instance and for the run, behind a confirmation, with the row marked while
-  it is unlocked. A draft of the words: "Unlock this app's files? Changes made here skip the
-  app's rules, and the app may report problems until they are fixed." (Unlock, Cancel). The
-  other candidate is a flag at start (`surfaces --unlock-apps`), which costs a restart.
+- **The escape hatch's details.** Expanding the app's row is the way out (outcome 1). Open:
+  - whether expanding asks first. The lean is yes, once per app in a run, since it is the step
+    that lets a person break the app's files. A draft of the words: "Show this app's files?
+    Changes made to them skip the app's rules, and the app may report problems until they are
+    fixed." (Show files, Cancel);
+  - whether collapsing the row locks the scope again (the lean: yes, so what the tree shows and
+    what the server allows are the same thing);
+  - how a file in an expanded scope is told apart from the app's row, which still opens the
+    app.
 
-  Context Manager differs here today: it opens a card or a zone file in its format's editor.
-  Whether it takes the lock when it adopts is for that phase.
+  Context Manager differs here today: its tree lists an app's files, and a card or a zone file
+  opens in its format's editor. Whether it takes the lock when it adopts is for that phase.
 
 - **Undo's reach:** whether a save from an editor is in the journal, whether the journal outlives
   a commit, and where the kept content lives (memory, or a temporary folder the run owns). The
