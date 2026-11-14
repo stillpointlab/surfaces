@@ -73,9 +73,10 @@ files.
   option to show them.
 - A card or a zone file opened from the app, or by its address, opens in its preview while the
   app's files are hidden.
+- **Every page load starts locked** (Jamie, 2026-11-13: the aim is to discourage editing an
+  app's files directly). The unlocked state is the browser tab's and is gone on a reload.
 
-How the unlocked state is kept, and whether the server refuses a draft in a locked scope, are
-open (below).
+Whether the server refuses a draft in a locked scope is open (below).
 
 ## Clarifications
 
@@ -89,12 +90,19 @@ open (below).
 
 For Jamie, before step 4 starts:
 
-- **Where the unlocked state lives in Context Manager.** The local host is one person and one
-  run, so its server holds the state. Context Manager has many users and no "run". The lean:
-  per browser tab, starting locked on every page load.
-- **Whether its server enforces the lock.** In the local host an unlocked write goes straight to
-  disk. In Context Manager it is a draft that check-in reviews. The lean: the client alone
-  enforces it there, and the server keeps accepting drafts.
+- **Whether Context Manager's server enforces the lock.** If it does not, only the page does:
+  the tree hides the files and the editor opens as a preview. Anything that is not that page
+  can still save a draft to an app's file: a call to the API, an agent through MCP, or the good
+  page reached another way. That discourages a person and stops nothing else.
+
+  The lean, changed after Jamie's question: the server refuses a draft to a path inside an
+  enabled app's scope unless the request says the scope is unlocked. The page sends that only
+  from an unlocked tab. The server keeps no unlocked state, so it fits many users, and every
+  other caller has to ask for the exception on purpose. The app's own writes go through the
+  app host and are not refused.
+
+  Not yet checked: where the draft save can look up an enabled instance's scope, and what else
+  writes to such a path (import, auto-rebase). Step 4 starts by reading that.
 
 ## Non-goals
 

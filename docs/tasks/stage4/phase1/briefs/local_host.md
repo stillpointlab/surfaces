@@ -245,9 +245,9 @@ against what stage 4 made.
 
 Each is for the spec that meets it, unless Jamie answers first:
 
-- **The lock in Context Manager:** where the unlocked state lives when there are many users and
-  no "run", and whether its server enforces the lock. Both are set out, with a lean, in
+- **The lock in Context Manager:** whether its server enforces the lock, set out with a lean in
   [context-manager-adopts-apps](../../../stage5/phase1/specs/context-manager-adopts-apps.md).
+  Decided (Jamie, 2026-11-13): there, every page load starts locked.
 
 The descriptor's place in Context Manager, open until now, is
 [context-manager-adopts-formats](../specs/context-manager-adopts-formats.md): one table from
