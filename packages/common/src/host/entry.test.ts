@@ -1,19 +1,22 @@
 // @vitest-environment node
-import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { dirname, join } from 'node:path';
-
+/// <reference types="vite/client" />
 import { describe, expect, it } from 'vitest';
 
 // Through the built entry, as for `./html`: the package imports itself, so the
 // entry loads dynamically (import-x/order classifies a self-import differently
-// with and without `dist`).
-const builtEntry = createRequire(import.meta.url).resolve('@stillpointlab/common-format/host');
+// with and without `dist`). The built files are read as text through Vite, since
+// `common` has no Node types.
+const built = import.meta.glob<string>('../../dist/*.{js,cjs}', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
 
-/** Every module specifier the built file imports, and the files it reaches through them. */
+/** Every module specifier a built file imports, and the files it reaches through them. */
 function importGraph(file: string, seen = new Map<string, string[]>()): Map<string, string[]> {
   if (seen.has(file)) return seen;
-  const source = readFileSync(file, 'utf8');
+  const source = built[file];
+  if (source === undefined) throw new Error(`${file} is not built`);
   const specifiers = [
     ...source.matchAll(/\bfrom\s*["']([^"']+)["']/g),
     ...source.matchAll(/\bimport\s*\(?\s*["']([^"']+)["']/g),
@@ -21,7 +24,7 @@ function importGraph(file: string, seen = new Map<string, string[]>()): Map<stri
   ].map((match) => match[1]);
   seen.set(file, specifiers);
   for (const specifier of specifiers) {
-    if (specifier.startsWith('.')) importGraph(join(dirname(file), specifier), seen);
+    if (specifier.startsWith('./')) importGraph(`../../dist/${specifier.slice(2)}`, seen);
   }
   return seen;
 }
@@ -34,14 +37,14 @@ describe('the ./host entry', () => {
   });
 
   it('imports nothing from Node or the DOM, directly or through a chunk', () => {
-    for (const file of [builtEntry, builtEntry.replace(/\.c?js$/, '.js')]) {
-      const graph = importGraph(file);
-      for (const [module, specifiers] of graph) {
+    for (const file of ['../../dist/host.js', '../../dist/host.cjs']) {
+      for (const [module, specifiers] of importGraph(file)) {
         for (const specifier of specifiers) {
-          expect(specifier, `${module} imports ${specifier}`).toMatch(/^\.\.?\//);
+          expect(specifier, `${module} imports ${specifier}`).toMatch(/^\.\//);
         }
-        const source = readFileSync(module, 'utf8');
-        expect(source, module).not.toMatch(/\b(document|window|HTMLElement|customElements)\b/);
+        expect(built[module], module).not.toMatch(
+          /\b(document|window|HTMLElement|customElements|process|Buffer)\b/
+        );
       }
     }
   });
