@@ -46,7 +46,14 @@ for (const pkg of targets) {
     const name = basename(scssPath, '.scss');
     const outPath = join(dirname(scssPath), `${name}.styles.ts`);
     // `packages/` on the load path lets any package `@use 'common/src/styles/tokens'`.
-    const { css } = sass.compile(scssPath, { style: 'compressed', loadPaths: [packagesDir] });
+    // `charset: false`: for a stylesheet with a character outside ASCII, Sass's compressed
+    // output starts with a byte order mark. In a `<style>`'s text that mark is read as part
+    // of the first selector, so the first rule never matches.
+    const { css } = sass.compile(scssPath, {
+      style: 'compressed',
+      loadPaths: [packagesDir],
+      charset: false,
+    });
     const banner = `// AUTO-GENERATED from ${name}.scss by tooling/gen-styles.mjs. Do not edit.\n`;
     writeFileSync(outPath, `${banner}export const ${name}Styles = ${JSON.stringify(css)};\n`);
     console.log(`gen-styles: wrote ${relative(root, outPath)} (${css.length} bytes)`);
