@@ -1,6 +1,7 @@
 ---
-column: in-progress
+column: done
 pr: 96
+completed: 2026-11-14
 created: 2026-11-13T18:38:00-07:00
 tags: [dev-tooling, code]
 ---
@@ -106,15 +107,17 @@ _[#96](https://github.com/stillpointlab/surfaces/pull/96), 2026-11-14._
   (`pane.followWrite`).
 - **"Delete X and the 1 file in it?"** says "file" for one.
 - **The dialogs' titles, buttons and messages** are drafts in `words.ts`.
+- **The by-hand item** was done by the implementing agent driving Chromium with a script, with
+  each result read from disk.
 
 ## Acceptance / completion checklist
 
-- [ ] Tests with a fake `HostClient`: each dialog's happy path, each path check, a server
+- [x] Tests with a fake `HostClient`: each dialog's happy path, each path check, a server
       refusal, a folder rename and a folder delete as one `put`.
-- [ ] The open file follows a rename, and closes on a delete, with the unsaved-edits warning.
-- [ ] The menu works by mouse and by keyboard, and closes on Escape and on an outside click.
-- [ ] By hand: create, rename, move and delete in a served folder, and see each on disk.
-- [ ] `npm run check` is green.
+- [x] The open file follows a rename, and closes on a delete, with the unsaved-edits warning.
+- [x] The menu works by mouse and by keyboard, and closes on Escape and on an outside click.
+- [x] By hand: create, rename, move and delete in a served folder, and see each on disk.
+- [x] `npm run check` is green.
 
 ## Implementation plan
 

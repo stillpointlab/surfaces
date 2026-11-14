@@ -1,6 +1,7 @@
 ---
-column: in-progress
+column: done
 pr: 91
+completed: 2026-11-14
 created: 2026-11-13T18:32:00-07:00
 tags: [dev-tooling, host-contract, code, major-feature]
 ---
@@ -204,15 +205,15 @@ the text above, this section is what the later specs read._
 
 ## Acceptance / completion checklist
 
-- [ ] `npm run serve -- <path>` and the `surfaces` bin start the server from a clean checkout.
-- [ ] Port tests over temporary folders: list in a repository and outside one; `get` and each
+- [x] `npm run serve -- <path>` and the `surfaces` bin start the server from a clean checkout.
+- [x] Port tests over temporary folders: list in a repository and outside one; `get` and each
       refusal; `put` with matching and stale bases, all-or-nothing; create, move and delete.
-- [ ] Confinement tests: `..`, an absolute path, `.git`, and a symbolic link out of the root, for
+- [x] Confinement tests: `..`, an absolute path, `.git`, and a symbolic link out of the root, for
       reads and writes.
-- [ ] Server tests: each route, the `Host` and `Origin` checks, and an event after a write made
+- [x] Server tests: each route, the `Host` and `Origin` checks, and an event after a write made
       outside the server.
-- [ ] `common-format/host` builds as its own entry and imports nothing from Node or the DOM.
-- [ ] `npm run check` is green, with the new workspace included in lint, typecheck and tests.
+- [x] `common-format/host` builds as its own entry and imports nothing from Node or the DOM.
+- [x] `npm run check` is green, with the new workspace included in lint, typecheck and tests.
 
 ## Implementation plan
 

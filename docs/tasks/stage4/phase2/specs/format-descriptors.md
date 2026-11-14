@@ -1,6 +1,7 @@
 ---
-column: in-progress
+column: done
 pr: 93
+completed: 2026-11-14
 created: 2026-11-13T18:30:00-07:00
 tags: [formats, common, host-contract, code]
 ---
@@ -174,12 +175,12 @@ _[#93](https://github.com/stillpointlab/surfaces/pull/93), 2026-11-14._
 
 ## Acceptance / completion checklist
 
-- [ ] `@stillpointlab/common-format/format` exports the types and `createFormatRegistry`.
-- [ ] Each of the five packages exports its descriptor from `./format`, and its entries test
+- [x] `@stillpointlab/common-format/format` exports the types and `createFormatRegistry`.
+- [x] Each of the five packages exports its descriptor from `./format`, and its entries test
       proves the entry defines no element and loads no engine.
-- [ ] Each package runs `describeFormatDescriptor` over at least one sample per extension family.
-- [ ] The harness mounts all five formats through their descriptors, and looks the same.
-- [ ] `npm run check` is green.
+- [x] Each package runs `describeFormatDescriptor` over at least one sample per extension family.
+- [x] The harness mounts all five formats through their descriptors, and looks the same.
+- [x] `npm run check` is green.
 
 ## Implementation plan
 

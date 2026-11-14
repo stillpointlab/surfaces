@@ -1,6 +1,7 @@
 ---
-column: in-progress
+column: done
 pr: 94
+completed: 2026-11-14
 created: 2026-11-13T18:36:00-07:00
 tags: [dev-tooling, formats, code, major-feature]
 ---
@@ -158,19 +159,21 @@ _[#94](https://github.com/stillpointlab/surfaces/pull/94), 2026-11-14._
 - **A format that takes a URL is not read on open.**
 - **The deleted-on-disk banner has no Reload button.**
 - **Words the brief does not give** are drafts in `words.ts`, with the brief's own.
+- **The by-hand items** were done by the implementing agent driving Chromium with a script, in
+  light and dark, and the orchestrating agent looked at the screenshots.
 
 ## Acceptance / completion checklist
 
-- [ ] From a clean checkout, `npm run serve -- <path>` opens a folder; each of the five formats
+- [x] From a clean checkout, `npm run serve -- <path>` opens a folder; each of the five formats
       previews, and the four with editors edit and save.
-- [ ] A text file with no matching format opens as plain code; a binary one says it cannot open.
-- [ ] Tests for the client with a fake `HostClient`: open by address, the unsaved mark, save, a
+- [x] A text file with no matching format opens as plain code; a binary one says it cannot open.
+- [x] Tests for the client with a fake `HostClient`: open by address, the unsaved mark, save, a
       refused save, each branch of the changed-on-disk flow, and the discard confirmation.
-- [ ] A markdown file with a script in it does not run the script (a test, and by hand).
-- [ ] No module but the HTTP client calls `fetch` or `EventSource` (the lint rule fails if one
+- [x] A markdown file with a script in it does not run the script (a test, and by hand).
+- [x] No module but the HTTP client calls `fetch` or `EventSource` (the lint rule fails if one
       does).
-- [ ] The built client loads from the server with no development server running.
-- [ ] `npm run check` is green.
+- [x] The built client loads from the server with no development server running.
+- [x] `npm run check` is green.
 
 ## Implementation plan
 

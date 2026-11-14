@@ -67,3 +67,8 @@ it opened: every entry was closed.
   `update-ref`, which touch neither `HEAD` nor `index`. Undo, in stage 5, may want it.
 - 2026-11-14 (git-in-the-host): a commit can switch branches (a new branch), and the undo
   journal's draft spec does not know about branches.
+- 2026-11-14 (git-in-the-host): the Commit button reads "Commit 0" when nothing has changed. It
+  could be disabled, or hidden, until there is a change.
+- 2026-11-14 (phase 3's close): `packages/formats/md/README.md` still calls the package
+  `@stillpointlab/md-editor`, its name before the monorepo, in its title, install line and
+  examples.
