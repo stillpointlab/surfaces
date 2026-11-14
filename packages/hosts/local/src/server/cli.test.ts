@@ -22,7 +22,11 @@ let blocker: Server | null;
 
 beforeEach(() => {
   folder = tempFolder();
-  writeFiles(folder.path, { 'site/a.md': 'a', 'file.txt': 'not a folder' });
+  writeFiles(folder.path, {
+    'site/a.md': 'a',
+    'file.txt': 'not a folder',
+    'client/index.html': '<!doctype html><title>the page</title>',
+  });
   out = [];
   err = [];
   serving = null;
@@ -42,7 +46,7 @@ const io = (env?: NodeJS.ProcessEnv) => ({
 });
 
 async function serve(args: string[], env?: NodeJS.ProcessEnv): Promise<Serving> {
-  const result = await runCli(args, io(env));
+  const result = await runCli(args, io(env), { clientDir: join(folder.path, 'client') });
   if (typeof result === 'number') throw new Error(`exit ${result}: ${err.join('\n')}`);
   serving = result;
   return result;
@@ -79,7 +83,9 @@ describe('surfaces', () => {
       nodes: [{ path: 'a.md', type: 'blob' }],
       truncated: false,
     });
-    expect(await (await fetch(url)).text()).toContain('Serving <code>');
+    const page = await fetch(url);
+    expect(page.headers.get('content-security-policy')).toContain("script-src 'self'");
+    expect(await page.text()).toContain('<title>the page</title>');
   });
 
   it('defaults to the folder it was typed in', async () => {

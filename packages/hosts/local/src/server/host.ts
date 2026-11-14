@@ -2,7 +2,8 @@
 // `Response`, so the `bin` is a thin adapter from `node:http`, and a desktop shell
 // can serve the same handler under its own scheme.
 //
-// Every request passes three checks before its route:
+// Every request passes three checks before its route (`createRequestCheck`, which
+// development mode applies to what Vite serves as well):
 //
 // - its `Host` is the host's own (`127.0.0.1:<port>` or `localhost:<port>`, from
 //   `origin`), so another site cannot reach it through a name it controls (DNS
@@ -18,13 +19,12 @@ import { constants, open } from 'node:fs/promises';
 import { basename, extname } from 'node:path';
 import { Readable } from 'node:stream';
 
-import { escapeHtml } from '@stillpointlab/common-format/html';
-
 import { LIST_LIMIT, MAX_BODY_BYTES } from './limits';
 import { isInside, locate, outsideRoot, pathProblem } from './paths';
 import { createNodePort } from './port';
 import { createFolderWatcher } from './watcher';
 
+import type { PageHandler } from './page';
 import type { NodePort, PortStart } from './port';
 import type { FolderWatcher } from './watcher';
 import type { Failure } from '@stillpointlab/common-format/app';
@@ -46,6 +46,12 @@ export interface HostOptions {
   env?: NodeJS.ProcessEnv;
   /** Something the host could not do but can work without. The default prints it. */
   warn?(message: string): void;
+  /**
+   * The page: a `GET` or `HEAD` of any path outside `/api/`, once the request has
+   * passed the checks. The `surfaces` command serves the built client
+   * (`createStaticPage`); without one, those paths answer `HOST_NO_ROUTE`.
+   */
+  page?: PageHandler;
 }
 
 export interface LocalHost extends Host {
@@ -140,10 +146,54 @@ function hostsFor(origin: URL): Set<string> {
   return hosts;
 }
 
+/** What the checks read of a request: a `Request` has all three. */
+export interface CheckedRequest {
+  method: string;
+  url: string;
+  headers: Headers;
+}
+
+/**
+ * The checks every request passes before it is answered, for the host whose page
+ * is at `origin`: a `Response` that refuses it, or `null`.
+ */
+export function createRequestCheck(origin: string): (request: CheckedRequest) => Response | null {
+  const base = new URL(origin);
+  const allowedHosts = hostsFor(base);
+  const allowedOrigins = new Set([...allowedHosts].map((host) => `${base.protocol}//${host}`));
+  return (request) => {
+    let fallback = '';
+    try {
+      fallback = new URL(request.url).host;
+    } catch {
+      // no usable URL: the `Host` header alone decides
+    }
+    const host = (request.headers.get('host') ?? fallback).toLowerCase();
+    if (!allowedHosts.has(host)) {
+      return refuse(
+        'HOST_FORBIDDEN',
+        `This server answers only as ${[...allowedHosts].join(' or ')}.`,
+        403
+      );
+    }
+    const from = request.headers.get('origin');
+    if (request.method !== 'GET' && (from === null || !allowedOrigins.has(from))) {
+      return refuse('HOST_FORBIDDEN', `A ${request.method} must come from ${base.origin}.`, 403);
+    }
+    if (from !== null && !allowedOrigins.has(from)) {
+      return refuse('HOST_FORBIDDEN', 'Another origin cannot read this server.', 403);
+    }
+    const site = request.headers.get('sec-fetch-site');
+    const mode = request.headers.get('sec-fetch-mode');
+    if ((site === 'cross-site' || site === 'same-site') && mode !== 'navigate') {
+      return refuse('HOST_FORBIDDEN', 'Another site cannot read this server.', 403);
+    }
+    return null;
+  };
+}
+
 export function createHost(options: HostOptions): LocalHost {
-  const origin = new URL(options.origin);
-  const allowedHosts = hostsFor(origin);
-  const allowedOrigins = new Set([...allowedHosts].map((host) => `${origin.protocol}//${host}`));
+  const check = createRequestCheck(options.origin);
   const warn = options.warn ?? ((message: string) => console.warn(`surfaces: ${message}`));
 
   const port = createNodePort({ root: options.root, env: options.env });
@@ -246,20 +296,6 @@ export function createHost(options: HostOptions): LocalHost {
     '/api/events': {
       GET: async (request) => events(request),
     },
-    '/': {
-      GET: async () =>
-        new Response(
-          `<!doctype html><meta charset="utf-8"><title>${escapeHtml(rootAnswer.name)}</title>` +
-            `<p>Serving <code>${escapeHtml(root)}</code>.</p>\n`,
-          {
-            headers: {
-              'content-type': 'text/html; charset=utf-8',
-              'content-security-policy': "default-src 'none'",
-              ...SECURITY_HEADERS,
-            },
-          }
-        ),
-    },
   };
 
   async function raw(path: string): Promise<Response> {
@@ -325,31 +361,6 @@ export function createHost(options: HostOptions): LocalHost {
     });
   }
 
-  /** The request's checks; a `Response` when it is refused. */
-  function check(request: Request, url: URL): Response | null {
-    const host = (request.headers.get('host') ?? url.host).toLowerCase();
-    if (!allowedHosts.has(host)) {
-      return refuse(
-        'HOST_FORBIDDEN',
-        `This server answers only as ${[...allowedHosts].join(' or ')}.`,
-        403
-      );
-    }
-    const from = request.headers.get('origin');
-    if (request.method !== 'GET' && (from === null || !allowedOrigins.has(from))) {
-      return refuse('HOST_FORBIDDEN', `A ${request.method} must come from ${origin.origin}.`, 403);
-    }
-    if (from !== null && !allowedOrigins.has(from)) {
-      return refuse('HOST_FORBIDDEN', 'Another origin cannot read this server.', 403);
-    }
-    const site = request.headers.get('sec-fetch-site');
-    const mode = request.headers.get('sec-fetch-mode');
-    if ((site === 'cross-site' || site === 'same-site') && mode !== 'navigate') {
-      return refuse('HOST_FORBIDDEN', 'Another site cannot read this server.', 403);
-    }
-    return null;
-  }
-
   async function fetch(request: Request): Promise<Response> {
     if (closed) return refuse('HOST_CLOSED', 'The host is closed.', 503);
     let url: URL;
@@ -358,9 +369,17 @@ export function createHost(options: HostOptions): LocalHost {
     } catch {
       return refuse('HOST_BAD_REQUEST', 'The request has no usable URL.', 400);
     }
-    const refused = check(request, url);
+    const refused = check(request);
     if (refused) return refused;
     const route = routes[url.pathname];
+    if (!route && options.page && !url.pathname.startsWith('/api/')) {
+      if (request.method !== 'GET' && request.method !== 'HEAD') {
+        return refuse('HOST_METHOD_NOT_ALLOWED', 'The page answers GET, HEAD.', 405, {
+          allow: 'GET, HEAD',
+        });
+      }
+      return options.page(request, url);
+    }
     if (!route) return refuse('HOST_NO_ROUTE', `Nothing is served at ${url.pathname}.`, 404);
     const handler = route[request.method];
     if (!handler) {
