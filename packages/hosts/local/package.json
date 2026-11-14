@@ -6,7 +6,7 @@
   "license": "MIT",
   "type": "module",
   "bin": {
-    "surfaces": "./dist/server/bin.js"
+    "surfaces": "./bin/surfaces.js"
   },
   "exports": {
     ".": {

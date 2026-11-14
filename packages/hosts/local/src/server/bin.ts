@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 // The `surfaces` command: a thin listener around the host library.
 
 import { runCli } from './cli';

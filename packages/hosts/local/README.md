@@ -9,9 +9,12 @@ and the [host-server spec](../../../docs/tasks/stage4/phase2/specs/host-server.m
 
 - In this repository: `npm run serve -- <path>` builds what it needs and serves `<path>` (relative
   to where you typed it; the current folder by default).
-- Anywhere, once linked (`npm link` from `packages/hosts/local`): `surfaces [path] [--port <n>]`.
-  The port defaults to 5190. It binds to `127.0.0.1` only, and refuses a path that is not a folder
-  and a port in use.
+- `surfaces [path] [--port <n>]`: in this repository `npx surfaces` once the package is built
+  (`npm run build --workspace @stillpointlab/local-host`, which `serve` also does), and anywhere
+  once linked (`npm link` from `packages/hosts/local`). The port defaults to 5190. It binds to
+  `127.0.0.1` only, and refuses a path that is not a folder and a port in use. The command is
+  `bin/surfaces.js`, checked in so npm links it when it installs; it runs the built
+  `dist/server/bin.js`.
 
 ## As a library
 
