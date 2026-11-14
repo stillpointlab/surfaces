@@ -1,8 +1,32 @@
 {
   "extends": "../../../tsconfig.base.json",
-  // The page and its harness fixtures, with the DOM and no Node types.
+  // The page and its harness fixtures, with the DOM and no Node types. The formats
+  // the page registers are read from their sources, as Vite resolves them, so the
+  // typecheck needs none of them built.
   "compilerOptions": {
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "paths": {
+      "@stillpointlab/code-format/*": [
+        "../../formats/code/src/*/index.ts",
+        "../../formats/code/src/*.ts"
+      ],
+      "@stillpointlab/image-format/*": [
+        "../../formats/image/src/*/index.ts",
+        "../../formats/image/src/*.ts"
+      ],
+      "@stillpointlab/md-format/*": [
+        "../../formats/md/src/*/index.ts",
+        "../../formats/md/src/*.ts"
+      ],
+      "@stillpointlab/sheet-format/*": [
+        "../../formats/sheet/src/*/index.ts",
+        "../../formats/sheet/src/*.ts"
+      ],
+      "@stillpointlab/xmdl-format/*": [
+        "../../formats/xmdl/src/*/index.ts",
+        "../../formats/xmdl/src/*.ts"
+      ]
+    }
   },
   "include": ["src/client", "dev"]
 }

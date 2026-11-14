@@ -1,20 +1,59 @@
 # @stillpointlab/local-host
 
-A server over a folder on this machine: it lists the folder, reads and writes its text files,
-serves its other files by URL, and tells a page when files change. Private; nothing here needs
-Context Manager. See the [local host brief](../../../docs/tasks/stage4/phase1/briefs/local_host.md)
-and the [host-server spec](../../../docs/tasks/stage4/phase2/specs/host-server.md).
+A server over a folder on this machine, and the page it serves: an explorer on the left and a
+pane that opens the selected file in its format's preview or editor, saving to disk. Private;
+nothing here needs Context Manager. See the
+[local host brief](../../../docs/tasks/stage4/phase1/briefs/local_host.md), the
+[host-server spec](../../../docs/tasks/stage4/phase2/specs/host-server.md) and the
+[host-page spec](../../../docs/tasks/stage4/phase2/specs/host-page.md).
 
 ## Running it
 
-- In this repository: `npm run serve -- <path>` builds what it needs and serves `<path>` (relative
-  to where you typed it; the current folder by default).
-- `surfaces [path] [--port <n>]`: in this repository `npx surfaces` once the package is built
-  (`npm run build --workspace @stillpointlab/local-host`, which `serve` also does), and anywhere
-  once linked (`npm link` from `packages/hosts/local`). The port defaults to 5190. It binds to
-  `127.0.0.1` only, and refuses a path that is not a folder and a port in use. The command is
-  `bin/surfaces.js`, checked in so npm links it when it installs; it runs the built
-  `dist/server/bin.js`.
+- In this repository: `npm run serve -- <path> [--port <n>]` serves `<path>` (relative to where
+  you typed it; the current folder by default) in development mode: the page from its sources
+  through Vite, as middleware in the server's own process, so a change to the page or a format
+  reloads it. It builds only what the server needs (`common` and `dist/server`).
+- `surfaces [path] [--port <n>]`: the built page, with no Vite. In this repository `npx surfaces`
+  once the package is built (`npm run build:common`, then
+  `npm run build --workspace @stillpointlab/local-host`, which writes `dist/server` and
+  `dist/client`), and anywhere once linked (`npm link` from `packages/hosts/local`). The port
+  defaults to 5190. It binds to `127.0.0.1` only, and refuses a path that is not a folder and a
+  port in use. The command is `bin/surfaces.js`, checked in so npm links it when it installs; it
+  runs the built `dist/server/bin.js`.
+
+## The page
+
+`src/client`, built by `vite build` (`vite.config.ts`, from `src/server/client-build.ts`) to static
+files in `dist/client` with relative paths, so a desktop shell can load the same files.
+
+| Module           | What it is                                                                               |
+| ---------------- | ---------------------------------------------------------------------------------------- |
+| `main.ts`        | The entry: the HTTP client, the five formats, md's sanitizing renderer                   |
+| `host-client.ts` | `HostClient` and `createHttpClient`: the only module that calls `fetch` or `EventSource` |
+| `page.ts`        | `startPage`: the layout, the tree's events, the address, the host's events               |
+| `pane.ts`        | `FilePane`: what is open, opening, saving, and a change on disk                          |
+| `registry.ts`    | md, xmdl, sheet, image and code, in that order, with code as the fallback                |
+| `markdown.ts`    | The renderer `<md-preview>` is given: markdown-it, then DOMPurify                        |
+| `confirm.ts`     | One confirmation helper over `<modal-dialog>`                                            |
+| `address.ts`     | `#/file/<path>` and `#/edit/<path>`                                                      |
+| `stored.ts`      | The open folders in `localStorage`, by the root's id                                     |
+| `words.ts`       | Everything the page says                                                                 |
+| `tree/`          | `<host-file-tree>`                                                                       |
+
+- **The address** names what is open: `#/file/<path>` for the preview, `#/edit/<path>` for the
+  editor, each segment percent-encoded. Back and forward work, and a reload opens the same file.
+- **Saving** (Save, Ctrl+S, Cmd+S) sends one `write` whose `base` is the version the file was
+  opened or last saved at. A change on disk to the open file is read again and compared by
+  version: with no unsaved edits it shows in place; with edits a banner offers Reload, and Save
+  asks before it writes over the newer file. Leaving unsaved edits asks first.
+- **Markdown is untrusted:** the page installs a renderer that sanitizes with DOMPurify before any
+  md element mounts.
+- **The content security policy** (`PAGE_POLICY` in `src/server/page.ts`, and the same `<meta>` in
+  `src/client/index.html`) lets scripts come from the page's own origin alone. Styles may also be
+  inline, because the elements write their stylesheets into their shadow roots at run time.
+  Images may be `data:` and `blob:` URLs as well; nothing loads from another origin.
+- **The workspace packages** resolve to their sources in the build and in development mode
+  (`workspaceAliases`), so each module exists once and the client needs no other package built.
 
 ## As a library
 
@@ -25,16 +64,16 @@ shell can serve the same handler under its own scheme. `createNodePort({ root })
 
 ## Routes
 
-| Route                 | Answers                                                                              |
-| --------------------- | ------------------------------------------------------------------------------------ |
-| `GET /api/list`       | `{ nodes, truncated }`: every file and folder; past 20,000 nodes cut, and saying so  |
-| `GET /api/file?path=` | `{ ok: true, text, version }`, or a refusal                                          |
-| `GET /api/raw?path=`  | the bytes, typed by extension, with `nosniff` and `Content-Security-Policy: sandbox` |
-| `PUT /api/files`      | body `{ changes: PortChange[] }`; `{ ok: true, versions }`, or a refusal             |
-| `GET /api/status`     | `{}` until git-in-the-host                                                           |
-| `GET /api/root`       | `{ name, id }`: the folder's name, and a SHA-256 of its real path                    |
-| `GET /api/events`     | server-sent events (below)                                                           |
-| `GET /`               | a one-line page naming the root, until the page lands                                |
+| Route                  | Answers                                                                              |
+| ---------------------- | ------------------------------------------------------------------------------------ |
+| `GET /api/list`        | `{ nodes, truncated }`: every file and folder; past 20,000 nodes cut, and saying so  |
+| `GET /api/file?path=`  | `{ ok: true, text, version }`, or a refusal                                          |
+| `GET /api/raw?path=`   | the bytes, typed by extension, with `nosniff` and `Content-Security-Policy: sandbox` |
+| `PUT /api/files`       | body `{ changes: PortChange[] }`; `{ ok: true, versions }`, or a refusal             |
+| `GET /api/status`      | `{}` until git-in-the-host                                                           |
+| `GET /api/root`        | `{ name, id }`: the folder's name, and a SHA-256 of its real path                    |
+| `GET /api/events`      | server-sent events (below)                                                           |
+| `GET /`, `GET /<file>` | the page: `dist/client`, or Vite in development mode (any path outside `/api/`)      |
 
 A path is relative to the root with `/` separators, in the `path` query (percent-encoded as any
 query value). A version is a SHA-256 of the file's bytes, as hex; only equality matters.
@@ -76,6 +115,11 @@ query value). A version is a SHA-256 of the file's bytes, as hex; only equality 
   the trailing dots and spaces Windows drops, and `git~1`); or when the real path of the nearest
   thing that exists along it, or of the folder that holds it, is outside the real root. A
   symbolic link that leaves the root is listed and cannot be opened, written, moved or deleted.
+- **The page's files.** `createStaticPage(dir)` lists the folder's regular files (no links, no
+  dot-files) and answers a request only when its path, exactly as sent, is one of them, so no
+  request path can leave `dist/client`. In development mode the same request checks stand in front
+  of everything Vite serves, and Vite's HMR socket opens only for the host's own `Host` and
+  `Origin` (and Vite's own token).
 - **Requests.** The `Host` must be the host's own (`127.0.0.1:<port>` or `localhost:<port>`). A
   request that is not a `GET` must carry the host's `Origin` (or its `localhost` twin). Any
   request whose `Origin` is another, and any the browser marks `Sec-Fetch-Site: cross-site` or

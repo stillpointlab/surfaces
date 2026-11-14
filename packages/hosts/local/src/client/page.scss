@@ -1,0 +1,238 @@
+@use 'common/src/styles/tokens' as *;
+
+// The page's layout: the explorer in a column on the left, the pane filling the
+// rest. Every colour is a token; the host's values for them are theme.css.
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  color: $text-primary;
+  background: $background-primary;
+  font-family: system-ui, sans-serif;
+}
+
+modal-dialog:not(:defined) {
+  display: none;
+}
+
+.host-page {
+  display: grid;
+  grid-template-columns: minmax(12rem, 18rem) minmax(0, 1fr);
+  height: 100vh;
+  height: 100dvh;
+}
+
+.explorer {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid $border-light;
+  background: $background-secondary;
+}
+
+.explorer-header {
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid $border-light;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.explorer-note {
+  margin: 0;
+  padding: $spacing-xs $spacing-md;
+  border-bottom: 1px solid $warning-border;
+  color: $warning-color;
+  background: $warning-bg;
+  font-size: 0.8125rem;
+}
+
+host-file-tree {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.pane-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: $spacing-sm;
+  min-height: 2.5rem;
+  padding: 0 $spacing-md;
+  border-bottom: 1px solid $border-light;
+  background: $header-bg;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.pane-path {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-family: ui-monospace, monospace;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pane-unsaved {
+  flex: none;
+  color: $primary-blue;
+  font-size: 0.75rem;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.pane-views {
+  display: inline-flex;
+  flex: none;
+
+  &[hidden] {
+    display: none;
+  }
+
+  .button {
+    border-radius: 0;
+  }
+
+  .button:first-child {
+    border-radius: $border-radius-md 0 0 $border-radius-md;
+  }
+
+  .button:last-child {
+    margin-left: -1px;
+    border-radius: 0 $border-radius-md $border-radius-md 0;
+  }
+
+  .button[aria-pressed='true'] {
+    color: $text-primary;
+    background: $background-hover;
+    font-weight: 600;
+  }
+}
+
+.button {
+  padding: $spacing-xs $spacing-md;
+  border: 1px solid $border-dark;
+  border-radius: $border-radius-md;
+  color: $text-secondary;
+  background: $background-primary;
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: $background-hover;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $focus-ring;
+    outline-offset: 1px;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.button-primary {
+  border-color: $button-bg;
+  color: $button-text;
+  background: $button-bg;
+
+  &:hover:not(:disabled) {
+    background: $button-bg;
+    filter: brightness(1.1);
+  }
+}
+
+.pane-banner {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid $warning-border;
+  color: $warning-color;
+  background: $warning-bg;
+  font-size: 0.875rem;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.pane-banner-text {
+  flex: 1 1 auto;
+}
+
+.pane-error {
+  flex: none;
+  margin: 0;
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid $error-border;
+  color: $error-color;
+  background: $error-bg;
+  font-size: 0.875rem;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.pane-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+
+  // The element fills the pane; an editor scrolls inside itself.
+  > :not(.pane-message) {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  // The two previews that read as a document get a margin; editors, code and
+  // grids fill the pane to its edges.
+  > md-preview,
+  > xmdl-preview {
+    padding: $spacing-lg $spacing-xl;
+  }
+}
+
+.pane-message {
+  margin: $spacing-xl;
+  color: $text-muted;
+}
+
+.confirm-detail {
+  margin: 0;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+}

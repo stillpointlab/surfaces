@@ -95,6 +95,37 @@ export default [
     },
   },
   {
+    // A host's page reaches its server through its `HostClient` alone: the HTTP
+    // client is the one module that may call `fetch` or open a stream, so a later
+    // spec adds a method there rather than a second way to the server.
+    files: ['packages/hosts/*/src/client/**/*.ts'],
+    ignores: ['packages/hosts/*/src/client/host-client.ts'],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        ...['fetch', 'EventSource', 'WebSocket', 'XMLHttpRequest'].map((name) => ({
+          name,
+          message: 'Reach the host through its HostClient (src/client/host-client.ts).',
+        })),
+      ],
+      'no-restricted-properties': [
+        'error',
+        ...['window', 'globalThis', 'self'].flatMap((object) =>
+          ['fetch', 'EventSource', 'WebSocket', 'XMLHttpRequest'].map((property) => ({
+            object,
+            property,
+            message: 'Reach the host through its HostClient (src/client/host-client.ts).',
+          }))
+        ),
+        {
+          object: 'navigator',
+          property: 'sendBeacon',
+          message: 'Reach the host through its HostClient (src/client/host-client.ts).',
+        },
+      ],
+    },
+  },
+  {
     // Node build scripts.
     files: ['tooling/**/*.mjs', '*.mjs'],
     languageOptions: {

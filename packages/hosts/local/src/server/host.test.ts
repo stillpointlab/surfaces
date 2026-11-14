@@ -199,10 +199,10 @@ describe('the routes', () => {
     });
   });
 
-  it('GET / answers a one-line page naming the root', async () => {
+  it('GET / answers HOST_NO_ROUTE when the host is given no page', async () => {
     const response = await request('/');
-    expect(response.headers.get('content-type')).toBe('text/html; charset=utf-8');
-    expect(await response.text()).toContain(`Serving <code>${root}</code>.`);
+    expect(response.status).toBe(404);
+    expect(await response.json()).toMatchObject({ code: 'HOST_NO_ROUTE' });
   });
 
   it('answers 404 for no route and 405 for a method a route does not take', async () => {

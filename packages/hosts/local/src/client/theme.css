@@ -1,0 +1,92 @@
+/* The host's half of the shared tokens: a value for every --spl-* property, light
+   by default and dark when the system asks for it. The same values as the
+   harness (tooling/harness/harness.css), so a format looks the same in both. The
+   page's own layout is page.scss, which uses the tokens and no colour of its own. */
+:root {
+  color-scheme: light;
+  --spl-background-primary: #ffffff;
+  --spl-background-secondary: #f5f5f5;
+  --spl-background-muted: #f8f8f8;
+  --spl-background-hover: #e8e8e8;
+  --spl-surface-overlay: #ffffff;
+  --spl-header-bg: #f6f8fa;
+  --spl-code-bg: #f0f0f0;
+  --spl-text-primary: #1f2933;
+  --spl-text-secondary: #333333;
+  --spl-text-color: #444444;
+  --spl-text-muted: #57606a;
+  --spl-border-color: #eeeeee;
+  --spl-border-light: #d0d7de;
+  --spl-border-dark: #cccccc;
+  --spl-border-strong: #b0b0b0;
+  --spl-primary-blue: #0969da;
+  --spl-primary-blue-hover: #0052a3;
+  --spl-error-color: #b42318;
+  --spl-shadow-color: rgba(0, 0, 0, 0.18);
+  --spl-focus-ring: #0969da;
+  --spl-button-bg: #2f6b5b;
+  --spl-button-text: #ffffff;
+  --spl-error-bg: #fff1f1;
+  --spl-error-bg-subtle: rgba(220, 53, 69, 0.08);
+  --spl-error-border: #f2a7a7;
+  --spl-warning-color: #5f4400;
+  --spl-warning-bg: #fff8e6;
+  --spl-warning-border: #f0c36a;
+  --spl-success-color: #166534;
+  --spl-success-bg: #dcfce7;
+  --spl-info-color: #1d4ed8;
+  --spl-info-bg: #dbeafe;
+  --spl-code-active-line-bg: rgba(88, 166, 255, 0.12);
+  --spl-code-selection-bg: rgba(88, 166, 255, 0.38);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --spl-background-primary: #0d1117;
+    --spl-background-secondary: #161b22;
+    --spl-background-muted: #161b22;
+    --spl-background-hover: #21262d;
+    --spl-surface-overlay: #161b22;
+    --spl-header-bg: #161b22;
+    --spl-code-bg: #161b22;
+    --spl-text-primary: #e6edf3;
+    --spl-text-secondary: #c9d1d9;
+    --spl-text-color: #c9d1d9;
+    --spl-text-muted: #8b949e;
+    --spl-border-color: #21262d;
+    --spl-border-light: #30363d;
+    --spl-border-dark: #30363d;
+    --spl-border-strong: #484f58;
+    --spl-primary-blue: #58a6ff;
+    --spl-primary-blue-hover: #79c0ff;
+    --spl-error-color: #ff7b72;
+    --spl-shadow-color: rgba(0, 0, 0, 0.6);
+    --spl-primary-color: #eceae0;
+    --spl-hover-gray: #253730;
+    --spl-pool-surface: #24221c;
+    --spl-alert-color: #f0883e;
+    --spl-alert-bg: #3a2211;
+    --spl-alert-text: #ffb77d;
+    --spl-gold-color: #e0b54c;
+    --spl-text-faint: #8b949e;
+    --spl-chip-hover-bg: rgba(139, 92, 246, 0.2);
+    --spl-drag-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    --spl-popover-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+    --spl-focus-ring: #58a6ff;
+    --spl-button-bg: #3b8a73;
+    --spl-button-text: #ffffff;
+    --spl-error-bg: #3c1618;
+    --spl-error-bg-subtle: rgba(248, 81, 73, 0.12);
+    --spl-error-border: #8e1519;
+    --spl-warning-color: #e3b341;
+    --spl-warning-bg: #3a2d0b;
+    --spl-warning-border: #9e6a03;
+    --spl-success-color: #56d364;
+    --spl-success-bg: #12261e;
+    --spl-info-color: #79c0ff;
+    --spl-info-bg: #0c2d6b;
+    --spl-code-active-line-bg: rgba(88, 166, 255, 0.1);
+    --spl-code-selection-bg: rgba(88, 166, 255, 0.3);
+  }
+}

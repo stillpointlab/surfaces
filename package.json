@@ -29,7 +29,7 @@
     "new-format": "node tooling/new-format.mjs",
     "build:common": "npm run build --workspace @stillpointlab/common-format",
     "build:deps": "npm run build --workspace @stillpointlab/common-format --workspace @stillpointlab/sheet-format --workspace @stillpointlab/modal-dialog-component --workspace @stillpointlab/spl-icon-component",
-    "serve": "npm run build:common && npm run build --workspace @stillpointlab/local-host && node packages/hosts/local/dist/server/bin.js"
+    "serve": "npm run gen:styles && npm run build:common && npm run build:server --workspace @stillpointlab/local-host && node packages/hosts/local/dist/server/dev.js"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
