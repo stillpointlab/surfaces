@@ -2,7 +2,9 @@
 // `dev/fixtures.ts` (see types.ts) and gives it the chrome every format wants:
 // editor beside preview, a fixture picker, read-only, narrow panes, light and
 // dark with the shared tokens, source readback, ready badges and an event log.
+// A format with a descriptor is mounted through it, as a host would.
 import type { HarnessControl, HarnessElements, HarnessFixture, HarnessFormat } from './types';
+import type { FormatDescriptor } from '@stillpointlab/common-format/format';
 
 declare const __HARNESS_DEFAULT_FORMAT__: string;
 
@@ -120,13 +122,31 @@ function defaultApply(elements: HarnessElements, content: string): void {
   }
 }
 
+/**
+ * A host's apply: the descriptor hands the editor and preview the file at `path`,
+ * as text or as a URL, and each extra gets `setContent` if it has it.
+ */
+function descriptorApply(descriptor: FormatDescriptor, path: string) {
+  return (elements: HarnessElements, content: string): void => {
+    const file = descriptor.needs === 'url' ? { path, url: content } : { path, text: content };
+    for (const el of [elements.editor, elements.preview]) if (el) descriptor.apply(el, file);
+    defaultApply({ editor: null, preview: null, extras: elements.extras }, content);
+  };
+}
+
 function applyFixture(name: string): void {
   if (!current) return;
   const { format, elements } = current;
   const raw = format.fixtures[name];
   if (raw === undefined) return;
   const fixture: HarnessFixture = typeof raw === 'string' ? { content: raw } : raw;
-  const apply = fixture.apply ?? format.apply ?? defaultApply;
+  const descriptor = format.format;
+  const apply =
+    fixture.apply ??
+    format.apply ??
+    (descriptor
+      ? descriptorApply(descriptor, fixture.path ?? `${name}${descriptor.opens[0] ?? ''}`)
+      : defaultApply);
   apply(elements, fixture.content);
   updateSource();
   const url = new URL(location.href);
@@ -185,6 +205,9 @@ async function selectFormat(name: string, fixtureName?: string): Promise<void> {
   const load = formats.get(name);
   if (!load) return;
   const { default: format } = await load();
+  // A descriptor's elements load through it, before any is created.
+  const descriptor = format.format;
+  if (descriptor) await Promise.all([descriptor.preview.load(), descriptor.editor?.load()]);
 
   for (const observer of observers) observer.disconnect();
   observers = [];
@@ -194,7 +217,9 @@ async function selectFormat(name: string, fixtureName?: string): Promise<void> {
   eventsOut.replaceChildren();
 
   const elements: HarnessElements = { editor: null, preview: null, extras: {} };
-  const { editor: editorTag, preview: previewTag, extra = [] } = format.elements;
+  const { extra = [] } = format.elements ?? {};
+  const editorTag = descriptor ? descriptor.editor?.tag : format.elements?.editor;
+  const previewTag = descriptor ? descriptor.preview.tag : format.elements?.preview;
 
   if (editorTag) {
     const el = document.createElement(editorTag) as HarnessElements['editor'];
