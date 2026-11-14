@@ -575,7 +575,8 @@ describe('a commit git refuses leaves everything as it was', () => {
     expect(existsSync(join(repo, '.git', 'index.lock'))).toBe(false);
     // The hook's own child went with it.
     const child = Number(readFileSync(pidFile, 'utf8'));
-    expect(() => process.kill(child, 0)).toThrow();
+    // (Polled briefly: once killed, it is reaped by whoever inherited it.)
+    await vi.waitFor(() => expect(() => process.kill(child, 0)).toThrow(), { timeout: 3000 });
   });
 
   it('a signature that would ask on a terminal fails at once, with no terminal to ask on', async () => {
