@@ -277,6 +277,13 @@ what is still open.
 - **Moves:** the host stages them (`git mv`). `git status --porcelain=v2` reports a rename only
   once it is staged; an unstaged move is a deleted file and an untracked one (tested in a
   scratch repository, git on Fedora 44).
+- **Deletes:** staged too. `git rm` refuses a file with uncommitted changes, so the host removes
+  the file and then stages that path (`git add -u -- <path>`), which works for a changed file
+  as for a clean one (tested the same way). Deleting an untracked file leaves nothing for git
+  to report.
+- **Files in an app's scope:** locked for writes by default, with an escape hatch; they still
+  open in their preview.
+- **Undo:** to be considered, with generous limits on the number of steps and the total size.
 - **The format descriptor:** still open; the brief sets out what it is and the two questions
   about it.
 

@@ -47,6 +47,14 @@ A second round, the same day, on this brief's open questions:
   both ways of losing work ask first (outcome 1).
 - **Undo and redo are to be considered** (outcome 5).
 
+A third round, the same day:
+
+- **An app's scope is locked for writes by default,** with an escape hatch. A file there still
+  opens in its preview (outcome 1).
+- **Undo's journal has limits,** generous ones, on both the number of steps and the total size
+  it keeps (outcome 5).
+- **Deletes are staged,** as moves are (outcome 2).
+
 ## High-level goal
 
 `surfaces <path>` serves a folder: its files open in their formats, its tasks and inventory
@@ -86,9 +94,16 @@ with the packages' sources reloading; `surfaces [path]` runs it anywhere.
    based on, and is refused when the file on disk is no longer that, so the check does not
    depend on the banner having arrived.
 
-2. **Git.** The explorer marks changed, new and moved files. A changed file shows its diff
-   against `HEAD`. Chosen files are committed, on the current branch or a new one. A folder that
-   is not a repository works without any of this.
+   Inside an app's scope (the folder its manifest mounts), the app is the only writer by
+   default. A file there opens in its preview. Its editor, and the explorer's create, rename
+   and delete, are off until the person unlocks that scope. The server enforces the lock, not
+   only the page: a write to a locked scope that does not come through the app's runner is
+   refused.
+
+2. **Git.** The explorer marks changed, new, moved and deleted files. A changed file shows its
+   diff against `HEAD`. The host stages its own moves and deletes, so git reports them as such.
+   Chosen files are committed, on the current branch or a new one. A folder that is not a
+   repository works without any of this.
 3. **Apps.** A tasks or inventory manifest shows as an instance in the explorer and opens as the
    app, inventory first. One runner applies ops over the storage port. Each app's page (its
    shell), its pages' rules, its bounds and its copy come from its package. An app is created
@@ -97,9 +112,14 @@ with the packages' sources reloading; `surfaces [path]` runs it anywhere.
    a title and a body. Locally it commits.
 5. **Undo and redo** for what the host writes, if its spec finds it sound. The lean: every write
    through the storage port (an app's op, a file created, renamed or deleted) is kept with its
-   inverse in a bounded journal in the server, for the run. Undo writes the inverse, and is
-   refused when a file it would touch has changed since. Text undo inside an open editor stays
-   the editor's own.
+   inverse in a journal in the server, for the run. Undo writes the inverse, and is refused when
+   a file it would touch has changed since. Undoing a staged move or delete puts the index back
+   as well as the file. Text undo inside an open editor stays the editor's own.
+
+   The journal has two limits, both generous: a number of steps and a total size of kept
+   content. The draft is 1,000 steps and 256 MB. Past either, the oldest steps are dropped. One
+   write too large to keep at all (a delete, mostly) says it cannot be undone and asks first.
+
 6. **Context Manager adopts** what moved (the registry, the shells, the pages, the bounds, the
    check-in element), piece by piece.
 
@@ -155,10 +175,16 @@ Each is for the spec that meets it, unless Jamie answers first:
   The harness's `HarnessFormat.elements` already names each format's tags; the descriptor would
   replace that field, so the harness reads it too.
 
-- **Files inside an app's scope.** The app is the sole executor in its scope (Context Manager
-  ADR-0028). Does the explorer create, rename and delete there, or only outside it? Opening a
-  card or a zone file in its format's editor is allowed in Context Manager today.
+- **The escape hatch's form.** Decided: an app's scope is locked for writes, and there is a way
+  out. Open: what the way out is. The lean is an **Unlock** action on the instance's row in the
+  explorer, for that instance and for the run, behind a confirmation, with the row marked while
+  it is unlocked. A draft of the words: "Unlock this app's files? Changes made here skip the
+  app's rules, and the app may report problems until they are fixed." (Unlock, Cancel). The
+  other candidate is a flag at start (`surfaces --unlock-apps`), which costs a restart.
+
+  Context Manager differs here today: it opens a card or a zone file in its format's editor.
+  Whether it takes the lock when it adopts is for that phase.
+
 - **Undo's reach:** whether a save from an editor is in the journal, whether the journal outlives
-  a commit, and what a delete too large to keep does (the lean: say it cannot be undone, and ask).
-- **Deletes and git.** A deleted file is removed from disk and shows as deleted until it is
-  committed; whether a delete is staged, as a move is.
+  a commit, and where the kept content lives (memory, or a temporary folder the run owns). The
+  two limits' numbers are a draft.
