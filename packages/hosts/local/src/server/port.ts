@@ -4,6 +4,8 @@
 // In a git repository, `put` stages its own moves and deletes once they are
 // written (`git/stage.ts`), and `status()` is git's (`git/repository.ts`). A
 // staging that fails leaves the write standing: `put` still succeeds, and warns.
+// `commit` is git's commit of chosen paths, run under the same write lock as
+// `put`, so a `put` arriving during a commit waits for it, and the reverse.
 //
 // `put` is all or nothing, in three steps under one lock (two `put`s run one after
 // the other, so the second checks its bases against what the first wrote):
@@ -51,6 +53,8 @@ import type { Failure, FolderNode, Result } from '@stillpointlab/common-format/a
 import type {
   FileStatus,
   GitState,
+  HostCommit,
+  HostCommitRequest,
   PortChange,
   StoragePort,
 } from '@stillpointlab/common-format/host';
@@ -76,6 +80,11 @@ export interface NodePort extends StoragePort {
   readonly git: HostGitAccess;
   /** How the port lists. The first call asks `git`; later calls answer the same. */
   start(): Promise<PortStart>;
+  /**
+   * Commit the chosen paths (`git.commit`) under the write lock: never while a
+   * `put` writes or stages.
+   */
+  commit(request: HostCommitRequest): Promise<Result<HostCommit>>;
 }
 
 export interface NodePortOptions {
@@ -85,6 +94,8 @@ export interface NodePortOptions {
   env?: NodeJS.ProcessEnv;
   /** Something the port could not do but worked without (a staging that failed). The default prints it. */
   warn?(message: string): void;
+  /** How long a commit may run (`COMMIT_TIMEOUT_MS` by default); a test shortens it. */
+  commitTimeoutMs?: number;
 }
 
 /** A SHA-256 of the bytes, as hex: a file's version. */
@@ -175,10 +186,18 @@ export function createNodePort(options: NodePortOptions): NodePort {
   const root = realpathSyncChecked(options.root);
   const env = options.env;
   const warn = options.warn ?? ((message: string) => console.warn(`surfaces: ${message}`));
-  const git = createGit({ root, env, warn });
+  const git = createGit({ root, env, warn, commitTimeoutMs: options.commitTimeoutMs });
   let started: Promise<PortStart> | null = null;
-  // Writes run one at a time: each `put` checks against what the one before wrote.
+  // Writes run one at a time: each `put` checks against what the one before wrote,
+  // and a commit reads the index the last `put` staged.
   let queue: Promise<unknown> = Promise.resolve();
+
+  /** Run `task` once every write before it has finished, and before any after it. */
+  function exclusive<T>(task: () => Promise<T>): Promise<T> {
+    const run = queue.then(task);
+    queue = run.catch(() => undefined);
+    return run;
+  }
 
   function start(): Promise<PortStart> {
     started ??= (async (): Promise<PortStart> => {
@@ -346,7 +365,7 @@ export function createNodePort(options: NodePortOptions): NodePort {
   async function put(
     changes: readonly PortChange[]
   ): Promise<Result<{ versions: Record<string, string> }>> {
-    const run = queue.then(async () => {
+    return exclusive(async () => {
       const planned = await plan(changes);
       if (!Array.isArray(planned)) return planned;
       const written = await write(planned);
@@ -354,8 +373,10 @@ export function createNodePort(options: NodePortOptions): NodePort {
       if (written.ok) await stage(changes);
       return written;
     });
-    queue = run.catch(() => undefined);
-    return run;
+  }
+
+  function commit(request: HostCommitRequest): Promise<Result<HostCommit>> {
+    return exclusive(() => git.commit(request));
   }
 
   /** Steps 2 and 3. */
@@ -544,7 +565,7 @@ export function createNodePort(options: NodePortOptions): NodePort {
     return git.status();
   }
 
-  return { root, git, start, list, get, put, status };
+  return { root, git, start, list, get, put, status, commit };
 }
 
 /** Remove `folder` and the folders above it while they are empty, up to the root. */

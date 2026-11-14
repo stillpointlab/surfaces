@@ -34,7 +34,12 @@ import type { PageHandler } from './page';
 import type { NodePort, PortStart } from './port';
 import type { FolderWatcher } from './watcher';
 import type { Failure } from '@stillpointlab/common-format/app';
-import type { HostEvent, HostListing, HostRoot } from '@stillpointlab/common-format/host';
+import type {
+  HostCommitRequest,
+  HostEvent,
+  HostListing,
+  HostRoot,
+} from '@stillpointlab/common-format/host';
 import type { FileHandle } from 'node:fs/promises';
 
 export interface Host {
@@ -76,6 +81,11 @@ export function statusFor(code: string): number {
     case 'HOST_FILE_CHANGED':
     case 'HOST_NOT_A_REPOSITORY':
     case 'HOST_GIT_NOT_FOUND':
+    case 'HOST_NOT_CHANGED':
+    case 'HOST_PATH_CONFLICTED':
+    case 'HOST_GIT_IN_PROGRESS':
+    case 'HOST_DETACHED_HEAD':
+    case 'HOST_BRANCH_EXISTS':
       return 409;
     case 'HOST_WRITE_FAILED':
     case 'HOST_GIT_FAILED':
@@ -315,6 +325,21 @@ export function createHost(options: HostOptions): LocalHost {
     '/api/base': {
       GET: async (_request, url) => {
         const answer = await port.git.base(pathParam(url));
+        return answer.ok ? json(answer) : refusal(answer);
+      },
+    },
+    '/api/commit': {
+      POST: async (request) => {
+        const body = await readBody(request);
+        if (body instanceof Response) return body;
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(body);
+        } catch {
+          return refuse('HOST_BAD_REQUEST', 'The body is not JSON.', 400);
+        }
+        // The port checks the body's shape: a request may come from anywhere.
+        const answer = await port.commit(parsed as HostCommitRequest);
         return answer.ok ? json(answer) : refusal(answer);
       },
     },

@@ -23,3 +23,11 @@ export const BURST_MAX_MS = 1000;
 
 /** How long one `git` command may run. */
 export const GIT_TIMEOUT_MS = 10_000;
+
+/**
+ * How long a commit (and the switch to a new branch) may run, hooks and signing
+ * included, before it is stopped. Longer than `GIT_TIMEOUT_MS`, since a hook may
+ * lint or test; short enough that a hook waiting for input does not hold the
+ * host's writes for long.
+ */
+export const COMMIT_TIMEOUT_MS = 60_000;

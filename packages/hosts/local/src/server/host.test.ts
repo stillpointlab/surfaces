@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -419,6 +419,79 @@ describe('git', () => {
     expect(await json('/api/base?path=s.md')).toEqual({ ok: true, text: 's\n' });
   });
 
+  function post(body: unknown, headers: Record<string, string> = { origin }): Promise<Response> {
+    return request('/api/commit', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...headers },
+      body: typeof body === 'string' ? body : JSON.stringify(body),
+    });
+  }
+
+  it('POST /api/commit commits the chosen paths, answers the commit, and sends status', async () => {
+    await start(repo, env).ready();
+    const events = await listen();
+    writeFileSync(join(repo, 'a.md'), 'edited\n');
+    writeFileSync(join(repo, 'docs', 'b.md'), 'not chosen\n');
+    expect((await put([{ kind: 'move', from: 'sub/s.md', path: 'sub/t.md' }])).status).toBe(200);
+    await events.next((e) => e.type === 'status');
+
+    const response = await post({ paths: ['a.md', 'sub/t.md'], message: 'From the page' });
+    expect(response.status).toBe(200);
+    const answer = (await response.json()) as { ok: boolean; commit: string; short: string };
+    expect(answer).toEqual({
+      ok: true,
+      commit: git(repo, env, 'rev-parse', 'HEAD').trim(),
+      short: git(repo, env, 'rev-parse', '--short', 'HEAD').trim(),
+      branch: 'main',
+    });
+    expect(
+      git(repo, env, 'show', '--format=%s', '--name-status', 'HEAD').trim().split('\n')
+    ).toEqual(['From the page', '', 'M\ta.md', 'R100\tsub/s.md\tsub/t.md']);
+    expect(await events.next((e) => e.type === 'status')).toEqual({ type: 'status' });
+    expect(await json('/api/status')).toEqual({ 'docs/b.md': 'changed' });
+    await events.close();
+  });
+
+  it('POST /api/commit refuses by code and status, and needs the origin', async () => {
+    await start(repo, env).ready();
+    writeFileSync(join(repo, 'a.md'), 'edited\n');
+    const cases: Array<[body: unknown, status: number, code: string]> = [
+      ['not json', 400, 'HOST_BAD_REQUEST'],
+      [{ paths: 'a.md', message: 'm' }, 400, 'HOST_BAD_REQUEST'],
+      [{ paths: [], message: 'm' }, 400, 'HOST_COMMIT_NO_PATHS'],
+      [{ paths: ['a.md'], message: '' }, 400, 'HOST_COMMIT_NO_MESSAGE'],
+      [{ paths: ['../x'], message: 'm' }, 400, 'HOST_PATH_OUTSIDE_ROOT'],
+      [{ paths: ['docs/b.md'], message: 'm' }, 409, 'HOST_NOT_CHANGED'],
+      [{ paths: ['a.md'], message: 'm', branch: 'a..b' }, 400, 'HOST_BRANCH_INVALID'],
+      [{ paths: ['a.md'], message: 'm', branch: 'main' }, 409, 'HOST_BRANCH_EXISTS'],
+    ];
+    for (const [body, status, code] of cases) {
+      const response = await post(body);
+      expect({ body, status: response.status }).toEqual({ body, status });
+      expect(await response.json()).toMatchObject({ ok: false, code });
+    }
+    git(repo, env, 'switch', '-q', '--detach');
+    const detached = await post({ paths: ['a.md'], message: 'm' });
+    expect(detached.status).toBe(409);
+    expect(await detached.json()).toMatchObject({ code: 'HOST_DETACHED_HEAD' });
+    expect((await post({ paths: ['a.md'], message: 'm' }, {})).status).toBe(403);
+    expect((await request('/api/commit')).status).toBe(405);
+    expect(git(repo, env, 'rev-list', '--count', '--all')).toBe('1\n');
+  });
+
+  it('POST /api/commit answers git’s failure as HOST_GIT_FAILED (500)', async () => {
+    const hook = join(repo, '.git', 'hooks', 'pre-commit');
+    writeFileSync(hook, `#!/bin/sh\necho '<b>no</b> & "quotes"' >&2\nexit 1\n`);
+    chmodSync(hook, 0o755);
+    await start(repo, env).ready();
+    writeFileSync(join(repo, 'a.md'), 'edited\n');
+    const response = await post({ paths: ['a.md'], message: 'm' });
+    expect(response.status).toBe(500);
+    const body = (await response.json()) as { code: string; message: string };
+    expect(body.code).toBe('HOST_GIT_FAILED');
+    expect(body.message).toContain('<b>no</b> & "quotes"');
+  });
+
   it('outside a repository the routes refuse with 409, and /api/git says why', async () => {
     await start().ready();
     expect(await json('/api/git')).toEqual({ state: 'no-repository', branch: null });
@@ -427,6 +500,9 @@ describe('git', () => {
       expect(response.status).toBe(409);
       expect(await response.json()).toMatchObject({ ok: false, code: 'HOST_NOT_A_REPOSITORY' });
     }
+    const commit = await post({ paths: ['a.md'], message: 'm' });
+    expect(commit.status).toBe(409);
+    expect(await commit.json()).toMatchObject({ ok: false, code: 'HOST_NOT_A_REPOSITORY' });
   });
 
   it('with git off the PATH a repository is served, walked, written, and says so', async () => {
@@ -436,6 +512,9 @@ describe('git', () => {
     const response = await request('/api/changes');
     expect(response.status).toBe(409);
     expect(await response.json()).toMatchObject({ code: 'HOST_GIT_NOT_FOUND' });
+    const commit = await post({ paths: ['a.md'], message: 'm' });
+    expect(commit.status).toBe(409);
+    expect(await commit.json()).toMatchObject({ code: 'HOST_GIT_NOT_FOUND' });
     expect(await json('/api/status')).toEqual({});
     expect((await put([{ kind: 'move', from: 'a.md', path: 'moved.md' }])).status).toBe(200);
     expect(git(repo, env, 'diff', '--cached', '--name-status')).toBe('');
