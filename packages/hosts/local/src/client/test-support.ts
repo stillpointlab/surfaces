@@ -9,7 +9,12 @@ import { createFormatRegistry } from '@stillpointlab/common-format/format';
 import type { HostClient, HostEvent } from './host-client';
 import type { FolderNode, Result } from '@stillpointlab/common-format/app';
 import type { FormatDescriptor } from '@stillpointlab/common-format/format';
-import type { FileStatus, PortChange } from '@stillpointlab/common-format/host';
+import type {
+  FileStatus,
+  HostChange,
+  HostGit,
+  PortChange,
+} from '@stillpointlab/common-format/host';
 
 /** A file whose content is not text: `get` refuses it as `HOST_NOT_TEXT`. */
 export const BINARY = Symbol('binary');
@@ -35,6 +40,16 @@ export interface FakeHost extends HostClient {
   emit(event: HostEvent): void;
   /** Write a file as something outside the page would, and say so. */
   writeOutside(path: string, text: string | null): void;
+  /** What `git()` answers: not a repository unless a test says so. */
+  gitInfo: HostGit;
+  /** What `status()` answers, by path; change it and `emit({ type: 'status' })`. */
+  statuses: Record<string, FileStatus>;
+  /** A moved file's old path, by its new one, for `changes()` and `base()`. */
+  movedFrom: Map<string, string>;
+  /** The files' text at `HEAD`, by path, for `base()`. */
+  readonly heads: Map<string, string | typeof BINARY>;
+  /** The git routes asked, in order: `changes`, `base:<path>`. */
+  readonly gitCalls: string[];
 }
 
 export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHost {
@@ -56,6 +71,11 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
     holdPut: false,
     separate: new Set(),
     truncated: false,
+    gitInfo: { state: 'no-repository', branch: null },
+    statuses: {},
+    movedFrom: new Map(),
+    heads: new Map(),
+    gitCalls: [],
     release() {
       const waiting = held;
       held = [];
@@ -160,7 +180,30 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
       return { ok: true, versions: answer };
     },
     async status(): Promise<Record<string, FileStatus>> {
-      return {};
+      return { ...host.statuses };
+    },
+    async git() {
+      return { ...host.gitInfo };
+    },
+    async changes(): Promise<Result<{ changes: HostChange[] }>> {
+      host.gitCalls.push('changes');
+      if (host.gitInfo.state !== 'repository') return notARepository(host.gitInfo);
+      const changes = Object.entries(host.statuses).map(([path, status]) => {
+        const from = host.movedFrom.get(path);
+        return from ? { path, status, from } : { path, status };
+      });
+      return { ok: true, changes };
+    },
+    async base(path): Promise<Result<{ text: string }>> {
+      host.gitCalls.push(`base:${path}`);
+      if (host.gitInfo.state !== 'repository') return notARepository(host.gitInfo);
+      const text =
+        host.statuses[path] === 'new'
+          ? undefined
+          : host.heads.get(host.movedFrom.get(path) ?? path);
+      if (text === undefined) return { ok: false, code: 'HOST_FILE_NOT_FOUND', message: 'none' };
+      if (text === BINARY) return { ok: false, code: 'HOST_NOT_TEXT', message: 'not text' };
+      return { ok: true, text };
     },
     watch(listener) {
       listeners.add(listener);
@@ -168,6 +211,12 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
     },
   };
   return host;
+}
+
+function notARepository(git: HostGit): { ok: false; code: string; message: string } {
+  return git.state === 'no-git'
+    ? { ok: false, code: 'HOST_GIT_NOT_FOUND', message: 'no git' }
+    : { ok: false, code: 'HOST_NOT_A_REPOSITORY', message: 'not a repository' };
 }
 
 /** A preview that keeps its text. */
@@ -194,6 +243,17 @@ export class FakeEditor extends FakePreview {
   }
 }
 
+/** A diff that keeps its two sides, as `<code-diff>` takes them. */
+export class FakeDiff extends HTMLElement {
+  left = '';
+  right = '';
+  setContents(contents: { left: string; right: string }): void {
+    this.left = contents.left;
+    this.right = contents.right;
+  }
+  async whenReady(): Promise<void> {}
+}
+
 /** A preview that takes a URL. */
 export class FakeImage extends HTMLElement {
   async whenReady(): Promise<void> {}
@@ -202,6 +262,10 @@ export class FakeImage extends HTMLElement {
 if (!customElements.get('fake-preview')) customElements.define('fake-preview', FakePreview);
 if (!customElements.get('fake-editor')) customElements.define('fake-editor', FakeEditor);
 if (!customElements.get('fake-image')) customElements.define('fake-image', FakeImage);
+if (!customElements.get('fake-diff')) customElements.define('fake-diff', FakeDiff);
+
+/** The pane's diff element, for tests: the fake, loaded at once. */
+export const fakeDiff = { tag: 'fake-diff', load: async () => undefined };
 
 export const textFormat: FormatDescriptor = {
   id: 'text',

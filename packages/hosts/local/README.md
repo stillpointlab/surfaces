@@ -33,11 +33,11 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
 | `main.ts`        | The entry: the HTTP client, the five formats, md's sanitizing renderer                   |
 | `host-client.ts` | `HostClient` and `createHttpClient`: the only module that calls `fetch` or `EventSource` |
 | `page.ts`        | `startPage`: the layout, the tree's events, the address, the host's events               |
-| `pane.ts`        | `FilePane`: what is open, opening, saving, and a change on disk                          |
+| `pane.ts`        | `FilePane`: what is open, opening, saving, a change on disk, and the Changes view        |
 | `registry.ts`    | md, xmdl, sheet, image and code, in that order, with code as the fallback                |
 | `markdown.ts`    | The renderer `<md-preview>` is given: markdown-it, then DOMPurify                        |
 | `confirm.ts`     | One confirmation helper over `<modal-dialog>`                                            |
-| `address.ts`     | `#/file/<path>` and `#/edit/<path>`                                                      |
+| `address.ts`     | `#/file/<path>`, `#/edit/<path>` and `#/diff/<path>`                                     |
 | `stored.ts`      | The open folders in `localStorage`, by the root's id                                     |
 | `words.ts`       | Everything the page says                                                                 |
 | `tree/`          | `<host-file-tree>`                                                                       |
@@ -45,7 +45,17 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
 | `file-ops/`      | Create, rename and delete: a row's menu entries, the dialogs, the checks and the writes  |
 
 - **The address** names what is open: `#/file/<path>` for the preview, `#/edit/<path>` for the
-  editor, each segment percent-encoded. Back and forward work, and a reload opens the same file.
+  editor and `#/diff/<path>` for the Changes view, each segment percent-encoded. Back and
+  forward work, and a reload opens the same file.
+- **Git.** The page asks `GET /api/git` once. In a repository the tree's marks are the
+  statuses (`GET /api/status`), read again on a `changed` or `status` event, and a `changed` or
+  `moved` file in a format that takes text offers **Changes** beside Preview and Edit: `<code-diff>`
+  with the text at `HEAD` on the left (`GET /api/base`; a moved file's under its old path) and
+  the file on the right, read again when either moves. The switch comes and goes with the
+  status without touching the editor or its edits; a Changes view whose file stops being changed
+  (a commit) goes to the preview. An image has no Changes. When git was not found and the folder
+  looks like a repository, the explorer says "git was not found, so changes and commit are
+  off."; outside a repository the page shows nothing of git and calls none of its routes.
 - **Saving** (Save, Ctrl+S, Cmd+S) sends one `write` whose `base` is the version the file was
   opened or last saved at. A change on disk to the open file is read again and compared by
   version: with no unsaved edits it shows in place; with edits a banner offers Reload, and Save

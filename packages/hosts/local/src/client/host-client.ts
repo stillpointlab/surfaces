@@ -6,9 +6,15 @@
 // A later spec adds a method here, never a second way to reach the server.
 
 import type { FolderNode, Result } from '@stillpointlab/common-format/app';
-import type { FileStatus, HostEvent, PortChange } from '@stillpointlab/common-format/host';
+import type {
+  FileStatus,
+  HostChange,
+  HostEvent,
+  HostGit,
+  PortChange,
+} from '@stillpointlab/common-format/host';
 
-export type { HostEvent } from '@stillpointlab/common-format/host';
+export type { HostChange, HostEvent, HostGit } from '@stillpointlab/common-format/host';
 
 export interface HostClient {
   /** The served folder: its name, and the id the page keys stored state by. */
@@ -19,6 +25,12 @@ export interface HostClient {
   urlFor(path: string): string;
   put(changes: readonly PortChange[]): Promise<Result<{ versions: Record<string, string> }>>;
   status(): Promise<Record<string, FileStatus>>;
+  /** Whether the folder is under git (decided when the host started), and the branch. */
+  git(): Promise<HostGit>;
+  /** What differs from the last commit, deleted and moved files included. Only in `repository`. */
+  changes(): Promise<Result<{ changes: HostChange[] }>>;
+  /** A file's text at `HEAD` (a moved file's, under its old path). Only in `repository`. */
+  base(path: string): Promise<Result<{ text: string }>>;
   watch(listener: (event: HostEvent) => void): () => void;
 }
 
@@ -70,6 +82,9 @@ export function createHttpClient(base = ''): HostClient {
     root: () => read('/api/root'),
     list: () => read('/api/list'),
     status: () => read('/api/status'),
+    git: () => read('/api/git'),
+    changes: () => result('/api/changes'),
+    base: (path) => result(`/api/base?path=${encodeURIComponent(path)}`),
     get: (path) => result(`/api/file?path=${encodeURIComponent(path)}`),
     urlFor(path) {
       const revision = revisions.get(path);

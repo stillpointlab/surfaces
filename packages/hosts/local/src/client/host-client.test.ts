@@ -83,6 +83,25 @@ describe('createHttpClient', () => {
     expect(JSON.parse(String(init?.body))).toEqual({ changes });
   });
 
+  it('reads git’s state, the changes and a file’s text at HEAD', async () => {
+    let fetch = answering({ state: 'repository', branch: 'main' });
+    const client = createHttpClient();
+    expect(await client.git()).toEqual({ state: 'repository', branch: 'main' });
+    expect(fetch.mock.calls[0][0]).toBe('/api/git');
+
+    const changes = [{ path: 'b.md', status: 'moved', from: 'a.md' }];
+    fetch = answering({ ok: true, changes });
+    expect(await client.changes()).toEqual({ ok: true, changes });
+    expect(fetch.mock.calls[0][0]).toBe('/api/changes');
+
+    fetch = answering({ ok: true, text: 'at head' });
+    expect(await client.base('a b/#c.md')).toEqual({ ok: true, text: 'at head' });
+    expect(fetch.mock.calls[0][0]).toBe('/api/base?path=a%20b%2F%23c.md');
+
+    answering({ ok: false, code: 'HOST_NOT_A_REPOSITORY', message: 'not' }, 409);
+    expect(await client.changes()).toMatchObject({ ok: false, code: 'HOST_NOT_A_REPOSITORY' });
+  });
+
   it('throws on a read the page cannot do without', async () => {
     answering({ ok: false, code: 'HOST_FORBIDDEN', message: 'Not from here.' }, 403);
     await expect(createHttpClient().list()).rejects.toThrow('Not from here.');
@@ -99,11 +118,13 @@ describe('createHttpClient', () => {
     source.send('{"type":"listed"}');
     source.send('not json');
     source.send('{"type":"changed","paths":["a.md"]}');
+    source.send('{"type":"status"}');
     source.onerror?.();
     source.onopen?.();
     expect(events).toEqual([
       { type: 'listed' },
       { type: 'changed', paths: ['a.md'] },
+      { type: 'status' },
       { type: 'listed' },
     ]);
     stop();
