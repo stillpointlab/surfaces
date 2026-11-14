@@ -1,0 +1,8 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  // The page and its harness fixtures, with the DOM and no Node types.
+  "compilerOptions": {
+    "types": ["vite/client"]
+  },
+  "include": ["src/client", "dev"]
+}

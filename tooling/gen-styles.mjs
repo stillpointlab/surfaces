@@ -2,7 +2,7 @@
 // the component can inject it into its shadow root without relying on a
 // bundler-specific `?inline` import. Run before build/dev/test.
 //
-// Every `packages/{components,formats,apps}/*/src/**/<name>.scss` (partials `_*.scss` excluded) becomes a
+// Every `packages/{components,formats,apps,hosts}/*/src/**/<name>.scss` (partials `_*.scss` excluded) becomes a
 // sibling `<name>.styles.ts` exporting `<name>Styles`. With a directory argument
 // only that package is generated; without one, all of them.
 import { existsSync, readdirSync, writeFileSync } from 'node:fs';
@@ -17,6 +17,7 @@ const packageDirs = [
   join(packagesDir, 'components'),
   join(packagesDir, 'formats'),
   join(packagesDir, 'apps'),
+  join(packagesDir, 'hosts'),
 ];
 
 function* scssFiles(dir) {

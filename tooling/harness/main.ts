@@ -8,11 +8,12 @@ declare const __HARNESS_DEFAULT_FORMAT__: string;
 
 type FormatModule = { default: HarnessFormat };
 
-// Every format, component and app with a fixtures module, loaded only when selected.
+// Every format, component, app and host with a fixtures module, loaded only when selected.
 const modules = import.meta.glob<FormatModule>([
   '../../packages/formats/*/dev/fixtures.ts',
   '../../packages/components/*/dev/fixtures.ts',
   '../../packages/apps/*/dev/fixtures.ts',
+  '../../packages/hosts/*/dev/fixtures.ts',
 ]);
 const formats = new Map<string, () => Promise<FormatModule>>();
 for (const [path, load] of Object.entries(modules)) {

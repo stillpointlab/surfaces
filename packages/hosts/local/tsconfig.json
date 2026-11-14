@@ -1,0 +1,11 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  // The server and the bin: Node, and no DOM lib, so a stray `document` fails the
+  // typecheck. The client has its own config (tsconfig.client.json).
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": ["node"]
+  },
+  "include": ["src"],
+  "exclude": ["src/client"]
+}
