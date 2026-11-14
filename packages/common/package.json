@@ -44,6 +44,11 @@
       "import": "./dist/frontmatter.js",
       "require": "./dist/frontmatter.cjs"
     },
+    "./host": {
+      "types": "./dist/host.d.ts",
+      "import": "./dist/host.js",
+      "require": "./dist/host.cjs"
+    },
     "./testing": {
       "types": "./dist/testing.d.ts",
       "import": "./dist/testing.js",
