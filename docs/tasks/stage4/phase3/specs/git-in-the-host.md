@@ -1,6 +1,7 @@
 ---
-column: in-progress
+column: done
 pr: 98
+completed: 2026-11-14
 created: 2026-11-13T18:40:00-07:00
 tags: [dev-tooling, code, major-feature]
 ---
@@ -193,20 +194,23 @@ the text above were tried against git 2.56 before they were relied on, and sever
 - **A commit and a `put` run under one write lock.**
 - **The Changes view is offered for any format that takes text,** sheets included.
 - **The dialog has a summary and optional details,** joined into the one `message`.
+- **The by-hand item** was done by the implementing agents driving Chromium with a script. The
+  orchestrating agent repeated the edit, the mark, the Changes view and a commit at the stack's
+  tip, and read the commit with `git log`.
 
 ## Acceptance / completion checklist
 
-- [ ] Tests over temporary repositories for the git module: each status; a served root inside a
+- [x] Tests over temporary repositories for the git module: each status; a served root inside a
       repository; staging a move and a delete, of clean and of changed files; `HEAD` text.
-- [ ] Commit tests: chosen paths only, with other staged work left alone; a new branch; each
+- [x] Commit tests: chosen paths only, with other staged work left alone; a new branch; each
       refusal; a failing hook leaves the tree as it was.
-- [ ] A folder with no repository serves with no git controls and no notice, with `git` on the
+- [x] A folder with no repository serves with no git controls and no notice, with `git` on the
       `PATH` and off it.
-- [ ] With `git` off the `PATH`, a repository serves with the notice, the walk listing, and
+- [x] With `git` off the `PATH`, a repository serves with the notice, the walk listing, and
       working file operations. So does a folder inside one, and a worktree (a `.git` file).
-- [ ] By hand: edit, rename and delete files, see the marks and a diff, commit on a new branch,
+- [x] By hand: edit, rename and delete files, see the marks and a diff, commit on a new branch,
       and read the result with `git log --stat`.
-- [ ] `npm run check` is green.
+- [x] `npm run check` is green.
 
 ## Implementation plan
 

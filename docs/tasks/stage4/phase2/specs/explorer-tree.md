@@ -1,6 +1,7 @@
 ---
-column: in-progress
+column: done
 pr: 92
+completed: 2026-11-14
 created: 2026-11-13T18:34:00-07:00
 tags: [dev-tooling, code]
 ---
@@ -137,12 +138,12 @@ _[#92](https://github.com/stillpointlab/surfaces/pull/92), 2026-11-14._
 
 ## Acceptance / completion checklist
 
-- [ ] Element tests in jsdom: rows and order; open and close; each key; each event with its
+- [x] Element tests in jsdom: rows and order; open and close; each key; each event with its
       detail; marks and their roll-up; an app row locked and unlocked; `reveal`; hostile names.
-- [ ] `setNodes` with unchanged paths keeps the open folders, selection and focus.
-- [ ] The ARIA attributes are present and change with the state.
-- [ ] The harness shows the fixtures, in light and dark.
-- [ ] `npm run check` is green.
+- [x] `setNodes` with unchanged paths keeps the open folders, selection and focus.
+- [x] The ARIA attributes are present and change with the state.
+- [x] The harness shows the fixtures, in light and dark.
+- [x] `npm run check` is green.
 
 ## Implementation plan
 
