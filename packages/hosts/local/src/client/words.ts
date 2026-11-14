@@ -5,6 +5,8 @@
 // sentence after it: together they are the draft's words. The explorer's menu and
 // dialogs are the file-operations spec's, where it has words for them. The git
 // notice is the git-in-the-host spec's; the Changes view's messages are drafts.
+// The commit dialog's choice ("On <branch>", "On a new branch") is the spec's; the
+// rest of its words, and the notice after a commit, are drafts.
 
 export interface Confirmation {
   question: string;
@@ -125,6 +127,43 @@ export const words = {
       folderExists: (path: string) => `There is already a folder at ${path}.`,
       fileInTheWay: (path: string) => `${path} is a file, so it cannot hold another.`,
     },
+  },
+
+  /** The Commit button, its dialog, and the notice after a commit. */
+  commit: {
+    button: 'Commit',
+    /** The button's name for a screen reader, with the count it shows. */
+    buttonLabel: (count: number) => `Commit: ${count} changed ${count === 1 ? 'file' : 'files'}`,
+    title: 'Commit',
+    loading: 'Reading the changes…',
+    readFailed: (message: string) => `The changes could not be read. ${message}`,
+    nothing: 'Nothing has changed since the last commit.',
+    files: 'Files',
+    all: 'All',
+    chosen: (count: number, total: number) =>
+      `${count} of ${total} ${total === 1 ? 'file' : 'files'} chosen`,
+    status: { changed: 'changed', new: 'new', moved: 'moved', deleted: 'deleted' },
+    moved: (from: string, to: string) => `${from} → ${to}`,
+    summary: 'Summary',
+    details: 'Details (optional)',
+    branch: 'Branch',
+    onCurrent: (branch: string) => `On ${branch}`,
+    onNew: 'On a new branch',
+    newName: 'New branch name',
+    detached: 'HEAD is detached (not on a branch), so the commit goes on a new branch.',
+    unsaved: (name: string) =>
+      `Your unsaved edits to ${name} are not in this commit. Save them first to include them.`,
+    check: {
+      noFiles: 'Choose at least one file to commit.',
+      noSummary: 'Write a summary for the commit.',
+      noBranch: 'Name the new branch.',
+    },
+    confirm: 'Commit',
+    committing: 'Committing…',
+    cancel: 'Cancel',
+    close: 'Close',
+    notice: (short: string, branch: string) => `Committed ${short} on ${branch}.`,
+    dismiss: 'Dismiss',
   },
 } as const;
 

@@ -43,6 +43,7 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
 | `tree/`          | `<host-file-tree>`                                                                       |
 | `menu/`          | `HostMenu`: the page's one options menu, entries opened at a point                       |
 | `file-ops/`      | Create, rename and delete: a row's menu entries, the dialogs, the checks and the writes  |
+| `commit/`        | The commit dialog (`dialog.ts`) and its pure parts: rows, checks, the request            |
 
 - **The address** names what is open: `#/file/<path>` for the preview, `#/edit/<path>` for the
   editor and `#/diff/<path>` for the Changes view, each segment percent-encoded. Back and
@@ -56,6 +57,20 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
   (a commit) goes to the preview. An image has no Changes. When git was not found and the folder
   looks like a repository, the explorer says "git was not found, so changes and commit are
   off."; outside a repository the page shows nothing of git and calls none of its routes.
+- **Commit.** In a repository the explorer's header holds a **Commit** button with the number of
+  changed files (one per moved file, deleted files included). It opens a dialog that reads the
+  branch and the changes: every changed file checked, with its status and a moved file as
+  old → new, and an All box; a summary (required) and details, sent as one message; the
+  current branch or a new one by name (only a new one when `HEAD` is detached). Commit says
+  what is missing (no file, no summary, no branch name) under the form and puts focus there,
+  so the button is never disabled without a reason. While the commit runs the form is held,
+  and Escape and the close button wait. A refusal, git's own words included, shows under the
+  form as text and the dialog keeps everything. When the changes move while it is open, it
+  reads them again: checks are kept, a new row starts unchecked. Unsaved edits in the open file
+  are not in a commit, and the dialog says so. After a commit the marks are read at once, and a
+  notice under the header (a live region) says "Committed `<short id>` on `<branch>`." until it
+  is dismissed or the next commit replaces it. The request is `requestOf` in
+  `commit/request.ts`, `{ paths, message, branch? }`, sent by `HostClient.commit`.
 - **Saving** (Save, Ctrl+S, Cmd+S) sends one `write` whose `base` is the version the file was
   opened or last saved at. A change on disk to the open file is read again and compared by
   version: with no unsaved edits it shows in place; with edits a banner offers Reload, and Save
@@ -91,7 +106,8 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
 `createHost({ root, origin })` answers the web's `Request` with a `Response`; `close()` ends its
 event streams and its watcher. The `bin` is `nodeListener` around it on `node:http`, and a desktop
 shell can serve the same handler under its own scheme. `createNodePort({ root })` is the
-`StoragePort` (from `@stillpointlab/common-format/host`) over the folder.
+`StoragePort` (from `@stillpointlab/common-format/host`) over the folder, with `commit(request)`
+beside it: `HostCommitRequest` in, `HostCommit` out, under the port's write lock.
 
 ## Routes
 
@@ -105,6 +121,7 @@ shell can serve the same handler under its own scheme. `createNodePort({ root })
 | `GET /api/git`         | `{ state, branch }`: `repository`, `no-repository` or `no-git`; `branch` `null` if detached |
 | `GET /api/changes`     | `{ ok: true, changes }`, each `{ path, status, from? }` (`from` for a moved file)           |
 | `GET /api/base?path=`  | `{ ok: true, text }`: the file's text at `HEAD`, under its old path when it moved           |
+| `POST /api/commit`     | body `{ paths, message, branch? }`; `{ ok: true, commit, short, branch }`, or a refusal     |
 | `GET /api/root`        | `{ name, id }`: the folder's name, and a SHA-256 of its real path                           |
 | `GET /api/events`      | server-sent events (below)                                                                  |
 | `GET /`, `GET /<file>` | the page: `dist/client`, or Vite in development mode (any path outside `/api/`)             |
@@ -118,7 +135,9 @@ query value). A version is a SHA-256 of the file's bytes, as hex; only equality 
 | ------ | ------------------------------------------------------------------------------------------------------------------------- |
 | 404    | `HOST_FILE_NOT_FOUND`, and `HOST_NO_ROUTE` for a route that does not exist                                                |
 | 409    | `HOST_PATH_EXISTS`, `HOST_FILE_CHANGED`; `HOST_NOT_A_REPOSITORY`, `HOST_GIT_NOT_FOUND` (a git route outside `repository`) |
+| 409    | A commit: `HOST_NOT_CHANGED`, `HOST_PATH_CONFLICTED`, `HOST_GIT_IN_PROGRESS`, `HOST_DETACHED_HEAD`, `HOST_BRANCH_EXISTS`  |
 | 400    | `HOST_PATH_OUTSIDE_ROOT`, `HOST_NOT_TEXT`, `HOST_FILE_TOO_LARGE`, `HOST_BAD_REQUEST`                                      |
+| 400    | A commit: `HOST_COMMIT_NO_PATHS`, `HOST_COMMIT_NO_MESSAGE`, `HOST_BRANCH_INVALID`                                         |
 | 403    | `HOST_FORBIDDEN`: the `Host`, `Origin` or `Sec-Fetch-Site` checks below                                                   |
 | 405    | `HOST_METHOD_NOT_ALLOWED`, with an `Allow` header                                                                         |
 | 413    | `HOST_BODY_TOO_LARGE`: a `PUT` body over 64 MiB                                                                           |
@@ -172,9 +191,10 @@ every 25 seconds. The server's own writes are reported too.
 ## Git
 
 `src/server/git/`: `run.ts` runs `git` (an argument list, a timeout, `GIT_OPTIONAL_LOCKS=0` for
-reads, standard input when asked); `repository.ts` is the host's git (`createGit`, the port's
-`git`); `status.ts` reads `git status --porcelain=v2 -z` into changes; `stage.ts` plans the
-staging. Nothing else runs git.
+reads, standard input when asked, and `isolate` for a command that may run a hook); `repository.ts`
+is the host's git (`createGit`, the port's `git`); `status.ts` reads `git status --porcelain=v2 -z`
+into changes; `stage.ts` plans the staging; `commit.ts` holds the commit's pure parts. Nothing else
+runs git.
 
 - **Three states, decided once at start** (`GET /api/git`): `repository` when git runs and the
   root is in a work tree; `no-git` when git cannot be run and a `.git` entry (a folder or a
@@ -191,6 +211,51 @@ staging. Nothing else runs git.
   nothing reaches the network. A symbolic link, a blob that is not text, and one over 2 MiB are
   refused as `HOST_NOT_TEXT` and `HOST_FILE_TOO_LARGE`.
 - **Paths are literal** (`--literal-pathspecs`): a file named `*.md` is that file.
+
+### The commit
+
+`POST /api/commit` (`port.commit`, `git.commit` in `repository.ts`, the pure parts in `commit.ts`)
+commits the chosen paths, and nothing else, on the current branch or a new one. It runs under the
+port's write lock: a `put` that arrives during a commit waits for it, and the reverse.
+
+- **Refused first, with nothing changed:** a body of the wrong shape (`HOST_BAD_REQUEST`); no path
+  (`HOST_COMMIT_NO_PATHS`); a message that is empty or only spaces (`HOST_COMMIT_NO_MESSAGE`); a path
+  the port would refuse (`HOST_PATH_OUTSIDE_ROOT`); a merge, cherry-pick, revert, rebase, `git am`,
+  or a sequence of picks in progress (`HOST_GIT_IN_PROGRESS`, saying which and how to finish or
+  abort it); `HEAD` detached and no branch given (`HOST_DETACHED_HEAD`); a path that is not a
+  change or a moved file's old path (`HOST_NOT_CHANGED`); a chosen path in conflict
+  (`HOST_PATH_CONFLICTED`); a branch name git refuses, one `@{-1}` style that git would expand, or
+  `@` (`HOST_BRANCH_INVALID`); a branch that exists, differs from one only in case, would be a
+  folder of one or hold one, or exists on a remote (`refs/remotes/<remote>/<name>`)
+  (`HOST_BRANCH_EXISTS`). In progress is git's answer: `MERGE_HEAD`, `CHERRY_PICK_HEAD` and
+  `REVERT_HEAD` through `git cat-file --batch-check`, and the `rebase-merge`, `rebase-apply` and
+  `sequencer` folders where `git rev-parse --git-path` says they are. A bisect does not stop a
+  commit.
+- **A moved file is one change:** naming either of its paths commits both, the removal and the
+  addition.
+- **What runs**, in order: `git switch --create <branch>` for a new branch (from the current
+  commit, the work tree and index carried across; on a repository with no commit yet it names
+  the first branch); `git add --intent-to-add` for the chosen paths git does not track;
+  `git commit --only --cleanup=whitespace --file <message> --pathspec-from-file=-`, the paths on
+  standard input. `--only` takes the work tree's content of those paths (a file gone from disk is
+  a removal) on top of `HEAD`, and leaves every other staged change staged, outside a served
+  subfolder too. The message is a file in the system's temporary folder, never an argument;
+  `whitespace` cleanup trims trailing spaces and blank lines and keeps a line that starts with `#`.
+- **When git refuses** (a hook, no identity set, signing that fails), the answer is
+  `HOST_GIT_FAILED` (500): what failed, that nothing was committed and where the person is, then
+  `git said:` and git's own words (standard error, then standard output) as text. Past 8,000
+  characters the middle is left out, so a hook's first and last lines stay. The paths it added
+  with `--intent-to-add` are taken out of the index again, and a new branch it made is undone
+  (`HEAD` back where it was, the branch deleted while it still points at the starting commit), so
+  the person is where they were. If `HEAD` moved anyway (a `post-commit` hook that failed or was
+  stopped after the commit was made), the commit is answered as made.
+- **Nothing waits on a person:** `commit` and `switch` (which runs `post-checkout`) run in a
+  session of their own, with no controlling terminal, so a passphrase prompt on `/dev/tty` fails
+  at once; standard input is closed after the paths (git gives hooks none); after 60 seconds
+  (`COMMIT_TIMEOUT_MS`) the whole process group gets `SIGTERM` (git removes its `index.lock`), then
+  `SIGKILL` two seconds later. A hook waiting for input is answered as "did not finish within 60
+  seconds (a hook or signing may be waiting for input), so it was stopped", with what it printed.
+  The host sets no identity and passes none.
 
 ## The listing and the watcher
 

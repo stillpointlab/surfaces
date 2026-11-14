@@ -9,12 +9,20 @@ import type { FolderNode, Result } from '@stillpointlab/common-format/app';
 import type {
   FileStatus,
   HostChange,
+  HostCommit,
+  HostCommitRequest,
   HostEvent,
   HostGit,
   PortChange,
 } from '@stillpointlab/common-format/host';
 
-export type { HostChange, HostEvent, HostGit } from '@stillpointlab/common-format/host';
+export type {
+  HostChange,
+  HostCommit,
+  HostCommitRequest,
+  HostEvent,
+  HostGit,
+} from '@stillpointlab/common-format/host';
 
 export interface HostClient {
   /** The served folder: its name, and the id the page keys stored state by. */
@@ -31,6 +39,11 @@ export interface HostClient {
   changes(): Promise<Result<{ changes: HostChange[] }>>;
   /** A file's text at `HEAD` (a moved file's, under its old path). Only in `repository`. */
   base(path: string): Promise<Result<{ text: string }>>;
+  /**
+   * Commit the chosen paths, and nothing else, on the current branch or a new one.
+   * Only in `repository`; a refusal, git's own included, is a `Result` failure.
+   */
+  commit(request: HostCommitRequest): Promise<Result<HostCommit>>;
   watch(listener: (event: HostEvent) => void): () => void;
 }
 
@@ -91,6 +104,12 @@ export function createHttpClient(base = ''): HostClient {
       const query = `path=${encodeURIComponent(path)}${revision ? `&rev=${revision}` : ''}`;
       return url(`/api/raw?${query}`);
     },
+    commit: (request) =>
+      result('/api/commit', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(request),
+      }),
     put: (changes) =>
       result('/api/files', {
         method: 'PUT',

@@ -10,18 +10,31 @@
 //
 // Reads pass `GIT_OPTIONAL_LOCKS=0`: a status never takes the index lock, so it
 // neither waits on a person's own git nor writes the index, which would raise a
-// `status` event of its own. Staging is the one write, and it may fail on the
-// lock; the port's write stands, and the port warns.
+// `status` event of its own. Staging and the commit are the writes. Staging may
+// fail on the lock; the port's write stands, and the port warns. The commit
+// (`commit.ts` says what it runs) takes no lock of the host's own: the port runs
+// it under its write lock, so it never interleaves with a `put`.
 
-import { lstat } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { lstat, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 
 import { fail, ok } from '@stillpointlab/common-format/app';
 
-import { MAX_TEXT_BYTES } from '../limits';
+import { COMMIT_TIMEOUT_MS, MAX_TEXT_BYTES } from '../limits';
 import { pathProblem } from '../paths';
 import { decodeText } from '../text';
 
+import {
+  PROGRESS_FOLDERS,
+  PROGRESS_REFS,
+  branchProblem,
+  choosePaths,
+  gitSaid,
+  inProgressRefusal,
+  readRequest,
+  refsInProgress,
+} from './commit';
 import { runGit } from './run';
 import { chunkPaths, parseIndexEntries, stagedSources, stagingPlan } from './stage';
 import { changesFromStatus, parseStatusEntries, withIndexRemovals } from './status';
@@ -32,6 +45,8 @@ import type {
   FileStatus,
   GitState,
   HostChange,
+  HostCommit,
+  HostCommitRequest,
   HostGit,
   PortChange,
 } from '@stillpointlab/common-format/host';
@@ -59,6 +74,8 @@ export interface GitOptions {
   env?: NodeJS.ProcessEnv;
   /** Something git could not do that the host works without. */
   warn?(message: string): void;
+  /** How long a commit may run, hooks and signing included: `COMMIT_TIMEOUT_MS` by default. */
+  commitTimeoutMs?: number;
 }
 
 export type StageResult = { ok: true; staged: string[] } | { ok: false; message: string };
@@ -76,6 +93,12 @@ export interface HostGitAccess {
   base(path: string): Promise<Result<{ text: string }>>;
   /** Stage the moves and deletes in changes the port has written. Nothing else is staged. */
   stage(changes: readonly PortChange[]): Promise<StageResult>;
+  /**
+   * Commit the chosen paths, and nothing else, on the current branch or a new
+   * one. Takes no lock: run it through the port (`NodePort.commit`), which holds
+   * its write lock around it. The request may come from a body: it is checked.
+   */
+  commit(request: HostCommitRequest): Promise<Result<HostCommit>>;
 }
 
 /** The refusal for a route that needs a repository, by state. */
@@ -129,6 +152,12 @@ export function createGit(options: GitOptions): HostGitAccess {
   }
 
   async function changes(): Promise<Result<{ changes: HostChange[] }>> {
+    const read = await readChanges();
+    return read.ok ? ok({ changes: read.changes }) : read;
+  }
+
+  /** The changes, and which of their paths git does not track (`?` in the status). */
+  async function readChanges(): Promise<Result<{ changes: HostChange[]; untracked: Set<string> }>> {
     const at = await start();
     if (at.state !== 'repository') return notARepository(at.state);
     const status = await read([
@@ -141,10 +170,12 @@ export function createGit(options: GitOptions): HostGitAccess {
       '.',
     ]);
     if (!status.ok) return gitFailed('git status', status);
-    let found = changesFromStatus(
-      parseStatusEntries(status.stdout.toString('utf8')),
-      at.prefix,
-      keep
+    const entries = parseStatusEntries(status.stdout.toString('utf8'));
+    let found = changesFromStatus(entries, at.prefix, keep);
+    const untracked = new Set(
+      entries
+        .filter((entry) => entry.kind === '?' && entry.path.startsWith(at.prefix))
+        .map((entry) => entry.path.slice(at.prefix.length))
     );
     if (at.prefix !== '') {
       // Limited to the root, status leaves out a rename whose new path is outside
@@ -167,7 +198,7 @@ export function createGit(options: GitOptions): HostGitAccess {
         found = withIndexRemovals(found, paths, at.prefix, keep);
       }
     }
-    return ok({ changes: found });
+    return ok({ changes: found, untracked });
   }
 
   async function status(): Promise<Record<string, FileStatus>> {
@@ -259,7 +290,273 @@ export function createGit(options: GitOptions): HostGitAccess {
     return { ok: true, staged: plan.staged };
   }
 
-  return { start, info, changes, status, base, stage };
+  const commitTimeoutMs = options.commitTimeoutMs ?? COMMIT_TIMEOUT_MS;
+  /** A write that may run a hook: isolated, with the commit's timeout. */
+  const write = (args: readonly string[], input?: string): Promise<GitRun> =>
+    runGit(['--literal-pathspecs', ...args], {
+      cwd: root,
+      env,
+      input,
+      isolate: true,
+      timeoutMs: commitTimeoutMs,
+    });
+  /** The first sentence of a failure: what failed, and how. */
+  const failedHow = (command: string, run: Extract<GitRun, { ok: false }>): string => {
+    if (run.timedOut) {
+      const seconds = Math.round(commitTimeoutMs / 100) / 10;
+      return `${command} did not finish within ${seconds} ${seconds === 1 ? 'second' : 'seconds'} (a hook or signing may be waiting for input), so it was stopped.`;
+    }
+    if (run.missing) return `${command} could not be run.`;
+    return `${command} failed${run.exitCode === null ? '' : ` (exit ${run.exitCode})`}.`;
+  };
+
+  /** Where `HEAD` is: its branch (`null` when detached) and its commit (`null` before the first). */
+  async function head(): Promise<{ branch: string | null; oid: string | null }> {
+    const [symbolic, verified] = await Promise.all([
+      read(['symbolic-ref', '--quiet', 'HEAD']),
+      read(['rev-parse', '--quiet', '--verify', 'HEAD^{commit}']),
+    ]);
+    const ref = symbolic.ok ? symbolic.stdout.toString('utf8').trim() : '';
+    const oid = verified.ok ? verified.stdout.toString('utf8').trim() : '';
+    return {
+      branch: ref.startsWith('refs/heads/') ? ref.slice('refs/heads/'.length) : null,
+      oid: oid === '' ? null : oid,
+    };
+  }
+
+  /** The merge, rebase, cherry-pick or revert that keeps a commit out, if one is in progress. */
+  async function inProgress(): Promise<Failure | null> {
+    const refs = await runGit(['cat-file', '--batch-check'], {
+      cwd: root,
+      env,
+      read: true,
+      input: PROGRESS_REFS.map(([ref]) => `${ref}\n`).join(''),
+    });
+    if (!refs.ok) return gitFailed('git cat-file', refs);
+    const [found] = refsInProgress(refs.stdout.toString('utf8'));
+    if (found) return inProgressRefusal(found);
+    // A rebase is a folder, not a ref; git says where it would be (a worktree's own).
+    const where = await read([
+      'rev-parse',
+      ...PROGRESS_FOLDERS.flatMap(([name]) => ['--git-path', name]),
+    ]);
+    if (!where.ok) return gitFailed('git rev-parse', where);
+    const folders = where.stdout.toString('utf8').split('\n');
+    for (const [index, [, what]] of PROGRESS_FOLDERS.entries()) {
+      const folder = folders[index];
+      if (!folder) continue;
+      const there = await lstat(resolve(root, folder)).then(
+        () => true,
+        () => false
+      );
+      if (there) return inProgressRefusal(what);
+    }
+    return null;
+  }
+
+  /** Why `name` cannot be the new branch, or null. */
+  async function checkBranch(name: string): Promise<Failure | null> {
+    const [formatted, refs, remotes] = await Promise.all([
+      read(['check-ref-format', '--branch', name]),
+      read(['for-each-ref', '--format=%(refname)', 'refs/heads/', 'refs/remotes/']),
+      read(['remote']),
+    ]);
+    if (!refs.ok) return gitFailed('git for-each-ref', refs);
+    if (!remotes.ok) return gitFailed('git remote', remotes);
+    const lines = (run: GitRun) =>
+      run.ok ? run.stdout.toString('utf8').split('\n').filter(Boolean) : [];
+    return branchProblem(
+      name,
+      formatted.ok ? formatted.stdout.toString('utf8').replace(/\n$/, '') : null,
+      lines(refs),
+      lines(remotes)
+    );
+  }
+
+  async function commit(request: HostCommitRequest): Promise<Result<HostCommit>> {
+    const at = await start();
+    if (at.state !== 'repository') return notARepository(at.state);
+    const asked = readRequest(request);
+    if ('ok' in asked) return asked;
+    const { message, branch } = asked;
+    for (const path of asked.paths) {
+      const problem = pathProblem(path);
+      if (problem !== null) {
+        return fail('HOST_PATH_OUTSIDE_ROOT', `${JSON.stringify(path)} is not usable: ${problem}`);
+      }
+    }
+
+    const busy = await inProgress();
+    if (busy) return busy;
+    const was = await head();
+    if (branch === undefined && was.branch === null) {
+      return fail(
+        'HOST_DETACHED_HEAD',
+        'HEAD is detached (not on a branch), so the commit needs a new branch: name one.'
+      );
+    }
+
+    const listed = await readChanges();
+    if (!listed.ok) return listed;
+    const { paths, unchanged } = choosePaths(listed.changes, asked.paths);
+    if (unchanged.length > 0) {
+      const named = unchanged.map((path) => JSON.stringify(path)).join(', ');
+      return fail(
+        'HOST_NOT_CHANGED',
+        `${named} ${unchanged.length === 1 ? 'has' : 'have'} nothing to commit: not changed since the last commit. The list may be out of date.`
+      );
+    }
+    const unmerged = await read(['ls-files', '-z', '--unmerged', '--', '.']);
+    if (!unmerged.ok) return gitFailed('git ls-files', unmerged);
+    const conflicted = new Set(
+      unmerged.stdout
+        .toString('utf8')
+        .split('\0')
+        .map((record) => /^\d+ [0-9a-f]+ \d\t(.*)$/s.exec(record)?.[1])
+        .filter((path): path is string => path !== undefined)
+    );
+    const inConflict = paths.filter((path) => conflicted.has(path));
+    if (inConflict.length > 0) {
+      return fail(
+        'HOST_PATH_CONFLICTED',
+        `${inConflict.map((path) => JSON.stringify(path)).join(', ')} ${inConflict.length === 1 ? 'is' : 'are'} in conflict. Resolve and stage ${inConflict.length === 1 ? 'it' : 'them'} in a terminal first.`
+      );
+    }
+    if (branch !== undefined) {
+      const problem = await checkBranch(branch);
+      if (problem) return problem;
+    }
+
+    // Where the person is, in words, for a message after a failure.
+    const where = (name: string | null) =>
+      name !== null
+        ? `on ${name}`
+        : `on a detached HEAD${was.oid ? ` at ${was.oid.slice(0, 12)}` : ''}`;
+
+    if (branch !== undefined) {
+      const switched = await write(['switch', '--quiet', '--create', branch]);
+      if (!switched.ok) {
+        // A switch that failed made nothing; the post-checkout hook runs after it has.
+        const now = await head();
+        if (now.branch === branch) await goBack(branch);
+        return fail(
+          'HOST_GIT_FAILED',
+          `${failedHow('git switch', switched)} Nothing was committed, and you are still ${where(was.branch)}.${saidOf(switched)}`
+        );
+      }
+    }
+
+    const toAdd = paths.filter((path) => listed.untracked.has(path));
+    const nul = (list: readonly string[]) => list.map((path) => `${path}\0`).join('');
+    if (toAdd.length > 0) {
+      const added = await write(
+        ['add', '--intent-to-add', '--pathspec-from-file=-', '--pathspec-file-nul'],
+        nul(toAdd)
+      );
+      if (!added.ok) {
+        await forget(toAdd);
+        const back = branch === undefined ? null : await goBack(branch);
+        return fail(
+          'HOST_GIT_FAILED',
+          `${failedHow('git add', added)} Nothing was committed${afterGoingBack(back)}.${saidOf(added)}`
+        );
+      }
+    }
+
+    const folder = await mkdtemp(join(tmpdir(), 'surfaces-commit-'));
+    let committed: GitRun;
+    try {
+      const file = join(folder, 'message');
+      await writeFile(file, message, { mode: 0o600 });
+      committed = await write(
+        [
+          'commit',
+          '--only',
+          '--quiet',
+          '--cleanup=whitespace',
+          '--file',
+          file,
+          '--pathspec-from-file=-',
+          '--pathspec-file-nul',
+        ],
+        nul(paths)
+      );
+    } finally {
+      await rm(folder, { recursive: true, force: true });
+    }
+
+    const now = await head();
+    // A hook after the commit (post-commit) may fail or be stopped once the
+    // commit is made: `HEAD` moved, so it was.
+    const landed = now.oid !== null && now.oid !== was.oid;
+    if (!committed.ok && !landed) {
+      await forget(toAdd);
+      const back = branch === undefined ? null : await goBack(branch);
+      return fail(
+        'HOST_GIT_FAILED',
+        `${failedHow('git commit', committed)} Nothing was committed${afterGoingBack(back)}.${saidOf(committed)}`
+      );
+    }
+    const short = await read(['rev-parse', '--short', now.oid!]);
+    return ok({
+      commit: now.oid!,
+      short: short.ok ? short.stdout.toString('utf8').trim() : now.oid!.slice(0, 7),
+      branch: now.branch ?? branch ?? '',
+    });
+
+    /** After a failure: the paths step 2 added go back to untracked. */
+    async function forget(added: readonly string[]): Promise<void> {
+      if (added.length === 0) return;
+      const run = await runGit(['update-index', '-z', '--force-remove', '--stdin'], {
+        cwd: root,
+        env,
+        input: nul(added),
+      });
+      if (!run.ok) {
+        warn(
+          `the commit failed, and ${added.length} new file(s) it had added to the index could not be taken out again (${describe('git update-index', run)}).`
+        );
+      }
+    }
+
+    /**
+     * After a failure on a new branch: `HEAD` back where it was, and the new
+     * branch deleted while it still points where it started (nothing was
+     * committed on it). Answers null when that worked, or what went wrong.
+     */
+    async function goBack(made: string): Promise<string | null> {
+      const back =
+        was.branch !== null
+          ? await runGit(['symbolic-ref', 'HEAD', `refs/heads/${was.branch}`], { cwd: root, env })
+          : await runGit(['update-ref', '--no-deref', 'HEAD', was.oid!], { cwd: root, env });
+      if (!back.ok) return describe('going back', back);
+      if (was.oid !== null) {
+        const dropped = await runGit(['update-ref', '-d', `refs/heads/${made}`, was.oid], {
+          cwd: root,
+          env,
+        });
+        if (!dropped.ok) {
+          warn(`the commit failed, and the branch ${made} it made could not be deleted.`);
+        }
+      }
+      return null;
+    }
+
+    function afterGoingBack(problem: string | null): string {
+      if (branch === undefined || problem === null) {
+        return `, and you are still ${where(was.branch)}`;
+      }
+      return `. The new branch ${branch} was made and you are on it; going back ${where(was.branch).replace(/^on /, 'to ')} failed (${problem})`;
+    }
+  }
+
+  return { start, info, changes, status, base, stage, commit };
+}
+
+/** git's words after the message, on lines of their own. */
+function saidOf(run: Extract<GitRun, { ok: false }>): string {
+  const said = gitSaid(run);
+  return said === '' ? '' : ` git said:\n${said}`;
 }
 
 function describe(command: string, run: Extract<GitRun, { ok: false }>): string {

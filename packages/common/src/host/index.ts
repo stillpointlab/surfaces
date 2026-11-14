@@ -75,6 +75,26 @@ export interface HostChange {
   from?: string;
 }
 
+/**
+ * A commit of chosen files. `paths` are relative to the host's root; naming
+ * either path of a moved file commits the move, both halves. `message` is the
+ * whole message (a summary line, then a blank line and a body if there is one).
+ * With `branch`, the commit goes on a new branch of that name, started from the
+ * current commit; without it, on the current branch.
+ */
+export interface HostCommitRequest {
+  paths: string[];
+  message: string;
+  branch?: string;
+}
+
+/** A commit made: its id, the short form git chose for it, and the branch it is on. */
+export interface HostCommit {
+  commit: string;
+  short: string;
+  branch: string;
+}
+
 /** A host's listing as its server answers it: cut, and saying so, past its limit. */
 export interface HostListing {
   nodes: FolderNode[];

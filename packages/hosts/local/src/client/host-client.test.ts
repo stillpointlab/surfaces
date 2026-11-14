@@ -102,6 +102,29 @@ describe('createHttpClient', () => {
     expect(await client.changes()).toMatchObject({ ok: false, code: 'HOST_NOT_A_REPOSITORY' });
   });
 
+  it('posts a commit as JSON, and answers git’s refusal as the server sent it', async () => {
+    let fetch = answering({ ok: true, commit: 'c'.repeat(40), short: 'ccccccc', branch: 'main' });
+    const request = { paths: ['b.md', 'a.md'], message: 'Move a\n\nbody', branch: 'topic' };
+    expect(await createHttpClient().commit(request)).toEqual({
+      ok: true,
+      commit: 'c'.repeat(40),
+      short: 'ccccccc',
+      branch: 'main',
+    });
+    const [url, init] = fetch.mock.calls[0];
+    expect(url).toBe('/api/commit');
+    expect(init?.method).toBe('POST');
+    expect(JSON.parse(String(init?.body))).toEqual(request);
+
+    fetch = answering({ ok: false, code: 'HOST_GIT_FAILED', message: 'hook said no' }, 500);
+    expect(await createHttpClient().commit(request)).toEqual({
+      ok: false,
+      code: 'HOST_GIT_FAILED',
+      message: 'hook said no',
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
   it('throws on a read the page cannot do without', async () => {
     answering({ ok: false, code: 'HOST_FORBIDDEN', message: 'Not from here.' }, 403);
     await expect(createHttpClient().list()).rejects.toThrow('Not from here.');
