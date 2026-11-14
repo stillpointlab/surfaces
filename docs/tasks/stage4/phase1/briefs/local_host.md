@@ -12,7 +12,9 @@ tags: [apps, formats, host-contract, dev-tooling, major-feature]
 
 _Drafted by the claude agent from the [local host spike](../spikes/local-host.md), the
 [host file tree spike](../spikes/host-file-tree.md) and Jamie's answers to the first spike's open
-questions. Phase 1 holds the spikes, this brief and its specs; the work starts in phase 2._
+questions. It covers two stages: stage 4 builds the host for files, formats and git, and stage 5
+puts the apps in it. Stage 4's phase 1 holds the spikes, this brief and stage 4's specs; stage
+5's specs wait in its own phase 1._
 
 ## Decisions (Jamie, 2026-11-13, on PR 87)
 
@@ -29,7 +31,7 @@ questions. Phase 1 holds the spikes, this brief and its specs; the work starts i
 - **Git by shelling out** to the installed `git`. Everything GitHub (pull request state, opening
   a pull request, divergence) is deferred.
 - **Check-in offers a new branch.**
-- **The tree** follows the tree spike's recommendation, once Jamie has read it: the host's own
+- **The tree** follows the tree spike's recommendation, which Jamie accepted: the host's own
   small tree, with Context Manager's trees and its context picker left as they are.
 
 A second round, the same day, on this brief's open questions:
@@ -66,6 +68,13 @@ A fifth round, the same day:
 - **Undo leaves editor saves out at first, and a commit does not clear the journal**
   (outcome 5).
 
+A sixth round, the same day, on the specs:
+
+- **Two stages, not one.** Thirteen specs is too many for a stage. Stage 4 is the host for
+  files, formats and git; stage 5 is the apps in it, check-in and undo. Each stage ends with
+  Context Manager adopting what that stage moved, which keeps the second-round decision.
+- **The specs are implemented by Opus 5.5 sub-agents,** with the claude agent orchestrating.
+
 ## High-level goal
 
 `surfaces <path>` serves a folder: its files open in their formats, its tasks and inventory
@@ -86,6 +95,10 @@ each of those pieces live here, because it needs them.
 
 Each phase ends with something to use. `npm run serve -- <path>` runs it from this repository
 with the packages' sources reloading; `surfaces [path]` runs it anywhere.
+
+Outcomes 1 and 2 are stage 4, with the format registry's share of outcome 6. Outcomes 3, 4 and 5
+are stage 5, with the rest of outcome 6. The lock under outcome 1 arrives with the apps, in
+stage 5.
 
 1. **Files and formats.** A folder opens with an explorer. A file opens in its format's preview,
    and its editor where it has one, chosen from the path by a registry of format descriptors.
@@ -194,12 +207,48 @@ with the packages' sources reloading; `surfaces [path]` runs it anywhere.
   - the check-in shared core and one host runner inside Context Manager;
   - a third app.
 
+## Specs, in order
+
+Each spec is one work package: what it owns, what it reads and must not change, and what it can
+run beside. The claude agent hands a wave to sub-agents, reviews and merges each PR, and starts
+the next wave. Specs in the same wave can run at the same time.
+
+**Stage 4: the host for files, formats and git** (specs in `stage4/phase1/specs/`)
+
+| Phase | Wave | Spec                                                                         | PRs |
+| ----- | ---- | ---------------------------------------------------------------------------- | --- |
+| 2     | 1    | [format-descriptors](../specs/format-descriptors.md)                         | 1   |
+| 2     | 1    | [host-server](../specs/host-server.md)                                       | 1   |
+| 2     | 1    | [explorer-tree](../specs/explorer-tree.md)                                   | 1   |
+| 2     | 2    | [host-page](../specs/host-page.md)                                           | 1   |
+| 2     | 3    | [file-operations](../specs/file-operations.md)                               | 1   |
+| 3     | 1    | [git-in-the-host](../specs/git-in-the-host.md)                               | 2   |
+| 4     | 1    | [context-manager-adopts-formats](../specs/context-manager-adopts-formats.md) | 1   |
+
+**Stage 5: the apps in the host** (specs in `stage5/phase1/specs/`)
+
+| Phase | Wave | Spec                                                                                       | PRs |
+| ----- | ---- | ------------------------------------------------------------------------------------------ | --- |
+| 2     | 1    | [app-module-grows](../../../stage5/phase1/specs/app-module-grows.md)                       | 2   |
+| 2     | 2    | [host-runner](../../../stage5/phase1/specs/host-runner.md)                                 | 1   |
+| 2     | 2    | [app-shells](../../../stage5/phase1/specs/app-shells.md)                                   | 2   |
+| 3     | 1    | [apps-in-the-local-host](../../../stage5/phase1/specs/apps-in-the-local-host.md)           | 2   |
+| 4     | 1    | [checkin-review](../../../stage5/phase1/specs/checkin-review.md)                           | 2   |
+| 5     | 1    | [undo-journal](../../../stage5/phase1/specs/undo-journal.md)                               | 1   |
+| 6     | 1    | [context-manager-adopts-apps](../../../stage5/phase1/specs/context-manager-adopts-apps.md) | 4   |
+
+A spec moves to its phase's folder when its phase opens, as stage 3's did. Stage 5's specs were
+written with stage 4's, before any of it was built, so stage 5 opens by reading them again
+against what stage 4 made.
+
 ## Open questions
 
 Each is for the spec that meets it, unless Jamie answers first:
 
-- **The descriptor in Context Manager.** Context Manager stores a content type on each good and
-  keeps two tables of its own, by content type and by path (`codeLanguage.utils.ts`,
-  `repoFileKind.utils.ts`). Adopting the registry replaces the second and maps the first onto
-  format ids. That changes ADR-0009, which pinned how a good's type picks its editor, so it
-  wants an amendment there rather than a new record. This is for the adoption phase's spec.
+- **The lock in Context Manager:** where the unlocked state lives when there are many users and
+  no "run", and whether its server enforces the lock. Both are set out, with a lean, in
+  [context-manager-adopts-apps](../../../stage5/phase1/specs/context-manager-adopts-apps.md).
+
+The descriptor's place in Context Manager, open until now, is
+[context-manager-adopts-formats](../specs/context-manager-adopts-formats.md): one table from
+content types to format ids, and an amendment to ADR-0009.
