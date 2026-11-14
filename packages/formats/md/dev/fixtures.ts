@@ -1,7 +1,7 @@
-// This format in the surfaces harness (`npm run dev`). The default preview
-// renderer is the package's own unsanitized markdown-it: fine here, never in a host.
-import '../src/editor';
-import '../src/preview';
+// This format in the surfaces harness (`npm run dev`), mounted through its
+// descriptor. The default preview renderer is the package's own unsanitized
+// markdown-it: fine here, never in a host.
+import { mdFormat } from '../src/format';
 
 import type { HarnessFormat } from '../../../../tooling/harness/types';
 
@@ -42,7 +42,7 @@ const headings = `# One
 `;
 
 export default {
-  elements: { editor: 'md-editor', preview: 'md-preview' },
+  format: mdFormat,
   fixtures: {
     'Playground doc': playground,
     'Headings, lists, quote': headings,

@@ -13,6 +13,39 @@ What every surface shares. No elements of its own.
   token before asynchronous work, `settle(token)` marks the element ready when that cycle lands
   (ignored if a newer cycle began), `settle()` with no token is for synchronous work, and `begin()`
   on disconnect makes the element pending until it is connected and rendered again.
+- **The format descriptor** (`@stillpointlab/common-format/format`), a light entry that touches no
+  DOM, for hosts and for each format's own `./format` entry:
+  - `FormatDescriptor`: which paths a format opens (`opens`, lower-case extensions with the dot),
+    whether it needs a file's `text` or a `url`, its `preview` and optional `editor` (each a `tag`
+    and a `load()` that resolves to the package's `./preview` or `./editor` module, so an element
+    is never defined twice), and `apply(element, file)`, which hands a mounted element a
+    `FormatFile` (`path` with `text` or `url`) through the format's own setter and attributes. The
+    host creates, places, listens to and reads back the element through the contracts above.
+  - `createFormatRegistry(formats, { fallback })`: `find(path)` answers the first registered
+    format whose `opens` has the path's extension, without regard to case, or `null`. The
+    extension is the file name's last dot onwards (`types.d.ts` matches `.ts`; a dotfile such as
+    `.md` matches `.md`), as `extensionOf(path)` gives it; `fileNameOf(path)` is the last segment.
+    `find` never reads a file: whether an unmatched file is text is the host's question, and a host
+    that decides it is uses `fallback`. The registry holds no other policy, such as size limits.
+  - **Register in this order:** `md`, `xmdl`, `sheet`, `image`, `code`, with `code` also as the
+    fallback. It is the order Context Manager's classifier tests a path in, and it matters: `code`
+    opens `.md` and `.markdown` too, so markdown must come first for both hosts to class a path
+    the same way.
+
+    ```ts
+    import { createFormatRegistry } from '@stillpointlab/common-format/format';
+    import { codeFormat } from '@stillpointlab/code-format/format';
+    import { imageFormat } from '@stillpointlab/image-format/format';
+    import { mdFormat } from '@stillpointlab/md-format/format';
+    import { sheetFormat } from '@stillpointlab/sheet-format/format';
+    import { xmdlFormat } from '@stillpointlab/xmdl-format/format';
+
+    const registry = createFormatRegistry(
+      [mdFormat, xmdlFormat, sheetFormat, imageFormat, codeFormat],
+      { fallback: codeFormat }
+    );
+    ```
+
 - **The app contract** (`@stillpointlab/common-format/app`), a light entry for apps and the host
   pages that mount them:
   - `Result`, `ok()` and `fail()`: an answer is `{ ok: true, …fields }` or
@@ -59,6 +92,12 @@ reusable })` whether they fit among a host's paths.
   view `describeRawViewContract` and `describeKeymapModeContract`, and for app elements
   `describeAppElementContract`: vitest suites a format or app runs for each element it ships, asserting what the contracts promise and nothing more.
   They import `vitest`, so they live in their own entry and never reach a runtime bundle.
+  - **Format descriptors.** `describeFormatDescriptor(format, samples, { load })`, which each
+    format runs in a test file that imports only its `./format` entry: importing the entry defines
+    none of the format's tags, `preview.load()` (and `editor.load()`) defines its tag, and for each
+    sample `apply` on a connected element then `whenReady()` settles, with `getContent()` reading
+    back the text for a text format's editor. Samples are `FormatFile`s, at least one per family
+    of extensions. `load` finishes what jsdom never loads (an image) before the wait.
   - **Hostile states.** `hostile(state, { except })` returns a deep copy with `HOSTILE_PAYLOAD`
     appended to every string (object keys and the `except`ed property names, such as a `mode` the
     element switches on, stay as they are). The payload breaks out of a quoted attribute and opens

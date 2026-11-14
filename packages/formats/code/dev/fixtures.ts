@@ -1,7 +1,8 @@
-// This format in the surfaces harness (`npm run dev`).
-import '../src/editor';
-import '../src/preview';
+// This format in the surfaces harness (`npm run dev`), mounted through its
+// descriptor. `<code-diff>` is an extra the descriptor does not cover.
 import '../src/diff';
+
+import { codeFormat, languageFromPath } from '../src/format';
 
 import type { HarnessFixture, HarnessFormat } from '../../../../tooling/harness/types';
 import type { DiffElement } from '@stillpointlab/common-format';
@@ -24,16 +25,19 @@ for (const i of [0, 1, 2]) {
 }
 `;
 
-/** A fixture that sets the language on all three elements and shows a diff against `changed`. */
-const inLanguage = (language: string, content: string, changed: string): HarnessFixture => ({
+/**
+ * A fixture for the file at `path`: the descriptor hands the editor and preview the
+ * content with the language the path implies, and the diff shows it against `changed`.
+ */
+const inFile = (path: string, content: string, changed: string): HarnessFixture => ({
   content,
+  path,
   apply: ({ editor, preview, extras }) => {
-    editor?.setAttribute('language', language);
-    editor?.setContent(content);
-    preview?.setAttribute('language', language);
-    preview?.setContent(content);
+    for (const el of [editor, preview]) if (el) codeFormat.apply(el, { path, text: content });
     const diff = extras['code-diff'] as DiffElement | undefined;
-    diff?.setAttribute('language', language);
+    const language = languageFromPath(path);
+    if (language) diff?.setAttribute('language', language);
+    else diff?.removeAttribute('language');
     diff?.setContents({ left: content, right: changed });
   },
 });
@@ -48,21 +52,22 @@ const diffToggle = (attribute: string, label: string, initial: boolean) =>
   }) satisfies NonNullable<HarnessFormat['controls']>[number];
 
 export default {
-  elements: { editor: 'code-editor', preview: 'code-preview', extra: ['code-diff'] },
+  format: codeFormat,
+  elements: { extra: ['code-diff'] },
   fixtures: {
-    Python: inLanguage(
-      'python',
+    Python: inFile(
+      'greet.py',
       python,
       python.replace('Hello', 'Hi').replace('range(3)', 'range(5)')
     ),
-    TypeScript: inLanguage(
-      'typescript',
+    TypeScript: inFile(
+      'greet.ts',
       typescript,
       typescript.replace('[0, 1, 2]', '[0, 1, 2, 3]').replace('Hello', 'Hey')
     ),
-    'Plain text': inLanguage('', 'one\ntwo\tthree\nfour  \n', 'one\ntwo three\nfour\nfive\n'),
-    'Long file': inLanguage(
-      'python',
+    'Plain text': inFile('notes.txt', 'one\ntwo\tthree\nfour  \n', 'one\ntwo three\nfour\nfive\n'),
+    'Long file': inFile(
+      'values.py',
       Array.from({ length: 120 }, (_, i) => `value_${i} = ${i}`).join('\n'),
       Array.from({ length: 120 }, (_, i) =>
         i === 60 ? `value_${i} = "changed"` : `value_${i} = ${i}`

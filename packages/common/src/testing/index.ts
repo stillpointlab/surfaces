@@ -21,6 +21,8 @@ export { describeRawViewContract, rawSurface, rawSwitch, rawText, viewChanges } 
 export type { RawViewContractOptions } from './raw-view';
 export { defineCodeEditorKeymapStub, describeKeymapModeContract } from './keymap';
 export type { CodeEditorKeymapStub, KeymapModeContractOptions } from './keymap';
+export { describeFormatDescriptor } from './format';
+export type { FormatDescriptorOptions } from './format';
 export { describeAppElementContract } from './app-element';
 export type { AppElementContractOptions } from './app-element';
 export { contentChanges, mount, pending, settledBy } from './support';

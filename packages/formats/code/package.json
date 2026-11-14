@@ -19,7 +19,8 @@
     "./dist/diff.cjs",
     "./src/editor/index.ts",
     "./dist/editor.js",
-    "./dist/editor.cjs"
+    "./dist/editor.cjs",
+    "./dist/chunks/*"
   ],
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -44,13 +45,19 @@
       "types": "./dist/editor.d.ts",
       "import": "./dist/editor.js",
       "require": "./dist/editor.cjs"
+    },
+    "./format": {
+      "types": "./dist/format.d.ts",
+      "import": "./dist/format.js",
+      "require": "./dist/format.cjs"
     }
   },
   "files": [
     "dist",
     "preview.d.ts",
     "diff.d.ts",
-    "editor.d.ts"
+    "editor.d.ts",
+    "format.d.ts"
   ],
   "scripts": {
     "gen:styles": "node ../../../tooling/gen-styles.mjs .",
