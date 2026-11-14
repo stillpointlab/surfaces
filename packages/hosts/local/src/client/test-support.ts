@@ -22,6 +22,13 @@ export interface FakeHost extends HostClient {
   readonly puts: PortChange[][];
   /** Answer the next `put` with this refusal instead of writing. */
   refuseNextPut?: { code: string; message: string };
+  /** Hold every `put` until `releasePut()`. */
+  holdPut: boolean;
+  releasePut(): void;
+  /** Folders listed with nothing under them, as a submodule is. */
+  readonly separate: Set<string>;
+  /** Answer the listing as cut. */
+  truncated: boolean;
   /** Hold every `get` until `release()`. */
   hold: boolean;
   release(): void;
@@ -38,6 +45,7 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
   for (const path of disk.keys()) stamp(path);
   const listeners = new Set<(event: HostEvent) => void>();
   let held: (() => void)[] = [];
+  let heldPuts: (() => void)[] = [];
 
   const host: FakeHost = {
     disk,
@@ -45,9 +53,17 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
     gets: [],
     puts: [],
     hold: false,
+    holdPut: false,
+    separate: new Set(),
+    truncated: false,
     release() {
       const waiting = held;
       held = [];
+      for (const go of waiting) go();
+    },
+    releasePut() {
+      const waiting = heldPuts;
+      heldPuts = [];
       for (const go of waiting) go();
     },
     emit(event) {
@@ -73,8 +89,9 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
           folders.add(path.slice(0, cut));
         }
       }
+      for (const path of host.separate) folders.add(path);
       for (const path of folders) nodes.push({ path, type: 'tree' });
-      return { nodes, truncated: false };
+      return { nodes, truncated: host.truncated };
     },
     async get(path): Promise<Result<{ text: string; version: string }>> {
       host.gets.push(path);
@@ -90,34 +107,56 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
     urlFor: (path) => `/api/raw?path=${encodeURIComponent(path)}`,
     async put(changes) {
       host.puts.push([...changes]);
+      if (host.holdPut) await new Promise<void>((go) => heldPuts.push(go));
       if (host.refuseNextPut) {
         const refusal = host.refuseNextPut;
         host.refuseNextPut = undefined;
         return { ok: false, ...refusal };
       }
+      const named = new Set<string>();
+      for (const change of changes) {
+        for (const path of change.kind === 'move' ? [change.from, change.path] : [change.path]) {
+          if (named.has(path)) return { ok: false, code: 'HOST_BAD_REQUEST', message: 'twice' };
+          named.add(path);
+        }
+      }
       for (const change of changes) {
         const exists = disk.has(change.path);
-        if (change.kind === 'write' && !exists) {
+        const source = change.kind === 'move' ? change.from : change.path;
+        if ((change.kind === 'write' || change.kind === 'delete') && !exists) {
           return { ok: false, code: 'HOST_FILE_NOT_FOUND', message: 'none' };
         }
-        if (change.kind === 'create' && exists) {
+        if (change.kind === 'move' && !disk.has(source)) {
+          return { ok: false, code: 'HOST_FILE_NOT_FOUND', message: 'none' };
+        }
+        if ((change.kind === 'create' || change.kind === 'move') && exists) {
           return { ok: false, code: 'HOST_PATH_EXISTS', message: 'exists' };
         }
-        if (change.base !== undefined && change.base !== versions.get(change.path)) {
+        if (change.base !== undefined && change.base !== versions.get(source)) {
           return { ok: false, code: 'HOST_FILE_CHANGED', message: 'changed' };
         }
       }
       const answer: Record<string, string> = {};
       for (const change of changes) {
-        if (change.kind === 'delete') disk.delete(change.path);
-        else if (change.kind === 'write' || change.kind === 'create') {
+        if (change.kind === 'delete') {
+          disk.delete(change.path);
+          versions.delete(change.path);
+        } else if (change.kind === 'move') {
+          // Without content, the bytes and so the version move as they are.
+          disk.set(change.path, disk.get(change.from)!);
+          versions.set(change.path, versions.get(change.from)!);
+          disk.delete(change.from);
+          versions.delete(change.from);
+          answer[change.path] = versions.get(change.path)!;
+        } else {
           disk.set(change.path, change.content);
           stamp(change.path);
           answer[change.path] = versions.get(change.path)!;
         }
       }
-      // The server reports its own writes too.
-      queueMicrotask(() => host.emit({ type: 'changed', paths: changes.map((c) => c.path) }));
+      // The server reports its own writes too, and here before the write's answer.
+      const paths = changes.flatMap((c) => (c.kind === 'move' ? [c.from, c.path] : [c.path]));
+      queueMicrotask(() => host.emit({ type: 'changed', paths }));
       return { ok: true, versions: answer };
     },
     async status(): Promise<Record<string, FileStatus>> {

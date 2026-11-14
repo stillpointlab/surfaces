@@ -236,3 +236,116 @@ host-file-tree {
   justify-content: flex-end;
   gap: $spacing-sm;
 }
+
+.button-danger {
+  border-color: $error-border;
+  color: $error-color;
+  background: $error-bg;
+  font-weight: 600;
+
+  &:hover:not(:disabled) {
+    background: $error-bg;
+    filter: brightness(1.1);
+  }
+}
+
+// The host's one options menu (menu/menu.ts): fixed at the point it was asked
+// for, above the page and below a dialog.
+.host-menu {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  min-width: 10rem;
+  max-width: min(20rem, calc(100vw - 8px));
+  padding: $spacing-xs 0;
+  border: 1px solid $border-light;
+  border-radius: $border-radius-md;
+  background: $surface-overlay;
+  box-shadow: $popover-shadow;
+  font-size: 0.875rem;
+
+  &[hidden] {
+    display: none;
+  }
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.host-menu-item {
+  padding: $spacing-xs $spacing-md;
+  border: 0;
+  color: $text-primary;
+  background: none;
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    background: $background-hover;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $focus-ring;
+    outline-offset: -2px;
+  }
+
+  &[aria-disabled='true'] {
+    color: $text-muted;
+    cursor: not-allowed;
+  }
+}
+
+.host-menu-danger:not([aria-disabled='true']) {
+  color: $error-color;
+}
+
+// The explorer's dialogs (file-ops/dialog.ts): one field or one message, and the
+// message for a refusal under it.
+.file-op-body {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.file-op-label {
+  color: $text-muted;
+  font-size: 0.8125rem;
+}
+
+.file-op-path {
+  box-sizing: border-box;
+  width: 100%;
+  padding: $spacing-xs $spacing-sm;
+  border: 1px solid $border-dark;
+  border-radius: $border-radius-md;
+  color: $text-primary;
+  background: $background-primary;
+  font-family: ui-monospace, monospace;
+  font-size: 0.875rem;
+
+  &:focus-visible {
+    outline: 2px solid $focus-ring;
+    outline-offset: 1px;
+  }
+
+  &[aria-invalid='true'] {
+    border-color: $error-border;
+  }
+}
+
+.file-op-error {
+  margin: 0;
+  color: $error-color;
+  font-size: 0.8125rem;
+
+  &[hidden] {
+    display: none;
+  }
+}
