@@ -246,6 +246,8 @@ export class CommitDialog {
         } else if (first || this.rows === null) {
           this.rows = rowsFor(changes);
           this.showForm();
+          // The form replaced what had focus while the changes were read.
+          this.focusField('summary');
         } else {
           this.rows = rowsFor(changes, this.rows);
           this.showRows();

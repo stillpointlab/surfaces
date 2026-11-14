@@ -196,6 +196,7 @@ describe('the dialog', () => {
     expect(radio('current')!.parentElement!.textContent!.trim()).toBe('On main');
     expect(radio('new')!.checked).toBe(false);
     expect(inDialog('.commit-unsaved')).toBeNull();
+    expect(document.activeElement).toBe(summary());
   });
 
   it('commits the chosen files with the message; the notice names it; the marks clear at once', async () => {
