@@ -226,9 +226,10 @@ export class ModalDialog extends HTMLElement {
     const overlay = this.shadowRoot?.querySelector('.modal-overlay');
     const closeButton = this.shadowRoot?.querySelector('.modal-close-button'); // If you add one
 
-    overlay?.addEventListener('click', () => {
-      // Optional: Close on overlay click, if a certain attribute is set
-      if (this.hasAttribute('close-on-overlay-click')) {
+    overlay?.addEventListener('click', (event) => {
+      // Only a click on the scrim itself: one inside the dialog (a slotted button's
+      // included) bubbles through the overlay too, and must not close it.
+      if (event.target === overlay && this.hasAttribute('close-on-overlay-click')) {
         this.close();
       }
     });
