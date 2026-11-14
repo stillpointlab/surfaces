@@ -55,6 +55,11 @@ A third round, the same day:
   it keeps (outcome 5).
 - **Deletes are staged,** as moves are (outcome 2).
 
+A fourth round, the same day:
+
+- **Context Manager takes the lock** when it adopts (outcome 6).
+- **The undo journal is in the server's memory,** for the run. It does not outlive the server.
+
 ## High-level goal
 
 `surfaces <path>` serves a folder: its files open in their formats, its tasks and inventory
@@ -127,7 +132,7 @@ with the packages' sources reloading; `surfaces [path]` runs it anywhere.
    a title and a body. Locally it commits.
 5. **Undo and redo** for what the host writes, if its spec finds it sound. The lean: every write
    through the storage port (an app's op, a file created, renamed or deleted) is kept with its
-   inverse in a journal in the server, for the run. Undo writes the inverse, and is refused when
+   inverse in a journal in the server's memory, for the run. Undo writes the inverse, and is refused when
    a file it would touch has changed since. Undoing a staged move or delete puts the index back
    as well as the file. Text undo inside an open editor stays the editor's own.
 
@@ -136,7 +141,8 @@ with the packages' sources reloading; `surfaces [path]` runs it anywhere.
    write too large to keep at all (a delete, mostly) says it cannot be undone and asks first.
 
 6. **Context Manager adopts** what moved (the registry, the shells, the pages, the bounds, the
-   check-in element), piece by piece.
+   check-in element), piece by piece, and takes the lock on an app's scope. Today its tree
+   lists an app's files, and a card or a zone file opens in its format's editor.
 
 ## Constraints
 
@@ -169,30 +175,32 @@ with the packages' sources reloading; `surfaces [path]` runs it anywhere.
 
 Each is for the spec that meets it, unless Jamie answers first:
 
-- **The format descriptor.** What it is: a small object each format package exports, from an
-  entry that loads no editor, which tells a host
-  - which paths the format opens (`.md`; `.csv` and `.sheet`; the image extensions);
-  - its preview and editor tags, and how to load each;
-  - whether its content is text or a URL (`<image-preview>` takes a URL);
-  - the attributes a path implies (the code language; the sheet's CSV or document source).
+- **The format descriptor's shape.** What it is: a small object each format package exports,
+  from an entry that loads no editor, which a host registers. It names the paths the format
+  opens, its preview and editor tags with how to load each, and whether it wants the file's
+  text or a URL. A host's registry is an ordered list of them: the first match opens the file,
+  and code is the fallback for text.
 
-  A host's registry is an ordered list of them: the first match opens the file, and code is the
-  fallback for text. Two things are open:
-  - **its shape:** data with one small function for the attributes (the lean, so the host stays
-    the one that mounts and drives the element), or a `mount()` the format supplies (less for a
-    host to know, but the format then drives itself);
-  - **what Context Manager does with it.** Context Manager stores a content type on each good
-    and keeps two tables of its own, by content type and by path (`codeLanguage.utils.ts`,
-    `repoFileKind.utils.ts`). Adopting the registry replaces the second and maps the first onto
-    format ids. That changes ADR-0009, which pinned how a good's type picks its editor, so it
-    wants an amendment there rather than a new record.
+  What is open is who hands the element its content. Attributes alone do not cover it: the
+  sheet takes CSV through `setContent` and a `.sheet` document through `setDocumentSource`, and
+  the image takes a URL through `setSource`. Three shapes:
+  - **data only,** with a function from a path to attributes. The host calls the setter, so it
+    needs a case for the sheet and one for the image;
+  - **data and one `apply(element, file)`** the format supplies (the lean). The host creates
+    the element, places it, listens to it and reads it back through the contracts; the format
+    only chooses its own setter and attributes. The harness's fixtures already work this way;
+  - **the format opens itself** in a container the host gives it and returns a handle. The
+    host knows least, but the handle has to offer again what the element contracts already do
+    (`readonly`, the raw view, the keymap mode, ready).
 
-  The harness's `HarnessFormat.elements` already names each format's tags; the descriptor would
-  replace that field, so the harness reads it too.
+  The harness's `HarnessFormat.elements` and `apply` become the descriptor's, so the harness
+  reads it too.
 
-- **The lock in Context Manager.** Context Manager differs today: its tree lists an app's
-  files, and a card or a zone file opens in its format's editor. Whether it takes the lock when
-  it adopts is for that phase.
-- **Undo's reach:** whether a save from an editor is in the journal, whether the journal outlives
-  a commit, and where the kept content lives (memory, or a temporary folder the run owns). The
-  two limits' numbers are a draft.
+- **The descriptor in Context Manager.** Context Manager stores a content type on each good and
+  keeps two tables of its own, by content type and by path (`codeLanguage.utils.ts`,
+  `repoFileKind.utils.ts`). Adopting the registry replaces the second and maps the first onto
+  format ids. That changes ADR-0009, which pinned how a good's type picks its editor, so it
+  wants an amendment there rather than a new record.
+- **Undo's reach:** whether a save from an editor is in the journal (the lean: not at first,
+  since the editor has its own undo and git shows the change), and what a commit does to the
+  journal (the lean: nothing; undoing after a commit makes a new change to commit).
