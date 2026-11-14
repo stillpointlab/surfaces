@@ -12,6 +12,8 @@ import type { FormatDescriptor } from '@stillpointlab/common-format/format';
 import type {
   FileStatus,
   HostChange,
+  HostCommit,
+  HostCommitRequest,
   HostGit,
   PortChange,
 } from '@stillpointlab/common-format/host';
@@ -48,8 +50,15 @@ export interface FakeHost extends HostClient {
   movedFrom: Map<string, string>;
   /** The files' text at `HEAD`, by path, for `base()`. */
   readonly heads: Map<string, string | typeof BINARY>;
-  /** The git routes asked, in order: `changes`, `base:<path>`. */
+  /** The git routes asked, in order: `changes`, `base:<path>`, `commit`. */
   readonly gitCalls: string[];
+  /** The commits asked for, in order. */
+  readonly commits: HostCommitRequest[];
+  /** Answer the next `commit` with this refusal instead of committing. */
+  refuseNextCommit?: { code: string; message: string };
+  /** Hold every `commit` until `releaseCommit()`. */
+  holdCommit: boolean;
+  releaseCommit(): void;
 }
 
 export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHost {
@@ -61,6 +70,8 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
   const listeners = new Set<(event: HostEvent) => void>();
   let held: (() => void)[] = [];
   let heldPuts: (() => void)[] = [];
+  let heldCommits: (() => void)[] = [];
+  let commitCount = 0;
 
   const host: FakeHost = {
     disk,
@@ -76,6 +87,13 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
     movedFrom: new Map(),
     heads: new Map(),
     gitCalls: [],
+    commits: [],
+    holdCommit: false,
+    releaseCommit() {
+      const waiting = heldCommits;
+      heldCommits = [];
+      for (const go of waiting) go();
+    },
     release() {
       const waiting = held;
       held = [];
@@ -204,6 +222,29 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
       if (text === undefined) return { ok: false, code: 'HOST_FILE_NOT_FOUND', message: 'none' };
       if (text === BINARY) return { ok: false, code: 'HOST_NOT_TEXT', message: 'not text' };
       return { ok: true, text };
+    },
+    async commit(request): Promise<Result<HostCommit>> {
+      host.gitCalls.push('commit');
+      host.commits.push({ ...request, paths: [...request.paths] });
+      if (host.holdCommit) await new Promise<void>((go) => heldCommits.push(go));
+      if (host.gitInfo.state !== 'repository') return notARepository(host.gitInfo);
+      if (host.refuseNextCommit) {
+        const refusal = host.refuseNextCommit;
+        host.refuseNextCommit = undefined;
+        return { ok: false, ...refusal };
+      }
+      // As the server does: the chosen paths, a moved file by either of its paths.
+      for (const path of request.paths) {
+        const moved = [...host.movedFrom].find(([, from]) => from === path)?.[0];
+        delete host.statuses[moved ?? path];
+        if (moved) host.movedFrom.delete(moved);
+        host.movedFrom.delete(path);
+      }
+      if (request.branch !== undefined) host.gitInfo = { ...host.gitInfo, branch: request.branch };
+      commitCount += 1;
+      const commit = `${commitCount}`.padStart(40, 'c');
+      queueMicrotask(() => host.emit({ type: 'status' }));
+      return { ok: true, commit, short: commit.slice(-7), branch: host.gitInfo.branch ?? '' };
     },
     watch(listener) {
       listeners.add(listener);

@@ -43,6 +43,7 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
 | `tree/`          | `<host-file-tree>`                                                                       |
 | `menu/`          | `HostMenu`: the page's one options menu, entries opened at a point                       |
 | `file-ops/`      | Create, rename and delete: a row's menu entries, the dialogs, the checks and the writes  |
+| `commit/`        | The commit dialog (`dialog.ts`) and its pure parts: rows, checks, the request            |
 
 - **The address** names what is open: `#/file/<path>` for the preview, `#/edit/<path>` for the
   editor and `#/diff/<path>` for the Changes view, each segment percent-encoded. Back and
@@ -56,6 +57,20 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
   (a commit) goes to the preview. An image has no Changes. When git was not found and the folder
   looks like a repository, the explorer says "git was not found, so changes and commit are
   off."; outside a repository the page shows nothing of git and calls none of its routes.
+- **Commit.** In a repository the explorer's header holds a **Commit** button with the number of
+  changed files (one per moved file, deleted files included). It opens a dialog that reads the
+  branch and the changes: every changed file checked, with its status and a moved file as
+  old → new, and an All box; a summary (required) and details, sent as one message; the
+  current branch or a new one by name (only a new one when `HEAD` is detached). Commit says
+  what is missing (no file, no summary, no branch name) under the form and puts focus there,
+  so the button is never disabled without a reason. While the commit runs the form is held,
+  and Escape and the close button wait. A refusal, git's own words included, shows under the
+  form as text and the dialog keeps everything. When the changes move while it is open, it
+  reads them again: checks are kept, a new row starts unchecked. Unsaved edits in the open file
+  are not in a commit, and the dialog says so. After a commit the marks are read at once, and a
+  notice under the header (a live region) says "Committed `<short id>` on `<branch>`." until it
+  is dismissed or the next commit replaces it. The request is `requestOf` in
+  `commit/request.ts`, `{ paths, message, branch? }`, sent by `HostClient.commit`.
 - **Saving** (Save, Ctrl+S, Cmd+S) sends one `write` whose `base` is the version the file was
   opened or last saved at. A change on disk to the open file is read again and compared by
   version: with no unsaved edits it shows in place; with edits a banner offers Reload, and Save
