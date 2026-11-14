@@ -45,11 +45,20 @@ served root, and git is given the prefix.
 The host is in one of three states, decided once at start and answered by `GET /api/git` as
 `{ state, branch }`:
 
-| State           | When                                      | What the page does                                                                                       |
-| --------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `repository`    | `git` runs and the root is in a work tree | marks, the Changes view and Commit; `branch` is the current branch, or `null` when detached              |
-| `no-repository` | `git` runs and the root is not in one     | none of them, and no notice: the folder is just a folder                                                 |
-| `no-git`        | `git` cannot be run                       | none of them, and one line in the explorer's header: "git was not found, so changes and commit are off." |
+| State           | When                                                        | What the page does                                                                                       |
+| --------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `repository`    | `git` runs and the root is in a work tree                   | marks, the Changes view and Commit; `branch` is the current branch, or `null` when detached              |
+| `no-repository` | the root is not in a repository, whether or not `git` runs  | none of them, and no notice: the folder is just a folder                                                 |
+| `no-git`        | `git` cannot be run, and the folder looks like a repository | none of them, and one line in the explorer's header: "git was not found, so changes and commit are off." |
+
+Degrading with a notice, not refusing to start, is Jamie's choice (2026-11-13), and so is
+showing the notice only for a folder that looks like a repository.
+
+**"Looks like a repository"** is a light check, used only when `git` cannot be run: a `.git`
+entry, a folder or a file, in the served root or in any folder above it. A file counts because
+a worktree and a submodule have one. It does not read the entry, and it ignores git's other
+rules (`GIT_DIR`, ceiling directories, bare repositories). When `git` runs, git's own answer is
+used and this check is not.
 
 Outside `repository`, `status()` answers `{}` and the routes below refuse with
 `HOST_NOT_A_REPOSITORY` or `HOST_GIT_NOT_FOUND`. Nothing else changes: files list, open, save,
@@ -126,9 +135,10 @@ without a commit, and anything that needs the network.
       repository; staging a move and a delete, of clean and of changed files; `HEAD` text.
 - [ ] Commit tests: chosen paths only, with other staged work left alone; a new branch; each
       refusal; a failing hook leaves the tree as it was.
-- [ ] A folder with no repository serves with no git controls and no notice. With `git` off the
-      `PATH`, a repository serves with the notice, the walk listing, and working file
-      operations.
+- [ ] A folder with no repository serves with no git controls and no notice, with `git` on the
+      `PATH` and off it.
+- [ ] With `git` off the `PATH`, a repository serves with the notice, the walk listing, and
+      working file operations. So does a folder inside one, and a worktree (a `.git` file).
 - [ ] By hand: edit, rename and delete files, see the marks and a diff, commit on a new branch,
       and read the result with `git log --stat`.
 - [ ] `npm run check` is green.
