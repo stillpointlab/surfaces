@@ -17,7 +17,9 @@ const modules = import.meta.glob<FormatModule>([
 ]);
 const formats = new Map<string, () => Promise<FormatModule>>();
 for (const [path, load] of Object.entries(modules)) {
-  const name = /packages\/(?:formats|components|apps)\/([^/]+)\/dev\/fixtures\.ts$/.exec(path)?.[1];
+  const name = /packages\/(?:formats|components|apps|hosts)\/([^/]+)\/dev\/fixtures\.ts$/.exec(
+    path
+  )?.[1];
   if (name) formats.set(name, load);
 }
 
