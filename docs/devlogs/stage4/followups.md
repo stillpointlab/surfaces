@@ -50,3 +50,20 @@ it opened: every entry was closed.
   file at that path.
 - 2026-11-14 (file-operations): a dialog with no detail line shows an empty band between its
   title and its buttons (`<modal-dialog>`'s body padding).
+- 2026-11-14 (git-in-the-host): the md editor's save reflows a file: three lines became one and
+  the final newline went. The Changes view makes it plain, and it matters more now that the
+  editor writes files on disk and git shows the change.
+- 2026-11-14 (git-in-the-host): `HEAD` text is read with no filter, so a repository that
+  converts line endings on checkout, or uses a smudge filter, shows every line as changed.
+- 2026-11-14 (git-in-the-host): a folder whose only file moved out of the served folder loses
+  its row, so that deletion shows in the commit dialog and nowhere in the tree.
+- 2026-11-14 (git-in-the-host): the commit dialog lists paths in git's order and the tree in
+  natural order (`many-2` before `many-10`).
+- 2026-11-14 (git-in-the-host): `HOST_GIT_FAILED` answers 500, as the mapping it joined does. A
+  hook that refuses is not the server's fault; 422 would say so.
+- 2026-11-14 (git-in-the-host): one commit test checks that a `put` has not finished after
+  300 ms, the only assertion in the package that depends on time.
+- 2026-11-14 (git-in-the-host): a watch on `logs/HEAD` would catch `reset --soft` and
+  `update-ref`, which touch neither `HEAD` nor `index`. Undo, in stage 5, may want it.
+- 2026-11-14 (git-in-the-host): a commit can switch branches (a new branch), and the undo
+  journal's draft spec does not know about branches.

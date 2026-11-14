@@ -6,7 +6,7 @@ tags: [formats, host-contract, code]
 
 # Spec: Context Manager adopts the format registry
 
-_The [local host brief](../briefs/local_host.md), outcome 6. Stage 4, phase 4, the stage's last:
+_The [local host brief](../../phase1/briefs/local_host.md), outcome 6. Stage 4, phase 4, the stage's last:
 after [format-descriptors](../../phase2/specs/format-descriptors.md) has merged. One Context Manager PR, with both
 walk suites._
 
@@ -17,7 +17,7 @@ Its own path tables and per-format branches go, so the two hosts cannot drift ap
 
 ## Related context
 
-- The [local host spike](../spikes/local-host.md), finding 3: where Context Manager decides
+- The [local host spike](../../phase1/spikes/local-host.md), finding 3: where Context Manager decides
   today.
 - Context Manager:
   - `shared/utils/repoFileKind.utils.ts` (`classifyRepoFilePath`, 39 lines);
@@ -35,6 +35,34 @@ Its own path tables and per-format branches go, so the two hosts cannot drift ap
   submodule pin.
 - **Does not change:** this repository, except a fix this work proves is needed, which goes in
   its own PR here first.
+
+## What stage 4 built (read before the text below)
+
+_Added 2026-11-14 by the claude agent, from reading this spec against
+[format-descriptors](../../phase2/specs/format-descriptors.md) as built
+([#93](https://github.com/stillpointlab/surfaces/pull/93)) and the local host's page, its first
+user ([#94](https://github.com/stillpointlab/surfaces/pull/94))._
+
+- **The pin moves past a change to every format package's build.** Splitting is on, with shared
+  code in `dist/chunks/` and `./dist/chunks/*` in each package's `sideEffects`. Check Context
+  Manager's client build before anything else: its bundle sizes per page, and that every
+  element still registers. Both walk suites run on the pin alone, before the adoption's own
+  changes.
+- **Register in this order:** md, xmdl, sheet, image, code, with code as the fallback. The code
+  format opens `.md`, as Context Manager's language table did.
+- **`common-format/format` has `extensionOf` and `fileNameOf`.** `classifyRepoFilePath` keeps
+  its two sheet kinds with `extensionOf`.
+- **Two paths class differently** and go in the PR's list: Context Manager trims the path and
+  the registry does not, so trim before asking; and `x.constructor` was code by an accident of
+  an object lookup, and is unknown now.
+- **The descriptor does not carry the image MIME table** (`imageContentTypeFromFilename`) or
+  the "XML content type is XML" rule in `languageForContentType`. Both are about content types,
+  and stay.
+- **Do not compare module namespaces.** Under a production build `await load()` is not `===` to
+  a static import of the same entry. The module is evaluated once.
+- **`load()` before the element is created,** and for markdown the sanitizing renderer before
+  that, as the local host's page does (`packages/hosts/local/src/client/registry.ts` and
+  `markdown.ts` here).
 
 ## Technical requirement
 
