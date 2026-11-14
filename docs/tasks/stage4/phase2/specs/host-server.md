@@ -1,5 +1,6 @@
 ---
-column: todo
+column: in-progress
+pr: 91
 created: 2026-11-13T18:32:00-07:00
 tags: [dev-tooling, host-contract, code, major-feature]
 ---
@@ -120,7 +121,7 @@ tested).
 | `GET /api/file?path=` | `{ text, version }`, or a refusal                                     |
 | `GET /api/raw?path=`  | the file's bytes, for a format that takes a URL                       |
 | `PUT /api/files`      | body `{ changes }`; `{ versions }`, or a refusal                      |
-| `GET /api/status`     | `{}` until [git-in-the-host](../../phase1/specs/git-in-the-host.md)   |
+| `GET /api/status`     | `{}` until [git-in-the-host](../../phase3/specs/git-in-the-host.md)   |
 | `GET /api/events`     | server-sent events, below                                             |
 | `GET /api/root`       | `{ name, id }`, below                                                 |
 
@@ -159,7 +160,7 @@ needs. Until host-page lands, `/` answers a one-line page naming the root.
 ## Clarifications
 
 - **Git is used for the listing only** in this spec. Status, diff and commit are
-  [git-in-the-host](../../phase1/specs/git-in-the-host.md).
+  [git-in-the-host](../../phase3/specs/git-in-the-host.md).
 - **`delete` is on the port from the start,** for [file-operations](file-operations.md) and
   [undo-journal](../../../stage5/phase1/specs/undo-journal.md). The app contract's `FileChange` is
   unchanged.
@@ -173,6 +174,33 @@ needs. Until host-page lands, `/` answers a one-line page naming the root.
 - The page, the client interface and development mode with Vite: [host-page](host-page.md).
 - Apps, check-in and undo.
 - Publishing the package, and Windows paths.
+
+## As built
+
+_[#91](https://github.com/stillpointlab/surfaces/pull/91), 2026-11-14. Where the work departed from
+the text above, this section is what the later specs read._
+
+- **The watcher is one plain watch per folder that holds a listed file,** not `fs.watch`
+  recursive. On Linux the recursive watch stops reporting a file once an editor or git has
+  replaced it by a rename, and it watches every file and folder, `node_modules` included.
+  `watchNames(folder, names, onChange)` watches names in any folder, the root's or not.
+- **`PortChange` has a `move` without `content`,** which keeps the file's bytes, so a file that
+  is not text can be renamed.
+- **The page's origin may be either loopback name** (`127.0.0.1` or `localhost`, same port), as
+  the `Host` rule already allowed.
+- **Two more request checks:** an `Origin` that is not the host's is refused on any method, and
+  a request another site started (`Sec-Fetch-Site`) is refused unless it is a navigation.
+- **More refusal codes:** `HOST_WRITE_FAILED` (500, a write that failed half way and was taken
+  back), `HOST_BAD_REQUEST` (400), `HOST_FORBIDDEN` (403), `HOST_NO_ROUTE` (404),
+  `HOST_METHOD_NOT_ALLOWED` (405), `HOST_BODY_TOO_LARGE` (413), `HOST_ERROR` (500) and
+  `HOST_CLOSED` (503).
+- **A success body carries `ok: true`,** so it is a `Result` as it stands.
+- **The path rule also refuses** a `.` segment, and git's folder in any case and in the
+  spellings other file systems fold to it.
+- **A submodule or nested repository** is one `tree` node with nothing under it.
+- **One `put` at a time:** a write lock per port. A path may appear once in a call.
+- **`createHost` answers `LocalHost`:** `Host` with `port` and `ready()`, and options `env` and
+  `warn`.
 
 ## Acceptance / completion checklist
 

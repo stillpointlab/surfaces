@@ -1,5 +1,6 @@
 ---
-column: todo
+column: in-progress
+pr: 92
 created: 2026-11-13T18:34:00-07:00
 tags: [dev-tooling, code]
 ---
@@ -119,6 +120,20 @@ The tree spike's list, as amended by the brief: drag and drop, rename in place, 
 selected, a second tree to hand the cursor to, virtual scrolling, a filter, and type-ahead. Any
 menu or dialog: the host owns those ([file-operations](file-operations.md)). Sharing code with
 Context Manager's trees or its context picker.
+
+## As built
+
+_[#92](https://github.com/stillpointlab/surfaces/pull/92), 2026-11-14._
+
+- **A shadow root.** The element scrolls itself and the page gives it a size. 629 lines with
+  its model and styles.
+- **A folder raises no `tree-activate`:** Enter and a double click open and close it.
+- **A click on the selected row raises no second `tree-select`,** and asking for a menu does not
+  select the row.
+- **`reveal` raises `tree-toggle`** for each folder it opens, and no `tree-select`.
+- **A folder missing from the nodes still has a row,** and the nodes' order does not matter.
+- **The row's menu button is a text `⋯`.** `<spl-icon>` is used for an app's row only.
+- **The keys move from the selected row,** as Context Manager's trees do.
 
 ## Acceptance / completion checklist
 
