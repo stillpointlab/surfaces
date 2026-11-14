@@ -1,5 +1,6 @@
 ---
-column: todo
+column: in-progress
+pr: 93
 created: 2026-11-13T18:30:00-07:00
 tags: [formats, common, host-contract, code]
 ---
@@ -151,6 +152,25 @@ format package:
   [context-manager-adopts-formats](../../phase1/specs/context-manager-adopts-formats.md).
 - The diff element. `<code-diff>` stays an extra the host mounts by tag.
 - A handle the format supplies for itself. Jamie chose data and `apply` (2026-11-13).
+
+## As built
+
+_[#93](https://github.com/stillpointlab/surfaces/pull/93), 2026-11-14._
+
+- **Splitting, the second of the two ways.** It is on for the five format packages, with the
+  split files in `dist/chunks/` and `./dist/chunks/*` in each package's `sideEffects`: without
+  that line a Vite build dropped `<md-editor>`, whose `defineElement` had moved into a chunk.
+  Every built entry of the five packages changed shape, so Context Manager's walks run when its
+  pin next moves.
+- **`common-format/format` also exports `extensionOf` and `fileNameOf`,** which the descriptors
+  share.
+- **The registry throws** on a format registered twice and on an `opens` entry that is not a
+  lower-case extension with one dot.
+- **A host registers md, xmdl, sheet, image, code, in that order,** with code as the fallback:
+  the code format opens `.md` too, because Context Manager's language table does.
+- **`describeFormatDescriptor` takes an optional `{ load }`,** since jsdom never loads an image.
+- **Two paths class differently from Context Manager's classifier:** it trims the path, and its
+  object lookup took `x.constructor` for code.
 
 ## Acceptance / completion checklist
 

@@ -225,7 +225,7 @@ phase opens; phase 2's moved to `stage4/phase2/specs/` on 2026-11-13)
 | 2     | 1    | [explorer-tree](../../phase2/specs/explorer-tree.md)                         | 1   |
 | 2     | 2    | [host-page](../../phase2/specs/host-page.md)                                 | 1   |
 | 2     | 3    | [file-operations](../../phase2/specs/file-operations.md)                     | 1   |
-| 3     | 1    | [git-in-the-host](../specs/git-in-the-host.md)                               | 2   |
+| 3     | 1    | [git-in-the-host](../../phase3/specs/git-in-the-host.md)                     | 2   |
 | 4     | 1    | [context-manager-adopts-formats](../specs/context-manager-adopts-formats.md) | 1   |
 
 **Stage 5: the apps in the host** (specs in `stage5/phase1/specs/`)

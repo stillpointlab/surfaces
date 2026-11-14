@@ -37,7 +37,7 @@ change), or undo across a restart.
   and on size; editor saves left out at first; a commit does not clear it.
 - `StoragePort.put` with `PortChange` and `base`
   ([host-server](../../../stage4/phase2/specs/host-server.md)); staging of moves and deletes
-  ([git-in-the-host](../../../stage4/phase1/specs/git-in-the-host.md)); the runner
+  ([git-in-the-host](../../../stage4/phase3/specs/git-in-the-host.md)); the runner
   ([host-runner](host-runner.md)).
 
 ## Work package

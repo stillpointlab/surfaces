@@ -6,7 +6,7 @@ tags: [dev-tooling, code, major-feature]
 
 # Spec: git in the local host
 
-_The [local host brief](../briefs/local_host.md), outcome 2. Stage 4, phase 3. Two steps, each one
+_The [local host brief](../../phase1/briefs/local_host.md), outcome 2. Stage 4, phase 3. Two steps, each one
 PR here: status and diff, then commit._
 
 ## High-level goal
@@ -18,7 +18,7 @@ works as before, with none of this.
 
 ## Related context
 
-- The [local host spike](../spikes/local-host.md), finding 6: git stands in for drafts and
+- The [local host spike](../../phase1/spikes/local-host.md), finding 6: git stands in for drafts and
   check-in. Its answered questions: moves and deletes are staged, and how.
 - `StoragePort.status()` and `FileStatus` ([host-server](../../phase2/specs/host-server.md)); the tree's marks
   ([explorer-tree](../../phase2/specs/explorer-tree.md)); `<code-diff>` and `DiffElement`
@@ -27,10 +27,42 @@ works as before, with none of this.
 ## Work package
 
 - **Owns:** `packages/hosts/local/src/server/git/` (the only module that runs `git`), its routes,
-  the `HostClient` methods for them, and the page's diff view and commit dialog.
+  the `HostClient` methods for them, the `status` member of `HostEvent`, and the page's diff view
+  and commit dialog.
 - **Changes:** the Node port's `put` (staging) and `status()`; the watcher (two paths under
   `.git`).
 - **Step 2 depends on step 1.** Nothing else runs beside either.
+
+## What phase 2 built (read before the text below)
+
+_Added 2026-11-14 by the claude agent, from reading this spec against the host as built
+([#91](https://github.com/stillpointlab/surfaces/pull/91)–[#96](https://github.com/stillpointlab/surfaces/pull/96)).
+Where it differs from the text below, this section holds._
+
+- **`src/server/git/run.ts` exists.** It is the one function that runs `git`, with an argument
+  list, a timeout and `GIT_OPTIONAL_LOCKS=0` for reads; the listing uses it. This spec's module
+  joins it.
+- **The watcher has no recursive watch.** It watches folders, and
+  `watchNames(folder, names, onChange)` is the hook for `HEAD` and `index`. Ask git for the
+  folder (`git rev-parse --absolute-git-dir`): for a worktree and a submodule it is not
+  `<root>/.git`. The hook holds through git's `index.lock` to `index` rename.
+- **`HostEvent` is in `common-format/host`** and gains the `status` member there. This spec owns
+  that line.
+- **`status()` cannot carry a move's old path,** and a deleted file has no row. The commit
+  dialog and the button's count therefore read a route of their own: `GET /api/changes` answers
+  `{ changes }`, each `{ path, status, from? }`, deleted files included. `status()` stays as it
+  is, for the tree's marks.
+- **The page's moves have no content** (`{ kind: 'move', from, path }`), and a folder rename or
+  delete is many changes in one `put`. Stage them in one `git` call, not one per file.
+- **Staging comes after the write.** If the write succeeded and staging fails, the write stands
+  and `put` still answers success; the host warns on its terminal, and the marks show what git
+  sees.
+- **In the page:** a view is an entry in `address.ts` and a case in the pane's `load`; the
+  Commit button goes in `.explorer-header`, which needs to become a flex row; the no-git notice
+  goes in `.explorer-note`, which is there and hidden; a method is added to `HostClient` in
+  `host-client.ts` and to the fake in `test-support.ts`. A write that moves or deletes the open
+  file goes through `pane.followWrite`.
+- **`createHost` takes `env`,** which is how a test takes `git` off the `PATH`.
 
 ## Technical requirement
 
