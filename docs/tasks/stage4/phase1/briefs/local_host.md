@@ -104,8 +104,12 @@ with the packages' sources reloading; `surfaces [path]` runs it anywhere.
    - **Unlocked,** that row is still the app's entry point: it keeps the app's name and still
      opens the app. Under it are the scope's folders and files, which act as any others do:
      they open in their editors, and the explorer creates, renames and deletes there.
-   - **Locking again** is a lock item on the row, not a matter of collapsing it. Locking hides
-     the files again, and can validate what was changed on the way.
+   - **Locking again** is a lock entry in the row's menu, not a matter of collapsing the row.
+     A mark on the row shows while the scope is unlocked. Locking hides the files again, runs
+     the app's own projection over the scope and shows the problems it reports. It locks
+     either way: the app shows the same problems when it opens, and a lock that refused would
+     leave the scope open.
+   - **Every run starts locked.** An unlocked scope does not outlive the run.
 
    A link to a file in a locked scope opens the file in its preview. The server enforces the
    lock, not only the page: a write to a locked scope that does not come through the app's
@@ -186,17 +190,9 @@ Each is for the spec that meets it, unless Jamie answers first:
   The harness's `HarnessFormat.elements` already names each format's tags; the descriptor would
   replace that field, so the harness reads it too.
 
-- **The lock's details.** Unlocking and locking an app's scope are decided (outcome 1). Open:
-  - **what locking validates.** The lean: it runs the app's own projection over the scope and
-    shows the problems it reports, and it locks either way, since the app shows the same
-    problems when it opens and a lock that refused would leave the scope open;
-  - **where the lock item is.** The lean: an entry in the row's menu, with a mark on the row
-    while the scope is unlocked, so the tree gains no buttons on its rows;
-  - **whether an unlocked scope outlives the run** (the lean: no, every run starts locked).
-
-  Context Manager differs here today: its tree lists an app's files, and a card or a zone file
-  opens in its format's editor. Whether it takes the lock when it adopts is for that phase.
-
+- **The lock in Context Manager.** Context Manager differs today: its tree lists an app's
+  files, and a card or a zone file opens in its format's editor. Whether it takes the lock when
+  it adopts is for that phase.
 - **Undo's reach:** whether a save from an editor is in the journal, whether the journal outlives
   a commit, and where the kept content lives (memory, or a temporary folder the run owns). The
   two limits' numbers are a draft.
