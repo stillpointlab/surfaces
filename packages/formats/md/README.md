@@ -129,6 +129,10 @@ From `@stillpointlab/md-editor`:
   `buildTableNode`
 - types: `MarkdownEditorPlugin`, `MarkdownNodeSerializer`
 
+From `@stillpointlab/md-format/editor`: the same, without `createSchema`, `getSchema`,
+`getMarkdownParser` and `getMarkdownSerializer`. Those are the engine, which the editor imports on
+its first connect; `src/editor/entry.test.ts` keeps this entry from loading it sooner.
+
 From `@stillpointlab/md-editor/markdown`:
 
 - `createMarkdownIt`, `getMarkdownIt`, `renderMarkdown`, `selectedMarkdownSource`
