@@ -11,8 +11,9 @@ second wave: after step 1 of [app-module-grows](app-module-grows.md). Two steps,
 the contract with inventory, then tasks. The two can go to two agents once step 1's contract is
 merged._
 
-> Written with stage 4's specs, before any of stage 4 was built. Stage 5 opens by reading it
-> again against what stage 4 made.
+> Written with stage 4's specs, before any of stage 4 was built, and read again on 2026-11-14
+> against what stage 4 made. The [review](../reviews/specs-against-stage-4.md) lists what changed
+> and why (M8, H7). "What stage 4 built" is what an implementer reads first.
 
 ## High-level goal
 
@@ -34,6 +35,23 @@ for what to read again after an op come from the app's package, not from a host.
   - `tasks.scss` (222) and `inventory.scss` (103), without their check-in blocks.
 - `AppElement`, `requestOp` and `answerOps` in `packages/common/src/app.ts`; the app element
   suite in `packages/common/src/testing/app-element.ts`.
+
+## What stage 4 built
+
+_Added 2026-11-14._
+
+- **The local host mounts a shell in its one pane,** at `#/app/<manifestPath>`. `base` is that
+  fragment, so every link a shell renders is `base` joined to a sub-path as text.
+- **The local host has a dark colour scheme,** and Context Manager has none. The shells and the
+  app elements are seen dark there for the first time; stage 4 found the code editor's
+  highlighting dark on dark this way. `tooling/check-tokens.mjs` already fails a literal colour.
+- **Its page allows no inline script and no `eval`.** A shell sets no `on…` attribute, and
+  builds its markup with `html` and `render`.
+- **The host's menu takes `{ x, y, entries }`.** The board's `open-options-menu` carries
+  `{ items, anchor }`, and the board waits for `options-menu-select` with the chosen `itemId`.
+  A shell lets both through unchanged.
+- **Context Manager's walks select the pages' chrome by id and class** (`e2e/walks/` and
+  `e2e/inventory-walks/` there): the bars, Refresh, Settings and both check-in dialogs.
 
 ## Work package
 
@@ -122,6 +140,13 @@ zone?(path): string }`). Without it the export controls are hidden, which is the
 - Each shell runs the app element suite, with a `hostile()` state.
 - Each app's harness fixtures gain the shell over the memory host, with `project` and `refresh`
   answered from the workspace. The app can then be developed as a page in the harness.
+- **A shell renders in the light DOM,** as every app element does, so a host's selectors and a
+  drag across the board still reach inside it.
+- **Markup the walks know.** Read Context Manager's walks before choosing a shell's markup, and
+  keep an id or a class where keeping it costs nothing. Each PR lists the ids and classes of
+  Context Manager's page chrome that the shell does not keep, so
+  [context-manager-adopts-apps](context-manager-adopts-apps.md) can change the walks in the
+  commit that mounts the shell.
 
 ## Clarifications
 
@@ -148,7 +173,10 @@ zone?(path): string }`). Without it the export controls are hidden, which is the
 - [ ] Shell tests in jsdom: each view; the links for a given `base`; `learn` after each op that
       changes the title or needs a re-read; `opView`; tasks' two claimed ops answered through
       `project`; the empty state; a hostile state.
-- [ ] The harness shows each shell over the memory host, and ops work end to end there.
+- [ ] The harness shows each shell over the memory host, and ops work end to end there, in a
+      light and in a dark colour scheme.
+- [ ] Each PR lists the ids and classes of Context Manager's page chrome the shell does not
+      keep.
 - [ ] `npm run check` is green.
 
 ## Implementation plan

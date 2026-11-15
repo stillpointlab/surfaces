@@ -9,8 +9,9 @@ tags: [apps, common, host-contract, code]
 _The [local host brief](../../../stage4/phase1/briefs/local_host.md), outcome 3. Stage 5, phase 2,
 first wave. Two steps, each one PR here: the contract with inventory, then tasks._
 
-> Written with stage 4's specs, before any of stage 4 was built. Stage 5 opens by reading it
-> again against what stage 4 made.
+> Written with stage 4's specs, before any of stage 4 was built, and read again on 2026-11-14
+> against what stage 4 made. The [review](../reviews/specs-against-stage-4.md) lists what changed
+> and why (M4, L2). "What stage 4 built" is what an implementer reads first.
 
 ## High-level goal
 
@@ -32,10 +33,28 @@ reads them from the module and keeps no per-app file for any of it.
 - `AppModule` in `packages/common/src/app.ts`; the module suite in
   `packages/common/src/testing/app.ts`.
 
+## What stage 4 built
+
+_Added 2026-11-14._
+
+- **Nothing here moved.** `packages/common/src/app.ts` and both app packages are as they were
+  when this was written, and the line counts above still hold at Context Manager's `main`
+  (`74ecae8c`).
+- **The local host's base is a fragment:** `#/app/<manifestPath>`. The query a page reads sits
+  inside the fragment, after the sub-path.
+- **The explorer draws `meta.icon` in an `<spl-icon>`** on the app's row. The icon set has
+  `task` and `inventory`.
+- **The local host's page allows no `eval`.** zod probes `Function('')`, and the page's content
+  security policy reports it; stage 4's follow-up log has the same for xmdl. It does no harm.
+  The local host runs the bounds in its server, so the light entry rule below is also what
+  keeps the probe out of its page.
+- **Stage 5's follow-up log** is `docs/devlogs/stage5/followups.md`.
+
 ## Work package
 
 - **Owns:** the additions to `packages/common/src/app.ts` and to the app suite; a `bounds.ts`,
-  `pages.ts` and `meta.ts` in each of `packages/apps/{inventory,tasks}/src/`.
+  `pages.ts`, `meta.ts` and `changes.ts` in each of `packages/apps/{inventory,tasks}/src/`; the
+  alias in `packages/common/src/host/index.ts`.
 - **Does not change:** Context Manager. Its copies stay until
   [context-manager-adopts-apps](context-manager-adopts-apps.md); the PR adds one line to the stage's
   follow-up log naming the duplication.
@@ -99,15 +118,50 @@ export function matchAppPage(
   pages: readonly AppPage[],
   subPath: string
 ): { page: AppPage; params: Record<string, string> } | null;
+
+/** One file that differs from the last check-in, as a host that knows only files reports it. */
+export interface AppFileChange {
+  path: string;
+  status: 'changed' | 'new' | 'moved' | 'deleted';
+  /** For a moved file, the path it had. */
+  from?: string;
+}
+
+/** What a module tells its core from file changes alone. */
+export interface AppKnown<Facts, S extends AppSnapshot> {
+  facts: Facts;
+  /** The snapshot's host parts: plain data the core reads beyond the files (tasks' pending moves). */
+  snapshot?: Partial<S>;
+}
 ```
 
-`AppModule` gains four members:
+`AppModule` gains five members:
 
 - `meta: AppMeta`;
 - `bounds: AppBounds<V, E, …>`;
 - `pages: readonly AppPage[]`;
 - `placeCreate(plan, paths)`: whether a seeded plan's files fit, which Context Manager's
-  registry holds today as `create.place`.
+  registry holds today as `create.place`;
+- `fromChanges(changes: readonly AppFileChange[], snapshot: S): AppKnown<Facts, S>`: the facts,
+  and the snapshot's host parts, for a host that knows nothing but which files changed.
+
+**`fromChanges` is to an app what `apply` is to a format's descriptor** (Jamie, 2026-11-14, on
+decision 3 of the review: "something like the format object?"). The module is the object a host
+registers, and this member is the one place the app says how file changes read in its own terms:
+data in, data out, and the host does not look inside. The harness's memory host and the local
+host both call it, over what their port reports. A host that knows more (Context Manager, with
+its drafts, pull requests and divergence) builds its facts itself and does not call it.
+
+- **Inventory:** `enabled: true`, and `dirty` as the changed and new files that are the
+  manifest or a zone.
+- **Tasks:** a changed card is `changed`; a new one is in the snapshot's `created`; a moved one
+  has `movedFrom` and an entry in the snapshot's `moves`. The order file and the housekeeping
+  files follow the same statuses. Everything about pull requests and divergence is absent,
+  which the board already accepts.
+
+`HostChange` in `common-format/host` has this shape already and becomes an alias of
+`AppFileChange`, so there is one. No core changes: this is not the shared fact shape the spike
+called "surgery", which stays a non-goal.
 
 ### What changes on the way
 
@@ -122,6 +176,8 @@ export function matchAppPage(
   imports `UNASSIGNED_COLUMN_ID`, `UNASSIGNED_DIR`, `TASKS_ID_MAX_LENGTH` and `TASKS_SLUG_PATTERN`
   from Context Manager's shared code; check which the package already has before copying any.
 - **The bounds are behaviour-identical.** Every limit, enum and pattern is carried over as it is.
+- **A page joins its redirect as text:** `base`, then a sub-path, then a query if it has one. It
+  never builds a `URL` from `base`, which in the local host is a fragment.
 
 ### The suite
 
@@ -132,16 +188,20 @@ export function matchAppPage(
 - `bounds.view` accepts each view its fixtures project;
 - every page's `path` matches through `matchAppPage`, and `resolve` over a fixture answers a view
   the core projects;
-- `meta.label` and `meta.icon` are not empty.
+- a page that redirects answers its `base` followed by a sub-path, for a base that is a path
+  (`/apps/x`) and for one that is a fragment (`#/app/docs/tasks/tasks.yaml`);
+- `meta.label` and `meta.icon` are not empty;
+- `fromChanges` over no changes, and over each fixture's changes, answers facts the core
+  projects with, and a moved card's state says where it moved from.
 
 ### Step 1: the contract, and inventory
 
-The types, `matchAppPage`, the suite's checks, and inventory's three files. Inventory is the
-smaller: two pages, four ops.
+The types, `matchAppPage`, the suite's checks, and inventory's three files and its
+`fromChanges`. Inventory is the smaller: two pages, four ops.
 
 ### Step 2: tasks
 
-Tasks' three files. Its landing page (`''`) keeps its rules: a legacy `?path=` redirect, the
+Tasks' three files and its `fromChanges`. Its landing page (`''`) keeps its rules: a legacy `?path=` redirect, the
 default board, and an empty view with extras when there is none.
 
 ## Clarifications
@@ -161,11 +221,12 @@ default board, and an empty view with extras when there is none.
 
 ## Acceptance / completion checklist
 
-- [ ] `AppModule` has `meta`, `bounds`, `pages` and `placeCreate`, and both modules supply them.
+- [ ] `AppModule` has `meta`, `bounds`, `pages`, `placeCreate` and `fromChanges`, and both
+      modules supply them.
 - [ ] Each schema's limits match Context Manager's at the commit the PR names, checked by tests
       that carry over that repository's cases for them.
 - [ ] `matchAppPage` has tests: an empty path, a parameter, two parameters, no match.
-- [ ] Both apps pass the grown suite.
+- [ ] Both apps pass the grown suite, the redirect check with a fragment base included.
 - [ ] `common` still does not depend on zod; the apps' light entries still do not load it.
 - [ ] `npm run check` is green, and Context Manager's build against this branch is unchanged.
 

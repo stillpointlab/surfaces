@@ -14,3 +14,8 @@ migration's convention spec creates in Context Manager's stage 5 phase 11.
 The format template is not a workspace today, so a template change is proven by scaffolding a trial
 format with `npm run new-format`, testing it, then removing it and restoring the lockfile by hand.
 The one scaffold should make its template testable in place (stage 1 follow-ups, phase 5).
+
+The template also has no `./format` entry (stage 4 follow-ups, format-descriptors), so a format
+made with `npm run new-format` has no descriptor and no host can register it. It needs
+`src/format.ts`, the export and its stub, splitting with `./dist/chunks/*` in `sideEffects`, the
+two tests and the fixtures switched to `format:`.
