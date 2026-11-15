@@ -50,3 +50,9 @@
 - docs/tasks/unassigned/seeds/mermaid-editor.md
 - docs/tasks/unassigned/seeds/slide-editor.md
 - docs/tasks/unassigned/seeds/spritesheet-editor.md
+
+# Test plans moved from Context Manager (2026-11-14). Each is rewritten for the
+# local host or the harness before it is walked.
+- docs/tasks/unassigned/tests/sheet-editor.test.md
+- docs/tasks/unassigned/tests/config-driven-inventory-fields.test.md
+- docs/tasks/unassigned/tests/task-board-refresh.test.md
