@@ -140,7 +140,7 @@ its own save raises nothing.
 - Creating, renaming and deleting files: [file-operations](file-operations.md).
 - Tabs, split panes, search, and a resizable explorer.
 - Apps in the tree. A manifest is a file like any other until
-  [apps-in-the-local-host](../../../stage5/phase1/specs/apps-in-the-local-host.md).
+  [apps-in-the-local-host](../../../stage5/phase3/specs/apps-in-the-local-host.md).
 
 ## As built
 

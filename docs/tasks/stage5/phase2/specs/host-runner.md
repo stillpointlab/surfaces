@@ -196,7 +196,7 @@ work departed from the text above, this is what the later specs read._
   path). Tasks' `fromChanges` marks a card `dirty`, with its `versionColumn`, when `base` is
   given, which is what the harness worked out from its base files before. The memory port
   fills it. The node port's git does not yet; the local host supplies it in
-  [apps-in-the-local-host](../../phase1/specs/apps-in-the-local-host.md).
+  [apps-in-the-local-host](../../phase3/specs/apps-in-the-local-host.md).
 - **The harness keeps what only a fixture knows.** Its `know` is `module.fromChanges` over the
   memory port's `changes()`, with the fixture's pinned facts (a tracked card, a divergence, a
   pull request's state) laid under.
@@ -284,7 +284,7 @@ over a committed repository in a temporary folder.
 
 - Context Manager adopting the runner (the brief's out of scope).
 - Host ops. Each host answers its own.
-- Discovering instances in a folder: [apps-in-the-local-host](../../phase1/specs/apps-in-the-local-host.md).
+- Discovering instances in a folder: [apps-in-the-local-host](../../phase3/specs/apps-in-the-local-host.md).
 
 ## Acceptance / completion checklist
 

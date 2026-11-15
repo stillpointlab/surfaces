@@ -160,7 +160,7 @@ the review. Without `words` the shell uses its own, which say "check in" and nev
 - **The app pane sets `checkin`** each time it sets the shell's input: the words for a commit,
   and the branch from `client.git()`, read again then, with `offerNew: true`. A commit or a
   switch made elsewhere raises `status`, which already resolves the page again
-  ([apps-in-the-local-host](apps-in-the-local-host.md)), so the branch is never the one the page
+  ([apps-in-the-local-host](../../phase3/specs/apps-in-the-local-host.md)), so the branch is never the one the page
   first asked for. A folder that is not a repository has no changed files, so the apps never
   ask.
 - **It answers `checkin` with the commit function:** the title is the commit's summary and the

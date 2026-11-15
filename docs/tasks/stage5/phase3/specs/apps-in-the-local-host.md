@@ -12,8 +12,9 @@ Stage 5, phase 3: after [app-module-grows](../../phase2/specs/app-module-grows.m
 create._
 
 > Written with stage 4's specs, before any of stage 4 was built, and read again on 2026-11-14
-> against what stage 4 made. The [review](../reviews/specs-against-stage-4.md) lists what changed
-> and why (H4, H5, M3, M4, M5, M7, M8). "What stage 4 built" is what an implementer reads first.
+> against what stage 4 made. The [review](../../phase1/reviews/specs-against-stage-4.md) lists what changed
+> and why (H4, H5, M3, M4, M5, M7, M8). It was read once more on 2026-11-14 against phase 2 as
+> built. "What stage 4 built" and "What phase 2 built" are what an implementer reads first.
 
 ## High-level goal
 
@@ -66,6 +67,48 @@ _Added 2026-11-14. Paths are under `packages/hosts/local/src/`._
 - **The page runs under a content security policy** (scripts from its own origin, no `eval`)
   and has a dark colour scheme. Context Manager has neither.
 
+## What phase 2 built
+
+_Added 2026-11-14, from the "As built" sections of
+[app-module-grows](../../phase2/specs/app-module-grows.md),
+[host-runner](../../phase2/specs/host-runner.md) and
+[app-shells](../../phase2/specs/app-shells.md). Read those sections; this is what they change
+here._
+
+- **The module** has `meta`, `bounds`, `pages`, `placeCreate` and `fromChanges`, all required.
+  Each app has a light `./meta` entry (no zod, none of the core) and a `./shell` entry.
+- **The runner** (`@stillpointlab/common-format/host`): `loadInstance`, `runOp`,
+  `projectView`, `createInstance`, `hostRefusalClass`. A host gives it `{ port, know, now }`.
+- **`know` is `module.fromChanges(changes, snapshot)`.** A change is `AppFileChange`: `path`,
+  `status`, `from` for a moved file, and an optional `base`, the file's text at the last
+  commit. Tasks needs `base` to say a card's column moved. The node port's `git.changes()`
+  gives no `base`; `git.base(path)` reads one.
+- **A manifest the lifecycle refuses still loads,** with the refusal in `warnings`, and the
+  core answers for it. Only a manifest that is not there is `APP_MANIFEST_NOT_FOUND`.
+- **The runner's `revision` covers the scope's files,** not what the host knows. A commit
+  changes no file, so it does not move it.
+- **`createInstance` does not check the new instance against the others.**
+- **`hostRefusalClass(code)`** answers `invalid`, `not-found` or `conflict` for the runner's
+  and the port's codes, and nothing for a code that is the module's (ask `refusalClass`).
+- **A shell is a light-DOM element** a host loads, sets (`AppShellInput`), answers and listens
+  to. A host's whole client half is in each app's harness host, which is the model for the app
+  pane: `packages/apps/inventory/dev/host.ts` (`attachHost`) and
+  `packages/apps/tasks/dev/shell.ts`. A core op goes out with `shell.opView(op)`, read before
+  the first wait, and its reply goes to `shell.learn(op, reply)`.
+- **Every `navigate` can be cancelled and carries `{ href }`,** and only a clicked link has a
+  fallback. The strip choosing a phase has none. A host that mounts a shell claims it.
+- **Tasks' shell answers `refresh-stage` and `close-candidates` itself,** through `project`.
+  It asks its host `project` and `refresh`. Inventory's asks neither.
+- **A shell holds no editor links.** Inventory's "Open in editor" asks `link-editor`.
+- **Inventory's export controls are hidden** without `extras.exports`.
+- **The app elements borrow their host's classes** for buttons and form fields: `.button`,
+  `.button-primary`, `.button-secondary`, `.form-field`, `.form-label`, `.form-input`,
+  `.form-help` and `.form-message`. The local host's stylesheet has the first two.
+- **Tasks' sticky pool reads `--spl-tasks-app-sticky-top`,** and the board keys its stored
+  state by `base`.
+- **`pageHref(base, path, params, query)`** in `common-format/app` writes a page's address
+  under a base, the query after a `?`, which is the address this spec gives.
+
 ## Work package
 
 - **Owns:** `server/apps/` (the registry, discovery, facts, routes, the lock) and `client/apps/`
@@ -89,7 +132,8 @@ _Added 2026-11-14. Paths are under `packages/hosts/local/src/`._
 
 - **Server:** a list of modules (`inventoryModule`, `tasksModule`). `createHost` takes it as an
   option (`apps`), both apps by default, so a test can hand it a fake.
-- **Client:** per app id, how to load its shell and its create form.
+- **Client:** per app id, how to load its shell (`./shell`) and its create form
+  (`./create-element`), and its `./meta`.
 
 Nothing else in the host names an app. The runner's `know` is one function for every app:
 `module.fromChanges` over what git reports (Jamie's decision 3 of the review, 2026-11-14; the
@@ -179,23 +223,33 @@ query. With no such instance the pane says there is no app at that address. `add
 the kind, and `navigate`, the title and the history handling treat it as they treat a file's.
 
 1. `GET /api/apps/page` with the manifest path, the sub-path and the query runs `matchAppPage`
-   and the page's `resolve` in the server. It answers the view, its state, the extras, the
-   title and the instance's `revision` (the runner's), or a redirect, or not found.
+   and the page's `resolve` in the server, with `projectView` as the page's `project`. It
+   answers the view, its state, the extras, the title (`page.title(state)`) and a `revision`,
+   or a redirect, or not found. A view that projects nothing is not found unless the page says
+   `emptyWhenMissing`.
+
+   **The `revision` here is the host's:** the runner's, joined with a digest of the changes
+   `know` was handed. The runner's alone covers the files, and a commit changes none of them,
+   yet it changes every mark the app shows.
+
 2. An app pane, beside `FilePane` in the page's `<main>`, mounts the shell and sets its input:
    `base` is `#/app/<manifestPath>`, `location` is the served folder's name, and there is no
    back link. One pane shows at a time. Leaving a file with unsaved edits for an app asks first,
    through `navigate`.
 3. `answerOps` on the shell:
-   - a core op: `POST /api/apps/op` (the runner), which answers the reply and the new
-     `revision`; then `shell.learn`;
+   - a core op: `POST /api/apps/op` (the runner) with `shell.opView(op)`, which answers the
+     reply and the new `revision`; then `shell.learn(op, reply)`;
    - `project`: `GET /api/apps/project`, the view as JSON in the query;
    - `refresh`: the listing, the statuses and the instances are read again;
-   - inventory's `link-editor`: `{ href }` to the file's address;
+   - inventory's `link-editor`: `{ href }` to the file's address, which is the only way a
+     shell opens a file's editor;
    - tasks' `read-file`: the port's `get`; `scan-references`: the core's `referencesTo` over the
      scope's files, in the server; `resolve`: refused with `HOST_NOTHING_TO_RESOLVE`, since there
      is no divergence without a remote.
 4. Requests:
-   - `navigate`: an `href` that starts with `base` sets the address;
+   - `navigate`: the pane claims it (`preventDefault()`) and sets the address when the `href`
+     starts with `#/`, whether a link was clicked or the strip chose a phase. Any other `href`
+     is left to the browser;
    - `open-card`: the file's preview, through `navigate`;
    - `notification`: the page's notice;
    - `reload-request`: the page is resolved again;
@@ -213,7 +267,8 @@ the kind, and `navigate`, the title and the history handling treat it as they tr
    only when the resolved `revision` differs from the one it shows, so its own op, already
    learned from the reply, sets nothing twice.
 
-An invalid manifest opens a pane that lists the errors and offers "Show files…".
+An invalid manifest opens a pane that lists discovery's errors and offers "Show files…". The
+shell is not mounted, though the runner would load the instance.
 
 A refusal's status: `statusFor` learns `HOST_SCOPE_LOCKED` and `HOST_NOTHING_TO_RESOLVE`; an
 `APP_` code and a core's refusal take their class from `hostRefusalClass` or the module's
@@ -231,14 +286,27 @@ Both apps' facts come from the port, and need no network: `know` hands `module.f
 the changes in the instance's region, from `port.git.changes()`, which names a moved file's old
 path. What each app makes of them is in [app-module-grows](../../phase2/specs/app-module-grows.md).
 
+Each changed or moved file's change carries its `base`, the text at the last commit, from
+`port.git.base(path)`. A base is kept until git's `HEAD` moves (the `status` event's cause),
+so an op does not read it twice. A file whose base cannot be read as text goes without.
+
 In a folder that is not a repository nothing is changed, new or moved.
 
 ### Creating an instance
 
 A folder's menu, and the empty space's, gain one entry per app with `meta.create`: "New
 `<noun>` here…". The dialog holds the app's create form, with `meta.create`'s folder copy and
-root consent. `answerOps` on the form sends `create` to `POST /api/apps/create`, which runs
-`createInstance`. The tree then shows the new row, and the pane opens it.
+root consent. `answerOps` on the form sends `create` to `POST /api/apps/create`. The route
+refuses a folder whose region would share a path with a found instance's
+(`HOST_APP_OVERLAP`, 409), which `createInstance` does not check, and then runs it. The tree
+then shows the new row, and the pane opens it.
+
+### Styles the apps borrow
+
+The page's stylesheet gains the classes the app elements take from their host and it lacks:
+`.button-secondary`, `.form-field`, `.form-label`, `.form-input`, `.form-help` and
+`.form-message`, from the shared tokens, in both colour schemes. It sets
+`--spl-tasks-app-sticky-top` if the pane scrolls under anything.
 
 ### `HostClient`
 
@@ -261,7 +329,7 @@ Tasks' facts and host ops, the board's menu request, and creating either app.
   every app has in one shape. A projection's problems are in each app's own state, so they show
   in the app.
 - **Inventory's exports** are not offered here; the shell hides them without `extras.exports`.
-- **Check-in from the app** arrives in [checkin-review](checkin-review.md). Until then the
+- **Check-in from the app** arrives in [checkin-review](../../phase1/specs/checkin-review.md). Until then the
   explorer's Commit button is how app changes are committed.
 - **Fixtures are instances too.** This repository has two `inventory.yaml` files under
   `packages/apps/inventory/dev/examples/`. Served here, each is a locked app row. That is the
@@ -290,7 +358,10 @@ Tasks' facts and host ops, the board's menu request, and creating either app.
       change on disk and the dot on the app's row; commit from the explorer and see the board's
       marks clear; unlock, edit a card as a file, lock again.
 - [ ] By hand, in a scratch folder: create an inventory, add a zone and an item, and commit.
-- [ ] By hand, in a dark colour scheme: both apps read well.
+- [ ] By hand, in a dark colour scheme: both apps read well, their dialogs' buttons and fields
+      included.
+- [ ] After a commit from the explorer the open app's marks clear, by a test: the page's
+      `revision` moves when only the changes do.
 - [ ] Adding an app touches the two registrations and nothing else.
 - [ ] `npm run check` is green.
 

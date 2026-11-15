@@ -50,7 +50,7 @@ says where it went. Nothing was dropped.
   check the open file, so a change made during the outage shows only at the next event or save.
   - Carried 2026-11-14 to the [stage 5 log](../stage5/followups.md). The app pane resolves again
     on the `listed` a reconnection sends
-    ([apps-in-the-local-host](../../tasks/stage5/phase1/specs/apps-in-the-local-host.md)); the
+    ([apps-in-the-local-host](../../tasks/stage5/phase3/specs/apps-in-the-local-host.md)); the
     open file is still not checked.
 - 2026-11-14 (host-page): the sheet editor's save adds `format: csv` to a `.sheet` document and
   drops its final newline.
@@ -73,7 +73,7 @@ says where it went. Nothing was dropped.
 - 2026-11-14 (file-operations): the page finds a row to focus by the tree's markup
   (`[role="treeitem"][data-path]` in its shadow root). The tree could offer `focusRow(path)`.
   - Moved 2026-11-14 to
-    [apps-in-the-local-host](../../tasks/stage5/phase1/specs/apps-in-the-local-host.md), whose
+    [apps-in-the-local-host](../../tasks/stage5/phase3/specs/apps-in-the-local-host.md), whose
     rows and menus need it.
 - 2026-11-14 (file-operations): going back to an address from before a rename says there is no
   file at that path.

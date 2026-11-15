@@ -26,7 +26,7 @@ the harness's memory host. Not reviewed: the specs' designs where stage 4 does n
 Overall / Verdict: the plan holds, and no spec needs to be thrown away. Seven findings would have
 sent an implementing agent the wrong way or stopped it, and they concentrate in the two specs that
 sit on stage 4's code: [undo-journal](../specs/undo-journal.md) and
-[apps-in-the-local-host](../specs/apps-in-the-local-host.md). The worst is in the undo journal:
+[apps-in-the-local-host](../../phase3/specs/apps-in-the-local-host.md). The worst is in the undo journal:
 the port reads and writes text of at most 2 MiB, so the journal as drafted cannot keep a deleted
 image, and its index step would unstage a person's own work. Every finding is written into its
 spec in this PR. Three of them rested on a choice that is Jamie's, and two more questions came
@@ -121,7 +121,7 @@ hold at its `main`.
 
 ### H4. A lock that hides files from the listing breaks the explorer's writes
 
-- **Where:** [apps-in-the-local-host](../specs/apps-in-the-local-host.md), "The row and the
+- **Where:** [apps-in-the-local-host](../../phase3/specs/apps-in-the-local-host.md), "The row and the
   lock"; the explorer's `renameChanges` and `deleteChanges`.
 - **What:** the draft has the server leave a locked instance's files out of the listing. The
   explorer renames a folder by moving every file the listing has under it, so a folder above a
@@ -189,7 +189,7 @@ seems to. The spec adds one port suite in `common-format/testing`, run over both
 ### M3. An instance at the served root has no row to sit on
 
 The tree has no row for `''`, and the overlap rule read by folder would make a root instance
-overlap every other. [apps-in-the-local-host](../specs/apps-in-the-local-host.md) now defines an
+overlap every other. [apps-in-the-local-host](../../phase3/specs/apps-in-the-local-host.md) now defines an
 instance's region once, for the lock, the overlap rule and the tree, and draws a root instance
 above the tree.
 
@@ -281,7 +281,7 @@ Jamie answered all five on 2026-11-14, and each spec now says what he decided.
 - [x] **H1, H2:** [undo-journal](../specs/undo-journal.md) amended.
 - [x] **H3, M1, M2:** [host-runner](../../phase2/specs/host-runner.md) amended.
 - [x] **H4, H5, M3, M4, M5, M7, M8, L1, L3, L4:**
-      [apps-in-the-local-host](../specs/apps-in-the-local-host.md) amended.
+      [apps-in-the-local-host](../../phase3/specs/apps-in-the-local-host.md) amended.
 - [x] **H6, M6:** [checkin-review](../specs/checkin-review.md) amended.
 - [x] **H7, M9:** [context-manager-adopts-apps](../specs/context-manager-adopts-apps.md) amended.
 - [x] **M4, L2:** [app-module-grows](../../phase2/specs/app-module-grows.md) amended.

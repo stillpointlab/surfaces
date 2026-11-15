@@ -130,3 +130,7 @@ are carried here as they were written.
   `close-candidates`, which a shell answers itself. Drop them once every host mounts the shell.
 - 2026-11-14 (app-shells, step 2): tasks' build has no splitting either, so `./shell` carries
   its own copy of the board and the strip (as inventory's, above).
+- 2026-11-14 (phase 2's read for phase 3): the app elements take their buttons' and form
+  fields' looks from classes their host must style (`.button`, `.form-input` and six more).
+  Each host styles them again; the harness has stand-ins. A shared partial in `common`'s styles
+  would give every host the same.
