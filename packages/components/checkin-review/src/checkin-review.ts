@@ -352,6 +352,8 @@ export class CheckinReview extends HTMLElement implements CheckinReviewElement {
       return;
     }
     const op = checkinOpOf(form);
+    // A new attempt: what the last one was told no longer stands.
+    this.showError(null);
     this.setBusy(true);
     const reply = await requestOp<AppShellOps, 'checkin'>(this, { type: 'checkin', ...op });
     const still = this.input === input;

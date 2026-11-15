@@ -365,7 +365,8 @@ describe('asking', () => {
 
   it('a refusal shows as text under the form, which keeps everything, with focus on it', async () => {
     const said = `git commit failed (exit 1). git said:\nlint: line 1\n${HOSTILE_PAYLOAD}`;
-    const { asked } = host(() => fail('HOST_GIT_FAILED', said));
+    const answering = host(() => fail('HOST_GIT_FAILED', said));
+    const { asked } = answering;
     open({ branch: { current: 'main', offerNew: true } });
     box('gone.md').click();
     type(title(), 'Title');
@@ -382,6 +383,15 @@ describe('asking', () => {
     expect(radio('current')!.checked).toBe(true);
     expect(button('confirm').textContent).toBe(WORDS.confirm);
     expect(review.isBusy).toBe(false);
+
+    // Asking again clears the refusal while the host answers.
+    answering.hold();
+    button('confirm').click();
+    await settle();
+    expect(error()).toBeNull();
+    answering.release();
+    await settle();
+    expect(error()).toBe(said);
   });
 
   it('a refusal the host names a field for puts focus there', async () => {

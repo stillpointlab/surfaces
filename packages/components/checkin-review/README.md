@@ -81,7 +81,7 @@ is a new branch's name. Enter in a one-line field confirms; in the body, Ctrl+En
 While the op is unanswered the review is busy: the fields are held, confirm says `words.busy`, and
 a second confirm, Enter, Escape and the close button do nothing. A refusal shows its message under
 the form as text, many lines kept, with everything kept and focus on it (or on `refusalField`'s
-field). A reply closes it.
+field); asking again clears it while the host answers. A reply closes it.
 
 `messageOf(title, body)` is the message a host over git makes of the two: the title, then a blank
 line and the body. The pure parts (`rowsFor`, `groupsOf`, `checkinProblem`, `checkinOpOf`) are
