@@ -323,6 +323,79 @@ to end.
 
 Tasks' facts and host ops, the board's menu request, and creating either app.
 
+## As built: step 1
+
+_2026-11-14, by an Opus 5.5 sub-agent; reviewed and checked by the orchestrating agent, who
+looked at the screenshots. Where the work departed from the text above, this is what step 2 and
+the later specs read. The package's README has the routes in full._
+
+**Server:**
+
+- **The default apps are inventory alone** until step 2 adds tasks.
+- **`GET /api/apps`** answers `{ apps }`. A root instance's `FoundInstance` also carries its
+  `scope`, which is its region; the page needs it to hide the paths.
+- **`POST /api/apps/lock`** takes `{ manifestPath, locked }` and answers
+  `{ ok, errors, warnings }`: the lifecycle's on a lock, empty on an unlock.
+- **`GET /api/apps/page`** takes `manifestPath`, `path` (the sub-path) and `query`, both as the
+  app's link wrote them. It answers `{ ok, view, state, extras?, title, revision }` or
+  `{ ok, redirect, permanent? }`. Not found is a refusal.
+- **`GET /api/apps/project`** takes `manifestPath` and `view` as JSON, and answers
+  `{ ok, state, revision }`. **`POST /api/apps/op`** takes `{ manifestPath, op, view? }` and
+  answers `{ ok, reply, revision }`.
+- **Codes:** `HOST_SCOPE_LOCKED` (409), `HOST_APP_NOT_FOUND` (404), `HOST_APP_PAGE_NOT_FOUND`
+  (404), and `HOST_APP_INVALID` (409) for any app route on an instance discovery marks invalid.
+- **A refusal's status** is `hostRefusalClass`'s, then `statusFor` for a `HOST_` code, then the
+  module's `refusalClass`.
+- **Discovery runs afresh for each route that needs it,** the check on `PUT /api/files`
+  included, so a lock is never checked against stale regions. One listing a write.
+- **Overlap:** two folder instances overlap when one folder is within the other; a root
+  instance overlaps another when its scope meets that one's folder or scope. Both are invalid,
+  each with a line naming the other.
+- **`know`** keeps a change whose path, or whose `from`, is in the region. Bases are kept until
+  the watch on git's `HEAD` and index fires.
+- **The host's `revision`** is a digest of the runner's and of the changes last handed to
+  `know`.
+- **The request helpers** (`statusFor`, `json`, `refuse`, `readBody`) moved to
+  `server/respond.ts`.
+
+**Page:**
+
+- **The address** is `{ view: 'app', manifestPath, subPath, query }`. The sub-path and the
+  query stay as the app's links wrote them. An address that matches no instance keeps
+  `manifestPath` as `null` and reads back unchanged.
+- **`HostClient`** has `apps()`, `appPage`, `appProject`, `appOp` and `setAppLock`. `appCreate`
+  is step 2's.
+- **The page reads the listing, the statuses and the apps together,** and an `apps` event
+  reads all three again.
+- **`navigate` is claimed when the `href` starts with `#/`.**
+- **`checkin-request` opens the explorer's commit dialog,** which the text above did not say;
+  without it inventory's "Check in…" did nothing.
+  [checkin-review](../../phase1/specs/checkin-review.md) replaces it.
+- **"Lock files" asks nothing of its own.** When the open file is in the region with unsaved
+  edits, the question for discarding them is asked first, and the file goes to its preview.
+- **Leaving the app's pane removes its shell.** Opening the app again resolves the page afresh.
+- **A root instance's row** is a button (icon, label, an "unlocked" chip, a dot) and a menu
+  button; the menu key and a right click open the menu too.
+- **`link-editor` answers `#/edit/<path>`,** which a locked file turns into its preview.
+- **Borrowed classes:** the six named above and `.sr-only`, which inventory's zone uses.
+- **The tree element has `focusRow(path)`,** and the pane takes `lockedBy(path)`.
+- **Words** not given above are drafts in `words.ts`, under `apps`.
+
+**For step 2:**
+
+- Tasks is two registrations (the module in `DEFAULT_APPS`; a client entry with its meta and
+  its shell) and three lines of packaging.
+- A host op is answered before `runOp`, and replies without a `revision`, so the pane does not
+  call `learn` for it.
+- The pane needs a handle on the page's menu for `open-options-menu`.
+- An app's `./create-element` entry is not among the sources development mode maps.
+
+**By hand,** against the built server in Chromium, light and dark, in a scratch repository with
+one inventory in a folder and one at the root: the rows, a zone and an item added and read back
+from disk, the dot, a commit from the explorer clearing the app's marks with no reload, the
+files shown and locked again, a zone file edited as a file, a locked file by its address, a
+folder above the instance, and a write to a locked file refused with 409.
+
 ## Clarifications
 
 - **"Runs the app's own projection" on lock** is met by `validateAndScope`, which is the part

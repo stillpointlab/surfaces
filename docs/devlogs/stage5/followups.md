@@ -134,3 +134,13 @@ are carried here as they were written.
   fields' looks from classes their host must style (`.button`, `.form-input` and six more).
   Each host styles them again; the harness has stand-ins. A shared partial in `common`'s styles
   would give every host the same.
+- 2026-11-14 (apps-in-the-local-host, step 1): discovery lists the folder on every write and
+  every app route. Keeping the answer until the watcher reports a change would save it once
+  folders are large.
+- 2026-11-14 (apps-in-the-local-host, step 1): the kept base texts are dropped when the watch
+  on git's `HEAD` fires, about 100 ms after a commit. A file changed again inside that window
+  could be compared with the old base.
+- 2026-11-14 (apps-in-the-local-host, step 1): an instance nested inside another is reported
+  invalid with it, and its row is hidden by the outer one's lock until that is unlocked.
+- 2026-11-14 (apps-in-the-local-host, step 1): a root instance's row shows a dot for changes
+  and no status letter. An instance whose app the page has no shell for still gets a row.
