@@ -4,6 +4,8 @@
  * `URL`: Context Manager's is a path, the local host's a fragment
  * (`#/app/inventory/inventory.yaml`).
  */
+import { pageHref } from '@stillpointlab/common-format/app';
+
 import { inventoryPages } from '../pages.js';
 
 /** What a host exports, as it hands them to the shell in `extras.exports`. */
@@ -18,22 +20,6 @@ export interface InventoryExports {
 export function zoneSlugOfPath(path: string): string {
   const file = path.slice(path.lastIndexOf('/') + 1);
   return file.replace(/\.ya?ml$/i, '');
-}
-
-/**
- * One page's href: `base` joined as text to the page's path, each `:name`
- * segment filled with its parameter, encoded. The empty path is `base` itself;
- * one trailing slash on `base` is dropped before joining.
- */
-export function pageHref(base: string, path: string, params: Record<string, string> = {}): string {
-  if (path === '') return base;
-  const filled = path
-    .split('/')
-    .map((segment) =>
-      segment.startsWith(':') ? encodeURIComponent(params[segment.slice(1)] ?? '') : segment
-    )
-    .join('/');
-  return `${base.endsWith('/') ? base.slice(0, -1) : base}${filled}`;
 }
 
 /** The page that shows one zone, from the module's pages: `/room/:roomSlug`. */

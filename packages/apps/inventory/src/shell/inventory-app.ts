@@ -16,11 +16,11 @@ import '@stillpointlab/spl-icon-component';
 import '../element/inventory-overview.js';
 import '../element/inventory-zone.js';
 
-import { createReadyGate } from '@stillpointlab/common-format/app';
+import { createReadyGate, pageHref } from '@stillpointlab/common-format/app';
 import { defineElement } from '@stillpointlab/common-format/elements';
 import { html, render } from '@stillpointlab/common-format/html';
 
-import { exportsOf, pageHref, zoneHref, zoneSlugOfPath } from './links.js';
+import { exportsOf, zoneHref, zoneSlugOfPath } from './links.js';
 import { shellStyles } from './shell.styles';
 
 import type { InventoryOverview } from '../element/inventory-overview.js';
