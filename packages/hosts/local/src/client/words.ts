@@ -6,7 +6,10 @@
 // dialogs are the file-operations spec's, where it has words for them. The git
 // notice is the git-in-the-host spec's; the Changes view's messages are drafts.
 // The commit dialog's choice ("On <branch>", "On a new branch") is the spec's; the
-// rest of its words, and the notice after a commit, are drafts.
+// rest of its words, and the notice after a commit, are drafts. The apps' words
+// (`apps`) are the apps-in-the-local-host spec's where it gives them (the "Show
+// files…" question, the folder's reason, the menu's entries), and drafts beside
+// them.
 
 export interface Confirmation {
   question: string;
@@ -99,6 +102,8 @@ export const words = {
     separate: 'A separate repository (a submodule or a nested one): change it there.',
     holdsSeparate: 'This folder holds a separate repository, which cannot be moved from here.',
     truncated: 'The folder is too large to list in full, so its files are not all known here.',
+    /** The spec's draft: a folder above an app's locked files. */
+    holdsLocked: 'This folder holds an app’s locked files. Show the files first.',
   },
 
   /**
@@ -127,6 +132,48 @@ export const words = {
       folderExists: (path: string) => `There is already a folder at ${path}.`,
       fileInTheWay: (path: string) => `${path} is a file, so it cannot hold another.`,
     },
+  },
+
+  /** An app's row, its menu, its pane, and the lock. */
+  apps: {
+    /** The menu on an app's row (the spec's entries). */
+    open: 'Open',
+    showFiles: 'Show files…',
+    lockFiles: 'Lock files',
+    menuLabel: (label: string) => `Options for ${label}`,
+    /** The spec's draft, word for word: asked before an app's files are shown. */
+    showFilesConfirm: {
+      question: 'Show this app’s files?',
+      detail:
+        'Changes made to them skip the app’s rules, and the app may report problems until they are fixed.',
+      confirm: 'Show files',
+      cancel: 'Cancel',
+    } satisfies Confirmation,
+    /** The row above the tree for an app at the served folder's root. */
+    rootRows: 'Apps in the served folder',
+    unlocked: 'unlocked',
+    unlockedTitle: 'Unlocked: this app’s files are listed, and changes to them skip its rules',
+    holdsChanges: 'Holds changes',
+    /** The notice after "Lock files": the problems the lifecycle reports follow it. */
+    locked: (label: string) => `${label}’s files are locked again.`,
+    lockedProblems: (label: string) =>
+      `${label}’s files are locked again. The app reports problems with them:`,
+    lockFailed: (message: string) => `The files could not be locked. ${message}`,
+    unlockFailed: (message: string) => `The files could not be shown. ${message}`,
+    /** The pane's line over a locked file, which opens in its preview. */
+    lockedLine: (label: string) =>
+      `This file is one of ${label}’s files, which are locked, so it opens in its preview. Show the app’s files to edit it here.`,
+    /** The app pane, when it has nothing to mount. */
+    loading: 'Opening the app…',
+    noApp: 'There is no app at this address.',
+    notFound: 'The app has no page at this address.',
+    unknownApp: (app: string) => `This page cannot show the ${app} app.`,
+    loadFailed: 'The app could not be loaded.',
+    readFailed: (message: string) => `The app could not be read. ${message}`,
+    /** An instance discovery found but cannot open: its manifest, or an overlap. */
+    invalidTitle: (label: string) => `${label} cannot open`,
+    invalidIntro: 'These are the problems with its files:',
+    invalidHelp: 'Show its files to fix them, then lock them again.',
   },
 
   /** The Commit button, its dialog, and the notice after a commit. */

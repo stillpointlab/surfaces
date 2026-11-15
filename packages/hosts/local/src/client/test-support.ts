@@ -6,7 +6,16 @@
 
 import { createFormatRegistry } from '@stillpointlab/common-format/format';
 
-import type { HostClient, HostEvent } from './host-client';
+import { inRegion } from '../shared/apps';
+
+import type {
+  AppLockAnswer,
+  AppOpAnswer,
+  AppPageAnswer,
+  FoundInstance,
+  HostClient,
+  LocalHostEvent,
+} from './host-client';
 import type { FolderNode, Result } from '@stillpointlab/common-format/app';
 import type { FormatDescriptor } from '@stillpointlab/common-format/format';
 import type {
@@ -39,7 +48,7 @@ export interface FakeHost extends HostClient {
   /** Hold every `get` until `release()`. */
   hold: boolean;
   release(): void;
-  emit(event: HostEvent): void;
+  emit(event: LocalHostEvent): void;
   /** Write a file as something outside the page would, and say so. */
   writeOutside(path: string, text: string | null): void;
   /** What `git()` answers: not a repository unless a test says so. */
@@ -59,6 +68,21 @@ export interface FakeHost extends HostClient {
   /** Hold every `commit` until `releaseCommit()`. */
   holdCommit: boolean;
   releaseCommit(): void;
+  /** The instances `apps()` answers; `setAppLock` changes their `unlocked` and says so. */
+  instances: FoundInstance[];
+  /** How `appPage` answers; by default a page whose state names the call. */
+  pageAnswer: (manifestPath: string, path: string, query: string) => Result<AppPageAnswer>;
+  /** How `appOp` answers; by default a reply with the next revision. */
+  opAnswer: (manifestPath: string, op: unknown, view: unknown) => Result<AppOpAnswer>;
+  /** The app calls, in order: `page:<manifest><path>?<query>`, `op:<type>`, `project`, `lock:<manifest>:<locked>`. */
+  readonly appCalls: string[];
+  /** The ops sent, with their views. */
+  readonly ops: { manifestPath: string; op: unknown; view: unknown }[];
+  /** Hold every `appOp` until `releaseOp()`. */
+  holdOp: boolean;
+  releaseOp(): void;
+  /** What `setAppLock` answers on a lock. */
+  lockAnswer: AppLockAnswer;
 }
 
 export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHost {
@@ -67,11 +91,13 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
   let next = 0;
   const stamp = (path: string) => versions.set(path, `v${++next}`);
   for (const path of disk.keys()) stamp(path);
-  const listeners = new Set<(event: HostEvent) => void>();
+  const listeners = new Set<(event: LocalHostEvent) => void>();
   let held: (() => void)[] = [];
   let heldPuts: (() => void)[] = [];
   let heldCommits: (() => void)[] = [];
+  let heldOps: (() => void)[] = [];
   let commitCount = 0;
+  let opCount = 0;
 
   const host: FakeHost = {
     disk,
@@ -89,6 +115,27 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
     gitCalls: [],
     commits: [],
     holdCommit: false,
+    instances: [],
+    appCalls: [],
+    ops: [],
+    holdOp: false,
+    lockAnswer: { errors: [], warnings: [] },
+    pageAnswer: (manifestPath, path, query) => ({
+      ok: true,
+      view: { type: 'page', path },
+      state: { manifestPath, path, query },
+      title: `Page ${path || '/'}`,
+      revision: 'r0',
+    }),
+    opAnswer: () => {
+      opCount += 1;
+      return { ok: true, reply: { done: opCount }, revision: `op${opCount}` };
+    },
+    releaseOp() {
+      const waiting = heldOps;
+      heldOps = [];
+      for (const go of waiting) go();
+    },
     releaseCommit() {
       const waiting = heldCommits;
       heldCommits = [];
@@ -146,6 +193,14 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
     async put(changes) {
       host.puts.push([...changes]);
       if (host.holdPut) await new Promise<void>((go) => heldPuts.push(go));
+      // As the server does: no write into a locked app's files.
+      for (const change of changes) {
+        for (const path of change.kind === 'move' ? [change.from, change.path] : [change.path]) {
+          if (host.instances.some((i) => !i.unlocked && inRegion(i, path))) {
+            return { ok: false, code: 'HOST_SCOPE_LOCKED', message: `${path} is locked.` };
+          }
+        }
+      }
       if (host.refuseNextPut) {
         const refusal = host.refuseNextPut;
         host.refuseNextPut = undefined;
@@ -245,6 +300,31 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
       const commit = `${commitCount}`.padStart(40, 'c');
       queueMicrotask(() => host.emit({ type: 'status' }));
       return { ok: true, commit, short: commit.slice(-7), branch: host.gitInfo.branch ?? '' };
+    },
+    async apps() {
+      return host.instances.map((instance) => ({ ...instance }));
+    },
+    async appPage(manifestPath, path, query) {
+      host.appCalls.push(`page:${manifestPath}${path}${query ? `?${query}` : ''}`);
+      return host.pageAnswer(manifestPath, path, query);
+    },
+    async appProject(manifestPath, view) {
+      host.appCalls.push('project');
+      return { ok: true, state: { manifestPath, view }, revision: 'project' };
+    },
+    async appOp(manifestPath, op, view) {
+      host.appCalls.push(`op:${(op as { type: string }).type}`);
+      host.ops.push({ manifestPath, op, view });
+      if (host.holdOp) await new Promise<void>((go) => heldOps.push(go));
+      return host.opAnswer(manifestPath, op, view);
+    },
+    async setAppLock(manifestPath, locked) {
+      host.appCalls.push(`lock:${manifestPath}:${locked}`);
+      const instance = host.instances.find((i) => i.manifestPath === manifestPath);
+      if (!instance) return { ok: false, code: 'HOST_APP_NOT_FOUND', message: 'no app' };
+      instance.unlocked = !locked;
+      queueMicrotask(() => host.emit({ type: 'apps' }));
+      return { ok: true, ...(locked ? host.lockAnswer : { errors: [], warnings: [] }) };
     },
     watch(listener) {
       listeners.add(listener);

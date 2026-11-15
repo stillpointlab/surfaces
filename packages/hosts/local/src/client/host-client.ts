@@ -5,13 +5,20 @@
 // `fetch` or `EventSource` (an ESLint rule in the root config fails any other).
 // A later spec adds a method here, never a second way to reach the server.
 
+import type {
+  AppLockAnswer,
+  AppOpAnswer,
+  AppPageAnswer,
+  AppsAnswer,
+  FoundInstance,
+  LocalHostEvent,
+} from '../shared/apps';
 import type { FolderNode, Result } from '@stillpointlab/common-format/app';
 import type {
   FileStatus,
   HostChange,
   HostCommit,
   HostCommitRequest,
-  HostEvent,
   HostGit,
   PortChange,
 } from '@stillpointlab/common-format/host';
@@ -23,6 +30,13 @@ export type {
   HostEvent,
   HostGit,
 } from '@stillpointlab/common-format/host';
+export type {
+  AppLockAnswer,
+  AppOpAnswer,
+  AppPageAnswer,
+  FoundInstance,
+  LocalHostEvent,
+} from '../shared/apps';
 
 export interface HostClient {
   /** The served folder: its name, and the id the page keys stored state by. */
@@ -44,7 +58,23 @@ export interface HostClient {
    * Only in `repository`; a refusal, git's own included, is a `Result` failure.
    */
   commit(request: HostCommitRequest): Promise<Result<HostCommit>>;
-  watch(listener: (event: HostEvent) => void): () => void;
+  /** The app instances in the folder, locked or not, valid or not. */
+  apps(): Promise<FoundInstance[]>;
+  /**
+   * One page of an instance: `path` is its sub-path under the instance
+   * (`''`, `/room/kitchen`) and `query` its query, both still encoded.
+   */
+  appPage(manifestPath: string, path: string, query: string): Promise<Result<AppPageAnswer>>;
+  /** One view of an instance, for a shell's `project`. */
+  appProject(
+    manifestPath: string,
+    view: unknown
+  ): Promise<Result<{ state: object | null; revision: string }>>;
+  /** One op on an instance; `view` is what the shell's `opView` answered for it. */
+  appOp(manifestPath: string, op: unknown, view?: unknown): Promise<Result<AppOpAnswer>>;
+  /** Lock an instance's files, or unlock them; locking answers the manifest's problems now. */
+  setAppLock(manifestPath: string, locked: boolean): Promise<Result<AppLockAnswer>>;
+  watch(listener: (event: LocalHostEvent) => void): () => void;
 }
 
 /** The code a client answers with when the server could not be reached or answered nonsense. */
@@ -71,6 +101,12 @@ export function createHttpClient(base = ''): HostClient {
     }
     return (await response.json()) as T;
   }
+
+  const post = (body: unknown): RequestInit => ({
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 
   /** A route that answers a `Result`: success or the server's refusal, never a throw. */
   async function result<T extends object>(route: string, init?: RequestInit): Promise<Result<T>> {
@@ -104,12 +140,20 @@ export function createHttpClient(base = ''): HostClient {
       const query = `path=${encodeURIComponent(path)}${revision ? `&rev=${revision}` : ''}`;
       return url(`/api/raw?${query}`);
     },
-    commit: (request) =>
-      result('/api/commit', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(request),
-      }),
+    commit: (request) => result('/api/commit', post(request)),
+    apps: async () => (await read<AppsAnswer>('/api/apps')).apps,
+    appPage: (manifestPath, path, query) =>
+      result(`/api/apps/page?${new URLSearchParams({ manifestPath, path, query })}`),
+    appProject: (manifestPath, view) =>
+      result(
+        `/api/apps/project?${new URLSearchParams({ manifestPath, view: JSON.stringify(view) })}`
+      ),
+    appOp: (manifestPath, op, view) =>
+      result(
+        '/api/apps/op',
+        post(view === undefined ? { manifestPath, op } : { manifestPath, op, view })
+      ),
+    setAppLock: (manifestPath, locked) => result('/api/apps/lock', post({ manifestPath, locked })),
     put: (changes) =>
       result('/api/files', {
         method: 'PUT',
@@ -120,9 +164,9 @@ export function createHttpClient(base = ''): HostClient {
       const source = new EventSource(url('/api/events'));
       let dropped = false;
       source.onmessage = (message: MessageEvent<string>) => {
-        let event: HostEvent;
+        let event: LocalHostEvent;
         try {
-          event = JSON.parse(message.data) as HostEvent;
+          event = JSON.parse(message.data) as LocalHostEvent;
         } catch {
           return;
         }

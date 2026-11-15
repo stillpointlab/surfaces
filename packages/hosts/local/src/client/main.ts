@@ -1,8 +1,9 @@
-// The page's entry: the host's own client over its routes, the five formats, and
-// md's sanitizing renderer, started before anything opens (a deep link to a
+// The page's entry: the host's own client over its routes, the five formats, the
+// apps (each loaded when one opens), and md's sanitizing renderer, started before anything opens (a deep link to a
 // markdown file included; the pane waits for it before it mounts an md element).
 
 import './theme.css';
+import { createAppRegistry } from './apps/registry';
 import { createHttpClient } from './host-client';
 import { installMarkdownRenderer } from './markdown';
 import { startPage } from './page';
@@ -15,5 +16,6 @@ void installMarkdownRenderer().catch((error: unknown) =>
 startPage({
   client: createHttpClient(),
   registry: createHostRegistry(),
+  apps: createAppRegistry(),
   prepare: prepareFormat,
 });

@@ -72,16 +72,34 @@ modal-dialog:not(:defined) {
   text-align: center;
 }
 
-// The notice after a commit: a live region, there and empty until a commit.
-.commit-notice {
+// The page's one notice: a live region, there and empty until something is said
+// (a commit, an app's notification, what a lock reports). Its tone colours it.
+.page-notice {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: $spacing-sm;
   padding: $spacing-xs $spacing-md;
   border-bottom: 1px solid $border-light;
-  color: $success-color;
-  background: $success-bg;
+  color: $info-color;
+  background: $info-bg;
   font-size: 0.8125rem;
+
+  &[data-tone='success'] {
+    color: $success-color;
+    background: $success-bg;
+  }
+
+  &[data-tone='warning'] {
+    border-bottom-color: $warning-border;
+    color: $warning-color;
+    background: $warning-bg;
+  }
+
+  &[data-tone='error'] {
+    border-bottom-color: $error-border;
+    color: $error-color;
+    background: $error-bg;
+  }
 
   &:empty {
     padding: 0;
@@ -89,13 +107,18 @@ modal-dialog:not(:defined) {
   }
 }
 
-.commit-notice-text {
+.page-notice-text {
   flex: 1 1 auto;
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
-.commit-notice-close {
+.page-notice-lines {
+  margin: $spacing-xs 0 0;
+  padding-left: 1.25em;
+}
+
+.page-notice-close {
   flex: none;
   padding: 0 $spacing-xs;
   border: 0;
@@ -130,6 +153,99 @@ modal-dialog:not(:defined) {
   display: block;
 }
 
+// The rows above the tree for the apps at the served folder's root: the app's
+// icon and label on a button, and its menu button, like a tree row.
+.app-roots {
+  display: flex;
+  flex-direction: column;
+  padding: $spacing-xs 0;
+  border-bottom: 1px solid $border-light;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.app-root {
+  display: flex;
+  align-items: center;
+  padding: 0 $spacing-xs 0 0;
+
+  &:hover {
+    background: $background-hover;
+  }
+}
+
+.app-root-open {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: $spacing-xs;
+  min-width: 0;
+  padding: 2px $spacing-md;
+  border: 0;
+  color: $text-primary;
+  background: none;
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+
+  &[aria-current='page'] {
+    font-weight: 600;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $focus-ring;
+    outline-offset: -2px;
+  }
+}
+
+.app-root-label {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.app-root-unlocked {
+  flex: none;
+  padding: 0 $spacing-xs;
+  border: 1px solid $warning-border;
+  border-radius: $border-radius-sm;
+  color: $warning-color;
+  font-size: 0.6875rem;
+}
+
+.app-root-dot {
+  flex: none;
+  width: 0.4rem;
+  height: 0.4rem;
+  margin-left: auto;
+  border-radius: 50%;
+  background: $warning-color;
+}
+
+.app-root-menu {
+  flex: none;
+  padding: 0 $spacing-xs;
+  border: 0;
+  border-radius: $border-radius-sm;
+  color: $text-muted;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    color: $text-primary;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $focus-ring;
+    outline-offset: 1px;
+  }
+}
+
 host-file-tree {
   flex: 1 1 auto;
   min-height: 0;
@@ -140,6 +256,75 @@ host-file-tree {
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+}
+
+// The file pane and the app pane: one shows at a time, filling `<main>`.
+.file-pane,
+.app-pane {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+// The app's shell scrolls in the pane; its top margin is the host's.
+.app-pane {
+  overflow: auto;
+}
+
+.app-pane-body {
+  flex: 1 1 auto;
+  padding: $spacing-lg $spacing-xl;
+
+  > [hidden] {
+    display: none;
+  }
+}
+
+.app-pane-message[hidden] {
+  display: none;
+}
+
+.app-invalid {
+  margin: $spacing-xl;
+  max-width: 48rem;
+
+  .button {
+    margin-top: $spacing-sm;
+  }
+}
+
+.app-invalid-title {
+  margin: 0 0 $spacing-sm;
+  font-size: 1.125rem;
+}
+
+.app-invalid-errors {
+  margin: 0;
+  padding-left: 1.25em;
+  color: $error-color;
+  font-family: ui-monospace, monospace;
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+
+// Over a locked file's preview: why it does not open in its editor.
+.pane-locked {
+  flex: none;
+  margin: 0;
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid $border-light;
+  color: $text-muted;
+  background: $background-muted;
+  font-size: 0.8125rem;
+
+  &[hidden] {
+    display: none;
+  }
 }
 
 .pane-header {
@@ -246,6 +431,85 @@ host-file-tree {
     background: $button-bg;
     filter: brightness(1.1);
   }
+}
+
+// The classes an app's elements take from their host (the app-shells spec):
+// `.button`, `.button-primary` above, and these, on the shared tokens.
+.button-secondary {
+  border-color: $border-dark;
+  color: $text-primary;
+  background: $background-secondary;
+
+  &:hover:not(:disabled) {
+    background: $background-hover;
+  }
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-md;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.form-label {
+  color: $text-primary;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.form-input {
+  box-sizing: border-box;
+  max-width: 100%;
+  padding: $spacing-xs $spacing-sm;
+  border: 1px solid $border-dark;
+  border-radius: $border-radius-md;
+  color: $text-primary;
+  background: $background-primary;
+  font: inherit;
+  font-size: 0.875rem;
+
+  &:focus-visible {
+    outline: 2px solid $focus-ring;
+    outline-offset: 1px;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+  }
+
+  &[aria-invalid='true'] {
+    border-color: $error-border;
+  }
+}
+
+.form-help {
+  margin: 0;
+  color: $text-muted;
+  font-size: 0.8125rem;
+}
+
+.form-message {
+  margin: 0;
+  color: $error-color;
+  font-size: 0.8125rem;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .pane-banner {

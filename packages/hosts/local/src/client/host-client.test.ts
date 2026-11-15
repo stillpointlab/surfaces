@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createHttpClient, UNREACHABLE } from './host-client';
 
-import type { HostEvent } from './host-client';
+import type { LocalHostEvent } from './host-client';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -125,6 +125,58 @@ describe('createHttpClient', () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
+  it('reads the apps, and throws when it cannot', async () => {
+    const instance = { app: 'inventory', manifestPath: 'inv/inventory.yaml', folder: 'inv' };
+    const fetch = answering({ apps: [instance] });
+    expect(await createHttpClient().apps()).toEqual([instance]);
+    expect(fetch.mock.calls[0][0]).toBe('/api/apps');
+    answering({ ok: false, code: 'HOST_ERROR', message: 'broken' }, 500);
+    await expect(createHttpClient().apps()).rejects.toThrow('broken');
+  });
+
+  it('asks for an app’s page, a view and an op, and sets its lock', async () => {
+    const client = createHttpClient();
+    let fetch = answering({ ok: true, view: null, state: null, title: 't', revision: 'r' });
+    expect(await client.appPage('a b/inventory.yaml', '/room/x%20y', 'q=1')).toMatchObject({
+      ok: true,
+      title: 't',
+    });
+    const page = new URL(fetch.mock.calls[0][0], 'http://h');
+    expect(page.pathname).toBe('/api/apps/page');
+    expect(Object.fromEntries(page.searchParams)).toEqual({
+      manifestPath: 'a b/inventory.yaml',
+      path: '/room/x%20y',
+      query: 'q=1',
+    });
+
+    fetch = answering({ ok: true, state: {}, revision: 'r' });
+    await client.appProject('inv/inventory.yaml', { type: 'zone', slug: 'a' });
+    const project = new URL(fetch.mock.calls[0][0], 'http://h');
+    expect(project.pathname).toBe('/api/apps/project');
+    expect(JSON.parse(project.searchParams.get('view')!)).toEqual({ type: 'zone', slug: 'a' });
+
+    fetch = answering({ ok: true, reply: {}, revision: 'r' });
+    await client.appOp('inv/inventory.yaml', { type: 'add-zone', title: 'A' }, { type: 'space' });
+    expect(fetch.mock.calls[0][0]).toBe('/api/apps/op');
+    expect(fetch.mock.calls[0][1]?.method).toBe('POST');
+    expect(JSON.parse(String(fetch.mock.calls[0][1]?.body))).toEqual({
+      manifestPath: 'inv/inventory.yaml',
+      op: { type: 'add-zone', title: 'A' },
+      view: { type: 'space' },
+    });
+
+    fetch = answering({ ok: false, code: 'HOST_APP_NOT_FOUND', message: 'none' }, 404);
+    expect(await client.setAppLock('inv/inventory.yaml', false)).toMatchObject({
+      ok: false,
+      code: 'HOST_APP_NOT_FOUND',
+    });
+    expect(fetch.mock.calls[0][0]).toBe('/api/apps/lock');
+    expect(JSON.parse(String(fetch.mock.calls[0][1]?.body))).toEqual({
+      manifestPath: 'inv/inventory.yaml',
+      locked: false,
+    });
+  });
+
   it('throws on a read the page cannot do without', async () => {
     answering({ ok: false, code: 'HOST_FORBIDDEN', message: 'Not from here.' }, 403);
     await expect(createHttpClient().list()).rejects.toThrow('Not from here.');
@@ -133,7 +185,7 @@ describe('createHttpClient', () => {
   it('watches the event stream, says the list is stale after a reconnection, and stops', () => {
     vi.stubGlobal('EventSource', FakeSource);
     const client = createHttpClient();
-    const events: HostEvent[] = [];
+    const events: LocalHostEvent[] = [];
     const stop = client.watch((event) => events.push(event));
     const source = FakeSource.last;
     expect(source.url).toBe('/api/events');

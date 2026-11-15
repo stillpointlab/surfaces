@@ -44,6 +44,8 @@ export interface FileOpsContext {
   navigate(address: Address, how: 'push', focus: boolean): Promise<boolean>;
   /** Make the address name what the pane shows now, in place of the current entry. */
   showAddress(state: { path: string; view: View } | null): void;
+  /** Whether a folder holds an app's locked files, so its files cannot all be moved from here. */
+  holdsLocked?(folder: string): boolean;
 }
 
 export interface FileOps {
@@ -51,6 +53,8 @@ export interface FileOps {
   entriesFor(detail: Pick<TreeMenuDetail, 'path' | 'kind'>): MenuEntry[];
   /** Focus a row by path, if it is shown. */
   focusRow(path: string): boolean;
+  /** Ask for a new file's path in `folder`, write it and open it: the menu's New file…. */
+  newFile(folder: string): Promise<void>;
   readonly dialog: FileOpDialog;
   destroy(): void;
 }
@@ -60,15 +64,7 @@ export function createFileOps(host: HTMLElement, context: FileOpsContext): FileO
   const dialog = new FileOpDialog(host);
   const baseOf = (path: string) => pane.versionOf(path);
 
-  function focusRow(path: string): boolean {
-    for (const row of tree.shadowRoot?.querySelectorAll<HTMLElement>('[role="treeitem"]') ?? []) {
-      if (row.dataset.path === path) {
-        row.focus();
-        return true;
-      }
-    }
-    return false;
-  }
+  const focusRow = (path: string): boolean => tree.focusRow(path);
 
   /** The tree's own tab stop: the selected row, or the first. */
   function focusTree(): void {
@@ -203,7 +199,8 @@ export function createFileOps(host: HTMLElement, context: FileOpsContext): FileO
     }
     if (path === '') return [entry(menu.newFile, () => void newFile(''))];
     const index = context.listing();
-    const problem = folderProblem(index, path);
+    const problem =
+      folderProblem(index, path) ?? (context.holdsLocked?.(path) ? words.menu.holdsLocked : null);
     return [
       // A separate repository takes no new file from here; a cut listing still can.
       entry(menu.newFile, () => void newFile(path), index.separate.has(path) ? problem : null),
@@ -215,6 +212,7 @@ export function createFileOps(host: HTMLElement, context: FileOpsContext): FileO
   return {
     entriesFor,
     focusRow,
+    newFile,
     dialog,
     destroy: () => dialog.destroy(),
   };

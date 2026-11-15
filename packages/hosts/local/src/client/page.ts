@@ -3,15 +3,18 @@
 // through the `HostClient` it is given.
 //
 // The wiring, for the specs that build on it:
-// - `tree-select` and `tree-activate` open files; `tree-toggle` keeps the open
-//   folders; `tree-menu` opens the host's menu (`menu/`) with the row's entries
-//   from `file-ops/`, in `wire`. Another kind of row adds its entries there.
+// - `tree-select` and `tree-activate` open files, and an app's row opens the app;
+//   `tree-toggle` keeps the open folders; `tree-menu` opens the host's menu
+//   (`menu/`) with the row's entries from `file-ops/`, or an app row's own, in
+//   `wire`. Another kind of row adds its entries there.
 // - `menu` is the page's one options menu: anything that asks for a menu opens
 //   it with `menu.open({ x, y, entries })`.
 // - `navigate` is the one way to open something: it asks before unsaved edits are
 //   lost, writes the address, and tells the pane. A new view (`#/diff/<path>`) is
-//   an entry in `address.ts` and a case in the pane.
-// - `refresh` lists the folder again, as a `listed` event does.
+//   an entry in `address.ts` and a case in the pane. An app's address
+//   (`#/app/<manifestPath>…`) shows the app pane in place of the file pane.
+// - `refresh` lists the folder again, with its statuses and its apps, as a
+//   `listed` or an `apps` event does.
 // - git: the page asks `client.git()` once. In `repository` the statuses mark the
 //   tree and tell the pane which files offer the Changes view (`statusOf`); a
 //   `status` event reads them again. In `no-git` the explorer's note says git was
@@ -20,15 +23,27 @@
 //   files changed (the statuses' count: one per moved file, deleted files
 //   included) and opens `commit/`'s dialog, which reads the changes again while
 //   it is open when the host says they moved. After a commit the marks are read
-//   at once (not only on the `status` event the commit raises), and the notice
-//   under the header names the commit and its branch until it is dismissed or
-//   the next commit replaces it. It is a live region, so a screen reader says it.
+//   at once (not only on the `status` event the commit raises).
+// - the notice under the header is the page's one: the commit's message, an
+//   app's `notification` and the problems a lock reports all show there, a line
+//   and a short list, the newest in place of the last, until it is dismissed. It
+//   is a live region, so a screen reader says it.
+// - apps (`apps/`): the page reads the instances with the listing. A locked
+//   instance's files are left out of the tree, and its folder is the app's row;
+//   an instance at the served root has a row above the tree. The row's menu
+//   shows or locks the files. A file in a locked region opens in its preview, and
+//   a folder above one cannot be renamed or deleted here.
 
 import '@stillpointlab/modal-dialog-component';
+import '@stillpointlab/spl-icon-component';
 import { fileNameOf } from '@stillpointlab/common-format/format';
 import { html, render } from '@stillpointlab/common-format/html';
 
-import { formatAddress, parseAddress } from './address';
+import { inRegion } from '../shared/apps';
+
+import { appAddress, formatAddress, parseAddress } from './address';
+import { AppPane } from './apps/app-pane';
+import { appTreeView, holdsChanges, holdsLocked, lockedBy } from './apps/tree-view';
 import { CommitDialog } from './commit/dialog';
 import { createConfirm } from './confirm';
 import { createFileOps } from './file-ops/file-ops';
@@ -40,24 +55,26 @@ import { readOpenFolders, writeOpenFolders } from './stored';
 import './tree/host-file-tree';
 import { words } from './words';
 
-import type { Address, View } from './address';
+import type { Address, AppAddress, View } from './address';
+import type { Notice } from './apps/app-pane';
+import type { ClientApps } from './apps/registry';
 import type { Confirm } from './confirm';
 import type { FileOps } from './file-ops/file-ops';
-import type { HostClient, HostEvent, HostGit } from './host-client';
+import type { FoundInstance, HostClient, HostGit, LocalHostEvent } from './host-client';
+import type { MenuEntry } from './menu/menu';
 import type { PaneState } from './pane';
-import type {
-  HostFileTree,
-  TreeEventDetail,
-  TreeMark,
-  TreeMenuDetail,
-} from './tree/host-file-tree';
+import type { HostFileTree, TreeEventDetail, TreeMenuDetail } from './tree/host-file-tree';
 import type { FolderNode } from '@stillpointlab/common-format/app';
 import type { FormatDescriptor, FormatRegistry } from '@stillpointlab/common-format/format';
 import type { FileStatus, HostCommit } from '@stillpointlab/common-format/host';
 
+export type { Notice } from './apps/app-pane';
+
 export interface PageOptions {
   client: HostClient;
   registry: FormatRegistry;
+  /** The apps the page can show, by id (`createAppRegistry()`); none by default. */
+  apps?: ClientApps;
   /** What must happen before a format's element mounts (md's sanitizing renderer). */
   prepare?: (format: FormatDescriptor) => Promise<void>;
   /** Where the page renders: `document.body` by default. */
@@ -69,6 +86,8 @@ export interface PageOptions {
 export interface HostPage {
   readonly tree: HostFileTree;
   readonly pane: FilePane;
+  /** The app pane: one instance's shell. */
+  readonly appPane: AppPane;
   readonly confirm: Confirm;
   /** The page's one options menu. */
   readonly menu: HostMenu;
@@ -76,12 +95,20 @@ export interface HostPage {
   readonly fileOps: FileOps;
   /** The commit dialog. */
   readonly commit: CommitDialog;
+  /** The instances, as last read. */
+  readonly instances: readonly FoundInstance[];
   /** Open the commit dialog, as the Commit button does; the commit made, or null. */
   openCommit(): Promise<HostCommit | null>;
+  /** Show a notice in the page's one notice; `null` clears it. */
+  notify(notice: Notice | null): void;
   /** Settles once the first listing and the first address have been handled. */
   readonly ready: Promise<void>;
   /** Open what an address names, asking first when edits would be lost; false if declined. */
   navigate(address: Address | null, how?: 'push' | 'replace'): Promise<boolean>;
+  /** "Show files…": ask, then unlock the instance's files. True when they were shown. */
+  showFiles(instance: FoundInstance): Promise<boolean>;
+  /** "Lock files": lock the instance's files again, and show what the lock reports. */
+  lockFiles(instance: FoundInstance): Promise<boolean>;
   /** List the folder again. */
   refresh(): Promise<void>;
   /** Stop listening to the host and the window. */
@@ -102,6 +129,7 @@ let styled = false;
 
 export function startPage(options: PageOptions): HostPage {
   const { client, registry } = options;
+  const apps = options.apps ?? {};
   const host = options.root ?? document.body;
   if (!styled) {
     styled = true;
@@ -112,14 +140,17 @@ export function startPage(options: PageOptions): HostPage {
 
   render(
     host,
-    html`<div class="host-page"><nav class="explorer" aria-label="${words.explorer}"><header class="explorer-header"><span class="explorer-name"></span><button type="button" class="button explorer-commit" hidden>${words.commit.button}<span class="explorer-commit-count"></span></button></header><div class="commit-notice" role="status"></div><p class="explorer-note" hidden></p><host-file-tree></host-file-tree></nav><main class="pane"></main></div>`
+    html`<div class="host-page"><nav class="explorer" aria-label="${words.explorer}"><header class="explorer-header"><span class="explorer-name"></span><button type="button" class="button explorer-commit" hidden>${words.commit.button}<span class="explorer-commit-count"></span></button></header><div class="page-notice" role="status"></div><p class="explorer-note" hidden></p><div class="app-roots" role="group" aria-label="${words.apps.rootRows}" hidden></div><host-file-tree></host-file-tree></nav><main class="pane"><div class="file-pane"></div><div class="app-pane" hidden></div></main></div>`
   );
   const tree = host.querySelector('host-file-tree') as HostFileTree;
   const rootName = host.querySelector<HTMLElement>('.explorer-name')!;
   const note = host.querySelector<HTMLElement>('.explorer-note')!;
   const commitButton = host.querySelector<HTMLButtonElement>('.explorer-commit')!;
   const commitCount = host.querySelector<HTMLElement>('.explorer-commit-count')!;
-  const notice = host.querySelector<HTMLElement>('.commit-notice')!;
+  const notice = host.querySelector<HTMLElement>('.page-notice')!;
+  const rootRows = host.querySelector<HTMLElement>('.app-roots')!;
+  const filePaneElement = host.querySelector<HTMLElement>('.file-pane')!;
+  const appPaneElement = host.querySelector<HTMLElement>('.app-pane')!;
   const confirm = createConfirm(host);
   const controller = new AbortController();
   const { signal } = controller;
@@ -133,10 +164,14 @@ export function startPage(options: PageOptions): HostPage {
   let git: HostGit | null = null;
   /** The last statuses read, by path. */
   let statuses: Record<string, FileStatus> = {};
+  /** The app instances, as last read. */
+  let instances: FoundInstance[] = [];
   /** The explorer's note: one line each for git and the listing. */
   const notes: { git: string | null; list: string | null } = { git: null, list: null };
+  /** Which pane shows: a file's, or an app's. */
+  let showing: 'file' | 'app' = 'file';
 
-  const pane: FilePane = new FilePane(host.querySelector<HTMLElement>('.pane')!, {
+  const pane: FilePane = new FilePane(filePaneElement, {
     client,
     registry,
     confirm,
@@ -149,7 +184,27 @@ export function startPage(options: PageOptions): HostPage {
     statusOf: (path) =>
       git?.state === 'repository' && Object.hasOwn(statuses, path) ? statuses[path] : undefined,
     onState: showState,
+    lockedBy: (path) => lockedBy(instances, path)?.label ?? null,
   });
+
+  const appPane = new AppPane(appPaneElement, {
+    client,
+    apps,
+    location: () => folderName,
+    navigate: (hash, how = 'push') => {
+      const address = parseAddress(hash, manifests());
+      if (address) void navigate(address, how);
+    },
+    notify: (shown) => showNotice(shown),
+    refresh: () => refresh(),
+    showFiles: (instance) => void showFiles(instance),
+    checkin: () => void openCommit(),
+    onTitle: () => showTitle(),
+  });
+
+  const manifests = (): string[] => instances.map((instance) => instance.manifestPath);
+  const instanceAt = (manifestPath: string | null): FoundInstance | null =>
+    instances.find((instance) => instance.manifestPath === manifestPath) ?? null;
 
   /** The Commit button: in a repository, with the number of changed files. */
   function showCommit(): void {
@@ -159,12 +214,18 @@ export function startPage(options: PageOptions): HostPage {
     commitButton.setAttribute('aria-label', words.commit.buttonLabel(count));
   }
 
-  function showNotice(made: HostCommit | null): void {
+  /** The page's one notice: a line and a short list, or nothing. */
+  function showNotice(shown: Notice | null): void {
+    notice.dataset.tone = shown?.tone ?? 'info';
     render(
       notice,
-      made === null
+      shown === null
         ? html``
-        : html`<span class="commit-notice-text">${words.commit.notice(made.short, made.branch)}</span><button type="button" class="commit-notice-close" aria-label="${words.commit.dismiss}" title="${words.commit.dismiss}">×</button>`
+        : html`<div class="page-notice-text"><span>${shown.text}</span>${
+            shown.lines && shown.lines.length > 0
+              ? html`<ul class="page-notice-lines">${shown.lines.map((line) => html`<li>${line}</li>`)}</ul>`
+              : ''
+          }</div><button type="button" class="page-notice-close" aria-label="${words.commit.dismiss}" title="${words.commit.dismiss}">×</button>`
     );
   }
 
@@ -198,25 +259,62 @@ export function startPage(options: PageOptions): HostPage {
     }
   }
 
+  /** Whether the file pane already shows what a file address names. */
+  function showsFile(address: Address | null): boolean {
+    const current = pane.current;
+    return (
+      showing === 'file' &&
+      address !== null &&
+      address.view !== 'app' &&
+      current !== null &&
+      current.path === address.path &&
+      current.view === pane.viewFor(address.path, address.view)
+    );
+  }
+
   async function navigate(
     address: Address | null,
     how: 'push' | 'replace' = 'push',
     focus = false
   ): Promise<boolean> {
-    const current = pane.current;
-    const same =
-      address !== null &&
-      current !== null &&
-      current.path === address.path &&
-      current.view === pane.viewFor(address.path, address.view);
-    if (!same && !(await pane.confirmLeave())) return false;
+    if (address?.view === 'app') {
+      // Leaving a file with unsaved edits for an app asks first.
+      if (!(await pane.confirmLeave())) return false;
+      writeAddress(address, how);
+      showApp(address);
+      return true;
+    }
+    if (!showsFile(address) && !(await pane.confirmLeave())) return false;
     writeAddress(
       address ? { ...address, view: pane.viewFor(address.path, address.view) } : null,
       how
     );
+    showFilePane();
     if (address) void pane.open(address.path, address.view, { focus });
     else pane.close();
     return true;
+  }
+
+  /** The app pane in place of the file pane, at an app's address. */
+  function showApp(address: AppAddress): void {
+    showing = 'app';
+    pane.close();
+    filePaneElement.hidden = true;
+    appPaneElement.hidden = false;
+    const instance = instanceAt(address.manifestPath);
+    tree.selected = instance && instance.folder !== '' ? instance.folder : null;
+    void appPane.open(address, instance);
+    showRoots();
+    showTitle();
+  }
+
+  function showFilePane(): void {
+    if (showing === 'file') return;
+    showing = 'file';
+    appPane.close();
+    appPaneElement.hidden = true;
+    filePaneElement.hidden = false;
+    showRoots();
   }
 
   async function onPopState(event: PopStateEvent): Promise<void> {
@@ -224,14 +322,9 @@ export function startPage(options: PageOptions): HostPage {
       undoing = false;
       return;
     }
-    const address = parseAddress(location.hash);
+    const address = parseAddress(location.hash, manifests());
     const current = pane.current;
-    const same =
-      address !== null &&
-      current !== null &&
-      current.path === address.path &&
-      current.view === pane.viewFor(address.path, address.view);
-    if (!same && !(await pane.confirmLeave())) {
+    if (!showsFile(address) && !(await pane.confirmLeave())) {
       // Put the address back where it was.
       const at = indexOf(event.state);
       if (at !== null && at !== index) {
@@ -254,28 +347,55 @@ export function startPage(options: PageOptions): HostPage {
     } else {
       index = at;
     }
-    if (address) {
+    if (address?.view === 'app') {
+      showApp(address);
+    } else if (address) {
+      showFilePane();
       tree.reveal(address.path);
       void openAddress(address);
     } else {
+      showFilePane();
       pane.close();
     }
   }
 
   /** Open what the address already names, saying so when the format has no editor. */
   function openAddress(address: Address): Promise<void> {
+    if (address.view === 'app') {
+      showApp(address);
+      return Promise.resolve();
+    }
+    showFilePane();
     const view = pane.viewFor(address.path, address.view);
     if (view !== address.view) writeAddress({ path: address.path, view }, 'replace');
     return pane.open(address.path, view);
   }
 
+  /** The document's title: what the pane shows, then the folder. */
+  function showTitle(state: PaneState | null = pane.current): void {
+    let name: string;
+    if (showing === 'app') {
+      const title = appPane.current?.title;
+      name = title ? `${title} — ` : '';
+    } else {
+      name = state ? `${state.dirty ? '● ' : ''}${fileNameOf(state.path)} — ` : '';
+    }
+    document.title = `${name}${folderName || 'Surfaces'}`;
+  }
+
   /** Keep the title and the address in step with what the pane shows. */
   function showState(state: PaneState | null): void {
-    const name = state ? `${state.dirty ? '● ' : ''}${fileNameOf(state.path)} — ` : '';
-    document.title = `${name}${folderName || 'Surfaces'}`;
+    if (showing !== 'file') return;
+    showTitle(state);
     // An editor-less format opens in its preview: the address says so.
     const address = parseAddress(location.hash);
-    if (state && !pane.busy && address?.path === state.path && address.view !== state.view) {
+    if (
+      state &&
+      !pane.busy &&
+      address?.view !== 'app' &&
+      address?.path === state.path &&
+      address.view !== state.view
+    ) {
       writeAddress({ path: state.path, view: state.view }, 'replace');
     }
   }
@@ -285,7 +405,7 @@ export function startPage(options: PageOptions): HostPage {
   let listing: Promise<void> | null = null;
   let listAgain = false;
 
-  /** List the folder and its statuses into the tree; one listing at a time. */
+  /** List the folder, its statuses and its apps into the tree; one listing at a time. */
   async function refresh(): Promise<void> {
     if (listing) {
       listAgain = true;
@@ -295,15 +415,21 @@ export function startPage(options: PageOptions): HostPage {
       do {
         listAgain = false;
         try {
-          const [list, status] = await Promise.all([client.list(), client.status()]);
+          const [list, status, found] = await Promise.all([
+            client.list(),
+            client.status(),
+            client.apps(),
+          ]);
           nodes = list.nodes;
           truncated = list.truncated;
           listingIndex = null;
           statuses = status;
-          tree.setNodes(nodes, marksOf(status));
-          showCommit();
+          instances = found;
+          showTree();
           notes.list = list.truncated ? words.explorerTruncated(nodes.length) : null;
           pane.statusChanged();
+          pane.lockChanged();
+          appPane.instancesChanged(instances);
         } catch (error) {
           notes.list = words.explorerFailed(String(error));
         }
@@ -320,23 +446,47 @@ export function startPage(options: PageOptions): HostPage {
   async function refreshMarks(head = false): Promise<void> {
     try {
       statuses = await client.status();
-      tree.setNodes(nodes, marksOf(statuses));
-      showCommit();
+      showTree();
       pane.statusChanged({ head });
     } catch {
       // the next listing tries again
     }
   }
 
-  function marksOf(status: Record<string, TreeMark['status']>): Record<string, TreeMark> {
-    // Own properties only, so a path named `__proto__` is a path like any other.
-    return Object.fromEntries(
-      Object.entries(status).map(([path, mark]) => [path, { status: mark }])
+  /** The tree, the rows above it and the Commit button, from what was last read. */
+  function showTree(): void {
+    const view = appTreeView(nodes, statuses, instances);
+    tree.setNodes(view.nodes, view.marks);
+    showRoots();
+    showCommit();
+  }
+
+  /** The rows above the tree: one per instance at the served root. */
+  function showRoots(): void {
+    const roots = instances.filter((instance) => instance.folder === '');
+    rootRows.hidden = roots.length === 0;
+    const open = showing === 'app' ? appPane.current?.manifestPath : null;
+    render(
+      rootRows,
+      html`${roots.map(
+        (instance) =>
+          html`<div class="app-root" data-manifest="${instance.manifestPath}"><button type="button" class="app-root-open" data-action="open" title="${instance.manifestPath}"${
+            open === instance.manifestPath ? html` aria-current="page"` : ''
+          }><spl-icon class="app-icon" icon-name="${instance.icon}" data-size="small" data-padding="none" aria-hidden="true" inert></spl-icon><span class="app-root-label">${instance.label}</span>${
+            instance.unlocked
+              ? html`<span class="app-root-unlocked" title="${words.apps.unlockedTitle}">${words.apps.unlocked}</span>`
+              : ''
+          }${
+            holdsChanges(instance, statuses)
+              ? html`<span class="app-root-dot" role="img" aria-label="${words.apps.holdsChanges}" title="${words.apps.holdsChanges}"></span>`
+              : ''
+          }</button><button type="button" class="app-root-menu" data-action="menu" aria-label="${words.apps.menuLabel(instance.label)}" aria-haspopup="menu">⋯</button></div>`
+      )}`
     );
   }
 
-  function onHostEvent(event: HostEvent): void {
-    if (event.type === 'listed') {
+  function onHostEvent(event: LocalHostEvent): void {
+    if (event.type === 'apps' || event.type === 'listed') {
       void refresh();
     } else if (event.type === 'changed') {
       void pane.fileChanged(event.paths);
@@ -344,15 +494,30 @@ export function startPage(options: PageOptions): HostPage {
     } else if (event.type === 'status') {
       void refreshMarks(true);
     }
-    void commit.changesMoved();
+    if (event.type !== 'apps') {
+      if (showing === 'app') appPane.hostEvent(event);
+      void commit.changesMoved();
+    }
   }
 
   async function openFromTree(detail: TreeEventDetail, view: View): Promise<void> {
+    if (detail.kind === 'app') {
+      const instance = instances.find((found) => found.folder === detail.path);
+      if (instance) await openApp(instance);
+      return;
+    }
     if (detail.kind !== 'file') return;
     const current = pane.current;
     // Selecting the open file again keeps it as it is.
-    if (view === 'preview' && current?.path === detail.path) return;
+    if (showing === 'file' && view === 'preview' && current?.path === detail.path) return;
     const opened = await navigate({ path: detail.path, view }, 'push', view === 'edit');
+    if (!opened) tree.selected = pane.current?.path ?? null;
+  }
+
+  /** Open an instance's first page, unless the app pane shows that instance already. */
+  async function openApp(instance: FoundInstance): Promise<void> {
+    if (showing === 'app' && appPane.current?.manifestPath === instance.manifestPath) return;
+    const opened = await navigate(appAddress(instance.manifestPath));
     if (!opened) tree.selected = pane.current?.path ?? null;
   }
 
@@ -369,11 +534,53 @@ export function startPage(options: PageOptions): HostPage {
     const made = await commit.open();
     if (made) {
       git = { ...git, branch: made.branch };
-      showNotice(made);
+      showNotice({ text: words.commit.notice(made.short, made.branch), tone: 'success' });
       await refreshMarks(true);
     }
     return made;
   }
+
+  // ---- the lock ----
+
+  async function showFiles(instance: FoundInstance): Promise<boolean> {
+    if (!(await confirm(words.apps.showFilesConfirm))) return false;
+    const answer = await client.setAppLock(instance.manifestPath, false);
+    if (!answer.ok) {
+      showNotice({ text: words.apps.unlockFailed(answer.message), tone: 'error' });
+      return false;
+    }
+    await refresh();
+    // The files are under the row now: open it to show them.
+    if (instance.folder !== '' && !tree.openPaths.includes(instance.folder)) {
+      tree.openPaths = [...tree.openPaths, instance.folder];
+      if (rootId !== null) writeOpenFolders(rootId, tree.openPaths);
+    }
+    return true;
+  }
+
+  async function lockFiles(instance: FoundInstance): Promise<boolean> {
+    // An unsaved edit to one of its files would be refused once they are locked.
+    const open = pane.current;
+    const losing =
+      showing === 'file' && open !== null && open.dirty && inRegion(instance, open.path);
+    if (losing && !(await confirm(words.discard(fileNameOf(open.path))))) return false;
+    const answer = await client.setAppLock(instance.manifestPath, true);
+    if (!answer.ok) {
+      showNotice({ text: words.apps.lockFailed(answer.message), tone: 'error' });
+      return false;
+    }
+    const problems = [...answer.errors, ...answer.warnings];
+    showNotice(
+      problems.length === 0
+        ? { text: words.apps.locked(instance.label), tone: 'success' }
+        : { text: words.apps.lockedProblems(instance.label), lines: problems, tone: 'warning' }
+    );
+    await refresh();
+    pane.lockChanged({ discard: losing });
+    return true;
+  }
+
+  // ---- the menus ----
 
   const menu = new HostMenu(host);
   const fileOps = createFileOps(host, {
@@ -384,17 +591,58 @@ export function startPage(options: PageOptions): HostPage {
     refresh,
     navigate: (address, how, focus) => navigate(address, how, focus),
     showAddress: (state) => writeAddress(state, 'replace'),
+    holdsLocked: (folder) => holdsLocked(instances, folder),
   });
 
+  /** An app row's entries: Open, then the lock's, and New file… while its files are shown. */
+  function appEntries(instance: FoundInstance): MenuEntry[] {
+    const entries: MenuEntry[] = [{ label: words.apps.open, action: () => void openApp(instance) }];
+    if (instance.unlocked) {
+      entries.push(
+        { label: words.apps.lockFiles, action: () => void lockFiles(instance) },
+        { label: words.menu.newFile, action: () => void fileOps.newFile(instance.folder) }
+      );
+    } else {
+      entries.push({ label: words.apps.showFiles, action: () => void showFiles(instance) });
+    }
+    return entries;
+  }
+
   function openMenu(detail: TreeMenuDetail): void {
+    const instance =
+      detail.kind === 'app' ? instances.find((found) => found.folder === detail.path) : undefined;
     menu.open({
       x: detail.x,
       y: detail.y,
-      entries: fileOps.entriesFor(detail),
-      label: words.menu.label(detail.path),
+      entries: instance ? appEntries(instance) : fileOps.entriesFor(detail),
+      label: instance ? words.apps.menuLabel(instance.label) : words.menu.label(detail.path),
       // Back to the row it was asked on; for the space under the rows, to what had focus.
       ...(detail.path === '' ? {} : { returnFocus: () => void fileOps.focusRow(detail.path) }),
     });
+  }
+
+  /** A root instance's menu, at its row above the tree. */
+  function openRootMenu(row: HTMLElement, instance: FoundInstance): void {
+    const box = row.getBoundingClientRect();
+    const opener = row.querySelector<HTMLElement>('.app-root-open');
+    menu.open({
+      x: box.left,
+      y: box.bottom,
+      entries: appEntries(instance),
+      label: words.apps.menuLabel(instance.label),
+      returnFocus: () => {
+        const again = rootRows.querySelector<HTMLElement>(
+          `.app-root[data-manifest="${CSS.escape(instance.manifestPath)}"] .app-root-open`
+        );
+        (again ?? opener)?.focus();
+      },
+    });
+  }
+
+  function rootOf(event: Event): { row: HTMLElement; instance: FoundInstance } | null {
+    const row = (event.target as Element).closest<HTMLElement>('.app-root');
+    const instance = row ? instanceAt(row.dataset.manifest ?? null) : null;
+    return row && instance ? { row, instance } : null;
   }
 
   function wire(): void {
@@ -420,11 +668,44 @@ export function startPage(options: PageOptions): HostPage {
       },
       { signal }
     );
+    rootRows.addEventListener(
+      'click',
+      (event) => {
+        const at = rootOf(event);
+        if (!at) return;
+        const action = (event.target as Element).closest<HTMLElement>('[data-action]')?.dataset
+          .action;
+        if (action === 'menu') openRootMenu(at.row, at.instance);
+        else if (action === 'open') void openApp(at.instance);
+      },
+      { signal }
+    );
+    rootRows.addEventListener(
+      'keydown',
+      (event) => {
+        if (event.key !== 'ContextMenu' && !(event.key === 'F10' && event.shiftKey)) return;
+        const at = rootOf(event);
+        if (!at) return;
+        event.preventDefault();
+        openRootMenu(at.row, at.instance);
+      },
+      { signal }
+    );
+    rootRows.addEventListener(
+      'contextmenu',
+      (event) => {
+        const at = rootOf(event);
+        if (!at) return;
+        event.preventDefault();
+        openRootMenu(at.row, at.instance);
+      },
+      { signal }
+    );
     commitButton.addEventListener('click', () => void openCommit(), { signal });
     notice.addEventListener(
       'click',
       (event) => {
-        if (!(event.target as Element).closest('.commit-notice-close')) return;
+        if (!(event.target as Element).closest('.page-notice-close')) return;
         showNotice(null);
         commitButton.focus();
       },
@@ -475,9 +756,11 @@ export function startPage(options: PageOptions): HostPage {
     let listed: () => void = () => undefined;
     const firstListing = new Promise<void>((done) => (listed = done));
     const opening = (async () => {
-      const address = parseAddress(location.hash);
-      // The Changes view is offered by status, so it waits for the first statuses.
-      if (address?.view === 'diff') await firstListing;
+      const first = parseAddress(location.hash);
+      // The Changes view is offered by status, and an app is found among the
+      // instances, so both wait for the first listing.
+      if (first?.view === 'diff' || first?.view === 'app') await firstListing;
+      const address = parseAddress(location.hash, manifests());
       if (address) await openAddress(address);
     })();
     try {
@@ -486,7 +769,7 @@ export function startPage(options: PageOptions): HostPage {
       folderName = root.name;
       rootName.textContent = root.name;
       rootName.title = root.name;
-      showState(pane.current);
+      showTitle();
     } catch (error) {
       notes.list = words.explorerFailed(String(error));
       showNote();
@@ -495,25 +778,38 @@ export function startPage(options: PageOptions): HostPage {
     await refresh();
     listed();
     if (rootId !== null) tree.openPaths = readOpenFolders(rootId);
-    const address = parseAddress(location.hash);
-    if (address) tree.reveal(address.path);
+    const address = parseAddress(location.hash, manifests());
+    if (address?.view === 'app') {
+      const instance = instanceAt(address.manifestPath);
+      if (instance && instance.folder !== '') tree.reveal(instance.folder);
+    } else if (address) {
+      tree.reveal(address.path);
+    }
     await opening;
   })();
 
   return {
     tree,
     pane,
+    appPane,
     confirm,
     menu,
     fileOps,
     commit,
+    get instances() {
+      return instances;
+    },
     openCommit,
+    notify: showNotice,
     ready,
     navigate,
+    showFiles,
+    lockFiles,
     refresh,
     destroy() {
       controller.abort();
       unwatch();
+      appPane.close();
       menu.destroy();
       fileOps.destroy();
       commit.destroy();

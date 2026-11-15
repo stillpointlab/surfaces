@@ -95,12 +95,14 @@ export function clientConfig(): UserConfig {
       assetsInlineLimit: 0,
     },
     optimizeDeps: {
-      // Crawl every format's elements at start, so opening the first file of a
-      // kind does not find a new dependency and reload the page.
+      // Crawl every format's elements and every app's shell at start, so opening
+      // the first file of a kind, or the first app, does not find a new
+      // dependency and reload the page.
       entries: [
         'index.html',
         '../../../../formats/*/src/preview/index.ts',
         '../../../../formats/*/src/editor/index.ts',
+        '../../../../apps/*/src/shell/index.ts',
       ],
     },
   };

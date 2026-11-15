@@ -122,7 +122,7 @@ const error = () => {
   const shown = inDialog<HTMLElement>('.commit-error')!;
   return shown.hidden ? null : shown.textContent;
 };
-const notice = () => $('.commit-notice').textContent;
+const notice = () => $('.page-notice').textContent;
 
 /** Open the dialog and let it read; `opened` settles when it closes. */
 async function openDialog(): Promise<{ opened: Promise<unknown> }> {
@@ -214,7 +214,7 @@ describe('the dialog', () => {
     ]);
     expect(await opened).toMatchObject({ short: 'cccccc1', branch: 'main' });
     expect(dialog().isOpen).toBe(false);
-    expect($('.commit-notice').getAttribute('role')).toBe('status');
+    expect($('.page-notice').getAttribute('role')).toBe('status');
     expect(notice()).toContain(words.commit.notice('cccccc1', 'main'));
     expect(button().getAttribute('aria-label')).toBe('Commit: 1 changed file');
   });
@@ -392,7 +392,7 @@ describe('after a commit', () => {
     type(summary(), 's');
     await press('confirm');
     expect(notice()).toContain('Committed');
-    $<HTMLButtonElement>('.commit-notice-close').click();
+    $<HTMLButtonElement>('.page-notice-close').click();
     expect(notice()).toBe('');
     expect(document.activeElement).toBe(button());
   });
