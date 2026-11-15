@@ -12,10 +12,17 @@
 //   port itself, so its writes are the server's own and are not refused.
 // - **The routes** answer an instance by its manifest path. One discovery marks
 //   invalid (a manifest the lifecycle refuses, an overlap) is refused with
-//   `HOST_APP_INVALID`: the page shows discovery's errors instead.
+//   `HOST_APP_INVALID`: the page shows discovery's errors instead. A host op an
+//   app's registration names (`host-ops.ts`) is answered before the runner, with
+//   no `revision`.
+// - **Create** (`POST /api/apps/create`) refuses a folder whose region would
+//   share a path with a found instance's (`HOST_APP_OVERLAP`), which the runner's
+//   `createInstance` does not check, and then runs it. The new instance is
+//   locked, as every instance starts.
 
 import { matchAppPage } from '@stillpointlab/common-format/app';
 import {
+  createInstance,
   hostRefusalClass,
   loadInstance,
   projectView,
@@ -23,6 +30,7 @@ import {
 } from '@stillpointlab/common-format/host';
 
 import { appBase, inRegion } from '../../shared/apps';
+import { pathProblem } from '../paths';
 import { json, readJson, refusal, refuse, statusFor } from '../respond';
 
 import { discover } from './discovery';
@@ -35,7 +43,14 @@ import type {
   LocalHostEvent,
 } from '../../shared/apps';
 import type { NodePort } from '../port';
-import type { AnyAppModule, Failure, RefusalClass } from '@stillpointlab/common-format/app';
+import type { ServerHostOps } from './host-ops';
+import type {
+  AnyAppModule,
+  Failure,
+  FileChange,
+  RefusalClass,
+  Result,
+} from '@stillpointlab/common-format/app';
 import type { HostEvent } from '@stillpointlab/common-format/host';
 
 export type Handler = (request: Request, url: URL) => Promise<Response>;
@@ -43,6 +58,8 @@ export type Handler = (request: Request, url: URL) => Promise<Response>;
 export interface AppHostOptions {
   port: NodePort;
   modules: readonly AnyAppModule[];
+  /** The host ops the server answers, by app id, then op type. */
+  hostOps?: Readonly<Record<string, ServerHostOps>>;
   /** Send an event on the host's stream. */
   send(event: LocalHostEvent): void;
   warn(message: string): void;
@@ -81,6 +98,9 @@ const pageNotFound = (manifestPath: string, path: string): Failure => ({
   code: 'HOST_APP_PAGE_NOT_FOUND',
   message: `The app at ${manifestPath} has no page at ${JSON.stringify(path === '' ? '/' : path)}.`,
 });
+
+const isWithin = (path: string, folder: string): boolean =>
+  path === folder || path.startsWith(`${folder}/`);
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
@@ -263,19 +283,126 @@ export function createAppHost(options: AppHostOptions): AppHost {
     const at = await opened(manifestPath);
     if (at instanceof Response) return at;
     const runner = facts.runner();
+    const type0 = isObject(asked) && typeof asked.type === 'string' ? asked.type : '';
+    const hostOps = options.hostOps?.[at.module.id];
+    const hostOp = hostOps && Object.hasOwn(hostOps, type0) ? hostOps[type0] : undefined;
+    if (hostOp) {
+      const manifestPath = at.instance.manifestPath;
+      const answered = await hostOp(asked as { type: string } & Record<string, unknown>, {
+        port,
+        module: at.module,
+        manifestPath,
+        snapshot: async () => {
+          const loaded = await loadInstance(port, at.module, manifestPath);
+          if (!loaded.ok) return loaded;
+          const told = await runner.know(at.module, loaded);
+          return { ok: true, snapshot: { ...loaded.snapshot, ...told.snapshot } };
+        },
+      });
+      if (!answered.ok) return refusal(answered, appStatus(at.module, answered.code, type0));
+      const { ok: _ok, ...reply } = answered as { ok: true } & Record<string, unknown>;
+      return json({ ok: true, reply });
+    }
     const answer = await runOp(
       runner,
       at.module,
       at.instance.manifestPath,
       view === undefined ? { op: asked } : { op: asked, view }
     );
-    const type = isObject(asked) && typeof asked.type === 'string' ? asked.type : '';
-    if (!answer.ok) return refusal(answer, appStatus(at.module, answer.code, type));
+    if (!answer.ok) return refusal(answer, appStatus(at.module, answer.code, type0));
     return json({
       ok: true,
       reply: answer.reply,
       revision: hostRevision(answer.revision, runner.changesDigest()),
     });
+  }
+
+  /** The paths a new instance at the root would hold: its seed, and its lifecycle's scope. */
+  async function rootScope(
+    module: AnyAppModule,
+    input: unknown,
+    confirmRoot: boolean | undefined
+  ): Promise<string[]> {
+    const bounded = module.bounds.create(input);
+    if (!bounded.ok) return [];
+    const plan = module.core.seed({
+      ...(bounded.input as object),
+      folder: '',
+      ...(confirmRoot !== undefined ? { confirmRoot } : {}),
+    }) as Result<{ manifestPath: string; files: FileChange[] }>;
+    if (!plan.ok) return [];
+    const nodes = await port.list();
+    const listed = new Set(nodes.map((node) => node.path));
+    const withSeed = [
+      ...nodes,
+      ...plan.files
+        .filter((file) => !listed.has(file.path))
+        .map((file) => ({ path: file.path, type: 'blob' as const })),
+    ];
+    const manifest = plan.files.find((file) => file.path === plan.manifestPath);
+    const scoped = manifest
+      ? module.lifecycle.validateAndScope(manifest.content, withSeed, plan.manifestPath)
+      : null;
+    return [...plan.files.map((file) => file.path), ...(scoped?.ok ? [...scoped.scope] : [])];
+  }
+
+  async function create(request: Request): Promise<Response> {
+    const read = await readJson(request);
+    if (read instanceof Response) return read;
+    const body = isObject(read.body) ? read.body : {};
+    const { app, folder, confirmRoot, input } = body;
+    if (
+      typeof app !== 'string' ||
+      typeof folder !== 'string' ||
+      (confirmRoot !== undefined && typeof confirmRoot !== 'boolean')
+    ) {
+      return refuse(
+        'HOST_BAD_REQUEST',
+        'The body must be { "app", "folder", "confirmRoot"?, "input" }.',
+        400
+      );
+    }
+    const module = modules.find((candidate) => candidate.id === app);
+    if (!module)
+      return refuse('HOST_APP_NOT_FOUND', `No app is called ${JSON.stringify(app)}.`, 404);
+    if (folder !== '') {
+      const problem = pathProblem(folder);
+      if (problem !== null) {
+        return refuse(
+          'HOST_PATH_OUTSIDE_ROOT',
+          `${JSON.stringify(folder)} is not a folder here: ${problem}`,
+          400
+        );
+      }
+    }
+    const found = await instances();
+    // The region the new instance would have: its folder, or at the root the
+    // scope its lifecycle would give the seeded manifest over the listing, as
+    // discovery will read it (a seed the app refuses is refused below, by the runner).
+    let seeded: string[] = [];
+    if (folder === '') seeded = await rootScope(module, input, confirmRoot);
+    const clash = found.find((instance) =>
+      folder === ''
+        ? seeded.some((path) => inRegion(instance, path))
+        : instance.folder !== ''
+          ? isWithin(instance.folder, folder) || isWithin(folder, instance.folder)
+          : (instance.scope ?? []).some((path) => isWithin(path, folder))
+    );
+    if (clash) {
+      return refuse(
+        'HOST_APP_OVERLAP',
+        `${folder === '' ? 'The served folder’s root' : JSON.stringify(folder)} would share files with ${clash.label}, the ${clash.app} app at ${clash.manifestPath}. Choose a folder outside it.`,
+        409
+      );
+    }
+    const made = await createInstance(facts.runner(), module, {
+      folder,
+      ...(confirmRoot !== undefined ? { confirmRoot } : {}),
+      input,
+    });
+    if (!made.ok) return refusal(made, appStatus(module, made.code, 'create'));
+    void findAgainSoon();
+    return json({ ok: true, manifestPath: made.manifestPath });
   }
 
   async function lock(request: Request): Promise<Response> {
@@ -333,6 +460,9 @@ export function createAppHost(options: AppHostOptions): AppHost {
       },
       '/api/apps/lock': {
         POST: async (request) => lock(request),
+      },
+      '/api/apps/create': {
+        POST: async (request) => create(request),
       },
     },
     checkWrite,

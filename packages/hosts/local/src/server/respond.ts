@@ -24,6 +24,8 @@ export function statusFor(code: string): number {
     case 'HOST_BRANCH_EXISTS':
     case 'HOST_SCOPE_LOCKED':
     case 'HOST_APP_INVALID':
+    case 'HOST_APP_OVERLAP':
+    case 'HOST_NOTHING_TO_RESOLVE':
       return 409;
     case 'HOST_WRITE_FAILED':
     case 'HOST_GIT_FAILED':

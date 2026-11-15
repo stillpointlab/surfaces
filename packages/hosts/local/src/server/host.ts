@@ -31,7 +31,7 @@ import { basename, extname } from 'node:path';
 import { Readable } from 'node:stream';
 
 import { createAppHost } from './apps/app-host';
-import { DEFAULT_APPS } from './apps/registry';
+import { DEFAULT_APPS, DEFAULT_HOST_OPS } from './apps/registry';
 import { LIST_LIMIT } from './limits';
 import { isInside, locate, outsideRoot, pathProblem } from './paths';
 import { createNodePort } from './port';
@@ -40,6 +40,7 @@ import { createFolderWatcher } from './watcher';
 
 import type { LocalHostEvent } from '../shared/apps';
 import type { Handler } from './apps/app-host';
+import type { ServerHostOps } from './apps/host-ops';
 import type { PageHandler } from './page';
 import type { NodePort, PortStart } from './port';
 import type { FolderWatcher } from './watcher';
@@ -73,6 +74,11 @@ export interface HostOptions {
    * absent): the server's one registration of them.
    */
   apps?: readonly AnyAppModule[];
+  /**
+   * The host ops the server answers itself, by app id, then op type
+   * (`DEFAULT_HOST_OPS` when absent).
+   */
+  hostOps?: Readonly<Record<string, ServerHostOps>>;
 }
 
 export { statusFor } from './respond';
@@ -213,6 +219,7 @@ export function createHost(options: HostOptions): LocalHost {
   const apps = createAppHost({
     port,
     modules: options.apps ?? DEFAULT_APPS,
+    hostOps: options.hostOps ?? DEFAULT_HOST_OPS,
     send: broadcast,
     warn,
   });

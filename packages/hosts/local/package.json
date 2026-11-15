@@ -31,6 +31,7 @@
     "@stillpointlab/modal-dialog-component": "*",
     "@stillpointlab/sheet-format": "*",
     "@stillpointlab/spl-icon-component": "*",
+    "@stillpointlab/tasks-app": "*",
     "@stillpointlab/xmdl-format": "*",
     "dompurify": "^3.4.17"
   },

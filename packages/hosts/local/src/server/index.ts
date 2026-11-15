@@ -3,7 +3,9 @@
 
 export { createHost, createRequestCheck, statusFor } from './host';
 export type { CheckedRequest, Host, HostOptions, LocalHost } from './host';
-export { DEFAULT_APPS } from './apps/registry';
+export { DEFAULT_APPS, DEFAULT_HOST_OPS } from './apps/registry';
+export { nothingToResolve, readFile, scanReferences } from './apps/host-ops';
+export type { HostOpContext, ServerHostOp, ServerHostOps } from './apps/host-ops';
 export { appBase, inRegion } from '../shared/apps';
 export type {
   AppLockAnswer,
