@@ -102,3 +102,19 @@ are carried here as they were written.
   scrolls sideways.
 - 2026-11-14 (app-shells, step 1): the harness's Dark toggle sets a class and does not follow
   the system's colour scheme, so a check in dark has to tick it.
+- 2026-11-14 (host-runner): `common-format/host`'s entry test reads the word `from` before a
+  quote in any string as an import, so two of the memory port's messages are worded around it.
+  A tighter pattern would let a message read naturally.
+- 2026-11-14 (host-runner): `createInstance` does not know of a create that was cut off half
+  way (the `reusable` files Context Manager passes), and does not check the new instance against
+  the others.
+- 2026-11-14 (host-runner): a `revision` covers the scope's files. A state that reads the
+  listing beyond the scope (a board in a folder the manifest does not name yet) would not show
+  as stale.
+- 2026-11-14 (host-runner): the harness has two ways to read: an op loads the scope through
+  `runOp`, and a fixture's view projects every file directly.
+- 2026-11-14 (host-runner): a pending move keeps the path a card started at and not the paths
+  it passed through, in the harness now as in `fromChanges`, so fixing references cannot find a
+  link to a path a card only passed through.
+- 2026-11-14 (host-runner): tasks' dirty mark reads a pool card's column as a board card's, as
+  the harness did. The board does not draw `movedFrom`; it is in the state.
