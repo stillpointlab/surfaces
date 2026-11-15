@@ -83,6 +83,33 @@ describe('createHttpClient', () => {
     expect(JSON.parse(String(init?.body))).toEqual({ changes });
   });
 
+  it('says so when a write is one the person agreed cannot be undone', async () => {
+    const fetch = answering({ ok: true, versions: {} });
+    const changes = [{ kind: 'delete' as const, path: 'a.png' }];
+    await createHttpClient().put(changes, { unjournaled: true });
+    expect(JSON.parse(String(fetch.mock.calls[0][1]?.body))).toEqual({
+      changes,
+      unjournaled: true,
+    });
+  });
+
+  it('reads the journal, and posts undo and redo', async () => {
+    let fetch = answering({ ok: true, undo: 'Delete a.md', redo: null });
+    const client = createHttpClient();
+    expect(await client.journal()).toEqual({ ok: true, undo: 'Delete a.md', redo: null });
+    expect(fetch.mock.calls[0][0]).toBe('/api/journal');
+
+    const moved = { ok: true, label: 'Delete a.md', moved: [], deleted: [] };
+    fetch = answering(moved);
+    expect(await client.undo()).toEqual(moved);
+    expect(fetch.mock.calls[0][0]).toBe('/api/undo');
+    expect(fetch.mock.calls[0][1]?.method).toBe('POST');
+
+    fetch = answering({ ok: false, code: 'HOST_NOTHING_TO_REDO', message: 'none' }, 409);
+    expect(await client.redo()).toMatchObject({ ok: false, code: 'HOST_NOTHING_TO_REDO' });
+    expect(fetch.mock.calls[0][0]).toBe('/api/redo');
+  });
+
   it('reads git’s state, the changes and a file’s text at HEAD', async () => {
     let fetch = answering({ state: 'repository', branch: 'main' });
     const client = createHttpClient();

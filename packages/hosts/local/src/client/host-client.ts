@@ -13,6 +13,7 @@ import type {
   FoundInstance,
   LocalHostEvent,
 } from '../shared/apps';
+import type { JournalLabels, JournalMove } from '../shared/journal';
 import type { FolderNode, Result } from '@stillpointlab/common-format/app';
 import type {
   FileStatus,
@@ -37,6 +38,12 @@ export type {
   FoundInstance,
   LocalHostEvent,
 } from '../shared/apps';
+export type { CannotUndoNotice, JournalLabels, JournalMove, UnkeptReason } from '../shared/journal';
+
+/** How a write goes: `unjournaled` when the person agreed it cannot be undone. */
+export interface PutOptions {
+  unjournaled?: boolean;
+}
 
 export interface HostClient {
   /** The served folder: its name, and the id the page keys stored state by. */
@@ -45,7 +52,24 @@ export interface HostClient {
   get(path: string): Promise<Result<{ text: string; version: string }>>;
   /** A URL an element can load the file from. */
   urlFor(path: string): string;
-  put(changes: readonly PortChange[]): Promise<Result<{ versions: Record<string, string> }>>;
+  /**
+   * Write all the changes or none. The explorer's creates, moves and deletes are
+   * a step undo takes back; one the host cannot keep is refused with
+   * `HOST_CANNOT_UNDO` (and its `reason`), and written with `{ unjournaled: true }`.
+   */
+  put(
+    changes: readonly PortChange[],
+    options?: PutOptions
+  ): Promise<Result<{ versions: Record<string, string> }>>;
+  /** The labels of the steps undo and redo would take next. */
+  journal(): Promise<Result<JournalLabels>>;
+  /**
+   * Take back the newest step: what it moved and deleted, or a refusal
+   * (`HOST_NOTHING_TO_UNDO`; `HOST_UNDO_CONFLICT` with the `path` that moved on).
+   */
+  undo(): Promise<Result<JournalMove>>;
+  /** Do the step last undone again, as `undo` answers. */
+  redo(): Promise<Result<JournalMove>>;
   status(): Promise<Record<string, FileStatus>>;
   /** Whether the folder is under git (decided when the host started), and the branch. */
   git(): Promise<HostGit>;
@@ -165,12 +189,15 @@ export function createHttpClient(base = ''): HostClient {
       ),
     appCreate: (request) => result('/api/apps/create', post(request)),
     setAppLock: (manifestPath, locked) => result('/api/apps/lock', post({ manifestPath, locked })),
-    put: (changes) =>
+    put: (changes, options) =>
       result('/api/files', {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ changes }),
+        body: JSON.stringify(options?.unjournaled ? { changes, unjournaled: true } : { changes }),
       }),
+    journal: () => result('/api/journal'),
+    undo: () => result('/api/undo', post({})),
+    redo: () => result('/api/redo', post({})),
     watch(listener) {
       const source = new EventSource(url('/api/events'));
       let dropped = false;

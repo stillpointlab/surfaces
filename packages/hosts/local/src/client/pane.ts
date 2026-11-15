@@ -10,10 +10,11 @@
 // one per row. Every step of an open checks it is still the newest after each
 // await, so a late answer for a file no longer wanted never lands.
 //
-// The explorer's own renames and deletes go through `followWrite`: the open file
-// follows a rename (keeping its element and its edits) or closes on a delete, and
-// a change event for the write, which may arrive before the write's answer, waits
-// until it has, so the page's own write raises no banner.
+// The explorer's own renames and deletes go through `followWrite`, and so do an
+// undo and a redo: the open file follows a rename (keeping its element and its
+// edits) or closes on a delete, and a change event for the write, which may
+// arrive before the write's answer, waits until it has, so the page's own write
+// raises no banner.
 //
 // The Changes view (`diff`) shows a file against the last commit in `<code-diff>`:
 // the text at `HEAD` on the left (a moved file's, under its old path), the file
@@ -38,6 +39,7 @@ import type { View } from './address';
 import type { Confirm } from './confirm';
 import type { HostClient } from './host-client';
 import type { DiffElement, EditorElement } from '@stillpointlab/common-format';
+import type { Result } from '@stillpointlab/common-format/app';
 import type { FormatDescriptor, FormatRegistry } from '@stillpointlab/common-format/format';
 import type { FileStatus, PortChange } from '@stillpointlab/common-format/host';
 
@@ -359,17 +361,17 @@ export class FilePane {
   }
 
   /**
-   * The page's own write that moves or deletes files. Once it lands, the open
-   * file follows it: `where` answers where the open path went, `null` when it was
-   * deleted, or `undefined` when the write left it alone. Answers the write's
-   * result.
+   * The page's own write that moves or deletes files: the explorer's, or an undo
+   * or a redo. Once it lands, the open file follows it: `where` answers, from the
+   * write's answer, where the open path went, `null` when it was deleted, or
+   * `undefined` when the write left it alone. Answers the write's result.
    */
-  followWrite(
-    write: Promise<PutResult>,
-    where: (path: string) => string | null | undefined
-  ): Promise<PutResult> {
+  followWrite<T extends Result<object> = PutResult>(
+    write: Promise<T>,
+    where: (path: string, answer: Extract<T, { ok: true }>) => string | null | undefined
+  ): Promise<T> {
     const landed = write.then((result) => {
-      if (result.ok) this.follow(where);
+      if (result.ok) this.follow((path) => where(path, result as Extract<T, { ok: true }>));
       return result;
     });
     const tracked: Promise<void> = landed.then(
