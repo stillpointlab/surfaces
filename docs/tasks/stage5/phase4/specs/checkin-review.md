@@ -1,5 +1,5 @@
 ---
-column: todo
+column: in-progress
 created: 2026-11-13T18:52:00-07:00
 tags: [apps, host-contract, code]
 ---
