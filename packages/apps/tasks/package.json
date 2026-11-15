@@ -71,6 +71,7 @@
     "test": "npm run gen:styles && vitest run"
   },
   "dependencies": {
+    "@stillpointlab/checkin-review-component": "*",
     "@stillpointlab/common-format": "*",
     "@stillpointlab/modal-dialog-component": "*",
     "@stillpointlab/spl-icon-component": "*",
