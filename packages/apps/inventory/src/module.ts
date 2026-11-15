@@ -1,15 +1,23 @@
 /**
  * The inventory app as a host runs it (the app contract's `AppModule`): the
  * lifecycle and the core, which of the elements' ops are the core's, the
- * elements' replies, and how a host treats each refusal.
+ * elements' replies, how a host treats each refusal, and what a host would
+ * otherwise keep a file for: the copy, the bounds, the pages, where a create's
+ * files fit, and the facts file changes make.
  */
 import { fail, ok } from '@stillpointlab/common-format/app';
 
+import { inventoryBounds } from './bounds.js';
+import { inventoryFromChanges } from './changes.js';
 import { inventoryCore } from './core.js';
+import { placeInventoryCreate } from './create.js';
 import { inventoryLifecycle } from './lifecycle.js';
+import { inventoryMeta } from './meta.js';
+import { inventoryPages } from './pages.js';
 
 import type { InventoryCoreOps, InventoryViews } from './core.js';
-import type { CreateInventoryInput } from './create.js';
+import type { CreateInventoryInput, InventoryCreatePlan } from './create.js';
+import type { InventoryCreateFields } from './createRules.js';
 import type { InventoryOps } from './elementOps.js';
 import type { InventoryHostFacts, InventorySnapshot } from './space.js';
 import type { AppCoreOp, AppModule, RefusalClass } from '@stillpointlab/common-format/app';
@@ -42,7 +50,8 @@ export const inventoryModule: AppModule<
   InventoryHostFacts,
   CreateInventoryInput,
   InventorySnapshot,
-  InventoryOps
+  InventoryOps,
+  InventoryCreateFields
 > = {
   id: 'inventory',
   lifecycle: inventoryLifecycle,
@@ -61,4 +70,10 @@ export const inventoryModule: AppModule<
     return state ? ok({ state }) : fail('INVENTORY_ZONE_NOT_FOUND', `No zone at ${path}`);
   },
   refusalClass: (code) => REFUSAL_CLASS[code] ?? 'invalid',
+  meta: inventoryMeta,
+  bounds: inventoryBounds,
+  pages: inventoryPages,
+  // The plan is the core's `seed`'s; placing it reads only its files.
+  placeCreate: (plan, paths) => placeInventoryCreate(plan as InventoryCreatePlan, paths),
+  fromChanges: inventoryFromChanges,
 };

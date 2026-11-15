@@ -30,6 +30,11 @@
       "import": "./dist/paths.js",
       "require": "./dist/paths.cjs"
     },
+    "./meta": {
+      "types": "./dist/meta.d.ts",
+      "import": "./dist/meta.js",
+      "require": "./dist/meta.cjs"
+    },
     "./create": {
       "types": "./dist/create.d.ts",
       "import": "./dist/create.js",

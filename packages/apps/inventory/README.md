@@ -17,14 +17,20 @@ root entry (`.`) exports:
 - byte-preserving rewrites: `appendItem`, `patchItem`, `deleteItem` (`zoneWriter.ts`);
 - seeds: `manifestSeedContent`, `zoneSeedContent`;
 - CSV: `serializeZone` and `serializeSpace` (each a `Result<{ content }>`), `exportWarnings`;
-- the lifecycle: `inventoryLifecycle`, the `AppLifecycle` a host mounts an inventory folder with.
+- the lifecycle: `inventoryLifecycle`, the `AppLifecycle` a host mounts an inventory folder with;
+- the module: `inventoryModule`, the `AppModule` a host runs the app with, and what it carries
+  beside the core: `inventoryMeta` (name, icon, create copy), `inventoryBounds` (the op, view and
+  create schemas a host checks input with), `inventoryPages` (the overview at `''` and a zone at
+  `/room/:roomSlug`) and `inventoryFromChanges` (the facts from a host's file changes).
 
 Two more entries import nothing: `./paths` exports the path rules alone (`slugifyInventoryName`,
 the folder and currency defaults, the field-id and currency patterns), and `./types` the shared
 types. A client that needs only those imports them there: `.` builds the manifest's zod schemas at
 module scope, which a bundler cannot drop. `./create` is the create form's checks
 (`checkInventoryCreate`, with the limits and defaults the form shows); it imports only `./paths`.
-`./element` is the app's two elements, and `./create-element` its create form (below).
+`./meta` is `inventoryMeta` alone; it imports only `./paths`, so a host page that lists the apps
+loads no zod. `./element` is the app's two elements, and `./create-element` its create form
+(below).
 
 The core was moved as-is from Context Manager (source commit `373a20ae`), and the elements followed
 (source commit `b73e3c59`). The rules that assemble a space and answer its ops followed in stage 2

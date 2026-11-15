@@ -1,9 +1,10 @@
 import { formatPackage } from '../../../tooling/tsup';
 
-// Six entries. `.` is the DOM-free core. `./types` (the shared types) and
+// Seven entries. `.` is the DOM-free core. `./types` (the shared types) and
 // `./paths` (the naming rules and creation defaults) import nothing, for a
 // client that needs them without the core: the manifest's zod schemas are built
-// at module scope, so a bundler cannot shake them out of `.`. `./create` is the
+// at module scope, so a bundler cannot shake them out of `.`. `./meta` (the
+// app's name, icon and create copy) imports `./paths` alone, for the same reason. `./create` is the
 // create form's checks, which the core's plan runs too; it imports `./paths`.
 // `./element` is `<spl-inventory-overview>` and `<spl-inventory-zone>`, and
 // `./create-element` is `<spl-inventory-create>`, kept apart so a page that
@@ -14,6 +15,7 @@ export default formatPackage({
     index: 'src/index.ts',
     types: 'src/types.ts',
     paths: 'src/paths.ts',
+    meta: 'src/meta.ts',
     create: 'src/createRules.ts',
     element: 'src/element/index.ts',
     'create-element': 'src/element/create.ts',
