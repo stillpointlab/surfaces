@@ -317,10 +317,8 @@ export async function createInstance(
 
   const nodes = await host.port.list();
   const taken = nodes.filter((node) => node.type === 'blob').map((node) => node.path);
-  const placed = module.placeCreate(
-    { manifestPath: plan.manifestPath, files: plan.files },
-    { taken }
-  );
+  // The whole plan, as the seed made it: an app's plan may carry more than its files.
+  const placed = module.placeCreate(plan, { taken });
   if (!placed.ok) return placed;
   const files = placed.files as FileChange[];
   const other = files.find((file) => file.kind !== 'create');
