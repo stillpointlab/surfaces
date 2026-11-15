@@ -370,7 +370,7 @@ the later specs read. The package's README has the routes in full._
 - **`navigate` is claimed when the `href` starts with `#/`.**
 - **`checkin-request` opens the explorer's commit dialog,** which the text above did not say;
   without it inventory's "Check in…" did nothing.
-  [checkin-review](../../phase1/specs/checkin-review.md) replaces it.
+  [checkin-review](../../phase4/specs/checkin-review.md) replaces it.
 - **"Lock files" asks nothing of its own.** When the open file is in the region with unsaved
   edits, the question for discarding them is asked first, and the file goes to its preview.
 - **Leaving the app's pane removes its shell.** Opening the app again resolves the page afresh.
@@ -462,7 +462,7 @@ moved. It counts among the uncommitted changes. In the follow-up log.
   every app has in one shape. A projection's problems are in each app's own state, so they show
   in the app.
 - **Inventory's exports** are not offered here; the shell hides them without `extras.exports`.
-- **Check-in from the app** arrives in [checkin-review](../../phase1/specs/checkin-review.md). Until then the
+- **Check-in from the app** arrives in [checkin-review](../../phase4/specs/checkin-review.md). Until then the
   explorer's Commit button is how app changes are committed.
 - **Fixtures are instances too.** This repository has two `inventory.yaml` files under
   `packages/apps/inventory/dev/examples/`. Served here, each is a locked app row. That is the

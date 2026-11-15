@@ -10,8 +10,9 @@ _The [local host brief](../../../stage4/phase1/briefs/local_host.md), outcome 4.
 Two steps, each one PR here: the element with the shells, then the local host._
 
 > Written with stage 4's specs, before any of stage 4 was built, and read again on 2026-11-14
-> against what stage 4 made. The [review](../reviews/specs-against-stage-4.md) lists what changed
-> and why (H6, M6). "What stage 4 built" is what an implementer reads first.
+> against what stage 4 made. The [review](../../phase1/reviews/specs-against-stage-4.md) lists what changed
+> and why (H6, M6). It was read once more on 2026-11-14 against phases 2 and 3 as built. "What
+> stage 4 built" and "What phases 2 and 3 built" are what an implementer reads first.
 
 ## High-level goal
 
@@ -58,6 +59,36 @@ The dialog this element replaces in step 2 does the following, and the explorer 
 - **The request** is `{ paths, message, branch? }`: each checked row's path and a moved one's old
   path, and the summary joined to the details by a blank line (`requestOf`, `messageOf`).
 
+## What phases 2 and 3 built
+
+_Added 2026-11-14, from the "As built" sections of
+[app-shells](../../phase2/specs/app-shells.md), [host-runner](../../phase2/specs/host-runner.md)
+and [apps-in-the-local-host](../../phase3/specs/apps-in-the-local-host.md)._
+
+- **The shells exist:** `<spl-inventory-app>` and `<spl-tasks-app>`, light-DOM elements, each
+  from its package's `./shell` entry. The contract (`AppShellInput`, `AppShellElement`,
+  `AppShellOps`) is one block at the end of `packages/common/src/app.ts`.
+- **Both shells let `checkin-request` bubble through** today, unchanged.
+- **The local host's app pane hears it and opens the explorer's commit dialog,** a stopgap so
+  that inventory's "Check in…" did something. Step 2 here takes it out.
+- **The board has `markCheckinInFlight(paths)`.** Tasks' shell has no way yet for a host to
+  say a check-in settled, or to mark one in flight from outside.
+- **The app elements borrow their host's classes** for buttons and fields (`.button`,
+  `.button-primary`, `.button-secondary`, `.form-field`, `.form-label`, `.form-input`,
+  `.form-help`, `.form-message`). The local host styles all of them now, and Context Manager
+  has them.
+- **`<modal-dialog>` has a shadow root with slots;** what a dialog holds is its light-DOM
+  children, which the host's styles reach.
+- **The memory port has `commit(paths?)`,** which is a check-in in the harness. Each app has a
+  "Shell over the memory host" fixture (`packages/apps/inventory/dev/host.ts`,
+  `packages/apps/tasks/dev/shell.ts`).
+- **The local host's page has one notice,** which a shell's `notification` reaches, and its
+  app pane resolves the page again on the host's `status` event, which a commit raises.
+- **The app pane sets the shell's input whenever the host's revision moves,** and the revision
+  covers what git reports.
+- **A new component is a package under `packages/components/`,** as `modal-dialog` and
+  `spl-icon` are: its own `package.json`, build, styles and tests, and the root's lists.
+
 ## Work package
 
 - **Owns:** a new component, `packages/components/checkin-review` (`<checkin-review>`), the
@@ -70,7 +101,9 @@ The dialog this element replaces in step 2 does the following, and the explorer 
 
 ### The element
 
-`<checkin-review>` wraps a `<modal-dialog>`.
+`<checkin-review>` wraps a `<modal-dialog>`. What it shows is light-DOM content of that dialog,
+with the classes the app elements borrow from their host for its buttons and fields, so each
+host's own styles reach it. Its own styles are layout alone, from the shared tokens.
 
 ```ts
 export interface CheckinFile {
@@ -141,7 +174,8 @@ It behaves as the commit dialog does, by the list under "What stage 4 built":
 ### In the shells
 
 `checkin` joins `AppShellOps`. Each shell holds one `<checkin-review>`, listens for its app's
-`checkin-request`, and opens the review:
+`checkin-request`, and opens the review. The request stops at the shell: a host that mounts one
+no longer hears `checkin-request`, and answers `checkin` instead.
 
 - **Inventory:** rows from the state's `dirty` list, labelled "manifest", "new" or "changed"; no
   default title, with the placeholder "Inventory check-in".
@@ -155,6 +189,10 @@ the review. Without `words` the shell uses its own, which say "check in" and nev
 "pull request". When the shell's state is set again while the review is open, it calls
 `setFiles` with the new rows.
 
+Each app's "Shell over the memory host" fixture answers `checkin` with the memory port's
+`commit` of the op's paths and replies `done`, so the review can be tried end to end in the
+harness: the rows, a check-in, and the marks clearing.
+
 ### In the local host
 
 - **The app pane sets `checkin`** each time it sets the shell's input: the words for a commit,
@@ -163,6 +201,8 @@ the review. Without `words` the shell uses its own, which say "check in" and nev
   ([apps-in-the-local-host](../../phase3/specs/apps-in-the-local-host.md)), so the branch is never the one the page
   first asked for. A folder that is not a repository has no changed files, so the apps never
   ask.
+- **The pane no longer opens the explorer's commit dialog on `checkin-request`:** the shell
+  takes the request now.
 - **It answers `checkin` with the commit function:** the title is the commit's summary and the
   body its details, joined as the dialog joins them; `branch` is a new branch. An absent title
   becomes "`<the app's label>` check-in". The reply is `done`, with the words the commit's notice
@@ -189,7 +229,7 @@ the review. Without `words` the shell uses its own, which say "check in" and nev
 
 - The check-in shared core (the brief's out of scope), and anything about a pull request.
 - Showing a diff inside the review.
-- Context Manager using the element ([context-manager-adopts-apps](context-manager-adopts-apps.md)).
+- Context Manager using the element ([context-manager-adopts-apps](../../phase1/specs/context-manager-adopts-apps.md)).
 
 ## Acceptance / completion checklist
 
@@ -200,8 +240,8 @@ the review. Without `words` the shell uses its own, which say "check in" and nev
 - [ ] Shell tests: each app's rows from its own request, its rows after the state is set again,
       and tasks' in-flight marks.
 - [ ] The harness shows the review in both shells, answered by the memory host.
-- [ ] By hand in the local host: change an inventory and a board, check in each on a new
-      branch, and read the commits.
+- [ ] By hand in the local host, light and dark: change an inventory and a board, check in
+      each on a new branch, and read the commits; the app's marks clear with no reload.
 - [ ] The explorer's commit and the apps' check-in use the same element, and the explorer does
       everything the list under "What stage 4 built" names.
 - [ ] `npm run check` is green.

@@ -292,7 +292,7 @@ Context Manager's `8fa439ba`._
 - **Entries.** A client that needs only `meta` must not pull in zod. `meta` is exported from a
   light entry of each package as well as on the module (the packages' `./paths` precedent).
 - **Check-in bodies stay in Context Manager.** They name files by its public ids.
-  [checkin-review](../../phase1/specs/checkin-review.md) names files by path instead.
+  [checkin-review](../../phase4/specs/checkin-review.md) names files by path instead.
 - **Lifecycle policy stays a host's** (`notFoundCode`, `maxAdoptionsPerRun`, `skipPendingMoves`):
   it is about Context Manager's adoption, not the app.
 

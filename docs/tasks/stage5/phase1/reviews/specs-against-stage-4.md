@@ -148,7 +148,7 @@ hold at its `main`.
 
 ### H6. The check-in element as drafted would lose what the commit dialog does
 
-- **Where:** [checkin-review](../specs/checkin-review.md), "The element" and "In the local
+- **Where:** [checkin-review](../../phase4/specs/checkin-review.md), "The element" and "In the local
   host"; the local host's `client/commit/`.
 - **What:** step 2 replaces the explorer's commit dialog with `<checkin-review>`. The draft
   element has no way to change its rows while open, no box for all rows, a confirm button that
@@ -208,7 +208,7 @@ notice in step 1 of apps-in-the-local-host.
 ### M6. The branch the app offers goes stale
 
 The page asks for git's state once and learns a new branch only from its own commit. A check-in
-from an app reads it when the review opens ([checkin-review](../specs/checkin-review.md)).
+from an app reads it when the review opens ([checkin-review](../../phase4/specs/checkin-review.md)).
 
 ### M7. Packaging the apps into the local host
 
@@ -282,7 +282,7 @@ Jamie answered all five on 2026-11-14, and each spec now says what he decided.
 - [x] **H3, M1, M2:** [host-runner](../../phase2/specs/host-runner.md) amended.
 - [x] **H4, H5, M3, M4, M5, M7, M8, L1, L3, L4:**
       [apps-in-the-local-host](../../phase3/specs/apps-in-the-local-host.md) amended.
-- [x] **H6, M6:** [checkin-review](../specs/checkin-review.md) amended.
+- [x] **H6, M6:** [checkin-review](../../phase4/specs/checkin-review.md) amended.
 - [x] **H7, M9:** [context-manager-adopts-apps](../specs/context-manager-adopts-apps.md) amended.
 - [x] **M4, L2:** [app-module-grows](../../phase2/specs/app-module-grows.md) amended.
 - [x] **M8, and the walks' selectors (H7):** [app-shells](../../phase2/specs/app-shells.md) amended.

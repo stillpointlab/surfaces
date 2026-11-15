@@ -153,7 +153,7 @@ id and branch.
   are the brief's deferred GitHub work.
 - **Submodules and nested repositories** are listed as git lists them and are otherwise left alone.
   - **This commit function is the one check-in uses** in
-    [checkin-review](../../../stage5/phase1/specs/checkin-review.md).
+    [checkin-review](../../../stage5/phase4/specs/checkin-review.md).
 - **The staging and commit commands were tried** in a scratch repository (git on Fedora 44,
   2026-11-13): a renamed file with uncommitted edits staged as a rename, and a commit of chosen
   paths left another staged file staged. The tests in this spec repeat both.

@@ -42,7 +42,7 @@ The local host brief's outcomes 3 to 6. In order:
 | 2     | 2    | [host-runner](../../phase2/specs/host-runner.md)                       | 1   | here            |
 | 2     | 2    | [app-shells](../../phase2/specs/app-shells.md)                         | 2   | here            |
 | 3     | 1    | [apps-in-the-local-host](../../phase3/specs/apps-in-the-local-host.md) | 2   | here            |
-| 4     | 1    | [checkin-review](../specs/checkin-review.md)                           | 2   | here            |
+| 4     | 1    | [checkin-review](../../phase4/specs/checkin-review.md)                 | 2   | here            |
 | 5     | 1    | [undo-journal](../specs/undo-journal.md)                               | 1   | here            |
 | 6     | 1    | [context-manager-adopts-apps](../specs/context-manager-adopts-apps.md) | 2   | Context Manager |
 

@@ -26,7 +26,7 @@ files.
 - The [local host spike](../../../stage4/phase1/spikes/local-host.md), finding 7: what each move
   lets Context Manager drop.
 - The specs whose output this consumes: [app-module-grows](../../phase2/specs/app-module-grows.md),
-  [app-shells](../../phase2/specs/app-shells.md), [checkin-review](checkin-review.md). Each PR for those lists the
+  [app-shells](../../phase2/specs/app-shells.md), [checkin-review](../../phase4/specs/checkin-review.md). Each PR for those lists the
   ids and classes of Context Manager's page chrome it did not keep.
 - [context-manager-adopts-formats](../../../stage4/phase4/specs/context-manager-adopts-formats.md),
   "As built": how stage 4's adoption went.

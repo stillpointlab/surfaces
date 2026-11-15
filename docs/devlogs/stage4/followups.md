@@ -97,7 +97,7 @@ says where it went. Nothing was dropped.
   - Carried 2026-11-14 to the [stage 5 log](../stage5/followups.md).
 - 2026-11-14 (git-in-the-host): the commit dialog lists paths in git's order and the tree in
   natural order (`many-2` before `many-10`).
-  - Moved 2026-11-14 to [checkin-review](../../tasks/stage5/phase1/specs/checkin-review.md): the
+  - Moved 2026-11-14 to [checkin-review](../../tasks/stage5/phase4/specs/checkin-review.md): the
     review lists in the tree's order.
 - 2026-11-14 (git-in-the-host): `HOST_GIT_FAILED` answers 500, as the mapping it joined does. A
   hook that refuses is not the server's fault; 422 would say so.
@@ -117,7 +117,7 @@ says where it went. Nothing was dropped.
     switch, and a commit on a new branch changes no file.
 - 2026-11-14 (git-in-the-host): the Commit button reads "Commit 0" when nothing has changed. It
   could be disabled, or hidden, until there is a change.
-  - Moved 2026-11-14 to [checkin-review](../../tasks/stage5/phase1/specs/checkin-review.md): the
+  - Moved 2026-11-14 to [checkin-review](../../tasks/stage5/phase4/specs/checkin-review.md): the
     button is disabled with nothing changed.
 - 2026-11-14 (phase 3's close): `packages/formats/md/README.md` still calls the package
   `@stillpointlab/md-editor`, its name before the monorepo, in its title, install line and

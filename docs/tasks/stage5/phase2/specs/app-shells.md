@@ -59,7 +59,7 @@ _Added 2026-11-14._
   `src/shell/` in each app package; each app's `dev/fixtures.ts` (one new fixture).
 - **Does not change:** the existing elements' ops or events, except the one named under
   "Inventory" below. Context Manager is not touched.
-- **Leaves for later:** the check-in dialog ([checkin-review](../../phase1/specs/checkin-review.md)).
+- **Leaves for later:** the check-in dialog ([checkin-review](../../phase4/specs/checkin-review.md)).
 
 ## Technical requirement
 
@@ -194,7 +194,7 @@ the later specs read._
 
   Kept: `.inventory-bar`, `.back-button`, `#inventory-title`, `.inventory-title`,
   `.inventory-repo`, and both back links' accessible names. The check-in dialog's chrome is
-  [checkin-review](../../phase1/specs/checkin-review.md)'s.
+  [checkin-review](../../phase4/specs/checkin-review.md)'s.
 
 - **What Context Manager passes when it mounts the shell:** `extras.exports` (two walks click
   the downloads), `back` with the label its page has today, and `location`.
@@ -266,7 +266,7 @@ orchestrating agent, who looked at the screenshots._
   - claims `navigate` with `preventDefault()`, or a clicked link is followed twice;
   - calls `learn(op, reply)`: its own `learn` took the two the other way round.
 - **No hook yet for a host to say a check-in is in flight,** or to have the shell read again
-  after one. [checkin-review](../../phase1/specs/checkin-review.md) adds `checkinSettled()`.
+  after one. [checkin-review](../../phase4/specs/checkin-review.md) adds `checkinSettled()`.
 - **By hand, in Chromium over the harness's memory host on the runner, light and dark:** the
   strip to another phase and to a stage view, a card moved by its menu and by drag, a card
   created, Settings, Refresh, a card's menu, Close phase, and another board. Both schemes read
@@ -283,7 +283,7 @@ orchestrating agent, who looked at the screenshots._
 
 ## Non-goals
 
-- The check-in review ([checkin-review](../../phase1/specs/checkin-review.md)); a shell lets `checkin-request`
+- The check-in review ([checkin-review](../../phase4/specs/checkin-review.md)); a shell lets `checkin-request`
   through unchanged for now.
 - Inventory's export in the local host (a follow-up; the controls are hidden there).
 - Context Manager mounting the shells
