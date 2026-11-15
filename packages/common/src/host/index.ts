@@ -1,7 +1,8 @@
 // The host contract: what a host's storage answers, and what its server sends a
-// page; and a port in memory. DOM-free and Node-free: the local host implements
-// the port over a folder (`packages/hosts/local`), the harness keeps its files
-// in the memory port, and a page reads the types without either.
+// page; and the one runner that runs an app over that storage, with a port in
+// memory to run it on. DOM-free and Node-free: the local host implements the
+// port over a folder (`packages/hosts/local`), the harness runs the runner over
+// the memory port, and a page reads the types without either.
 //
 // A light entry (`@stillpointlab/common-format/host`).
 
@@ -9,6 +10,8 @@ import type { AppFileChange, FileChange, FolderNode, Result } from '../app';
 
 export { createMemoryPort, MEMORY_MAX_TEXT_BYTES } from './memory-port';
 export type { MemoryPort, MemoryPortOptions } from './memory-port';
+export { createInstance, hostRefusalClass, loadInstance, projectView, runOp } from './runner';
+export type { LoadedInstance, RunnerHost, RunnerRefusalCode } from './runner';
 
 /** How a file differs from the last commit. */
 export type FileStatus = AppFileChange['status'];
