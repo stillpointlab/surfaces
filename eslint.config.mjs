@@ -68,12 +68,13 @@ export default [
     },
   },
   {
-    // Components, app elements and a host's page set markup only through `render`
+    // Components, app elements and shells, and a host's page set markup only through `render`
     // from `@stillpointlab/common-format/html`, whose `html` template escapes every
     // value. Tests may build fixtures however they like.
     files: [
       'packages/components/*/src/**/*.ts',
       'packages/apps/*/src/element/**/*.ts',
+      'packages/apps/*/src/shell/**/*.ts',
       'packages/hosts/*/src/client/**/*.ts',
     ],
     ignores: ['**/*.test.ts'],

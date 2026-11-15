@@ -1,0 +1,76 @@
+@use 'common/src/styles/tokens' as *;
+
+// The inventory's page: the bar above the overview or one zone, in the shell's
+// light DOM. Where the page sits (a host's header, its margins) is the host's;
+// the column and the bar are the app's. Moved from Context Manager's inventory
+// page styles, on the shared tokens.
+
+spl-inventory-app {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: $spacing-lg;
+  color: $text-color;
+
+  .inventory-bar {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    min-width: 0;
+  }
+
+  .back-button {
+    display: inline-flex;
+    flex: none;
+    color: $text-secondary;
+    border-radius: $border-radius-md;
+
+    &:hover {
+      color: $text-primary;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $focus-ring;
+      outline-offset: 2px;
+    }
+  }
+
+  .inventory-title {
+    min-width: 0;
+    margin: 0;
+    font-size: 1.2rem;
+    color: $text-primary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .inventory-repo {
+    margin-left: auto;
+    color: $text-muted;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .inventory-app-missing {
+    border: 1px solid $border-color;
+    border-radius: $border-radius-md;
+    padding: $spacing-md;
+    background: $background-secondary;
+    color: $text-secondary;
+
+    p {
+      margin: 0 0 $spacing-xs;
+    }
+
+    a {
+      color: $primary-blue;
+    }
+  }
+}

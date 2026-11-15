@@ -29,8 +29,8 @@ types. A client that needs only those imports them there: `.` builds the manifes
 module scope, which a bundler cannot drop. `./create` is the create form's checks
 (`checkInventoryCreate`, with the limits and defaults the form shows); it imports only `./paths`.
 `./meta` is `inventoryMeta` alone; it imports only `./paths`, so a host page that lists the apps
-loads no zod. `./element` is the app's two elements, and `./create-element` its create form
-(below).
+loads no zod. `./element` is the app's two elements, `./create-element` its create form, and
+`./shell` the page around the two elements (below).
 
 The core was moved as-is from Context Manager (source commit `373a20ae`), and the elements followed
 (source commit `b73e3c59`). The rules that assemble a space and answer its ops followed in stage 2
@@ -139,6 +139,33 @@ file and a parse error). The harness's memory host keeps their files, answers ev
 page reloads. Hand-built fixtures cover the cases files alone do not show (local changes, a disabled
 space, no inventory, hostile strings) and the element tests' states; the host refuses their ops.
 The controls switch the host off or make it refuse the next op.
+
+### The shell
+
+`@stillpointlab/inventory-app/shell` registers `<spl-inventory-app>`, the inventory's page: the app
+contract's `AppShellElement`, from `common-format/app`. It registers the overview and the zone too,
+and lays one of them out under its bar, in light DOM.
+
+- **Input.** `setState({ base, back?, location?, view, state, extras? })`. The `space` view (or no
+  view) shows `<spl-inventory-overview>`, the `zone` view `<spl-inventory-zone>`; a zone view with
+  no state says the zone is gone and links to the overview.
+- **The bar** (`.inventory-bar`): a back link (`.back-button`), the title (`#inventory-title`) and
+  the location (`.inventory-repo`). On the overview, back is the host's `back`, and absent without
+  it; on a zone it leads to the overview. The title is the inventory's label, with the zone's after
+  it on a zone page, and follows each reply passed to `learn(op, reply)`.
+- **Links** are built from `base` and `inventoryPages`, joined as text (a base can be a fragment):
+  the overview is `base`, a zone `base/room/<slug>`, with the slug its state carries or its file's
+  name. A followed link raises `navigate { href }` (bubbling, cancelable); a host that claims it
+  navigates itself, and otherwise the browser follows the link. The shell never sets `location`.
+- **Exports are the host's:** `extras.exports` is `{ all?: string; zone?(path): string }`, and the
+  download controls are hidden for an export it leaves out.
+- **Ops.** The elements' ops bubble through unchanged, `link-editor` included; the shell asks
+  nothing itself (`opView` answers no view: no inventory reply depends on one). Its
+  `notification`, `reload-request` and `checkin-request` bubble through unchanged too.
+
+In the harness, the fixture "Shell over the memory host" shows the shell over the example workshop,
+with its links under a fragment base, `navigate` resolved through `inventoryPages` and `project`
+and `refresh` answered from the memory host's files.
 
 ### The create form
 
