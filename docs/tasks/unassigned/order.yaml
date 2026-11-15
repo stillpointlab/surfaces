@@ -1,5 +1,9 @@
 # Backlog pool priority order: top = highest priority. One flat ranking;
 # comments are grouping hints only.
+
+# From stage 4's follow-ups (2026-11-14): two editors rewrite a file on disk when it is saved.
+- docs/tasks/unassigned/seeds/a-save-keeps-the-file.md
+
 - docs/tasks/unassigned/seeds/one-scaffold-for-formats-and-apps.md
 - docs/tasks/unassigned/seeds/media-formats-preview-first.md
 
@@ -8,6 +12,8 @@
 
 # From Jamie's first pass over the local host (2026-11-14).
 - docs/tasks/unassigned/seeds/revert-a-changed-file.md
+- docs/tasks/unassigned/seeds/markdown-relative-links.md
+- docs/tasks/unassigned/seeds/dark-scheme-pass.md
 
 # Carried from stage 2's follow-ups.
 - docs/tasks/unassigned/seeds/inventory-zones-folder.md

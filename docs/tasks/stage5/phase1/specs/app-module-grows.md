@@ -9,8 +9,9 @@ tags: [apps, common, host-contract, code]
 _The [local host brief](../../../stage4/phase1/briefs/local_host.md), outcome 3. Stage 5, phase 2,
 first wave. Two steps, each one PR here: the contract with inventory, then tasks._
 
-> Written with stage 4's specs, before any of stage 4 was built. Stage 5 opens by reading it
-> again against what stage 4 made.
+> Written with stage 4's specs, before any of stage 4 was built, and read again on 2026-11-14
+> against what stage 4 made. The [review](../reviews/specs-against-stage-4.md) lists what changed
+> and why (M4, L2). "What stage 4 built" is what an implementer reads first.
 
 ## High-level goal
 
@@ -31,6 +32,23 @@ reads them from the module and keeps no per-app file for any of it.
     copy, root consent. `services/apps/registry.ts`: the create noun and `place`.
 - `AppModule` in `packages/common/src/app.ts`; the module suite in
   `packages/common/src/testing/app.ts`.
+
+## What stage 4 built
+
+_Added 2026-11-14._
+
+- **Nothing here moved.** `packages/common/src/app.ts` and both app packages are as they were
+  when this was written, and the line counts above still hold at Context Manager's `main`
+  (`74ecae8c`).
+- **The local host's base is a fragment:** `#/app/<manifestPath>`. The query a page reads sits
+  inside the fragment, after the sub-path.
+- **The explorer draws `meta.icon` in an `<spl-icon>`** on the app's row. The icon set has
+  `task` and `inventory`.
+- **The local host's page allows no `eval`.** zod probes `Function('')`, and the page's content
+  security policy reports it; stage 4's follow-up log has the same for xmdl. It does no harm.
+  The local host runs the bounds in its server, so the light entry rule below is also what
+  keeps the probe out of its page.
+- **Stage 5's follow-up log** is `docs/devlogs/stage5/followups.md`.
 
 ## Work package
 
@@ -122,6 +140,8 @@ export function matchAppPage(
   imports `UNASSIGNED_COLUMN_ID`, `UNASSIGNED_DIR`, `TASKS_ID_MAX_LENGTH` and `TASKS_SLUG_PATTERN`
   from Context Manager's shared code; check which the package already has before copying any.
 - **The bounds are behaviour-identical.** Every limit, enum and pattern is carried over as it is.
+- **A page joins its redirect as text:** `base`, then a sub-path, then a query if it has one. It
+  never builds a `URL` from `base`, which in the local host is a fragment.
 
 ### The suite
 
@@ -132,6 +152,8 @@ export function matchAppPage(
 - `bounds.view` accepts each view its fixtures project;
 - every page's `path` matches through `matchAppPage`, and `resolve` over a fixture answers a view
   the core projects;
+- a page that redirects answers its `base` followed by a sub-path, for a base that is a path
+  (`/apps/x`) and for one that is a fragment (`#/app/docs/tasks/tasks.yaml`);
 - `meta.label` and `meta.icon` are not empty.
 
 ### Step 1: the contract, and inventory
@@ -165,7 +187,7 @@ default board, and an empty view with extras when there is none.
 - [ ] Each schema's limits match Context Manager's at the commit the PR names, checked by tests
       that carry over that repository's cases for them.
 - [ ] `matchAppPage` has tests: an empty path, a parameter, two parameters, no match.
-- [ ] Both apps pass the grown suite.
+- [ ] Both apps pass the grown suite, the redirect check with a fragment base included.
 - [ ] `common` still does not depend on zod; the apps' light entries still do not load it.
 - [ ] `npm run check` is green, and Context Manager's build against this branch is unchanged.
 

@@ -7,11 +7,13 @@ tags: [apps, host-contract, code, major-feature]
 # Spec: Context Manager adopts the apps' pieces
 
 _The [local host brief](../../../stage4/phase1/briefs/local_host.md), outcome 6. Stage 5,
-phase 6, the stage's last. Four steps, each one Context Manager PR with both walk suites. Steps
-1 to 3 do not depend on each other; step 4 comes after step 2._
+phase 6, the stage's last. Four steps in two Context Manager PRs: steps 1 to 3 together, then the
+lock._
 
-> Written with stage 4's specs, before any of stage 4 was built. Stage 5 opens by reading it
-> again against what stage 4 made.
+> Written with stage 4's specs, before any of stage 4 was built, and read again on 2026-11-14
+> against what stage 4 made and how its own adoption went. The
+> [review](../reviews/specs-against-stage-4.md) lists what changed and why (H7, M9). "What
+> stage 4 taught" is what an implementer reads first.
 
 ## High-level goal
 
@@ -24,19 +26,63 @@ files.
 - The [local host spike](../../../stage4/phase1/spikes/local-host.md), finding 7: what each move
   lets Context Manager drop.
 - The specs whose output this consumes: [app-module-grows](app-module-grows.md),
-  [app-shells](app-shells.md), [checkin-review](checkin-review.md).
+  [app-shells](app-shells.md), [checkin-review](checkin-review.md). Each PR for those lists the
+  ids and classes of Context Manager's page chrome it did not keep.
+- [context-manager-adopts-formats](../../../stage4/phase4/specs/context-manager-adopts-formats.md),
+  "As built": how stage 4's adoption went.
 - Context Manager: ADR-0028 (one executor per path) and ADR-0040 (apps through one host), with
   its count of app lines.
+
+## What stage 4 taught
+
+_Added 2026-11-14, from stage 4's adoption (context-manager#1186) and Jamie's
+[stage 4 reflections](../../../../devlogs/stage4/reflections.md)._
+
+- **One integration at the stage's end was good process:** less contention and less review. The
+  first draft of this spec had four PRs, each with both walk suites.
+- **A round of walks is slow and heavy.** Both suites take over 20 minutes and load the
+  machine, and two projects running CI at once caused build failures. The suites never run at
+  the same time, and a round does not start while another CI run is on the machine. A round
+  resets the walk database and pushes to the scratch repository, which needs Jamie's go-ahead
+  each time.
+- **The pin moves first, alone, and is walked alone.** In stage 4 every built entry of the
+  format packages had changed shape, and walking the pin by itself showed the adoption's own
+  failures apart from the pin's.
+- **A PR that sits conflicts.** Both sides append to Context Manager's follow-up log, and its CI
+  does not start on a PR that conflicts with `main`. Merge `main` in before marking it ready.
+- **The walks passed and missed the change.** They opened no code, sheet or image file, where
+  stage 4's adoption changed the most, and a pass by hand in Chromium covered it. Here the
+  walks drive both apps hard (tasks 01 to 27 and 29, 38 inventory steps), which is the surface
+  steps 1 to 3 change. The lock is new behaviour, and no walk covers it.
+- **The walks select the pages' chrome by id and class.** The two check-in dialogs alone are
+  selected 57 times. The shells and the review move that markup.
+- **The shared chunk grew** by 3.9 kB in stage 4, because a barrel every page loads exported
+  the registry. Here the shells and the review should load on the app pages alone, and the PR's
+  sizes show whether they do.
+- **The implementing agent works in the `context-manager-surfaces` clone, commits there, and
+  neither pushes nor runs walks.** The orchestrating agent rebuilds on current `main`, runs the
+  checks and the walks, and opens the PR.
 
 ## Work package
 
 - **Owns:** changes in Context Manager only, in the clone `context-manager-surfaces`, plus the
-  submodule pin. Each step is its own PR there.
+  submodule pin.
 - **Does not change:** this repository, except a fix a step proves is needed, which goes in its
   own PR here first.
-- **Every step** runs both walk suites and lists any behaviour change in its PR.
+- **Two PRs** (the agent's reading of the reflections; decision 2 of the review):
+  1. the adoption: the pin alone, then steps 1, 2 and 3, each its own commit. Both walk suites
+     run on the pin's commit and on the tip. A failure at the tip is found by commit;
+  2. the lock (step 4), after the first has merged, with one walk of its own.
+- **Each PR** lists every behaviour change, and the sizes of the app pages' entries and the
+  shared chunk before and after.
 
 ## Technical requirement
+
+### The pin
+
+The first commit moves `packages/surfaces` to this repository's `main` and changes nothing else.
+Context Manager builds, and both suites pass, with nothing adopted: the grown module, the shells
+and the review are additions.
 
 ### Step 1: bounds, pages and copy
 
@@ -59,13 +105,18 @@ files.
   two handlers go.
 - `tasks.scss` and `inventory.scss` lose everything but what styles Context Manager's own
   chrome.
+- **The walks' selectors** for the bars, Refresh and Settings change in this commit, from the
+  list the shells' PRs gave.
 
 ### Step 3: the check-in review
 
 - Both dialogs go. Context Manager answers the shell's `checkin` op: it maps the paths to its
   public ids, calls its existing endpoint, and replies `started`.
+- It passes its own words as `checkin.words` (a pull request's title and description), and no
+  `branch`: its check-in opens a pull request on a branch of its own naming.
 - Its job handling stays: the notices, the stuck timer, and telling the shell when the check-in
   settles.
+- **The walks' selectors** for the two dialogs change in this commit.
 
 ### Step 4: the lock
 
@@ -80,7 +131,14 @@ files.
   an unlocked tab; any other caller has to ask for the exception on purpose. The server keeps
   no unlocked state.
 
-Where the check can stand, read in Context Manager at `a2bc7cba`:
+The local host built the same lock first
+([apps-in-the-local-host](apps-in-the-local-host.md), with its "As built" section by then). What
+carries over: the listing stays whole and the page hides the files; the lock covers the
+manifest's folder and everything under it; a file in a locked scope opens in its preview with a
+line saying why; the server's refusal has one code.
+
+Where the check can stand, read in Context Manager at `a2bc7cba`; nothing there changed during
+stage 4:
 
 - **What enabling stores.** One row in `repoViewInstance`: the connection, the view type and the
   manifest's path (`RepoViewLifecycleService.enable`). The scope is derived, never stored: it
@@ -101,13 +159,21 @@ Step 4 starts by listing every such entry. Not yet read: the paths that write a 
 a draft, the MCP tools that write, import, and how an app-only good (one with no upstream yet)
 records its path.
 
+**A walk for the lock.** One new walk: an app's files are hidden in the tree; a card opened from
+the board shows its preview; a draft to it is refused; after "show files" the editor opens and
+saves; a reload hides the files again.
+
 ## Clarifications
 
 - **The order of steps 1 to 3 is free.** Take the smallest first: step 1.
 - **The count.** ADR-0040's count of app lines is taken again after each step and recorded in
-  that step's PR, and the ADR is refreshed once at the end.
+  the PR, and the ADR is refreshed once at the end.
 - **Not adopted here:** the runner, the storage port, the undo journal, and the explorer's
   tree. The brief keeps the runner and the check-in shared core out of scope.
+- **The preview pages** (public, library, claim review) still mount without the format
+  descriptors, which stage 4's follow-up log left for this spec to decide. The agent's lean:
+  they do not join. They are format work, the walks do not open them, and Context Manager's own
+  follow-up log holds them. Decision 5 of the review.
 
 ## Non-goals
 
@@ -118,16 +184,19 @@ records its path.
 
 ## Acceptance / completion checklist
 
+- [ ] Both walk suites pass on the pin alone.
 - [ ] After step 1, a module's bounds, pages and copy exist only in this repository.
 - [ ] After step 2, the client halves hold no layout and no page styles of an app.
 - [ ] After step 3, neither app has a check-in dialog of its own.
-- [ ] After step 4, an app's files are hidden in the repo tree until shown.
-- [ ] Both walk suites pass after every step, and each PR lists its behaviour changes.
+- [ ] Both walk suites pass on the first PR's tip, with the walks' edits in the commits that
+      moved the markup.
+- [ ] After step 4, an app's files are hidden in the repo tree until shown, the server refuses
+      a draft to them, and the lock's walk passes with both suites.
+- [ ] Each PR lists its behaviour changes and the sizes before and after.
 - [ ] ADR-0040 is refreshed with the new count.
 
 ## Implementation plan
 
-1. PR: bounds, pages and copy.
-2. PR: the shells.
-3. PR: the check-in review.
-4. PR: the lock, after listing every entry that writes to an app's file.
+1. PR: the pin; bounds, pages and copy; the shells; the check-in review. Walked at the pin and
+   at the tip.
+2. PR: the lock, after listing every entry that writes to an app's file, with its walk.
