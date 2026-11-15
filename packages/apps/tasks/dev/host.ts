@@ -1,6 +1,7 @@
-// The harness's tasks host: a workspace's files in memory, with the board's
-// and the strip's ops answered through the tasks module by the harness's one
-// memory host, as Context Manager's board service answers them over drafts.
+// The harness's tasks host: a workspace's files in a memory port, with the
+// board's and the strip's ops answered through the tasks module by the
+// harness's one memory host (common's runner), as Context Manager's board
+// service answers them over drafts.
 // What only a host does is done here: the host ops (resolving a divergence by
 // dropping it, scanning references, reading a file, a stage's phases, the close
 // dialog's candidates) and showing the board a change lands on. The controls
@@ -11,7 +12,7 @@ import { answerOps, fail, ok } from '@stillpointlab/common-format/app';
 import { memoryAnswer } from '../../../../tooling/harness/memory-host';
 import { projectResolvedCard, referencesTo, resolveTasks, tasksModule } from '../src/index.js';
 
-import { boardOf, factsOf, navOf, stageOf, write } from './workspace.js';
+import { boardOf, fixedPath, knowOf, navOf, read, stageOf } from './workspace.js';
 
 import type { Workspace } from './workspace.js';
 import type {
@@ -83,10 +84,9 @@ export function attachHost(board: TaskBoard, nav: TasksNav): HarnessHost {
   /** One card as it stands after an op. */
   const cardAt = (path: string): SharedTaskCard | null => {
     if (!ws) return null;
-    const resolved = resolveTasks(ws.snapshot);
-    return resolved?.ok
-      ? projectResolvedCard(ws.snapshot, resolved.tasks, path, factsOf(ws))
-      : null;
+    const { snapshot, facts } = read(ws);
+    const resolved = resolveTasks(snapshot);
+    return resolved?.ok ? projectResolvedCard(snapshot, resolved.tasks, path, facts) : null;
   };
   const withCard = (path: string): Result<object> => {
     const card = cardAt(path);
@@ -103,27 +103,32 @@ export function attachHost(board: TaskBoard, nav: TasksNav): HarnessHost {
 
   const inMemory = memoryAnswer({
     module: tasksModule,
-    workspace: () =>
-      ws && {
-        snapshot: ws.snapshot,
-        facts: () => factsOf(ws!),
-        write: (changes) => write(ws!, changes),
-      },
+    // The module's facts from the port's changes, with the fixture's pinned ones under them.
+    workspace: () => {
+      const at = ws;
+      return (
+        at && {
+          port: at.port,
+          manifestPath: at.manifestPath,
+          know: async (_module, loaded) => knowOf(at, loaded.snapshot),
+        }
+      );
+    },
     view: () =>
       'stage' in view ? { type: 'stage', stage: view.stage } : { type: 'board', path: view.board },
     hostOps: {
       // A host's own: a resolve keeps one side of a divergence; here, the facts drop it.
       resolve: (op) => {
         const path = op.path as string;
-        if (ws) delete ws.fixed[path]?.diverged;
+        if (ws) delete ws.fixed[fixedPath(ws, path)]?.diverged;
         return withCard(path);
       },
       'scan-references': (op) =>
         ws
-          ? ok({ references: referencesTo(ws.snapshot, op.path as string) })
+          ? ok({ references: referencesTo(read(ws).snapshot, op.path as string) })
           : fail('HARNESS_NO_FILES', 'The harness has no files to read.'),
       'read-file': (op) => {
-        const content = ws?.snapshot.files[op.path as string];
+        const content = ws?.port.files()[op.path as string];
         return typeof content === 'string'
           ? ok({ content })
           : fail('NOT_FOUND', `No file at ${op.path as string}`);
@@ -156,10 +161,12 @@ export function attachHost(board: TaskBoard, nav: TasksNav): HarnessHost {
     'set-current',
   ]);
 
-  const answer = (op: { type: string } & Record<string, unknown>): Result<object> => {
+  const answer = async (
+    op: { type: string } & Record<string, unknown>
+  ): Promise<Result<object>> => {
     const refusal = refused();
     if (refusal) return refusal;
-    const result = inMemory(op);
+    const result = await inMemory(op);
     if (!result.ok || !ws) return result;
     if (op.type === 'create-stage-phase' || op.type === 'close') {
       // A host's page goes to the phase the op made current.
@@ -171,8 +178,8 @@ export function attachHost(board: TaskBoard, nav: TasksNav): HarnessHost {
     return result;
   };
 
-  const answerBoard = (op: AppOp<TaskBoardOps>): Result<object> => answer(op);
-  const answerNav = (op: AppOp<TasksNavOps>): Result<object> => answer(op);
+  const answerBoard = (op: AppOp<TaskBoardOps>): Promise<Result<object>> => answer(op);
+  const answerNav = (op: AppOp<TasksNavOps>): Promise<Result<object>> => answer(op);
 
   const setAnswering = (on: boolean): void => {
     for (const stop of stops) stop();

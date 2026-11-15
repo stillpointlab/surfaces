@@ -172,7 +172,7 @@ async function open(shell: InventoryApp, href: string): Promise<void> {
         params: matched.params,
         query: Object.fromEntries(new URLSearchParams(query)),
         base: SHELL_BASE,
-        manifestPath: ws.snapshot.manifestPath,
+        manifestPath: ws.manifestPath,
         project,
       })
     : { notFound: true as const };

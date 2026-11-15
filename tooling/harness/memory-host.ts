@@ -1,25 +1,22 @@
-// One in-memory host for any app: it answers an element's ops with the app
-// module alone. A core op is applied to the workspace's snapshot, its changes
-// are written into memory, and the element gets the module's reply; a host op
-// goes to the handler the fixture gave. What a host knows that no file shows
-// (facts, how a move is kept) is the workspace's, so an app's harness supplies
-// its files and facts and nothing about its ops.
-import { fail, isCoreOp } from '@stillpointlab/common-format/app';
+// One in-memory host for any app: it answers an element's ops with common's
+// runner over the workspace's memory port. A core op runs as any host runs it
+// (`runOp`: bounded, applied, written into the port, replied from the files
+// read again); a host op goes to the handler the fixture gave. What a host
+// knows that no file shows is the module's `fromChanges` over the port's
+// changes, unless the workspace says more, so an app's harness supplies its
+// files and nothing about its ops.
+import { fail, isCoreOp, ok } from '@stillpointlab/common-format/app';
+import { runOp } from '@stillpointlab/common-format/host';
 
-import type {
-  AnyAppModule,
-  AppSnapshot,
-  AppView,
-  AppViewMap,
-  FileChange,
-  Result,
-} from '@stillpointlab/common-format/app';
+import type { AnyAppModule, AppView, AppViewMap, Result } from '@stillpointlab/common-format/app';
+import type { LoadedInstance, MemoryPort, RunnerHost } from '@stillpointlab/common-format/host';
 
-/** The files a host answers from, with the facts it lays on and how it writes a change. */
-export interface MemoryWorkspace<S extends AppSnapshot = AppSnapshot, Facts = unknown> {
-  snapshot: S;
-  facts(): Facts;
-  write(changes: readonly FileChange[]): void;
+/** The files a host answers from: a memory port, the instance's manifest, and what it knows beyond them. */
+export interface MemoryWorkspace {
+  port: MemoryPort;
+  manifestPath: string;
+  /** The facts and snapshot parts: the module's `fromChanges` over the port's changes by default. */
+  know?: RunnerHost['know'];
 }
 
 export interface MemoryHostOptions {
@@ -29,17 +26,26 @@ export interface MemoryHostOptions {
   /** The view the page shows, for a reply that depends on it. */
   view?(): AppView<AppViewMap> | undefined;
   /** Answers for the module's host ops, by op type. */
-  hostOps?: Record<string, (op: { type: string } & Record<string, unknown>) => Result<object>>;
+  hostOps?: Record<
+    string,
+    (op: { type: string } & Record<string, unknown>) => Result<object> | Promise<Result<object>>
+  >;
   /** The time a new file is stamped with (now, unless a fixture pins it). */
   now?(): string;
+}
+
+/** The module's facts from the port's changes alone: what a host that knows only files knows. */
+export function knowFromChanges(port: MemoryPort): RunnerHost['know'] {
+  return async (module: AnyAppModule, loaded: LoadedInstance) =>
+    module.fromChanges(port.changes(), loaded.snapshot);
 }
 
 /** An answer function for `answerOps`: any element op of the module, answered in memory. */
 export function memoryAnswer(
   options: MemoryHostOptions
-): (op: { type: string } & Record<string, unknown>) => Result<object> {
+): (op: { type: string } & Record<string, unknown>) => Promise<Result<object>> {
   const { module } = options;
-  return (op) => {
+  return async (op) => {
     const hostOp = options.hostOps?.[op.type];
     if (hostOp) return hostOp(op);
     if (!isCoreOp(module, op.type)) {
@@ -52,14 +58,17 @@ export function memoryAnswer(
         'This state is hand-built: the harness has no files to change.'
       );
     }
-    const now = options.now?.() ?? new Date().toISOString();
-    const applied = module.core.apply(ws.snapshot, module.toCoreOp(op, { now }));
-    if (!applied.ok) return applied;
-    ws.write(applied.changes);
-    return module.reply(op, applied, {
-      snapshot: ws.snapshot,
-      facts: ws.facts(),
-      view: options.view?.(),
-    });
+    const view = options.view?.();
+    const answer = await runOp(
+      {
+        port: ws.port,
+        know: ws.know ?? knowFromChanges(ws.port),
+        now: () => options.now?.() ?? new Date().toISOString(),
+      },
+      module,
+      ws.manifestPath,
+      view === undefined ? { op } : { op, view }
+    );
+    return answer.ok ? ok(answer.reply) : answer;
   };
 }
