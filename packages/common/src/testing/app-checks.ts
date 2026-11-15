@@ -1,15 +1,29 @@
 import { expect } from 'vitest';
 
+import { matchAppPage } from '../app';
 import { withLineBreak } from '../line-endings';
 
 import type {
+  AppChangesCase,
   AppCoreOptions,
   AppCoreRewrite,
   AppCoreRoundTrip,
   AppCoreRoundTripOptions,
   AppFixture,
+  AppModuleOpCase,
+  AppModuleOptions,
+  AppPageCase,
 } from './app';
-import type { AppLifecycle, AppSnapshot, FileChange, FolderNode } from '../app';
+import type {
+  AnyAppModule,
+  AppKnown,
+  AppLifecycle,
+  AppPageResolution,
+  AppSnapshot,
+  FileChange,
+  FolderNode,
+  Result,
+} from '../app';
 
 // The checks describeAppCore runs, one function per `it`, so common's own tests
 // can show each one failing against a broken sample core.
@@ -294,4 +308,218 @@ function countLines(lines: string[]): Map<string, number> {
 
 function commentLines(text: string): string[] {
   return text.split(/\r\n|\r|\n/).filter((line) => /^\s*#/.test(line));
+}
+
+// ---- The module -------------------------------------------------------------
+
+/** The members a grown module adds to its lifecycle and core. */
+export const GROWN_MEMBERS = ['meta', 'bounds', 'pages', 'placeCreate', 'fromChanges'] as const;
+
+/** The grown members a module does not have yet. */
+export function missingMembers(module: AnyAppModule): string[] {
+  return GROWN_MEMBERS.filter((member) => module[member] === undefined);
+}
+
+/** The module, failing when it lacks a grown member. */
+function grown(module: AnyAppModule): Required<AnyAppModule> {
+  const missing = missingMembers(module);
+  expect(missing, `the module has no ${missing.join(', ')}`).toEqual([]);
+  return module as Required<AnyAppModule>;
+}
+
+/** The time the suite's host stamps a new file with. */
+const NOW = '2026-01-01T00:00:00.000Z';
+
+/** A fixture's snapshot with a case's host parts laid on. */
+function caseSnapshot(
+  options: AppCoreOptions,
+  fixture: string,
+  extra?: Readonly<Record<string, unknown>>
+): AppSnapshot {
+  return { ...fixtureSnapshot(fixtureFiles(options, fixture), options.manifest), ...extra };
+}
+
+/** What `fromChanges` knows over a snapshot, and the snapshot with its host parts laid on. */
+function known(
+  module: Required<AnyAppModule>,
+  changes: AppChangesCase['changes'],
+  snapshot: AppSnapshot
+): { facts: unknown; snapshot: AppSnapshot } {
+  const answer = module.fromChanges(changes, snapshot) as AppKnown<unknown, AppSnapshot>;
+  expect(answer, 'fromChanges must answer an object').toBeTypeOf('object');
+  return { facts: answer.facts, snapshot: { ...snapshot, ...answer.snapshot } };
+}
+
+const describeRefusal = (result: Result): string =>
+  result.ok ? 'it was accepted' : `${result.code}: ${result.message}`;
+
+/** A grown module names the cases its checks run over: an op, an over-long op, a case per page, a change. */
+export function assertModuleCases(module: AnyAppModule, checks: AppModuleOptions): void {
+  const { pages } = grown(module);
+  expect(checks.ops?.length ?? 0, 'name at least one op a fixture applies').toBeGreaterThan(0);
+  expect(checks.overLong, 'name an op with a field past its limit').toBeDefined();
+  expect(checks.changes?.length ?? 0, 'name at least one fromChanges case').toBeGreaterThan(0);
+  for (const page of pages) {
+    const covered = (checks.pages ?? []).some(
+      (pageCase) => matchAppPage(pages, pageCase.path)?.page === page
+    );
+    expect(covered, `no page case resolves the page "${page.path}"`).toBe(true);
+  }
+}
+
+/** `meta` names the app and its icon. */
+export function assertMeta(module: AnyAppModule): void {
+  const { meta } = grown(module);
+  expect(meta.label.trim(), 'meta.label must not be empty').not.toBe('');
+  expect(meta.icon.trim(), 'meta.icon must not be empty').not.toBe('');
+  if (meta.create) {
+    expect(meta.create.noun.trim(), 'meta.create.noun must not be empty').not.toBe('');
+  }
+}
+
+/** `bounds.op` accepts an op a fixture applies, and the core applies what it answers. */
+export function assertBoundsAcceptOp(
+  options: AppCoreOptions,
+  module: AnyAppModule,
+  opCase: AppModuleOpCase
+): void {
+  const { bounds, core, toCoreOp } = grown(module);
+  const bounded = bounds.op(opCase.op);
+  expect(bounded.ok, `bounds.op refused "${opCase.name}": ${describeRefusal(bounded)}`).toBe(true);
+  if (!bounded.ok) return;
+  const applied = core.apply(
+    caseSnapshot(options, opCase.fixture, opCase.snapshot),
+    toCoreOp(bounded.op, { now: NOW })
+  );
+  expect(
+    applied.ok,
+    `the core refused "${opCase.name}" as bounds.op answered it: ${describeRefusal(applied)}`
+  ).toBe(true);
+}
+
+/** `bounds.op` refuses `op` with `APP_OP_INVALID` and its causes. */
+export function assertBoundsRefuseOp(module: AnyAppModule, op: unknown): void {
+  const refused = grown(module).bounds.op(op);
+  expect(refused.ok, `bounds.op accepted ${JSON.stringify(op).slice(0, 200)}`).toBe(false);
+  if (refused.ok) return;
+  expect(refused.code).toBe('APP_OP_INVALID');
+  expect(refused.details?.length ?? 0, 'a refusal carries its causes in details').toBeGreaterThan(
+    0
+  );
+}
+
+/** `bounds.view` accepts a view the fixtures project, and refuses an unknown one. */
+export function assertBoundsView(module: AnyAppModule, view: AppCoreRoundTrip['view']): void {
+  const { bounds } = grown(module);
+  const bounded = bounds.view(view);
+  expect(
+    bounded.ok,
+    `bounds.view refused ${JSON.stringify(view)}: ${describeRefusal(bounded)}`
+  ).toBe(true);
+  const unknown = bounds.view({ type: '__no-such-view__' });
+  expect(unknown.ok, 'bounds.view accepted an unknown view type').toBe(false);
+  if (!unknown.ok) expect(unknown.code).toBe('APP_VIEW_INVALID');
+}
+
+/** Each page's own path, its parameters given their names, matches that page and no other first. */
+export function assertPagePathMatches(module: AnyAppModule, path: string): void {
+  const { pages } = grown(module);
+  const sample = path.replace(/:(\w+)/g, '$1');
+  const match = matchAppPage(pages, sample);
+  expect(match?.page.path, `"${sample}" does not match the page "${path}"`).toBe(path);
+}
+
+/** The bases a page's redirect is checked against: a path, and the local host's fragment. */
+export function pageBases(options: AppCoreOptions): string[] {
+  return ['/apps/x', `#/app/${options.manifest}`];
+}
+
+/**
+ * A page case resolves as it says over each base: a view that `bounds.view`
+ * accepts and the core projects (with a title), the empty state, not found, or
+ * a redirect to the base followed by the case's text.
+ */
+export async function assertPageResolves(
+  options: AppCoreOptions,
+  module: AnyAppModule,
+  pageCase: AppPageCase
+): Promise<void> {
+  const grownModule = grown(module);
+  const { bounds, core, pages } = grownModule;
+  const answers = pageCase.answers ?? 'view';
+  const match = matchAppPage(pages, pageCase.path);
+  if (answers === 'not-found' && match === null) return;
+  expect(match, `no page matches "${pageCase.path}"`).not.toBeNull();
+  if (!match) return;
+  const { facts, snapshot } = known(
+    grownModule,
+    [],
+    caseSnapshot(options, pageCase.fixture, pageCase.snapshot)
+  );
+  const project = async (view: { type: string }): Promise<object | null> =>
+    core.project(snapshot, view, facts);
+
+  for (const base of pageBases(options)) {
+    const resolution: AppPageResolution = await match.page.resolve({
+      params: match.params,
+      query: { ...pageCase.query },
+      base,
+      manifestPath: options.manifest,
+      project,
+    });
+    const at = `"${pageCase.name}" (base ${base})`;
+    if (typeof answers === 'object') {
+      expect(resolution, `${at} must redirect`).toHaveProperty('redirect');
+      expect((resolution as { redirect: string }).redirect, `${at} redirected elsewhere`).toBe(
+        base + answers.redirect
+      );
+      continue;
+    }
+    if (answers === 'not-found') {
+      expect(resolution, `${at} must answer not found`).toEqual({ notFound: true });
+      continue;
+    }
+    expect(resolution, `${at} answered no view`).toHaveProperty('view');
+    const { view } = resolution as { view: { type: string } | null };
+    const state = view === null ? null : await project(view);
+    if (view !== null) {
+      const bounded = bounds.view(view);
+      expect(bounded.ok, `${at}: bounds.view refused its view: ${describeRefusal(bounded)}`).toBe(
+        true
+      );
+    }
+    if (answers === 'view') {
+      expect(state, `${at}: the core does not project its view`).not.toBeNull();
+    } else {
+      expect(
+        view === null || (state === null && match.page.emptyWhenMissing),
+        `${at} must answer the empty state`
+      ).toBe(true);
+    }
+    const title = match.page.title(state);
+    expect(typeof title === 'string' && title.trim() !== '', `${at} has no title`).toBe(true);
+  }
+}
+
+/**
+ * `fromChanges` over no changes, and over the case's, answers facts the core
+ * projects the case's view with; what it shows of the changes is the case's.
+ */
+export function assertFromChanges(
+  options: AppCoreOptions,
+  module: AnyAppModule,
+  changesCase: AppChangesCase
+): void {
+  const grownModule = grown(module);
+  const snapshot = caseSnapshot(options, changesCase.fixture);
+  for (const changes of [[], changesCase.changes]) {
+    const answer = known(grownModule, changes, snapshot);
+    const state = grownModule.core.project(answer.snapshot, changesCase.view, answer.facts);
+    const over = changes.length === 0 ? 'no changes' : `"${changesCase.name}"`;
+    expect(
+      state,
+      `the view does not project with what fromChanges knows over ${over}`
+    ).not.toBeNull();
+    if (changes.length > 0 && state) changesCase.shows?.(state as object);
+  }
 }
