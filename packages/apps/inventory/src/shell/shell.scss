@@ -30,7 +30,7 @@ spl-inventory-app {
     border-radius: $border-radius-md;
 
     &:hover {
-      color: $text-primary;
+      color: $text-color;
     }
 
     &:focus-visible {
@@ -43,7 +43,6 @@ spl-inventory-app {
     min-width: 0;
     margin: 0;
     font-size: 1.2rem;
-    color: $text-primary;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -51,7 +50,7 @@ spl-inventory-app {
 
   .inventory-repo {
     margin-left: auto;
-    color: $text-muted;
+    color: $text-secondary;
     font-size: 0.85rem;
     white-space: nowrap;
     overflow: hidden;
