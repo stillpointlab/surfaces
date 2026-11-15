@@ -40,6 +40,7 @@ import { chunkPaths, parseIndexEntries, stagedSources, stagingPlan } from './sta
 import { changesFromStatus, parseStatusEntries, withIndexRemovals } from './status';
 
 import type { GitRun } from './run';
+import type { IndexEntry } from './stage';
 import type { Failure, Result } from '@stillpointlab/common-format/app';
 import type {
   FileStatus,
@@ -93,6 +94,17 @@ export interface HostGitAccess {
   base(path: string): Promise<Result<{ text: string }>>;
   /** Stage the moves and deletes in changes the port has written. Nothing else is staged. */
   stage(changes: readonly PortChange[]): Promise<StageResult>;
+  /**
+   * The index entries of `paths` (from the root) that staging a delete of them
+   * would remove: each path's one entry, when git tracks it and it is not in
+   * conflict. Empty outside `repository`. For the journal, read before a delete.
+   */
+  indexEntries(paths: readonly string[]): Promise<IndexEntry[]>;
+  /**
+   * Put index entries back as `indexEntries` read them, with the command staging
+   * uses (`git update-index -z --index-info`). Outside `repository`, nothing.
+   */
+  restoreIndex(entries: readonly IndexEntry[]): Promise<StageResult>;
   /**
    * Commit the chosen paths, and nothing else, on the current branch or a new
    * one. Takes no lock: run it through the port (`NodePort.commit`), which holds
@@ -288,6 +300,41 @@ export function createGit(options: GitOptions): HostGitAccess {
     });
     if (!run.ok) return { ok: false, message: describe('git update-index', run) };
     return { ok: true, staged: plan.staged };
+  }
+
+  async function indexEntries(paths: readonly string[]): Promise<IndexEntry[]> {
+    const at = await start();
+    if (at.state !== 'repository' || paths.length === 0) return [];
+    let listed = '';
+    for (const chunk of chunkPaths(paths)) {
+      const run = await read(['ls-files', '-s', '-z', '--full-name', '--', ...chunk]);
+      if (!run.ok) throw new Error(describe('git ls-files', run));
+      listed += run.stdout.toString('utf8');
+    }
+    const asked = new Set(paths.map((path) => at.prefix + path));
+    const byPath = new Map<string, IndexEntry[]>();
+    for (const entry of parseIndexEntries(listed)) {
+      if (!asked.has(entry.path)) continue;
+      byPath.set(entry.path, [...(byPath.get(entry.path) ?? []), entry]);
+    }
+    // As `stagingPlan` reads them: one entry at stage 0, or nothing staging would touch.
+    return [...byPath.values()].flatMap((list) =>
+      list.length === 1 && list[0].stage === '0' ? list : []
+    );
+  }
+
+  async function restoreIndex(entries: readonly IndexEntry[]): Promise<StageResult> {
+    const at = await start();
+    if (at.state !== 'repository' || entries.length === 0) return { ok: true, staged: [] };
+    const input = entries
+      .map((entry) => `${entry.mode} ${entry.oid} ${entry.stage}\t${entry.path}\0`)
+      .join('');
+    const run = await runGit(['update-index', '-z', '--index-info'], { cwd: root, env, input });
+    if (!run.ok) return { ok: false, message: describe('git update-index', run) };
+    return {
+      ok: true,
+      staged: entries.map((entry) => entry.path.slice(at.prefix.length)),
+    };
   }
 
   const commitTimeoutMs = options.commitTimeoutMs ?? COMMIT_TIMEOUT_MS;
@@ -550,7 +597,7 @@ export function createGit(options: GitOptions): HostGitAccess {
     }
   }
 
-  return { start, info, changes, status, base, stage, commit };
+  return { start, info, changes, status, base, stage, indexEntries, restoreIndex, commit };
 }
 
 /** git's words after the message, on lines of their own. */
