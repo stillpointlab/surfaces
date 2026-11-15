@@ -1,0 +1,174 @@
+@use 'common/src/styles/tokens' as *;
+
+// The tasks app's page: the top bar above the tab strip and the board, in the
+// shell's light DOM. Where the page sits (a host's header, its margins) is the
+// host's; the column, the bar and the layout are the app's. Moved from Context
+// Manager's task board page styles, on the shared tokens; its check-in dialog's
+// rules stay with the dialog.
+//
+// A host with a fixed header sets `--spl-tasks-app-sticky-top` to its height,
+// so the pool sidebar sticks below it.
+
+spl-tasks-app {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: $spacing-lg;
+  color: $text-color;
+
+  // The identity row: back, the task icon, where the instance lives, then
+  // Refresh and, on a board, Settings (an instance-level concern, not a stage verb).
+  .tasks-topbar {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    min-width: 0;
+
+    .tasks-board-settings {
+      margin-left: auto;
+    }
+  }
+
+  .back-button {
+    display: inline-flex;
+    flex: none;
+    color: $text-secondary;
+    border-radius: $border-radius-md;
+
+    &:hover {
+      color: $text-color;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $focus-ring;
+      outline-offset: 2px;
+    }
+  }
+
+  .task-board-repo {
+    min-width: 0;
+    max-width: 24rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: $text-color;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // The bar's verbs, in the treatment the tab strip gives its own (+ stage,
+  // Close…, Set current).
+  .tasks-topbar .tasks-nav-button {
+    font-size: 0.8rem;
+    border: 1px solid $border-color;
+    border-radius: $border-radius-sm;
+    background: none;
+    color: $text-secondary;
+    padding: 3px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover {
+      background-color: $background-hover;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $focus-ring;
+      outline-offset: 2px;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  // The strip above the board, the pool sidebar flanking both. The board is
+  // `display: contents` (light DOM), so the sidebar and `.task-board` it
+  // renders are placed by this grid. Column 1 is the sidebar (auto: nothing
+  // when it is collapsed or absent); no column gap, so an empty track leaves no
+  // indent, and the sidebar carries its own margin.
+  .board-layout {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    row-gap: $spacing-sm;
+
+    > .tasks-nav {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    spl-task-board {
+      display: contents;
+    }
+
+    .board-pool-sidebar {
+      grid-column: 1;
+      grid-row: 1 / 3;
+      margin-right: $spacing-lg;
+      align-self: start;
+      position: sticky;
+      top: calc(var(--spl-tasks-app-sticky-top, 0px) + #{$spacing-sm});
+      max-height: calc(100vh - var(--spl-tasks-app-sticky-top, 0px) - 2rem);
+    }
+
+    .task-board {
+      grid-column: 2;
+      grid-row: 2;
+      min-width: 0;
+      min-height: 0;
+    }
+
+    // The empty and missing states have no sidebar: they span the layout.
+    .task-board-empty,
+    .board-empty,
+    .tasks-app-missing {
+      grid-column: 1 / 3;
+      grid-row: 2;
+    }
+  }
+
+  // No boards yet: centred and quiet; "+ stage" in the strip above is the action.
+  .task-board-empty {
+    max-width: 34rem;
+    margin: 3rem auto;
+    text-align: center;
+    color: $text-secondary;
+
+    h2 {
+      margin: 0 0 0.5rem;
+      color: $text-color;
+    }
+
+    p {
+      margin: 0.5rem 0;
+    }
+
+    code {
+      font-size: 0.85em;
+    }
+  }
+
+  .tasks-app-missing {
+    border: 1px solid $border-color;
+    border-radius: $border-radius-md;
+    padding: $spacing-md;
+    background: $background-secondary;
+    color: $text-secondary;
+
+    p {
+      margin: 0 0 $spacing-xs;
+    }
+
+    a {
+      color: $primary-blue;
+    }
+  }
+}

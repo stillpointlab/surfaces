@@ -33,7 +33,8 @@ A third, `./create`, is the create form's checks (`checkTasksCreate`, with the l
 columns and kinds the form shows). It imports only `./paths` and `./types`, and `planTasksCreate`
 runs the same checks, so the form and the plan cannot drift.
 `./meta` is `tasksMeta` alone; it imports only `./paths`, so a host page that lists the apps loads
-no zod.
+no zod. `./element` is the board and the tab strip, `./create-element` the create form, and
+`./shell` the page around the board and the strip (below).
 
 It was moved as-is from Context Manager (source commit `30428c3c`), where the host side stays:
 drafts, check-in, the pool and board services, routes and the task board. The rest of this README
@@ -262,6 +263,51 @@ a moved card names its anchor). The fixtures cover every card state (a hand-buil
 few facts no file shows), the stage view, an empty board, this repository's own `docs/tasks/`,
 and each dialog open. The strip sits above the board in every fixture, and the "Nav:" fixtures
 show a phase that is not current, a board outside the stages, no pointer, and the close dialog.
+
+### The shell
+
+`@stillpointlab/tasks-app/shell` registers `<spl-tasks-app>`, the tasks app's page: the app
+contract's `AppShellElement`, from `common-format/app`. It registers the board and the strip too,
+and lays them out under its top bar, in light DOM.
+
+- **Input.** `setState({ base, back?, location?, view, state, extras? })`. `extras` is what
+  `tasksPages` answer beside a view (`TasksPageExtras`): `nav`, the strip's state with the page's
+  selection, and `docsRoot`, the folder the empty state names. A `board` view shows
+  `<spl-task-board>`, a `stage` view the board's swimlanes, and no view the empty state ("No boards
+  yet") in the board's place; the strip is beside each. A view it does not know is a line with a
+  link to the landing. A new view gets a new board, as a page load did.
+- **The top bar** (`.tasks-topbar`): a back link (`.back-button`, absent without `back`), the task
+  icon, the location (`.task-board-repo`), **Refresh** (`.tasks-refresh`) and, on a board,
+  **Settings** (`.tasks-board-settings`), which opens the board's settings dialog, or says it is
+  unavailable when the board has no state to edit.
+- **Links** are built from `base` and `tasksPages`, joined as text with `pageHref` (a base can be
+  a fragment): a stage is `base/stage/<n>`, a phase `base/stage/<n>/phase/<m>`, and a board
+  outside the stages `base?path=<path>`. A followed link raises `navigate { href }` (bubbling,
+  cancelable); a host that claims it navigates itself, and otherwise the browser follows the link.
+  The strip's own `navigate` (a phase or board chosen, one created or closed to) is cancelable too,
+  and so is the shell's when a refresh leaves the page with nothing to show. Neither has a link
+  behind it, so unclaimed it goes nowhere. The shell never sets `location`.
+- **Refresh** asks the host `refresh`, then reads the nav and the view again with `project`,
+  keeping the strip's selection. From the empty state, or a stage the nav no longer has, it goes
+  to the landing instead.
+- **`learn(op, reply)`** reads the board again with `project` after `edit-manifest`,
+  `create-card`, `set-title` or `set-tags`, the dialogs' changes. **`opView(op)`** answers the
+  view on screen for `reorder-pool`, whose reply is that view's pool.
+- **Ops.** The elements' ops bubble through to the host, except two the shell answers itself
+  through `project`: `refresh-stage` (the stage view) and `close-candidates` (the board at the
+  path, as `{ path, title, column }`). It claims them before a listener on the shell sees them,
+  so a host that mounts the shell answers neither. Its own two are `project` and `refresh`
+  (`AppShellOps`).
+- **Requests** bubble through unchanged: `navigate`, `notification`, `reload-request`,
+  `checkin-request`, `open-card` and both elements' `open-options-menu` (the host's menu answers
+  with `options-menu-select` on the element that asked).
+- **Styles** read the shared tokens. A host with a fixed header sets
+  `--spl-tasks-app-sticky-top` to its height, so the pool sidebar sticks below it. The board's
+  and the strip's dialogs use a host's `.button` and form classes, as they did on its page.
+
+In the harness, the fixture "Shell over the memory host" shows the shell over the workshop, under
+a fragment base, with `navigate` resolved through `tasksPages`, `project` and `refresh` answered
+from the memory host's files, every op answered and learned, and a small options menu.
 
 ### The create form
 
