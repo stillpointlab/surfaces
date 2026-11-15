@@ -238,7 +238,7 @@ phase 2's moved to `stage5/phase2/specs/` and phase 3's to `stage5/phase3/specs/
 | 2     | 2    | [app-shells](../../../stage5/phase2/specs/app-shells.md)                                   | 2   |
 | 3     | 1    | [apps-in-the-local-host](../../../stage5/phase3/specs/apps-in-the-local-host.md)           | 2   |
 | 4     | 1    | [checkin-review](../../../stage5/phase4/specs/checkin-review.md)                           | 2   |
-| 5     | 1    | [undo-journal](../../../stage5/phase1/specs/undo-journal.md)                               | 1   |
+| 5     | 1    | [undo-journal](../../../stage5/phase5/specs/undo-journal.md)                               | 1   |
 | 6     | 1    | [context-manager-adopts-apps](../../../stage5/phase1/specs/context-manager-adopts-apps.md) | 4   |
 
 A spec moves to its phase's folder when its phase opens, as stage 3's did. Stage 5's specs were

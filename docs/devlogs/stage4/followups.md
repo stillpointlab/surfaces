@@ -108,12 +108,12 @@ says where it went. Nothing was dropped.
 - 2026-11-14 (git-in-the-host): a watch on `logs/HEAD` would catch `reset --soft` and
   `update-ref`, which touch neither `HEAD` nor `index`. Undo, in stage 5, may want it.
   - Closed 2026-11-14 by the read of
-    [undo-journal](../../tasks/stage5/phase1/specs/undo-journal.md): undo changes the index, which
+    [undo-journal](../../tasks/stage5/phase5/specs/undo-journal.md): undo changes the index, which
     the watcher already reports.
 - 2026-11-14 (git-in-the-host): a commit can switch branches (a new branch), and the undo
   journal's draft spec does not know about branches.
   - Closed 2026-11-14 by the read of
-    [undo-journal](../../tasks/stage5/phase1/specs/undo-journal.md): the `base` check covers a
+    [undo-journal](../../tasks/stage5/phase5/specs/undo-journal.md): the `base` check covers a
     switch, and a commit on a new branch changes no file.
 - 2026-11-14 (git-in-the-host): the Commit button reads "Commit 0" when nothing has changed. It
   could be disabled, or hidden, until there is a change.

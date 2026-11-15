@@ -83,7 +83,7 @@ server's message.
   [git-in-the-host](../../phase3/specs/git-in-the-host.md), which changes the server's `put`, not this page.
 - **An app's scope** is not special yet. The lock arrives with
   [apps-in-the-local-host](../../../stage5/phase3/specs/apps-in-the-local-host.md).
-- **Nothing is undone here.** [undo-journal](../../../stage5/phase1/specs/undo-journal.md) adds
+- **Nothing is undone here.** [undo-journal](../../../stage5/phase5/specs/undo-journal.md) adds
   that under the same writes.
 
 ## Non-goals

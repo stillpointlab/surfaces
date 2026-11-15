@@ -25,7 +25,7 @@ the harness's memory host. Not reviewed: the specs' designs where stage 4 does n
 
 Overall / Verdict: the plan holds, and no spec needs to be thrown away. Seven findings would have
 sent an implementing agent the wrong way or stopped it, and they concentrate in the two specs that
-sit on stage 4's code: [undo-journal](../specs/undo-journal.md) and
+sit on stage 4's code: [undo-journal](../../phase5/specs/undo-journal.md) and
 [apps-in-the-local-host](../../phase3/specs/apps-in-the-local-host.md). The worst is in the undo journal:
 the port reads and writes text of at most 2 MiB, so the journal as drafted cannot keep a deleted
 image, and its index step would unstage a person's own work. Every finding is written into its
@@ -78,7 +78,7 @@ hold at its `main`.
 
 ### H1. The undo journal cannot keep a file that is not text
 
-- **Where:** [undo-journal](../specs/undo-journal.md), "The journal"; `StoragePort` in
+- **Where:** [undo-journal](../../phase5/specs/undo-journal.md), "The journal"; `StoragePort` in
   `packages/common/src/host/index.ts`; `MAX_TEXT_BYTES` in the local host's `limits.ts`.
 - **What:** the draft's inverse of a `delete` is a `create` "with the old content", read through
   the port. The port cannot read an image or a file over 2 MiB, and cannot write bytes.
@@ -252,7 +252,7 @@ ends with one walk of its own.
 Jamie answered all five on 2026-11-14, and each spec now says what he decided.
 
 1. **Undo of a deleted image or large file** (H1). **Agreed:** it cannot be undone, and the host
-   asks first. In [undo-journal](../specs/undo-journal.md).
+   asks first. In [undo-journal](../../phase5/specs/undo-journal.md).
 2. **Context Manager's adoption as two PRs, not four** (H7). **"Two is fine if less disruptive
    overall."** Steps 1 to 3 together, the lock apart. In
    [context-manager-adopts-apps](../specs/context-manager-adopts-apps.md).
@@ -278,7 +278,7 @@ Jamie answered all five on 2026-11-14, and each spec now says what he decided.
 
 ## Task list
 
-- [x] **H1, H2:** [undo-journal](../specs/undo-journal.md) amended.
+- [x] **H1, H2:** [undo-journal](../../phase5/specs/undo-journal.md) amended.
 - [x] **H3, M1, M2:** [host-runner](../../phase2/specs/host-runner.md) amended.
 - [x] **H4, H5, M3, M4, M5, M7, M8, L1, L3, L4:**
       [apps-in-the-local-host](../../phase3/specs/apps-in-the-local-host.md) amended.

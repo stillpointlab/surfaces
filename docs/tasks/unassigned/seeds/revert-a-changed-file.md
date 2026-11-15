@@ -13,7 +13,7 @@ Where it stands:
 - Stage 4's [git spec](../../stage4/phase3/specs/git-in-the-host.md) lists "discard a change"
   among its non-goals, so the host can mark a change, show its diff and commit it, and cannot
   take it back.
-- Stage 5's [undo journal](../../stage5/phase1/specs/undo-journal.md) undoes steps the host
+- Stage 5's [undo journal](../../stage5/phase5/specs/undo-journal.md) undoes steps the host
   itself made. It does not return a file to the last commit.
 
 What a spec would have to settle (the claude agent's list, not Jamie's):

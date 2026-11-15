@@ -10,8 +10,9 @@ _The [local host brief](../../../stage4/phase1/briefs/local_host.md), outcome 5.
 One PR here._
 
 > Written with stage 4's specs, before any of stage 4 was built, and read again on 2026-11-14
-> against what stage 4 made. The [review](../reviews/specs-against-stage-4.md) lists what changed
-> and why (H1, H2). "What stage 4 built" is what an implementer reads first.
+> against what stage 4 made. The [review](../../phase1/reviews/specs-against-stage-4.md) lists what changed
+> and why (H1, H2). It was read once more on 2026-11-14 against phases 2 to 4 as built. "What
+> stage 4 built" and "What phases 2 to 4 built" are what an implementer reads first.
 
 ## High-level goal
 
@@ -65,12 +66,48 @@ _Added 2026-11-14. Paths are under `packages/hosts/local/src/`._
   with nothing more.
 - **The explorer's header** holds the folder's name and the Commit button.
 
+## What phases 2 to 4 built
+
+_Added 2026-11-14, from the "As built" sections of
+[host-runner](../../phase2/specs/host-runner.md),
+[apps-in-the-local-host](../../phase3/specs/apps-in-the-local-host.md) and
+[checkin-review](../../phase4/specs/checkin-review.md). Paths are under
+`packages/hosts/local/src/`._
+
+- **Where the host writes today:**
+  - `PUT /api/files` in `server/host.ts`: the lock's check (`checkWrite`), then `port.put`;
+  - an app's op: `POST /api/apps/op` in `server/apps/app-host.ts`, which runs `runOp` with the
+    runner host `server/apps/facts.ts` makes. Its `port` is the node port. One op is one
+    `put`;
+  - a create: `POST /api/apps/create`, which runs `createInstance`: one `put`;
+  - a commit, which writes no file.
+- **A port in memory** (`createMemoryPort` in `@stillpointlab/common-format/host`) keeps the
+  node port's rules, and one suite, `describeStoragePort` in
+  `@stillpointlab/common-format/testing/host`, runs over both.
+- **The op route answers `{ ok, reply, revision }`,** and the page's app pane shows the open
+  app again when the host's `revision` moves. A file an undo writes moves it.
+- **The host's own events** are a union in `shared/apps.ts`: `LocalHostEvent`, which is
+  `HostEvent` and `{ type: 'apps' }`. The server finds the instances again when the watcher
+  reports a listing or a manifest changed, so an undone create is seen with nothing more.
+- **The request helpers and the status for a code** are in `server/respond.ts`.
+- **The node port's git** (`server/git/repository.ts`, `HostGitAccess`) answers `start`,
+  `info`, `changes`, `status` and `base`. Staging is inside the port's `put`.
+- **The page** has one notice, which an app's reply or the page can write to, and the explorer's
+  header holds the folder's name and the Commit button, which is disabled with nothing
+  changed.
+- **The delete dialog** is `client/file-ops/dialog.ts`, and `HostClient.put(changes)` is the
+  page's one way to write.
+- **The lock:** a write through `PUT /api/files` to a locked app's file is refused. The
+  runner's writes are the server's own.
+
 ## Work package
 
 - **Owns:** `server/journal/`, its three routes, the `HostClient` methods and the explorer
   header's two buttons.
-- **Changes:** where the server builds its port (the journal wraps it), the node port's git
-  (two calls for index entries), the delete dialog (one more question), and `PUT /api/files`.
+- **Changes:** where the server builds its port (the journal wraps it), the runner host
+  `server/apps/facts.ts` makes and the two app routes that write, the node port's git (two
+  calls for index entries), `shared/apps.ts` (the event), `server/respond.ts` (the codes), the
+  delete dialog (one more question), `HostClient.put`, and `PUT /api/files`.
 - **Runs alone.**
 
 ## Technical requirement
@@ -120,6 +157,10 @@ type>`"), `createInstance`, and the explorer's create, rename and delete. `PUT /
   journals a request whose changes are all `create`, `move` or `delete`, and the server words
   its label from the changes; a `write` there is an editor's save and is not journaled. The
   order in the route is the lock's check, then the journal, then the port.
+- **How a writer names its step.** The journal answers a port for a label,
+  `journal.port(label)`, which is a `StoragePort` whose `put` is one step. The op route makes
+  its runner host with it for each op, and the create route for each create. A port so made
+  passes the port suite: the journal changes nothing a writer can see.
 - A new step clears the redo side.
 
 ### A step that cannot be kept
@@ -138,8 +179,9 @@ Either is handled the same way:
   image or a large file is among these, and deleting it cannot be undone. Delete anyway?"
   (Delete, Cancel). The second request says so (`{ changes, unjournaled: true }`), and is
   written without a step;
-- from an app's op, it is written without a step, and the reply's notice says the change cannot
-  be undone.
+- from an app's op, it is written without a step, and the op route's answer carries a `notice`
+  beside the reply, which the app pane shows in the page's notice: the change cannot be
+  undone.
 
 Either way the journal is emptied, since an older step could no longer be undone in order.
 
@@ -174,12 +216,17 @@ writes are the server's own: the lock does not refuse them, and they add no new 
   text field; `deepActiveElement` in `menu/menu.ts` finds the focused element inside a shadow
   root. Inside an editor, the key is the editor's.
 - The server sends `{ type: 'journal' }` on its event stream when the labels change. The event
-  is the local host's own, in the union beside `HostEvent` that the apps' event started.
+  joins `LocalHostEvent` in `shared/apps.ts`.
+- `HostClient` gains `journal()`, `undo()` and `redo()`, and `put` takes a second, optional
+  argument for a write the person agreed cannot be undone.
 - **The open file follows an undo** as it follows the explorer's write: the page hands the
   request to `FilePane.followWrite` with the paths the answer names, so a file renamed back
   keeps its element and its edits, and no banner shows for the page's own undo.
 - Everything else is brought up to date by the events the page already handles: the list, the
-  statuses, and the open app, whose revision changed.
+  statuses, the apps found (an undone create is an instance gone), and the open app, whose
+  revision moved.
+- With an app open, the keys undo the app's last op, since focus is in neither an editor nor a
+  text field. In an app's dialog with a field focused, they are the field's.
 
 ## Clarifications
 
@@ -209,6 +256,7 @@ writes are the server's own: the lock does not refuse them, and they add no new 
 
 ## Acceptance / completion checklist
 
+- [ ] The journal's port passes the port suite, over the memory port and over the node port.
 - [ ] Journal tests over the memory port: each inverse; redo after undo; a new step clearing
       redo; both limits; a step too large; a file changed between the wrapper's read and its
       write.
@@ -221,8 +269,9 @@ writes are the server's own: the lock does not refuse them, and they add no new 
 - [ ] Runner test: an op with several changes is one step, undone and redone whole.
 - [ ] Page tests: the open file follows an undone rename and closes on an undone create, with
       no banner.
-- [ ] By hand: delete a folder of text files and undo it; delete a folder with an image and see
-      the question; move a card on a board and undo it from the header.
+- [ ] By hand, light and dark: delete a folder of text files and undo it; delete a folder with
+      an image and see the question; move a card on a board and undo it from the header and
+      with the key, and see the board follow; create an app and undo it.
 - [ ] `npm run check` is green.
 
 ## Implementation plan
