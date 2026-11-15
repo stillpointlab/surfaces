@@ -21,7 +21,7 @@ import {
   tasksPages,
 } from '../src/index.js';
 
-import { factsOf, write } from './workspace.js';
+import { fixedPath, knowOf, read } from './workspace.js';
 
 import type { Workspace } from './workspace.js';
 import type { HarnessElements } from '../../../../tooling/harness/types';
@@ -38,7 +38,7 @@ import type {
 export const SHELL_TAG = 'spl-tasks-app';
 
 /** Where the shell's pages hang: a fragment, as the local host mounts an app. */
-const baseOf = (ws: Workspace): string => `#/app/${ws.snapshot.manifestPath}`;
+const baseOf = (ws: Workspace): string => `#/app/${ws.manifestPath}`;
 
 type Op = { type: string } & Record<string, unknown>;
 
@@ -55,7 +55,8 @@ function projectView(ws: Workspace, input: unknown): Result<{ state: object | nu
   const checked = tasksModule.bounds.view(input);
   if (!checked.ok) return checked;
   const view = checked.view as AppView<TasksViews>;
-  return ok({ state: tasksCore.project(ws.snapshot, view, factsOf(ws)) as object | null });
+  const { snapshot, facts } = read(ws);
+  return ok({ state: tasksCore.project(snapshot, view, facts) as object | null });
 }
 
 interface ShellHarness {
@@ -99,32 +100,36 @@ function attach(h: ShellHarness): void {
   const ws = (): Workspace => h.workspace();
 
   const cardAt = (path: string): Result<object> => {
-    const resolved = resolveTasks(ws().snapshot);
-    const card = resolved?.ok
-      ? projectResolvedCard(ws().snapshot, resolved.tasks, path, factsOf(ws()))
-      : null;
+    const { snapshot, facts } = read(ws());
+    const resolved = resolveTasks(snapshot);
+    const card = resolved?.ok ? projectResolvedCard(snapshot, resolved.tasks, path, facts) : null;
     return card ? ok({ card }) : fail('NOT_FOUND', `No card at ${path}`);
   };
 
   const inMemory = memoryAnswer({
     module: tasksModule,
-    workspace: () => ({
-      snapshot: ws().snapshot,
-      facts: () => factsOf(ws()),
-      write: (changes) => write(ws(), changes),
-    }),
+    // The module's facts from the port's changes, with the fixture's pinned ones under them.
+    workspace: () => {
+      const at = ws();
+      return {
+        port: at.port,
+        manifestPath: at.manifestPath,
+        know: async (_module, loaded) => knowOf(at, loaded.snapshot),
+      };
+    },
     view: () => opView,
     // A host's own ops; the shell answers the two that only read a view.
     hostOps: {
       // A resolve keeps one side of a divergence; here, the facts drop it.
       resolve: (op) => {
         const path = op.path as string;
-        delete ws().fixed[path]?.diverged;
+        delete ws().fixed[fixedPath(ws(), path)]?.diverged;
         return cardAt(path);
       },
-      'scan-references': (op) => ok({ references: referencesTo(ws().snapshot, op.path as string) }),
+      'scan-references': (op) =>
+        ok({ references: referencesTo(read(ws()).snapshot, op.path as string) }),
       'read-file': (op) => {
-        const content = ws().snapshot.files[op.path as string];
+        const content = ws().port.files()[op.path as string];
         return typeof content === 'string'
           ? ok({ content })
           : fail('NOT_FOUND', `No file at ${op.path as string}`);
@@ -132,16 +137,21 @@ function attach(h: ShellHarness): void {
     },
   });
 
-  answerOps<TasksElementOps & AppShellOps>(shell, (op: AppOp<TasksElementOps & AppShellOps>) => {
-    if (op.type === 'project') return projectView(ws(), op.view);
-    // The memory host's files are their own source: there is nothing to bring up to date.
-    if (op.type === 'refresh') return ok();
-    opView = shell.opView(op) as AppView<TasksViews> | undefined;
-    const reply = inMemory(op as Op);
-    opView = undefined;
-    if (reply.ok && isCoreOp(tasksModule, op.type)) shell.learn(op, reply);
-    return reply;
-  });
+  answerOps<TasksElementOps & AppShellOps>(
+    shell,
+    async (op: AppOp<TasksElementOps & AppShellOps>): Promise<Result<object>> => {
+      if (op.type === 'project') return projectView(ws(), op.view);
+      // The memory host's files are their own source: there is nothing to bring up to date.
+      if (op.type === 'refresh') return ok();
+      // The memory host reads the view before its first await, so it is this op's alone.
+      opView = shell.opView(op) as AppView<TasksViews> | undefined;
+      const pending = inMemory(op as Op);
+      opView = undefined;
+      const reply = await pending;
+      if (reply.ok && isCoreOp(tasksModule, op.type)) shell.learn(op, reply);
+      return reply;
+    }
+  );
 
   shell.addEventListener('navigate', (event) => {
     const { href } = (event as CustomEvent<{ href: string }>).detail;
@@ -171,7 +181,7 @@ async function open(h: ShellHarness, href: string): Promise<void> {
         params: matched.params,
         query: Object.fromEntries(new URLSearchParams(query)),
         base,
-        manifestPath: ws.snapshot.manifestPath,
+        manifestPath: ws.manifestPath,
         project,
       })
     : { notFound: true as const };
