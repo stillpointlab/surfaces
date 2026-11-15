@@ -247,6 +247,46 @@ work departed from the text above, this is what step 2 and the later specs read.
 - **Not checked in this step:** Context Manager's build against the branch. It is checked once,
   after step 2.
 
+## As built: step 2
+
+_2026-11-14, by an Opus 5.5 sub-agent; reviewed and checked by the orchestrating agent. Read at
+Context Manager's `8fa439ba`._
+
+- **The five members are required on `AppModule`,** and the suite's to-do path is gone.
+- **`bounded(key, schema, input, code, what)` is in `common-format/app`:** a schema's
+  `safeParse` answered as a `Result`, typed against the shape of `safeParse` with no import of
+  zod. Both apps' bounds use it.
+- **Tasks' `bounds.op` covers the core's twelve ops.** Its host ops are refused, as are
+  `create-card` with `now` (the host adds the time through `toCoreOp`) and `move-file`'s
+  `coMoving`, all as Context Manager's schema refused them. The four constants the schemas
+  need were in the package already.
+- **A page's stage and phase are read with `parseInt`,** as Context Manager read them, so
+  `/stage/3x` is stage 3. Kept so that nothing changes; it is in the follow-up log.
+- **Not found where Context Manager answered 400 or threw:** a `?path=` over 1,024 characters,
+  a parameter that is not a positive number, and any page whose nav cannot be projected.
+- **A stage the nav does not have still answers its view;** the host gives not found, since
+  `emptyWhenMissing` is false. The suite cannot say that yet.
+- **`meta.create.noun` is "a task project",** and `folderHelp` is plain text.
+- **Tasks' `fromChanges`, exactly:**
+  - a card is a path in a board's or the pool's kind folders; a broken manifest has none;
+  - a changed, new or moved card is `changed`; `created` lists the new ones;
+  - a moved card has `movedFrom` and `moves[path] = [from]`: the anchor alone, since one change
+    cannot carry the paths a card passed through;
+  - the `order` fact is there when the order file is among the snapshot's paths, and `changed`
+    when the file is changed, new or moved;
+  - housekeeping is the manifest when it is changed, new or moved, and every new `.gitkeep`
+    among the changes;
+  - a deleted file adds nothing;
+  - the answer always carries `snapshot: { moves, created }`, empty or not.
+- **Facts the statuses cannot give are left out:** `dirty` and `versionColumn` (whether a card's
+  column moved needs the last check-in's content), `diverged`, `title`, `tracked`, and anything
+  about pull requests. The harness's own facts still have `dirty`; the follow-up log has it for
+  [host-runner](host-runner.md).
+- **The bounds' cases carried from Context Manager** are all 31 of its test file for the op
+  schema. It has none for the view or create schemas, which have one test a limit.
+- **The suite has a fourth tasks fixture, `flat`:** a board outside the stage and phase folders,
+  for the landing page's `?path=` link.
+
 ## Clarifications
 
 - **Entries.** A client that needs only `meta` must not pull in zod. `meta` is exported from a

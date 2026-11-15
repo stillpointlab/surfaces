@@ -77,3 +77,17 @@ are carried here as they were written.
   `answers: 'not-found'` covers no match and a page that refuses.
 - 2026-11-14 (app-module-grows, step 1): the module has no bound for its host ops
   (`link-editor`); each host bounds them itself.
+- 2026-11-14 (app-module-grows, step 2): tasks' bounds, pages and create copy are now in
+  `packages/apps/tasks` (`bounds.ts`, `pages.ts`, `meta.ts`) and still in Context Manager. Two
+  copies until context-manager-adopts-apps, as for inventory.
+- 2026-11-14 (app-module-grows, step 2): tasks' `fromChanges` cannot say whether a card's column
+  moved (`dirty`, `versionColumn`): that needs the last check-in's content, not a status. The
+  harness's workspace works it out from its base files today. host-runner has to choose: the
+  module reads a base the host supplies, or the mark is given up outside Context Manager.
+- 2026-11-14 (app-module-grows, step 2): tasks' pages read a stage or phase with `parseInt`, as
+  Context Manager's did, so `/stage/3x` opens stage 3. Tighten it once Context Manager has
+  adopted the pages.
+- 2026-11-14 (app-module-grows, step 2): the `add-kind` bound carries a reserved-folder check
+  from Context Manager that can never be true.
+- 2026-11-14 (app-module-grows, step 2): tasks' `fromChanges` takes every new `.gitkeep` among
+  the changes as housekeeping, wherever it is. A host hands it the instance's changes only.
