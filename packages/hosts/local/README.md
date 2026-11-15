@@ -45,7 +45,7 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
 | `tree/`          | `<host-file-tree>`                                                                       |
 | `menu/`          | `HostMenu`: the page's one options menu, entries opened at a point                       |
 | `file-ops/`      | Create, rename and delete: a row's menu entries, the dialogs, the checks and the writes  |
-| `commit/`        | The commit dialog (`dialog.ts`) and its pure parts: rows, checks, the request            |
+| `commit/`        | The commit over `<checkin-review>` (`review.ts`) and its pure parts (`rows.ts`)          |
 | `apps/`          | The apps' registration, the app pane, the tree's view of the apps, the page's host ops   |
 
 - **The address** names what is open: `#/file/<path>` for the preview, `#/edit/<path>` for the
@@ -61,19 +61,26 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
   looks like a repository, the explorer says "git was not found, so changes and commit are
   off."; outside a repository the page shows nothing of git and calls none of its routes.
 - **Commit.** In a repository the explorer's header holds a **Commit** button with the number of
-  changed files (one per moved file, deleted files included). It opens a dialog that reads the
-  branch and the changes: every changed file checked, with its status and a moved file as
-  old → new, and an All box; a summary (required) and details, sent as one message; the
-  current branch or a new one by name (only a new one when `HEAD` is detached). Commit says
-  what is missing (no file, no summary, no branch name) under the form and puts focus there,
-  so the button is never disabled without a reason. While the commit runs the form is held,
-  and Escape and the close button wait. A refusal, git's own words included, shows under the
-  form as text and the dialog keeps everything. When the changes move while it is open, it
-  reads them again: checks are kept, a new row starts unchecked. Unsaved edits in the open file
-  are not in a commit, and the dialog says so. After a commit the marks are read at once, and a
-  notice under the header (a live region) says "Committed `<short id>` on `<branch>`." until it
-  is dismissed or the next commit replaces it. The request is `requestOf` in
-  `commit/request.ts`, `{ paths, message, branch? }`, sent by `HostClient.commit`.
+  changed files (one per moved file, deleted files included), disabled when nothing has changed.
+  It reads the branch and the changes, then opens the check-in review
+  (`@stillpointlab/checkin-review-component`), the same element an app's shell holds: every
+  changed file checked, in the tree's order (folders first, numbered names in order), its status
+  as its label (coloured by `[data-label]` in `page.scss`) and a moved file as old → new, with an
+  All box; a summary (required) and details, sent as one message; the current branch or a new one
+  by name (only a new one when `HEAD` is detached). A read that fails, or finds nothing changed,
+  says so in the notice and opens nothing. Commit says what is missing (no file, no summary, no
+  branch name) under the form and puts focus there, so the button is never disabled without a
+  reason. While the commit runs the form is held, and Escape and the close button wait. A
+  refusal, git's own words included, shows under the form as text, the review keeps everything,
+  and focus goes to the field it is about (`HOST_BRANCH_*` the branch, `HOST_COMMIT_NO_MESSAGE`
+  the summary, `HOST_COMMIT_NO_PATHS` the files) or to the refusal. When the changes move while
+  it is open, or after `HOST_NOT_CHANGED`, it reads them again: checks are kept, a new row starts
+  unchecked; a read that fails then is said under the form. Unsaved edits in the open file are
+  not in a commit, and the review says so. After a commit the marks are read at once, the branch
+  is the commit's, and a notice under the header (a live region) says "Committed `<short id>` on
+  `<branch>`." until it is dismissed or the next commit replaces it. The request is
+  `{ paths, message, branch? }` (`commitRequestOf` in `commit/rows.ts`), sent by
+  `HostClient.commit`.
 - **Saving** (Save, Ctrl+S, Cmd+S) sends one `write` whose `base` is the version the file was
   opened or last saved at. A change on disk to the open file is read again and compared by
   version: with no unsaved edits it shows in place; with edits a banner offers Reload, and Save
@@ -107,9 +114,12 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
   here, and a locked file opens in its preview. The app opens at `#/app/<manifestPath>`, then
   its own sub-path and query, in the app pane beside the file pane; the pane resolves the page
   on the server, answers the shell's ops, opens the page's menu for `open-options-menu`, and
-  reads the page again on the host's events. A shell's check-in review asks `checkin`; for now
-  the pane answers `started` and opens the explorer's commit dialog, and tells the shell
-  `checkinSettled()` when the dialog closes. A folder's menu, and the space under the rows,
+  reads the page again on the host's events. The shell's input carries `checkin`: the commit's
+  words and, in a repository, the branch, read again each time it is set, with a new one
+  offered. A shell's check-in review asks `checkin`, and the pane answers it with the page's
+  commit: the title as the summary ("`<app>` check-in" when there is none), the body as the
+  details, `branch` a new branch; `done` with the commit notice's words, or the refusal as it
+  is. The commit's `status` event resolves the page again, so the app's marks clear. A folder's menu, and the space under the rows,
   offer "Create <noun> here…" for each app with a create form: a dialog with the folder, the
   app's root consent where it asks one, and the app's own form.
 - **The notice** under the explorer's header is the page's one: a commit, an app's

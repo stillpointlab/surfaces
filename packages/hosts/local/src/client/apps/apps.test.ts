@@ -5,9 +5,9 @@
 import { requestOp } from '@stillpointlab/common-format/app';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { COMMIT_WORDS } from '../commit/rows';
 import { startPage } from '../page';
 import { fakeHost, fakeRegistry } from '../test-support';
-import { words } from '../words';
 
 import { editorLink } from './page-ops';
 import { appTreeView } from './tree-view';
@@ -542,31 +542,90 @@ describe('the app pane staying current', () => {
     expect(shell().inputs).toHaveLength(before);
   });
 
-  it('answers an app’s check-in with the explorer’s commit dialog, settled when it closes', async () => {
+  it('gives the shell a commit’s words and the branch, and sets it again when the branch moves', async () => {
     start('', [HOME, ROOT], (fake) => (fake.gitInfo = { state: 'repository', branch: 'main' }));
     await page.ready;
     await openHome();
-    const reads = () => host.gitCalls.filter((call) => call === 'changes').length;
-    const before = reads();
-    // The request is the shell's to take now: the pane does nothing with it.
+    expect(shell().inputs.at(-1)!.checkin).toEqual({
+      words: COMMIT_WORDS,
+      branch: { current: 'main', offerNew: true },
+    });
+    const before = shell().inputs.length;
+    // A switch made elsewhere: no file moved, but the branch did.
+    host.gitInfo = { state: 'repository', branch: null };
+    host.emit({ type: 'status' });
+    await settle();
+    expect(shell().inputs).toHaveLength(before + 1);
+    expect(shell().inputs.at(-1)!.checkin!.branch).toEqual({ current: null, offerNew: true });
+  });
+
+  it('outside a repository gives the words alone, and reads no git', async () => {
+    start();
+    await page.ready;
+    await openHome();
+    expect(shell().inputs.at(-1)!.checkin).toEqual({ words: COMMIT_WORDS });
+    expect(host.gitCalls).toEqual([]);
+  });
+
+  it('answers an app’s check-in with the commit, and the page follows it', async () => {
+    start('', [HOME, ROOT], (fake) => {
+      fake.gitInfo = { state: 'repository', branch: 'main' };
+      fake.statuses = { 'places/home/rooms/kitchen.md': 'changed', 'notes.md': 'new' };
+    });
+    await page.ready;
+    await openHome();
+    // The request is the shell's to take: the pane does nothing with it.
     shell().dispatchEvent(new CustomEvent('checkin-request', { bubbles: true }));
     await settle();
-    expect(reads()).toBe(before);
+    expect(host.gitCalls).toEqual([]);
 
     const reply = await requestOp(shell(), {
       type: 'checkin',
-      paths: ['places/home/inventory.yaml'],
+      paths: ['places/home/rooms/kitchen.md'],
+      title: ' Kitchen ',
+      body: '\nTwo chairs.\n',
+      branch: 'topic',
+      context: { ignored: true },
     } as never);
-    expect(reply).toEqual({ ok: true, status: 'started', message: words.apps.checkinInExplorer });
+    expect(host.commits).toEqual([
+      {
+        paths: ['places/home/rooms/kitchen.md'],
+        message: 'Kitchen\n\nTwo chairs.',
+        branch: 'topic',
+      },
+    ]);
+    expect(reply).toMatchObject({ ok: true, status: 'done' });
+    expect((reply as { message: string }).message).toMatch(/^Committed \w+ on topic\.$/);
     await settle();
-    expect(reads()).toBe(before + 1);
-    const dialog = document.querySelector<ModalDialog>('modal-dialog.commit')!;
-    expect(dialog.isOpen).toBe(true);
-    expect(shell().settled).toBe(0);
-    dialog.querySelector<HTMLButtonElement>('[data-answer="cancel"]')!.click();
-    await settle();
-    expect(dialog.isOpen).toBe(false);
-    expect(shell().settled).toBe(1);
+    expect(shell().inputs.at(-1)!.checkin!.branch).toEqual({ current: 'topic', offerNew: true });
+    expect($<HTMLButtonElement>('.explorer-commit').getAttribute('aria-label')).toBe(
+      'Commit: 1 changed file'
+    );
+  });
+
+  it('an app’s check-in with no title is “<app> check-in”; a refusal goes back as it is', async () => {
+    start('', [HOME, ROOT], (fake) => {
+      fake.gitInfo = { state: 'repository', branch: 'main' };
+      fake.statuses = { 'places/home/rooms/kitchen.md': 'changed' };
+    });
+    await page.ready;
+    await openHome();
+    host.refuseNextCommit = { code: 'HOST_GIT_FAILED', message: 'git said:\nhook failed' };
+    const refused = await requestOp(shell(), {
+      type: 'checkin',
+      paths: ['places/home/rooms/kitchen.md'],
+    } as never);
+    expect(refused).toEqual({
+      ok: false,
+      code: 'HOST_GIT_FAILED',
+      message: 'git said:\nhook failed',
+    });
+    expect(host.commits[0]).toEqual({
+      paths: ['places/home/rooms/kitchen.md'],
+      message: 'Fake check-in',
+    });
+    const invalid = await requestOp(shell(), { type: 'checkin', paths: 'x' } as never);
+    expect(invalid).toMatchObject({ ok: false, code: 'APP_OP_INVALID' });
   });
 });
 

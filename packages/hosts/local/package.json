@@ -23,6 +23,7 @@
     "test": "npm run gen:styles && vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@stillpointlab/checkin-review-component": "*",
     "@stillpointlab/code-format": "*",
     "@stillpointlab/common-format": "*",
     "@stillpointlab/image-format": "*",

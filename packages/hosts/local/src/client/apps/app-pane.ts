@@ -4,16 +4,20 @@
 // It loads the app's shell through the page's registration, resolves the page
 // the address names on the server (`HostClient.appPage`), and sets the shell's
 // input: `base` is `#/app/<manifestPath>`, `location` the served folder's name,
-// and there is no back link. It answers the shell's ops (`answerOps`):
+// there is no back link, and `checkin` is a commit's: the commit's words, and
+// in a repository the branch, read again each time the input is set, with a new
+// one offered. It answers the shell's ops (`answerOps`):
 //
 // - a core op goes to the server with `shell.opView(op)`, read before the first
 //   wait, and its reply to `shell.learn(op, reply)`;
 // - `project` reads one view; `refresh` reads the listing, the statuses and the
 //   instances again;
-// - `checkin`, the shell's check-in review confirmed, is for now the explorer's
-//   commit (a stopgap until the pane commits the review's choice itself): the
-//   reply is `started`, the commit dialog opens once the review has closed, and
-//   the shell hears `checkinSettled()` when the dialog closes;
+// - `checkin`, the shell's check-in review confirmed, is the page's commit of
+//   its paths: the title is the summary ("<the app's label> check-in" when there
+//   is none) and the body the details, `branch` a new branch. The reply is
+//   `done` with the commit notice's words; a refusal goes back as it is, so the
+//   review shows git's own words. The commit raises `status`, and the page is
+//   resolved again, so the app's marks clear;
 // - a host op the registration names (inventory's `link-editor`) is answered in
 //   the page; any other goes to the server.
 //
@@ -28,8 +32,9 @@
 // Staying current: a `changed` event for a path in the instance's region, a
 // `listed` or a `status` resolves the page again. One that arrives while the
 // pane's own op is unanswered waits for the answer; the shell's input is then
-// set only when the resolved revision differs from the one it shows, so the
-// pane's own op, already learned from its reply, sets nothing twice.
+// set only when the resolved revision, or the branch, differs from the one it
+// shows, so the pane's own op, already learned from its reply, sets nothing
+// twice.
 //
 // An instance discovery marks invalid shows its errors and "Show files…", and
 // no shell.
@@ -39,6 +44,7 @@ import { html, render } from '@stillpointlab/common-format/html';
 
 import { appBase, inRegion } from '../../shared/apps';
 import { formatAddress } from '../address';
+import { checkinOpFrom, COMMIT_WORDS, commitRequestOf } from '../commit/rows';
 import { words } from '../words';
 
 import type { AppAddress } from '../address';
@@ -46,6 +52,7 @@ import type { HostClient, HostEvent } from '../host-client';
 import type { ClientApp, ClientApps } from './registry';
 import type { FoundInstance } from '../../shared/apps';
 import type { AppShellElement, AppShellInput, Result } from '@stillpointlab/common-format/app';
+import type { HostCommit, HostCommitRequest, HostGit } from '@stillpointlab/common-format/host';
 
 /** A notice for the page: a line, and a short list under it. */
 export interface Notice {
@@ -67,8 +74,10 @@ export interface AppPaneOptions {
   refresh(): Promise<void>;
   /** "Show files…", from the pane of an instance that cannot open. */
   showFiles(instance: FoundInstance): void;
-  /** An app's check-in, for now: the explorer's commit dialog, settled when it closes. */
-  checkin(): Promise<unknown>;
+  /** The folder's git, read again; `null` outside a repository. */
+  git(): Promise<HostGit | null>;
+  /** The page's commit, which an app's check-in is here: the marks and the branch follow it. */
+  commit(request: HostCommitRequest): Promise<Result<HostCommit>>;
   /** Open the page's menu with these items at the anchor; `choose` answers the one picked. */
   openMenu(request: {
     anchor: Element;
@@ -123,8 +132,8 @@ export class AppPane {
   private address: AppAddress | null = null;
   private instance: FoundInstance | null = null;
   private mounted: Mounted | null = null;
-  /** The revision and the address the shell's input was last set for. */
-  private shown: { key: string; revision: string } | null = null;
+  /** The revision, the address and the branch (`undefined` outside a repository) the shell's input was last set for. */
+  private shown: { key: string; revision: string; branch: string | null | undefined } | null = null;
   private title: string | null = null;
   private seq = 0;
   /** The pane's own ops, until each is answered. */
@@ -260,11 +269,10 @@ export class AppPane {
     const mounted = this.mounted;
     if (!address || address.manifestPath === null || !mounted) return;
     const seq = this.seq;
-    const answer = await this.options.client.appPage(
-      address.manifestPath,
-      address.subPath,
-      address.query
-    );
+    const [answer, git] = await Promise.all([
+      this.options.client.appPage(address.manifestPath, address.subPath, address.query),
+      this.options.git().catch(() => null),
+    ]);
     if (seq !== this.seq || this.mounted !== mounted) return;
     if (!answer.ok) {
       const message =
@@ -285,14 +293,25 @@ export class AppPane {
     this.message.hidden = true;
     mounted.shell.hidden = false;
     this.setTitle(answer.title);
-    if (this.shown?.key === key && this.shown.revision === answer.revision) return;
-    this.shown = { key, revision: answer.revision };
+    const branch = git === null ? undefined : git.branch;
+    if (
+      this.shown?.key === key &&
+      this.shown.revision === answer.revision &&
+      this.shown.branch === branch
+    ) {
+      return;
+    }
+    this.shown = { key, revision: answer.revision, branch };
     const input: AppShellInput = {
       base: appBase(address.manifestPath),
       location: this.options.location(),
       view: answer.view,
       state: answer.state,
       ...(answer.extras ? { extras: answer.extras } : {}),
+      checkin: {
+        words: COMMIT_WORDS,
+        ...(git === null ? {} : { branch: { current: git.branch, offerNew: true } }),
+      },
     };
     mounted.shell.setState(input);
   }
@@ -381,7 +400,7 @@ export class AppPane {
       await this.options.refresh();
       return ok();
     }
-    if (op.type === 'checkin') return this.checkinInExplorer(mounted);
+    if (op.type === 'checkin') return this.checkin(op, mounted.app.meta.label);
     const pageOp = mounted.app.pageOps?.[op.type];
     if (pageOp) return pageOp(op);
 
@@ -404,18 +423,18 @@ export class AppPane {
     return ok(answer.reply);
   }
 
-  /**
-   * The stopgap for `checkin`: the review closes on a `started` reply, then the
-   * explorer's commit dialog opens on the folder's changes; when it closes, with
-   * a commit or without, the check-in has settled.
-   */
-  private checkinInExplorer(mounted: Mounted): Result<object> {
-    setTimeout(() => {
-      void Promise.resolve(this.options.checkin()).finally(() => {
-        if (this.mounted === mounted) mounted.shell.checkinSettled?.();
-      });
-    }, 0);
-    return ok({ status: 'started', message: words.apps.checkinInExplorer });
+  /** An app's check-in: the page's commit of its paths, `done` with the notice's words, or the refusal. */
+  private async checkin(raw: Op, label: string): Promise<Result<object>> {
+    const op = checkinOpFrom(raw);
+    if (!op) return fail('APP_OP_INVALID', 'A check-in names its files by path.');
+    let made: Result<HostCommit>;
+    try {
+      made = await this.options.commit(commitRequestOf(op, words.apps.checkinTitle(label)));
+    } catch (error) {
+      made = fail('HOST_COMMIT_FAILED', String(error));
+    }
+    if (!made.ok) return made;
+    return ok({ status: 'done', message: words.commit.notice(made.short, made.branch) });
   }
 
   // ---- what else the pane shows ----

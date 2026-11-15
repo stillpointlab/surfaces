@@ -5,8 +5,8 @@
 // sentence after it: together they are the draft's words. The explorer's menu and
 // dialogs are the file-operations spec's, where it has words for them. The git
 // notice is the git-in-the-host spec's; the Changes view's messages are drafts.
-// The commit dialog's choice ("On <branch>", "On a new branch") is the spec's; the
-// rest of its words, and the notice after a commit, are drafts. The apps' words
+// The commit's words in the check-in review, and the notice after a commit, are
+// drafts; the review's choice ("On <branch>", "On a new branch") is its own. The apps' words
 // (`apps`) are the apps-in-the-local-host spec's where it gives them (the "Show
 // files…" question, the folder's reason, the menu's entries), and drafts beside
 // them.
@@ -170,8 +170,8 @@ export const words = {
     unknownApp: (app: string) => `This page cannot show the ${app} app.`,
     loadFailed: 'The app could not be loaded.',
     readFailed: (message: string) => `The app could not be read. ${message}`,
-    /** An app's check-in, until the pane commits its review's choice itself. */
-    checkinInExplorer: 'Here a check-in is a commit: choose the files in the Commit dialog.',
+    /** An app's commit summary when its review gives none. */
+    checkinTitle: (label: string) => `${label} check-in`,
     /** An instance discovery found but cannot open: its manifest, or an overlap. */
     invalidTitle: (label: string) => `${label} cannot open`,
     invalidIntro: 'These are the problems with its files:',
@@ -196,39 +196,34 @@ export const words = {
     },
   },
 
-  /** The Commit button, its dialog, and the notice after a commit. */
+  /**
+   * The Commit button, the commit's words in the check-in review (the explorer's
+   * and every app's), and the notice after a commit. The review's own words
+   * ("Files", "All", "On <branch>", "New branch name", …) are the component's.
+   */
   commit: {
     button: 'Commit',
     /** The button's name for a screen reader, with the count it shows. */
-    buttonLabel: (count: number) => `Commit: ${count} changed ${count === 1 ? 'file' : 'files'}`,
+    buttonLabel: (count: number) =>
+      count === 0
+        ? 'Commit: nothing has changed'
+        : `Commit: ${count} changed ${count === 1 ? 'file' : 'files'}`,
     title: 'Commit',
-    loading: 'Reading the changes…',
     readFailed: (message: string) => `The changes could not be read. ${message}`,
     nothing: 'Nothing has changed since the last commit.',
-    files: 'Files',
-    all: 'All',
-    chosen: (count: number, total: number) =>
-      `${count} of ${total} ${total === 1 ? 'file' : 'files'} chosen`,
     status: { changed: 'changed', new: 'new', moved: 'moved', deleted: 'deleted' },
-    moved: (from: string, to: string) => `${from} → ${to}`,
     summary: 'Summary',
     details: 'Details (optional)',
-    branch: 'Branch',
-    onCurrent: (branch: string) => `On ${branch}`,
-    onNew: 'On a new branch',
-    newName: 'New branch name',
     detached: 'HEAD is detached (not on a branch), so the commit goes on a new branch.',
     unsaved: (name: string) =>
       `Your unsaved edits to ${name} are not in this commit. Save them first to include them.`,
     check: {
       noFiles: 'Choose at least one file to commit.',
       noSummary: 'Write a summary for the commit.',
-      noBranch: 'Name the new branch.',
     },
     confirm: 'Commit',
     committing: 'Committing…',
     cancel: 'Cancel',
-    close: 'Close',
     notice: (short: string, branch: string) => `Committed ${short} on ${branch}.`,
     dismiss: 'Dismiss',
   },

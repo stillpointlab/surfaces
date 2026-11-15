@@ -21,9 +21,13 @@
 //   not found. Outside `repository` nothing calls the git routes.
 // - commit: in `repository` the Commit button in `.explorer-header` shows how many
 //   files changed (the statuses' count: one per moved file, deleted files
-//   included) and opens `commit/`'s dialog, which reads the changes again while
-//   it is open when the host says they moved. After a commit the marks are read
-//   at once (not only on the `status` event the commit raises).
+//   included), and is disabled when none has. It opens `commit/`'s review, the
+//   check-in review an app's shell holds too, which reads the changes again while
+//   it is open when the host says they moved. The page's one commit
+//   (`commitChosen`) answers the explorer's review and every app's check-in: after
+//   it the marks are read at once (not only on the `status` event the commit
+//   raises), and the branch is the commit's. The app pane gives each shell the
+//   commit's words and the branch, read again each time it sets the input.
 // - the notice under the header is the page's one: the commit's message, an
 //   app's `notification` and the problems a lock reports all show there, a line
 //   and a short list, the newest in place of the last, until it is dismissed. It
@@ -48,7 +52,7 @@ import { appAddress, formatAddress, parseAddress } from './address';
 import { AppPane } from './apps/app-pane';
 import { CreateDialog } from './apps/create-dialog';
 import { appTreeView, holdsChanges, holdsLocked, lockedBy } from './apps/tree-view';
-import { CommitDialog } from './commit/dialog';
+import { CommitReview } from './commit/review';
 import { createConfirm } from './confirm';
 import { createFileOps } from './file-ops/file-ops';
 import { indexListing } from './file-ops/paths';
@@ -69,8 +73,9 @@ import type { MenuEntry } from './menu/menu';
 import type { PaneState } from './pane';
 import type { HostFileTree, TreeEventDetail, TreeMenuDetail } from './tree/host-file-tree';
 import type { FolderNode } from '@stillpointlab/common-format/app';
+import type { Result } from '@stillpointlab/common-format/app';
 import type { FormatDescriptor, FormatRegistry } from '@stillpointlab/common-format/format';
-import type { FileStatus, HostCommit } from '@stillpointlab/common-format/host';
+import type { FileStatus, HostCommit, HostCommitRequest } from '@stillpointlab/common-format/host';
 
 export type { Notice } from './apps/app-pane';
 
@@ -97,13 +102,17 @@ export interface HostPage {
   readonly menu: HostMenu;
   /** Create, rename and delete: the explorer's entries, dialogs and writes. */
   readonly fileOps: FileOps;
-  /** The commit dialog. */
-  readonly commit: CommitDialog;
+  /** The explorer's commit: the check-in review, over the folder's changes. */
+  readonly commit: CommitReview;
   /** The dialog that creates an app's instance. */
   readonly createDialog: CreateDialog;
   /** The instances, as last read. */
   readonly instances: readonly FoundInstance[];
-  /** Open the commit dialog, as the Commit button does; the commit made, or null. */
+  /**
+   * Open the commit, as the Commit button does: read the changes, then open the
+   * review on them. Settles when the review closes, with the commit made, or
+   * null (none made, nothing changed, the read failed, or not a repository).
+   */
   openCommit(): Promise<HostCommit | null>;
   /** Show a notice in the page's one notice; `null` clears it. */
   notify(notice: Notice | null): void;
@@ -206,7 +215,8 @@ export function startPage(options: PageOptions): HostPage {
     notify: (shown) => showNotice(shown),
     refresh: () => refresh(),
     showFiles: (instance) => void showFiles(instance),
-    checkin: () => openCommit(),
+    git: () => readGit(),
+    commit: (request) => commitChosen(request),
     openMenu: ({ anchor, items, choose }) => {
       const box = anchor.getBoundingClientRect();
       menu.open({
@@ -228,11 +238,12 @@ export function startPage(options: PageOptions): HostPage {
   const instanceAt = (manifestPath: string | null): FoundInstance | null =>
     instances.find((instance) => instance.manifestPath === manifestPath) ?? null;
 
-  /** The Commit button: in a repository, with the number of changed files. */
+  /** The Commit button: in a repository, with the number of changed files; disabled with none. */
   function showCommit(): void {
     commitButton.hidden = git?.state !== 'repository';
     const count = Object.keys(statuses).length;
-    commitCount.textContent = String(count);
+    commitButton.disabled = count === 0;
+    commitCount.textContent = count === 0 ? '' : String(count);
     commitButton.setAttribute('aria-label', words.commit.buttonLabel(count));
   }
 
@@ -543,23 +554,43 @@ export function startPage(options: PageOptions): HostPage {
     if (!opened) tree.selected = pane.current?.path ?? null;
   }
 
-  const commit = new CommitDialog(host, {
+  const commit = new CommitReview(host, {
     client,
     unsaved: () => {
       const current = pane.current;
       return current?.dirty ? current.path : null;
     },
+    commit: (request) => commitChosen(request),
+    notify: (shown) => showNotice(shown),
   });
 
   async function openCommit(): Promise<HostCommit | null> {
     if (git?.state !== 'repository') return null;
-    const made = await commit.open();
-    if (made) {
-      git = { ...git, branch: made.branch };
-      showNotice({ text: words.commit.notice(made.short, made.branch), tone: 'success' });
+    return commit.open();
+  }
+
+  /**
+   * The page's one commit, for the explorer's review and an app's check-in: on a
+   * commit, the branch is the commit's and the marks are read at once.
+   */
+  async function commitChosen(request: HostCommitRequest): Promise<Result<HostCommit>> {
+    const made = await client.commit(request);
+    if (made.ok) {
+      if (git) git = { ...git, branch: made.branch };
       await refreshMarks(true);
     }
     return made;
+  }
+
+  /** The folder's git, read again, for an app's review; `null` outside a repository. */
+  async function readGit(): Promise<HostGit | null> {
+    if (git?.state !== 'repository') return null;
+    try {
+      git = await client.git();
+    } catch {
+      // keep what was last read
+    }
+    return git;
   }
 
   // ---- the lock ----
@@ -768,7 +799,9 @@ export function startPage(options: PageOptions): HostPage {
       (event) => {
         if (!(event.target as Element).closest('.page-notice-close')) return;
         showNotice(null);
-        commitButton.focus();
+        // Back to the button, or, when nothing is left to commit, the tree's row.
+        if (!commitButton.disabled) commitButton.focus();
+        else tree.querySelector<HTMLElement>('[role="treeitem"][tabindex="0"]')?.focus();
       },
       { signal }
     );

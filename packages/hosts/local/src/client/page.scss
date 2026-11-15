@@ -61,6 +61,11 @@ modal-dialog:not(:defined) {
   gap: $spacing-xs;
 }
 
+// No count when nothing has changed: the button is disabled instead.
+.explorer-commit-count:empty {
+  display: none;
+}
+
 .explorer-commit-count {
   min-width: 1.25em;
   padding: 0 $spacing-xs;
@@ -700,185 +705,48 @@ host-file-tree {
   }
 }
 
-// The commit dialog (commit/dialog.ts): the files, the message, the branch, and a
-// refusal under them.
-.commit-body {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-xs;
-}
-
-.commit-message {
-  margin: 0;
-}
-
-.commit-files,
-.commit-branch {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-xs;
-  min-width: 0;
-  margin: 0 0 $spacing-sm;
-  padding: 0;
-  border: 0;
-}
-
-.commit-legend {
-  padding: 0;
-  margin-bottom: $spacing-xs;
-  color: $text-muted;
-  font-size: 0.8125rem;
-}
-
-.commit-files-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $spacing-sm;
-  font-size: 0.875rem;
-}
-
-.commit-count {
-  color: $text-muted;
-  font-size: 0.8125rem;
-}
-
-.commit-list {
-  max-height: min(40vh, 18rem);
-  margin: 0;
-  padding: $spacing-xs 0;
-  overflow-y: auto;
-  border: 1px solid $border-light;
-  border-radius: $border-radius-md;
-  background: $background-primary;
-  list-style: none;
-}
-
-.commit-row-label {
-  display: flex;
-  align-items: baseline;
-  gap: $spacing-sm;
-  padding: 2px $spacing-sm;
-  font-size: 0.875rem;
-  cursor: pointer;
-
-  &:hover {
-    background: $background-hover;
-  }
-
-  input {
-    flex: none;
-    align-self: center;
-    margin: 0;
-  }
-}
-
-.commit-status {
-  flex: none;
-  width: 4.5em;
-  font-size: 0.75rem;
-  font-weight: 600;
-
-  &[data-status='changed'] {
-    color: $warning-color;
-  }
-  &[data-status='new'] {
-    color: $success-color;
-  }
-  &[data-status='moved'] {
-    color: $info-color;
-  }
-  &[data-status='deleted'] {
-    color: $error-color;
-  }
-}
-
-.commit-path {
-  min-width: 0;
-  font-family: ui-monospace, monospace;
-  font-size: 0.8125rem;
-  overflow-wrap: anywhere;
-}
-
-.commit-label {
-  color: $text-muted;
-  font-size: 0.8125rem;
-}
-
-.commit-field {
-  box-sizing: border-box;
-  width: 100%;
+// The check-in review (`<checkin-review>`), the explorer's commit and every app's:
+// the review places its rows and fields, and borrows `.button` and the form
+// classes above. A refusal is git's own words, which may be many lines: kept as
+// they are, framed and scrolled. The explorer's rows are statuses, coloured as
+// the tree colours them; its note about unsaved edits is a warning.
+checkin-review .checkin-review-error {
   padding: $spacing-xs $spacing-sm;
-  border: 1px solid $border-dark;
-  border-radius: $border-radius-md;
-  color: $text-primary;
-  background: $background-primary;
-  font: inherit;
-  font-size: 0.875rem;
-
-  &:focus-visible {
-    outline: 2px solid $focus-ring;
-    outline-offset: 1px;
-  }
-
-  &:read-only,
-  &:disabled {
-    opacity: 0.7;
-  }
-}
-
-.commit-details {
-  margin-bottom: $spacing-sm;
-  resize: vertical;
-}
-
-#commit-branch-name {
-  font-family: ui-monospace, monospace;
-}
-
-.commit-choice {
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
-  font-size: 0.875rem;
-}
-
-.commit-note {
-  margin: 0;
-  color: $text-muted;
-  font-size: 0.8125rem;
-}
-
-.commit-unsaved {
-  padding: $spacing-xs $spacing-sm;
-  border: 1px solid $warning-border;
-  border-radius: $border-radius-md;
-  color: $warning-color;
-  background: $warning-bg;
-}
-
-// git's own words, which may be many lines: kept as they are, and scrolled.
-.commit-error {
-  max-height: 12rem;
-  margin: 0;
-  padding: $spacing-xs $spacing-sm;
-  overflow: auto;
   border: 1px solid $error-border;
   border-radius: $border-radius-md;
-  color: $error-color;
   background: $error-bg;
   font-family: ui-monospace, monospace;
-  font-size: 0.8125rem;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-
-  &[hidden] {
-    display: none;
-  }
 
   &:focus-visible {
     outline: 2px solid $focus-ring;
     outline-offset: 1px;
+  }
+}
+
+.commit-review {
+  .checkin-review-label {
+    font-weight: 600;
+
+    &[data-label='changed'] {
+      color: $warning-color;
+    }
+    &[data-label='new'] {
+      color: $success-color;
+    }
+    &[data-label='moved'] {
+      color: $info-color;
+    }
+    &[data-label='deleted'] {
+      color: $error-color;
+    }
+  }
+
+  .checkin-review-note {
+    padding: $spacing-xs $spacing-sm;
+    border: 1px solid $warning-border;
+    border-radius: $border-radius-md;
+    color: $warning-color;
+    background: $warning-bg;
   }
 }
 
