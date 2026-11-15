@@ -166,3 +166,15 @@ are carried here as they were written.
   so a phase's new folder can come after "Pool & config".
 - 2026-11-14 (checkin-review, step 1): inventory's `./shell` entry still exports the name of
   `checkin-request`, which no host hears now.
+- 2026-11-14 (checkin-review, step 2): a shell cannot say where focus goes after a refusal, so
+  in an app's review it goes to the refusal's line. Rules a host can pass as data would let it
+  reach the branch or the title.
+- 2026-11-14 (checkin-review, step 2): nothing shows between pressing Commit and the review
+  opening while the page reads the changes.
+- 2026-11-14 (checkin-review, step 2): the review's error line is framed and monospace for
+  git's words, so the review's own short messages ("Choose at least one file…") are monospace
+  too in the local host.
+- 2026-11-14 (checkin-review, step 2): an app's check-in with no title is "`<app>` check-in";
+  the instance's own name ("Workshop assets check-in") may read better.
+- 2026-11-14 (checkin-review, step 2): the app pane asks for git's state at every resolve. The
+  branch could come with the `status` event.

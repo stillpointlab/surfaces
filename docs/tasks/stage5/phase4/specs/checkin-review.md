@@ -290,6 +290,55 @@ and kept for what did not; confirm with nothing checked. In the component's own 
 groups, a moved file with a branch choice, a detached `HEAD`, a refusal, busy, and hostile
 strings.
 
+## As built: step 2
+
+_2026-11-14, by the same Opus 5.5 sub-agent; reviewed and checked by the orchestrating agent,
+who looked at the screenshots._
+
+- **The page has one commit,** `commitChosen(request)`, which the explorer's review and the app
+  pane both answer `checkin` with. After it the page knows the commit's branch and has read
+  the marks before it replies.
+- **The app pane** sets `checkin` on the shell's input with the words for a commit and, in a
+  repository, the branch, read again at each resolve. A branch that moved sets the input again
+  even when the revision did not. Outside a repository it sets the words alone and asks git
+  nothing.
+- **An absent title becomes "`<app>` check-in"** from the app's `meta.label` ("Inventory
+  check-in"), not the instance's own label.
+- **The reply** is `done` with "Committed `<id>` on `<branch>`.", the notice's words.
+- **The explorer's commit is a `<checkin-review>`** the page owns (`commit/review.ts`).
+  `commit/dialog.ts` and `commit/request.ts` are gone.
+  - The page reads git's state and the changes, then opens it. With nothing changed, or a read
+    that fails, it opens nothing and says so in the page's notice.
+  - Rows are in the tree's order, worked out from the paths: at the first segment that
+    differs a folder is before a file, then names with numbers in order. A moved file sorts by
+    its new path.
+  - A host event reads the changes again into `setFiles`; so does a `HOST_NOT_CHANGED`
+    refusal.
+  - `refusalField` sends focus to the branch, the title or the files for the codes that name
+    them.
+  - `HostPage.openCommit()` answers, when the review closes, the commit made or `null`.
+- **The element gained `showMessage(message)`:** a host's line under the form that is not a
+  refusal, for a read that fails while the review is open.
+- **The Commit button is disabled with no count** when nothing has changed.
+- **Styles:** the status colours are `[data-label]` rules for the explorer's review alone; an
+  app's labels stay muted. The framed, monospace error line is for every review on the page,
+  since git's words can answer an app's check-in too.
+- **A shell cannot pass `refusalField`,** which is a function and the shell's input is data, so
+  in an app's review focus goes to the refusal's line.
+- **Tests:** the commit dialog's tests are rewritten against the element, every behaviour they
+  covered still covered, with nine more. One is replaced: "nothing changed offers only Close"
+  is now the notice.
+- **By hand,** against the built server in Chromium, light and dark, in a scratch repository:
+  - from the inventory, a zone and an item checked in on a new branch with a title and a body;
+    the commit's message, the branch and a clean `git status` read back; the app's bar, the
+    row's dot and the Commit button cleared with no reload;
+  - from the board, a column move and a move to another phase checked in; the commit shows
+    the rename;
+  - from the explorer, rows in the tree's order with their statuses, one unchecked, no
+    summary named, a branch that exists refused in git's words with focus on the branch, a
+    file written to disk while the review was open arriving unchecked, and the unsaved note;
+  - a `pre-commit` hook that refuses, its message shown from the app and from the explorer.
+
 ## Clarifications
 
 - **`status: 'started'`** is for a host whose check-in is a job, as Context Manager's is. That
