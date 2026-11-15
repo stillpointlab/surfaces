@@ -19,27 +19,32 @@
 // `{ type: 'status' }` when either changes: a commit, a stage or a switch made in
 // a terminal, and the host's own staging. The host's reads never write the index
 // (`GIT_OPTIONAL_LOCKS=0`), so reading the status after the event raises no other.
+//
+// The apps (`apps/`): the host finds instances of the modules it is given
+// (`apps`), serves their pages and ops under `/api/apps`, and holds their lock.
+// A `PUT /api/files` that would write into a locked app's files is refused
+// before the port sees it; the runner's own writes go to the port directly.
 
 import { createHash } from 'node:crypto';
 import { constants, open } from 'node:fs/promises';
 import { basename, extname } from 'node:path';
 import { Readable } from 'node:stream';
 
-import { LIST_LIMIT, MAX_BODY_BYTES } from './limits';
+import { createAppHost } from './apps/app-host';
+import { DEFAULT_APPS } from './apps/registry';
+import { LIST_LIMIT } from './limits';
 import { isInside, locate, outsideRoot, pathProblem } from './paths';
 import { createNodePort } from './port';
+import { json, readBody, refusal, refuse, SECURITY_HEADERS } from './respond';
 import { createFolderWatcher } from './watcher';
 
+import type { LocalHostEvent } from '../shared/apps';
+import type { Handler } from './apps/app-host';
 import type { PageHandler } from './page';
 import type { NodePort, PortStart } from './port';
 import type { FolderWatcher } from './watcher';
-import type { Failure } from '@stillpointlab/common-format/app';
-import type {
-  HostCommitRequest,
-  HostEvent,
-  HostListing,
-  HostRoot,
-} from '@stillpointlab/common-format/host';
+import type { AnyAppModule } from '@stillpointlab/common-format/app';
+import type { HostCommitRequest, HostListing, HostRoot } from '@stillpointlab/common-format/host';
 import type { FileHandle } from 'node:fs/promises';
 
 export interface Host {
@@ -63,62 +68,20 @@ export interface HostOptions {
    * (`createStaticPage`); without one, those paths answer `HOST_NO_ROUTE`.
    */
   page?: PageHandler;
+  /**
+   * The apps the host finds and runs, by their modules (`DEFAULT_APPS` when
+   * absent): the server's one registration of them.
+   */
+  apps?: readonly AnyAppModule[];
 }
+
+export { statusFor } from './respond';
 
 export interface LocalHost extends Host {
   /** The port the host reads and writes through. */
   readonly port: NodePort;
   /** Resolves once the host has decided how it lists and is watching the folder. */
   ready(): Promise<PortStart>;
-}
-
-/** The HTTP status for a refusal's code: not found, a conflict, or anything else. */
-export function statusFor(code: string): number {
-  switch (code) {
-    case 'HOST_FILE_NOT_FOUND':
-      return 404;
-    case 'HOST_PATH_EXISTS':
-    case 'HOST_FILE_CHANGED':
-    case 'HOST_NOT_A_REPOSITORY':
-    case 'HOST_GIT_NOT_FOUND':
-    case 'HOST_NOT_CHANGED':
-    case 'HOST_PATH_CONFLICTED':
-    case 'HOST_GIT_IN_PROGRESS':
-    case 'HOST_DETACHED_HEAD':
-    case 'HOST_BRANCH_EXISTS':
-      return 409;
-    case 'HOST_WRITE_FAILED':
-    case 'HOST_GIT_FAILED':
-      return 500;
-    default:
-      return 400;
-  }
-}
-
-const SECURITY_HEADERS = {
-  'x-content-type-options': 'nosniff',
-  'cache-control': 'no-store',
-  'referrer-policy': 'no-referrer',
-};
-
-function json(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': 'application/json; charset=utf-8', ...SECURITY_HEADERS, ...headers },
-  });
-}
-
-function refusal(failure: Failure, status = statusFor(failure.code)): Response {
-  return json({ ok: false, code: failure.code, message: failure.message }, status);
-}
-
-function refuse(
-  code: string,
-  message: string,
-  status: number,
-  headers?: Record<string, string>
-): Response {
-  return json({ ok: false, code, message }, status, headers);
 }
 
 /** The type `/api/raw` sends for an extension; anything else is bytes. */
@@ -225,7 +188,7 @@ export function createHost(options: HostOptions): LocalHost {
   // Server-sent events: one controller per listener.
   const listeners = new Set<ReadableStreamDefaultController<Uint8Array>>();
   const encoder = new TextEncoder();
-  function broadcast(event: HostEvent): void {
+  function broadcast(event: LocalHostEvent): void {
     const chunk = encoder.encode(`data: ${JSON.stringify(event)}\n\n`);
     for (const listener of listeners) {
       try {
@@ -247,10 +210,19 @@ export function createHost(options: HostOptions): LocalHost {
   }, 25_000);
   keepAlive.unref();
 
+  const apps = createAppHost({
+    port,
+    modules: options.apps ?? DEFAULT_APPS,
+    send: broadcast,
+    warn,
+  });
   const watcher: FolderWatcher = createFolderWatcher({
     root,
     list: () => port.list(),
-    send: broadcast,
+    send: (event) => {
+      broadcast(event);
+      apps.watched(event);
+    },
     warn,
   });
   let closed = false;
@@ -259,14 +231,16 @@ export function createHost(options: HostOptions): LocalHost {
     await watcher.ready;
     const git = await port.git.start();
     if (git.state === 'repository' && !closed) {
-      watcher.watchNames(git.gitDir, ['HEAD', 'index'], () => broadcast({ type: 'status' }));
+      watcher.watchNames(git.gitDir, ['HEAD', 'index'], () => {
+        apps.statusMoved();
+        broadcast({ type: 'status' });
+      });
     }
+    await apps.start();
     return start;
   })();
   // A failure surfaces through `ready()`; it must not go unhandled if nobody asks.
   ready.catch(() => undefined);
-
-  type Handler = (request: Request, url: URL) => Promise<Response>;
 
   function pathParam(url: URL): string {
     return url.searchParams.get('path') ?? '';
@@ -306,6 +280,9 @@ export function createHost(options: HostOptions): LocalHost {
         if (!Array.isArray(changes)) {
           return refuse('HOST_BAD_REQUEST', 'The body must be { "changes": [...] }.', 400);
         }
+        // An app's locked files take no write from here; the runner's go through the port.
+        const locked = await apps.checkWrite(changes);
+        if (locked) return refusal(locked);
         const answer = await port.put(changes);
         return answer.ok ? json(answer) : refusal(answer);
       },
@@ -349,6 +326,7 @@ export function createHost(options: HostOptions): LocalHost {
     '/api/events': {
       GET: async (request) => events(request),
     },
+    ...apps.routes,
   };
 
   async function raw(path: string): Promise<Response> {
@@ -450,6 +428,7 @@ export function createHost(options: HostOptions): LocalHost {
   async function close(): Promise<void> {
     if (closed) return;
     closed = true;
+    apps.close();
     clearInterval(keepAlive);
     watcher.close();
     for (const listener of listeners) {
@@ -463,27 +442,4 @@ export function createHost(options: HostOptions): LocalHost {
   }
 
   return { fetch, close, port, ready: () => ready };
-}
-
-/** A request's body as text, refused past `MAX_BODY_BYTES`. */
-async function readBody(request: Request): Promise<string | Response> {
-  if (!request.body) return '';
-  const declared = Number(request.headers.get('content-length') ?? '0');
-  const tooLarge = () =>
-    refuse('HOST_BODY_TOO_LARGE', `The body is over ${MAX_BODY_BYTES / 1024 / 1024} MiB.`, 413);
-  if (declared > MAX_BODY_BYTES) return tooLarge();
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  const reader = request.body.getReader();
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    size += value.byteLength;
-    if (size > MAX_BODY_BYTES) {
-      await reader.cancel();
-      return tooLarge();
-    }
-    chunks.push(value);
-  }
-  return Buffer.concat(chunks).toString('utf8');
 }

@@ -26,6 +26,7 @@
     "@stillpointlab/code-format": "*",
     "@stillpointlab/common-format": "*",
     "@stillpointlab/image-format": "*",
+    "@stillpointlab/inventory-app": "*",
     "@stillpointlab/md-format": "*",
     "@stillpointlab/modal-dialog-component": "*",
     "@stillpointlab/sheet-format": "*",
