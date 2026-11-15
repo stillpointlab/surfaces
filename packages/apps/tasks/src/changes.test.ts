@@ -68,6 +68,51 @@ describe('tasksFromChanges', () => {
     expect(snapshot).toEqual({ moves: { [CARD]: [from] }, created: [] });
   });
 
+  it('marks a card dirty when its column differs from the text at the last check-in', () => {
+    const base = '---\ncolumn: done\n---\n\n# A\n';
+    const { facts } = tasksFromChanges([{ path: CARD, status: 'changed', base }], snapshotOf());
+    expect(facts.cards).toEqual({
+      [CARD]: { changed: true, dirty: true, versionColumn: 'done' },
+    });
+  });
+
+  it('marks a moved card dirty from the text it had under its old path', () => {
+    const from = 'docs/tasks/stage1/phase2/specs/a.md';
+    const { facts } = tasksFromChanges(
+      [{ path: CARD, status: 'moved', from, base: '---\ncolumn: done\n---\n\n# A\n' }],
+      snapshotOf()
+    );
+    expect(facts.cards).toEqual({
+      [CARD]: { changed: true, movedFrom: from, dirty: true, versionColumn: 'done' },
+    });
+  });
+
+  it('a card in the column the last check-in had, or with no base, is not dirty', () => {
+    const { facts } = tasksFromChanges(
+      [
+        { path: CARD, status: 'changed', base: '---\ncolumn: todo\n---\n\n# Before\n' },
+        { path: `${PHASE}/specs/b.md`, status: 'changed' },
+      ],
+      snapshotOf()
+    );
+    expect(facts.cards).toEqual({
+      [CARD]: { changed: true },
+      [`${PHASE}/specs/b.md`]: { changed: true },
+    });
+  });
+
+  it('the dirty mark reaches the board, with the column it had', () => {
+    const base = '---\ncolumn: done\n---\n\n# A\n';
+    const snapshot = snapshotOf();
+    const known = tasksFromChanges([{ path: CARD, status: 'changed', base }], snapshot);
+    const board = projectTasksBoard({ ...snapshot, ...known.snapshot }, PHASE, known.facts);
+    expect(board?.cards.find((card) => card.path === CARD)).toMatchObject({
+      changed: true,
+      dirty: true,
+      versionColumn: 'done',
+    });
+  });
+
   it('treats a move with no old path, or onto itself, as a change', () => {
     const { facts, snapshot } = tasksFromChanges(
       [

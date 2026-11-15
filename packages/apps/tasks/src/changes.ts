@@ -7,17 +7,20 @@
  * - a card that is changed, new or moved is `changed`; a new one is in the
  *   snapshot's `created`; a moved one has `movedFrom`, and its move is in the
  *   snapshot's `moves` (the path it had, as the move's anchor);
+ * - a changed or moved card whose change carries its text at the last check-in
+ *   (`base`) is `dirty` when its column differs from that text's, with that
+ *   column as `versionColumn`;
  * - the pool's order file, when there is one, is `changed` the same way;
  * - the housekeeping files that join a check-in are the manifest, changed, new
  *   or moved, and every new `.gitkeep` (a folder made in the host);
  * - a deleted file has nothing left to mark.
  *
- * What the statuses cannot say is left out: whether a card's column moved
- * (`dirty`, `versionColumn`), a divergence, a title, and anything about pull
- * requests. The board already takes a card and a pool without them.
+ * What the changes cannot say is left out: whether a card's column moved when
+ * no `base` is given, a divergence, a title, and anything about pull requests.
+ * The board already takes a card and a pool without them.
  */
 import { kindPathsOf } from './boardDetection.js';
-import { resolveTasks } from './projection.js';
+import { columnOfContent, resolveTasks } from './projection.js';
 
 import type { TasksCardFacts, TasksHostFacts, TasksSnapshot } from './projection.js';
 import type { SharedTaskHousekeepingFile } from './types.js';
@@ -51,6 +54,14 @@ export function tasksFromChanges(
     if (change.status === 'moved' && change.from !== undefined && change.from !== change.path) {
       facts.movedFrom = change.from;
       moves[change.path] = [change.from];
+    }
+    const now = snapshot.files[change.path];
+    if (tasks && change.base !== undefined && typeof now === 'string') {
+      const was = columnOfContent(change.base, tasks.manifest);
+      if (columnOfContent(now, tasks.manifest) !== was) {
+        facts.dirty = true;
+        facts.versionColumn = was;
+      }
     }
     cards[change.path] = facts;
   }
