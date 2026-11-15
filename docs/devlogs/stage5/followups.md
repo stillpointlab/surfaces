@@ -156,3 +156,13 @@ are carried here as they were written.
   Control+End put the cursor in the frontmatter block, and typing added a line there.
 - 2026-11-14 (apps-in-the-local-host, step 2): creating an app at the served root, with its
   consent, is covered by tests and was not done by hand.
+- 2026-11-14 (checkin-review, step 1): tasks' shell works out the board's check-in request from
+  the state with a copy of the board's own rule, since the board has no method for it.
+- 2026-11-14 (checkin-review, step 1): the board's in-flight chip reads "PR…" and speaks of a
+  pull request. The word should be the host's.
+- 2026-11-14 (checkin-review, step 1): while a review is busy, focus falls to the page, since
+  the button that had it is disabled. The commit dialog does the same.
+- 2026-11-14 (checkin-review, step 1): a review's groups keep the order they first appear in,
+  so a phase's new folder can come after "Pool & config".
+- 2026-11-14 (checkin-review, step 1): inventory's `./shell` entry still exports the name of
+  `checkin-request`, which no host hears now.

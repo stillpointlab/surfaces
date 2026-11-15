@@ -215,6 +215,81 @@ harness: the rows, a check-in, and the marks clearing.
   - `request.ts`'s pure functions and their tests move into the component, and `dialog.ts` goes.
 - **The Commit button** is disabled when nothing has changed, in place of "Commit 0".
 
+## As built: step 1
+
+_2026-11-14, by an Opus 5.5 sub-agent; reviewed and checked by the orchestrating agent, who
+looked at the screenshots. Where the work departed from the text above, this is what step 2 and
+Context Manager's adoption read._
+
+**The contract:**
+
+- **`CheckinWords` and `CheckinBranch` are in the shell contract,** in
+  `packages/common/src/app.ts`, since `common` cannot depend on a component. The component
+  imports them and exports them again.
+- **`AppShellOps.checkin`** is as written, with `context` as a record.
+  **`AppShellElement.checkinSettled()`** is optional, and tasks' shell has it.
+- **`CheckinWords` has five more words, each optional with a plain default:** `busy`,
+  `noFiles`, `noTitle`, `detached` and `nothing`.
+- **`CheckinReviewInput.refusalField(code)`** says where focus goes after a refusal; without
+  it, to the refusal's line.
+
+**The element** (`@stillpointlab/checkin-review-component`):
+
+- **It has no attributes.** `open(input)`, `setFiles(files)`, `close()`, and `isOpen` and
+  `isBusy` to read.
+- **While busy,** `open` does nothing, and files set are applied after the answer.
+- **`checkin-accepted`** is raised, with `{ op, reply }`, when a host takes a check-in. Tasks'
+  shell marks its paths in flight from it.
+- **The notice** is a success for `done` and information for `started`; a reply with no
+  message raises none.
+- **A title is trimmed and left out when empty;** the body likewise. Joined, they are the
+  commit dialog's message.
+- **With `offerNew` false** the branch is shown as text and none is sent.
+- **A row's label** is after its path, and in a `data-label` attribute, so a host can colour
+  the ones it knows. Groups are in the order they first appear.
+- **Asking again hides the last refusal** while the host answers.
+- **Its ids are its own per instance,** so two reviews can share a page.
+
+**The shells:**
+
+- **Each takes `checkin-request` in the capture phase and stops it.** No host hears it.
+- **Inventory:** "manifest", "new" or "changed"; a new manifest is "manifest". The rows are the
+  latest of the input's dirty list and the last reply the shell learned, since the elements
+  move on from replies and the input goes stale.
+- **Tasks:** Context Manager's labels: "moved", "`<column>` → `<column>`", "needs attention",
+  "content edited", "backlog priority", "pointer / tags", "new folder". On a stage view every
+  row is under its own phase or "Pool & config"; Context Manager left the order file and the
+  housekeeping ungrouped, so they sat under whatever group came last.
+- **The words without a host's:** "Check in inventory changes" or "Check in board changes",
+  "Choose the files to include in this check-in.", "Title", "Description (optional)", "Check
+  in", "Cancel".
+- **Tasks' shell works the request out again from the state** when the state is set while the
+  review is open, with a copy of the board's own rule for it.
+
+**The harness:** each shell fixture answers `checkin` with the memory port's `commit` and reads
+the page again.
+
+**The local host, until step 2:** the pane answers `checkin` with `started` and a line saying a
+check-in here is a commit, and then opens the explorer's commit dialog. A refusal with the
+commit dialog opened over the open review, which the orchestrating agent had asked for, left
+two dialogs each trapping focus.
+
+**For step 2,** what the element does not do that `commit/dialog.ts` does:
+
+- read the changes and the branch itself, and say so while it reads or when it cannot: the
+  page reads, then opens;
+- a state for nothing changed with only Close: the element says so inside the form;
+- a message under the form that is not a refusal (a read that failed while it was open);
+- read again after `HOST_NOT_CHANGED`: the page calls `setFiles` from its answer;
+- answer a promise: the page answers the review's op and hears its `notification`;
+- colour a status: the page styles `[data-label]`.
+
+**By hand,** in Chromium over the harness, light and dark: in each shell's fixture, changes
+made, the review opened, one row unchecked, a check-in, and the marks cleared for what went in
+and kept for what did not; confirm with nothing checked. In the component's own fixtures:
+groups, a moved file with a branch choice, a detached `HEAD`, a refusal, busy, and hostile
+strings.
+
 ## Clarifications
 
 - **`status: 'started'`** is for a host whose check-in is a job, as Context Manager's is. That
