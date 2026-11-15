@@ -96,16 +96,20 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
   A row's entries are `page.fileOps.entriesFor({ path, kind })`; another kind of row, or an
   app's request, adds its own in the page's `tree-menu` listener.
 - **Apps** (`apps/`, the server's `src/server/apps/`). Each side has one registration: the
-  server's list of modules (`createHost`'s `apps`, inventory by default) and the page's
-  `createAppRegistry()` (per app id: its `./meta`, how to load its `./shell`, and the host ops
-  the page answers). A folder with a manifest is one row in the tree, named for the app; an
+  server's list of modules (`createHost`'s `apps`, inventory and tasks by default) with the
+  host ops it answers (`hostOps`), and the page's `createAppRegistry()` (per app id: its
+  `./meta`, how to load its `./shell` and its `./create-element`, and the host ops the page
+  answers). A folder with a manifest is one row in the tree, named for the app; an
   instance at the served root has a row above the tree. Every run starts locked: the instance's
   files are left out of the tree (the listing stays whole) and the server refuses a
   `PUT /api/files` into them. The row's menu offers Open and "Show files…" (asked first), or
   Open, "Lock files" and "New file…". A folder above locked files cannot be renamed or deleted
   here, and a locked file opens in its preview. The app opens at `#/app/<manifestPath>`, then
   its own sub-path and query, in the app pane beside the file pane; the pane resolves the page
-  on the server, answers the shell's ops, and reads the page again on the host's events.
+  on the server, answers the shell's ops, opens the page's menu for `open-options-menu`, and
+  reads the page again on the host's events. A folder's menu, and the space under the rows,
+  offer "Create <noun> here…" for each app with a create form: a dialog with the folder, the
+  app's root consent where it asks one, and the app's own form.
 - **The notice** under the explorer's header is the page's one: a commit, an app's
   notification, or what a lock reports.
 - **Markdown is untrusted:** the page installs a renderer that sanitizes with DOMPurify before any
@@ -146,6 +150,7 @@ beside it: `HostCommitRequest` in, `HostCommit` out, under the port's write lock
 | `GET /api/apps/page`    | `?manifestPath=&path=&query=`; `{ ok, view, state, extras?, title, revision }` or `{ ok, redirect }` |
 | `GET /api/apps/project` | `?manifestPath=&view=<JSON>`; `{ ok: true, state, revision }`                                        |
 | `POST /api/apps/op`     | body `{ manifestPath, op, view? }`; `{ ok: true, reply, revision }`                                  |
+| `POST /api/apps/create` | body `{ app, folder, confirmRoot?, input }`; `{ ok: true, manifestPath }`                            |
 | `GET /api/events`       | server-sent events (below)                                                                           |
 | `GET /`, `GET /<file>`  | the page: `dist/client`, or Vite in development mode (any path outside `/api/`)                      |
 
@@ -160,6 +165,8 @@ query value). A version is a SHA-256 of the file's bytes, as hex; only equality 
 | 404    | `HOST_APP_NOT_FOUND` (no instance at the manifest path), `HOST_APP_PAGE_NOT_FOUND` (the app has no page there)            |
 | 409    | `HOST_SCOPE_LOCKED`: a `PUT /api/files` change's path, or a move's `from`, is in a locked app's files                     |
 | 409    | `HOST_APP_INVALID`: an app route for an instance discovery marks invalid (its manifest, or an overlap)                    |
+| 409    | `HOST_APP_OVERLAP`: a create whose region would share a path with a found instance's                                      |
+| 409    | `HOST_NOTHING_TO_RESOLVE`: tasks' `resolve`, since a folder has no upstream to differ from                                |
 | 409    | `HOST_PATH_EXISTS`, `HOST_FILE_CHANGED`; `HOST_NOT_A_REPOSITORY`, `HOST_GIT_NOT_FOUND` (a git route outside `repository`) |
 | 409    | A commit: `HOST_NOT_CHANGED`, `HOST_PATH_CONFLICTED`, `HOST_GIT_IN_PROGRESS`, `HOST_DETACHED_HEAD`, `HOST_BRANCH_EXISTS`  |
 | 400    | `HOST_PATH_OUTSIDE_ROOT`, `HOST_NOT_TEXT`, `HOST_FILE_TOO_LARGE`, `HOST_BAD_REQUEST`                                      |
@@ -321,5 +328,10 @@ port's write lock: a `put` that arrives during a commit waits for it, and the re
   changed.
 - **The revision** the page and op routes answer is the runner's joined with a digest of the
   changes `know` was handed, so a commit, which changes no file, moves it.
+- **Host ops** an app's registration names (`host-ops.ts`) are answered before the runner:
+  tasks' `read-file` (the port's text), `scan-references` (the core's `referencesTo` over the
+  instance as known) and `resolve` (refused). Their answers carry no revision.
+- **Create** checks the folder against the found instances' regions first (at the root, the
+  scope the app's lifecycle would give the seeded manifest), then runs `createInstance`.
 - **A refusal's status** on an app route: the runner's class (`hostRefusalClass`), else the
   host's own (`statusFor`), else the module's `refusalClass`: 404, 409 or 400.

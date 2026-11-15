@@ -454,6 +454,11 @@ host-file-tree {
   &[hidden] {
     display: none;
   }
+
+  // A field's own button ("Add another column") keeps its width.
+  > .button {
+    align-self: flex-start;
+  }
 }
 
 .form-label {
