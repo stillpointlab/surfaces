@@ -563,3 +563,42 @@ export function answerOps<M extends AppOpMap>(
   element.addEventListener(APP_OP_EVENT, listener);
   return () => element.removeEventListener(APP_OP_EVENT, listener);
 }
+
+// ---- The shell --------------------------------------------------------------
+
+/** What a host gives a shell: the page around an app's elements. */
+export interface AppShellInput {
+  /** Where the app's pages hang; the shell builds its links from it and its module's pages. */
+  base: string;
+  /** Where "back" leads. Absent: no back link. */
+  back?: { href: string; label: string };
+  /** A name for where the instance lives: a repository, a folder. */
+  location?: string;
+  view: ({ type: string } & Record<string, unknown>) | null;
+  state: object | null;
+  extras?: Record<string, unknown>;
+}
+
+/**
+ * An app's shell: one element per app that lays out its bar, its elements and
+ * the links between its pages. A host loads it, sets its input, answers its ops
+ * (a core op with `opView`'s view, its reply passed to `learn`) and listens for
+ * its requests.
+ */
+export interface AppShellElement extends AppElement<AppShellInput> {
+  /** What a core op answered, so the title, the links and the counts follow. */
+  learn(op: { type: string }, reply: object): void;
+  /** The view an op's reply depends on, for the host to send with it. */
+  opView(op: { type: string }): ({ type: string } & Record<string, unknown>) | undefined;
+}
+
+/** The ops a shell itself asks its host, beside its module's. */
+export type AppShellOps = {
+  /** Read one view. */
+  project: {
+    op: { view: { type: string } & Record<string, unknown> };
+    reply: { state: object | null };
+  };
+  /** Bring the instance up to date with its source, whatever that means to the host. */
+  refresh: { op: Record<never, never>; reply: Record<never, never> };
+};
