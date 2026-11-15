@@ -246,7 +246,8 @@ places it.
   | `close-candidates`   | `path`           | `{ cards: [{ path, title, column }] }`          |
   | `close`              | `kind`, `paths`  | `{ target: { stage, phase }, moved, created? }` |
 
-- **Requests:** `navigate { href }` (a phase or board chosen, or one just created or closed to),
+- **Requests:** `navigate { href }` (a phase or board chosen, or one just created or closed to;
+  cancelable, so a host that goes there claims it with `preventDefault()`),
   `reload-request` (after Set current; `RELOAD_REQUEST_EVENT`), `notification`, and `open-options-menu` from "Close…",
   answered with `options-menu-select` (`close-phase` or `close-stage`) on the strip.
 - **The close dialog** comes with it: a `<modal-dialog id="close-dialog">` listing the pointer

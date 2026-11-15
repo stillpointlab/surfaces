@@ -187,6 +187,21 @@ describe('navigation', () => {
     change(el.querySelector<HTMLSelectElement>('.tasks-other-select')!, 'docs/other/board');
     expect(navigated).toHaveBeenCalledWith(`${BASE}?path=docs%2Fother%2Fboard`);
   });
+
+  it('asks with a bubbling, composed, cancelable navigate, which a host claims', () => {
+    const el = mount();
+    const seen: Event[] = [];
+    const claim = (event: Event): void => {
+      seen.push(event);
+      event.preventDefault();
+    };
+    document.addEventListener('navigate', claim);
+    change(el.querySelector<HTMLSelectElement>('.tasks-tab-filter')!, '7');
+    document.removeEventListener('navigate', claim);
+    expect(seen).toHaveLength(1);
+    expect(seen[0]!.bubbles && seen[0]!.composed && seen[0]!.cancelable).toBe(true);
+    expect(seen[0]!.defaultPrevented).toBe(true);
+  });
 });
 
 describe('creating a stage or phase', () => {

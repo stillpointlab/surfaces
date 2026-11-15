@@ -53,7 +53,11 @@ export interface TasksNavLinks {
 
 export type { TasksNavCloseCandidate, TasksNavOps };
 
-/** Raised (bubbling) with `{ href }`: the strip asks the host to go to one of its links. */
+/**
+ * Raised (bubbling, composed, cancelable) with `{ href }`: the strip asks the
+ * host to go to one of its links. A host that goes there claims it with
+ * `preventDefault()`; the strip goes nowhere itself.
+ */
 export const NAVIGATE_EVENT = 'navigate';
 
 /** Raised (bubbling, no detail) after Set current, which shows on a reload. */
@@ -277,7 +281,12 @@ export class TasksNav extends HTMLElement implements AppElement<TasksNavState> {
 
   private navigate(href: string): void {
     this.dispatchEvent(
-      new CustomEvent(NAVIGATE_EVENT, { detail: { href }, bubbles: true, composed: true })
+      new CustomEvent(NAVIGATE_EVENT, {
+        detail: { href },
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      })
     );
   }
 
