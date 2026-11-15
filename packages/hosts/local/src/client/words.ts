@@ -209,8 +209,9 @@ export const words = {
 
   /** Undo and Redo: the explorer header's buttons, the keys, and what they say after. */
   journal: {
-    undo: 'Undo',
-    redo: 'Redo',
+    /** The buttons' faces: a glyph each, so the folder's name keeps its room. Their names are their titles. */
+    undo: '↶',
+    redo: '↷',
     /** The buttons' titles: the spec's "Undo: Delete notes.md". */
     undoTitle: (label: string) => `Undo: ${label}`,
     redoTitle: (label: string) => `Redo: ${label}`,

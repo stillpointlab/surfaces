@@ -53,10 +53,15 @@ modal-dialog:not(:defined) {
   text-overflow: ellipsis;
 }
 
-// Undo and Redo: disabled with nothing to do, their step's label as the title.
+// Undo and Redo: a glyph each, disabled with nothing to do, their step's label as
+// the title and the name. Square, so the folder's name keeps its room.
 .explorer-undo,
 .explorer-redo {
   flex: none;
+  min-width: 2rem;
+  padding-inline: $spacing-xs;
+  font-size: 1.125rem;
+  line-height: 1;
 }
 
 // The Commit button and the number of changed files on it.
