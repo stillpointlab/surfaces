@@ -107,7 +107,9 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
 event streams and its watcher. The `bin` is `nodeListener` around it on `node:http`, and a desktop
 shell can serve the same handler under its own scheme. `createNodePort({ root })` is the
 `StoragePort` (from `@stillpointlab/common-format/host`) over the folder, with `commit(request)`
-beside it: `HostCommitRequest` in, `HostCommit` out, under the port's write lock.
+beside it: `HostCommitRequest` in, `HostCommit` out, under the port's write lock. The port runs
+`common`'s storage port suite over a repository in a temporary folder
+(`src/server/port-suite.test.ts`), the same suite the memory port runs.
 
 ## Routes
 
