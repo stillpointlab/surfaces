@@ -312,21 +312,6 @@ function commentLines(text: string): string[] {
 
 // ---- The module -------------------------------------------------------------
 
-/** The members a grown module adds to its lifecycle and core. */
-export const GROWN_MEMBERS = ['meta', 'bounds', 'pages', 'placeCreate', 'fromChanges'] as const;
-
-/** The grown members a module does not have yet. */
-export function missingMembers(module: AnyAppModule): string[] {
-  return GROWN_MEMBERS.filter((member) => module[member] === undefined);
-}
-
-/** The module, failing when it lacks a grown member. */
-function grown(module: AnyAppModule): Required<AnyAppModule> {
-  const missing = missingMembers(module);
-  expect(missing, `the module has no ${missing.join(', ')}`).toEqual([]);
-  return module as Required<AnyAppModule>;
-}
-
 /** The time the suite's host stamps a new file with. */
 const NOW = '2026-01-01T00:00:00.000Z';
 
@@ -341,7 +326,7 @@ function caseSnapshot(
 
 /** What `fromChanges` knows over a snapshot, and the snapshot with its host parts laid on. */
 function known(
-  module: Required<AnyAppModule>,
+  module: AnyAppModule,
   changes: AppChangesCase['changes'],
   snapshot: AppSnapshot
 ): { facts: unknown; snapshot: AppSnapshot } {
@@ -353,9 +338,9 @@ function known(
 const describeRefusal = (result: Result): string =>
   result.ok ? 'it was accepted' : `${result.code}: ${result.message}`;
 
-/** A grown module names the cases its checks run over: an op, an over-long op, a case per page, a change. */
+/** A module's checks name their cases: an op, an over-long op, a case per page, a change. */
 export function assertModuleCases(module: AnyAppModule, checks: AppModuleOptions): void {
-  const { pages } = grown(module);
+  const { pages } = module;
   expect(checks.ops?.length ?? 0, 'name at least one op a fixture applies').toBeGreaterThan(0);
   expect(checks.overLong, 'name an op with a field past its limit').toBeDefined();
   expect(checks.changes?.length ?? 0, 'name at least one fromChanges case').toBeGreaterThan(0);
@@ -369,7 +354,7 @@ export function assertModuleCases(module: AnyAppModule, checks: AppModuleOptions
 
 /** `meta` names the app and its icon. */
 export function assertMeta(module: AnyAppModule): void {
-  const { meta } = grown(module);
+  const { meta } = module;
   expect(meta.label.trim(), 'meta.label must not be empty').not.toBe('');
   expect(meta.icon.trim(), 'meta.icon must not be empty').not.toBe('');
   if (meta.create) {
@@ -383,7 +368,7 @@ export function assertBoundsAcceptOp(
   module: AnyAppModule,
   opCase: AppModuleOpCase
 ): void {
-  const { bounds, core, toCoreOp } = grown(module);
+  const { bounds, core, toCoreOp } = module;
   const bounded = bounds.op(opCase.op);
   expect(bounded.ok, `bounds.op refused "${opCase.name}": ${describeRefusal(bounded)}`).toBe(true);
   if (!bounded.ok) return;
@@ -399,7 +384,7 @@ export function assertBoundsAcceptOp(
 
 /** `bounds.op` refuses `op` with `APP_OP_INVALID` and its causes. */
 export function assertBoundsRefuseOp(module: AnyAppModule, op: unknown): void {
-  const refused = grown(module).bounds.op(op);
+  const refused = module.bounds.op(op);
   expect(refused.ok, `bounds.op accepted ${JSON.stringify(op).slice(0, 200)}`).toBe(false);
   if (refused.ok) return;
   expect(refused.code).toBe('APP_OP_INVALID');
@@ -410,7 +395,7 @@ export function assertBoundsRefuseOp(module: AnyAppModule, op: unknown): void {
 
 /** `bounds.view` accepts a view the fixtures project, and refuses an unknown one. */
 export function assertBoundsView(module: AnyAppModule, view: AppCoreRoundTrip['view']): void {
-  const { bounds } = grown(module);
+  const { bounds } = module;
   const bounded = bounds.view(view);
   expect(
     bounded.ok,
@@ -423,7 +408,7 @@ export function assertBoundsView(module: AnyAppModule, view: AppCoreRoundTrip['v
 
 /** Each page's own path, its parameters given their names, matches that page and no other first. */
 export function assertPagePathMatches(module: AnyAppModule, path: string): void {
-  const { pages } = grown(module);
+  const { pages } = module;
   const sample = path.replace(/:(\w+)/g, '$1');
   const match = matchAppPage(pages, sample);
   expect(match?.page.path, `"${sample}" does not match the page "${path}"`).toBe(path);
@@ -444,15 +429,14 @@ export async function assertPageResolves(
   module: AnyAppModule,
   pageCase: AppPageCase
 ): Promise<void> {
-  const grownModule = grown(module);
-  const { bounds, core, pages } = grownModule;
+  const { bounds, core, pages } = module;
   const answers = pageCase.answers ?? 'view';
   const match = matchAppPage(pages, pageCase.path);
   if (answers === 'not-found' && match === null) return;
   expect(match, `no page matches "${pageCase.path}"`).not.toBeNull();
   if (!match) return;
   const { facts, snapshot } = known(
-    grownModule,
+    module,
     [],
     caseSnapshot(options, pageCase.fixture, pageCase.snapshot)
   );
@@ -510,11 +494,10 @@ export function assertFromChanges(
   module: AnyAppModule,
   changesCase: AppChangesCase
 ): void {
-  const grownModule = grown(module);
   const snapshot = caseSnapshot(options, changesCase.fixture);
   for (const changes of [[], changesCase.changes]) {
-    const answer = known(grownModule, changes, snapshot);
-    const state = grownModule.core.project(answer.snapshot, changesCase.view, answer.facts);
+    const answer = known(module, changes, snapshot);
+    const state = module.core.project(answer.snapshot, changesCase.view, answer.facts);
     const over = changes.length === 0 ? 'no changes' : `"${changesCase.name}"`;
     expect(
       state,

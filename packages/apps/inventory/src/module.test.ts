@@ -72,7 +72,7 @@ describe('inventoryModule', () => {
   it('places a create’s files as placeInventoryCreate does', () => {
     const plan = planInventoryCreate({ label: 'Home', zones: ['Kitchen'], folder: 'home' });
     if (!plan.ok) throw new Error(plan.message);
-    const placeCreate = inventoryModule.placeCreate!;
+    const { placeCreate } = inventoryModule;
     expect(placeCreate(plan, { taken: [] })).toEqual({ ok: true, files: plan.files });
     expect(
       placeCreate(plan, { taken: ['home/inventory.yaml'], reusable: ['home/inventory.yaml'] })

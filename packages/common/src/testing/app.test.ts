@@ -23,7 +23,6 @@ import {
   assertRoundTripFinalNewlineKept,
   assertRoundTripProjects,
   assertRoundTripReparses,
-  missingMembers,
 } from './app-checks';
 
 import type {
@@ -492,28 +491,12 @@ describeAppCore('sample module', {
   module: moduleChecks,
 });
 
-// A module without the grown members gets a to-do, not a failure.
-describeAppCore('sample module, not grown', {
-  manifest: 'kv.app',
-  fixtures,
-  mount,
-  module: { module: { ...kvModule, meta: undefined, pages: undefined } as AnyAppModule },
-});
-
 describe('the module checks fail on a broken module', () => {
   const options: AppCoreOptions = { manifest: 'kv.app', fixtures, mount, module: moduleChecks };
   const withModule = (changes: Partial<AnyAppModule>): AnyAppModule =>
     ({ ...kvModule, ...changes }) as AnyAppModule;
   const withPage = (page: Partial<AppPage>, at = 0): AnyAppModule =>
     withModule({ pages: kvPages.map((each, i) => (i === at ? { ...each, ...page } : each)) });
-
-  it('names the members a module lacks', () => {
-    expect(missingMembers({ ...kvModule, bounds: undefined, fromChanges: undefined })).toEqual([
-      'bounds',
-      'fromChanges',
-    ]);
-    expect(() => assertMeta({ ...kvModule, meta: undefined })).toThrow(/has no meta/);
-  });
 
   it('a page no case resolves', () => {
     expect(() => assertModuleCases(kvModule, { ...moduleChecks, pages: [] })).toThrow(

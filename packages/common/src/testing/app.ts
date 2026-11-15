@@ -40,7 +40,6 @@ import {
   assertRoundTripFinalNewlineKept,
   assertRoundTripProjects,
   assertRoundTripReparses,
-  missingMembers,
   rewriteInput,
 } from './app-checks';
 
@@ -170,11 +169,7 @@ export interface AppCoreOptions {
    * is described with a label.
    */
   lifecycle?: AppLifecycle<{ label: string }>;
-  /**
-   * The app's module, for the module checks. A module without the grown
-   * members (`meta`, `bounds`, `pages`, `placeCreate`, `fromChanges`) has the
-   * checks listed as to do; one with them must name the cases.
-   */
+  /** The app's module, for the module checks, with the cases they run over. */
   module?: AppModuleOptions;
 }
 
@@ -226,15 +221,10 @@ export function describeAppCore(app: string, options: AppCoreOptions): void {
   });
 }
 
-/** The module checks, or a to-do naming what the module lacks. */
+/** The module checks. */
 function describeModule(options: AppCoreOptions, checks: AppModuleOptions): void {
   const { module } = checks;
   describe('module', () => {
-    const missing = missingMembers(module);
-    if (missing.length > 0) {
-      it.todo(`has no ${missing.join(', ')} yet (app-module-grows, step 2)`);
-      return;
-    }
     it('names the cases its checks run over', () => assertModuleCases(module, checks));
     it('meta names the app and its icon', () => assertMeta(module));
 
@@ -260,7 +250,7 @@ function describeModule(options: AppCoreOptions, checks: AppModuleOptions): void
         assertBoundsView(module, view));
     }
 
-    for (const page of module.pages ?? []) {
+    for (const page of module.pages) {
       it(`the page "${page.path}" matches its own path`, () =>
         assertPagePathMatches(module, page.path));
     }

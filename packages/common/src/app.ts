@@ -365,20 +365,19 @@ export interface AppModule<
   ): Result<object>;
   /** How a host treats the core's refusal of one op. */
   refusalClass(code: string, op: string): RefusalClass;
-  // The five below keep a host from holding a file per app. Optional until
-  // every app supplies them (app-module-grows, step 2).
+  // The five below keep a host from holding a file per app.
   /** The app's name, icon and create copy. */
-  meta?: AppMeta;
+  meta: AppMeta;
   /** The app's bounds on an op, a view and a create input. */
-  bounds?: AppBounds<V, E, CreateInput>;
+  bounds: AppBounds<V, E, CreateInput>;
   /** The app's pages under its base. */
-  pages?: readonly AppPage[];
+  pages: readonly AppPage[];
   /**
    * Whether a seeded plan's files fit among a host's paths: the files still to
    * create, or the app's refusal for the first path in the way. `reusable` are
    * files an earlier, unfinished attempt at the same create left.
    */
-  placeCreate?(
+  placeCreate(
     plan: { manifestPath: string; files: FileChange[] },
     paths: { taken: readonly string[]; reusable?: readonly string[] }
   ): Result<{ files: FileChange[] }>;
@@ -387,7 +386,7 @@ export interface AppModule<
    * which files changed since the last check-in: the app's counterpart of a
    * format descriptor's `apply`. A host that knows more builds its facts itself.
    */
-  fromChanges?(changes: readonly AppFileChange[], snapshot: S): AppKnown<Facts, S>;
+  fromChanges(changes: readonly AppFileChange[], snapshot: S): AppKnown<Facts, S>;
 }
 
 /**

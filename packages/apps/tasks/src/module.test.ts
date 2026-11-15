@@ -149,7 +149,7 @@ describe('tasksModule', () => {
       kinds: [{ id: 'task' }],
     });
     if (!plan.ok) throw new Error(plan.message);
-    const placeCreate = tasksModule.placeCreate!;
+    const { placeCreate } = tasksModule;
     expect(placeCreate(plan, { taken: [] })).toEqual({ ok: true, files: plan.files });
     expect(placeCreate(plan, { taken: [MANIFEST], reusable: [MANIFEST] })).toEqual({
       ok: true,
