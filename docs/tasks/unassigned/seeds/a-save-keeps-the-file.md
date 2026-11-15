@@ -5,23 +5,24 @@ tags: [formats, code, polish]
 
 # A save keeps the rest of the file
 
-Two editors change more of a file than the person edited (stage 4 follow-ups, host-page and
-git-in-the-host):
+An editor's save should change the file by the edit and nothing else. In Context Manager a save
+made a draft, and a difference showed in a check-in at most. The local host writes the file on
+disk, and git shows every changed line.
 
-- **The md editor reflows the file.** In stage 4's by-hand pass three lines became one and the
-  final newline went. The Changes view makes it plain.
-- **The sheet editor** adds `format: csv` to a `.sheet` document and drops its final newline.
+The md editor was the worst case (stage 4 follow-ups, git-in-the-host): one edit reflowed the
+whole file. [#111](https://github.com/stillpointlab/surfaces/pull/111) fixed that on 2026-11-14:
+a save rewrites the top-level blocks that changed and writes every other block back as the text
+it was set with.
 
-In Context Manager a save made a draft, and the difference showed in a check-in at most. The
-local host writes the file on disk, and git shows every changed line. Stage 5 lets an app's
-files be unlocked and edited: a card opened in the md editor is rewritten by its first save.
+What is left:
 
-What a spec would have to settle (the claude agent's list, not Jamie's):
-
-- what "keeps" means for markdown, where the editor parses to a document and writes it back:
-  the same bytes for a save with no edit, and the smallest change for one with an edit, or only
-  the first;
-- line endings and the final newline, which the code format already keeps as set;
-- a test both editors and any later one run: open, save without an edit, compare the bytes;
-- whether the fix goes in before stage 5's phase 3, which is decision 4 of the
-  [stage 5 review](../../stage5/phase1/reviews/specs-against-stage-4.md).
+- **The sheet editor** adds `format: csv` to a `.sheet` document and drops its final newline
+  (stage 4 follow-ups, host-page).
+- **Inside a list or a table.** The md editor's unit is the top-level block, so an edit to one
+  list item rewrites the whole list: `*` bullets become `-`, a loose list goes tight. Keeping
+  each item, or each table row, is the next step down.
+- **A changed paragraph is written on one line.** A paragraph wrapped by hand loses its wrapping
+  when it is edited. Keeping the lines an edit did not touch, or wrapping to the width the
+  paragraph had, would close it.
+- **One test for every editor:** open, save without an edit, compare the bytes; then one edit,
+  and compare what else changed.

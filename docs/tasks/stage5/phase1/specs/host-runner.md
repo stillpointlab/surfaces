@@ -180,11 +180,9 @@ cannot drift apart.
 over `createMemoryPort(files)`. The hand-built-state refusal (`HARNESS_NO_FILES`) and the host
 op table stay in the harness. Each app's `dev/host.ts` shrinks by what the memory port now does:
 writing changes into the snapshot, and, for tasks, recording a move as it is written. Its
-`know` reads the memory port's `changes()` instead.
-
-Where the function from a port's changes to an app's facts lives is decision 3 of the review:
-in the app's package, for the harness and the local host to share, if Jamie takes the lean.
-Until it is decided each harness host keeps its own, as `dev/host.ts` has today.
+`know` is `module.fromChanges` over the memory port's `changes()`
+([app-module-grows](app-module-grows.md); Jamie's decision 3 of the review, 2026-11-14), so the
+facts code in each `dev/host.ts` goes too.
 
 ## Clarifications
 

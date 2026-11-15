@@ -87,15 +87,13 @@ _Added 2026-11-14. Paths are under `packages/hosts/local/src/`._
 
 ### One registration per app, on each side
 
-- **Server:** a list of modules (`inventoryModule`, `tasksModule`) and, per app, what the
-  runner's `know` answers for it: the module's facts and its snapshot's host parts. `createHost`
-  takes the list as an option (`apps`), both apps by default, so a test can hand it a fake.
+- **Server:** a list of modules (`inventoryModule`, `tasksModule`). `createHost` takes it as an
+  option (`apps`), both apps by default, so a test can hand it a fake.
 - **Client:** per app id, how to load its shell and its create form.
 
-Nothing else in the host names an app. What an app knows from a file's status stays under about
-40 lines; a longer function is the sign the core should derive its facts from file status itself,
-which is the spike's "surgery" and not this spec. Where that function lives (here, or in the
-app's package for the harness to share) is decision 3 of the review.
+Nothing else in the host names an app. The runner's `know` is one function for every app:
+`module.fromChanges` over what git reports (Jamie's decision 3 of the review, 2026-11-14; the
+member is [app-module-grows](app-module-grows.md)'s).
 
 ### Finding instances
 
@@ -229,15 +227,9 @@ or a short list, and a dismiss button, in the same live region. The commit's mes
 
 ### Facts
 
-Both apps' facts come from the port, and need no network:
-
-- **Inventory:** `enabled: true`, and `dirty` as the changed and new files of the region, each
-  a manifest or a zone.
-- **Tasks:** what `TasksCardFacts` and the snapshot's optional parts accept from a file's status
-  alone. A changed card is `changed`; a new one is in the snapshot's `created`; a moved one has
-  `movedFrom` and an entry in the snapshot's `moves`, from the old path git reports
-  (`port.git.changes()`). Everything about pull requests and divergence is absent, which the
-  board already accepts.
+Both apps' facts come from the port, and need no network: `know` hands `module.fromChanges`
+the changes in the instance's region, from `port.git.changes()`, which names a moved file's old
+path. What each app makes of them is in [app-module-grows](app-module-grows.md).
 
 In a folder that is not a repository nothing is changed, new or moved.
 
@@ -299,8 +291,7 @@ Tasks' facts and host ops, the board's menu request, and creating either app.
       marks clear; unlock, edit a card as a file, lock again.
 - [ ] By hand, in a scratch folder: create an inventory, add a zone and an item, and commit.
 - [ ] By hand, in a dark colour scheme: both apps read well.
-- [ ] Adding an app touches the two registrations and what it knows from a file's status, and
-      nothing else.
+- [ ] Adding an app touches the two registrations and nothing else.
 - [ ] `npm run check` is green.
 
 ## Implementation plan

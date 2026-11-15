@@ -27,12 +27,12 @@ sit on stage 4's code: [undo-journal](../specs/undo-journal.md) and
 [apps-in-the-local-host](../specs/apps-in-the-local-host.md). The worst is in the undo journal:
 the port reads and writes text of at most 2 MiB, so the journal as drafted cannot keep a deleted
 image, and its index step would unstage a person's own work. Every finding is written into its
-spec in this PR. Three of them rest on a choice that is Jamie's, and two more questions came up
-on the way. All five are under [Decisions for Jamie](#decisions-for-jamie); each spec carries
-the agent's lean and says so.
+spec in this PR. Three of them rested on a choice that is Jamie's, and two more questions came
+up on the way. All five are under [Decisions for Jamie](#decisions-for-jamie), with his answers.
 
 > **Resolution status (2026-11-14):** every finding below is written into the spec it names, in
-> the PR that adds this review. The decisions for Jamie are open.
+> the PR that adds this review. Jamie answered the five decisions the same day; the fifth has a
+> question of his still open.
 
 ---
 
@@ -245,27 +245,32 @@ ends with one walk of its own.
 
 ## Decisions for Jamie
 
-Each spec is written with the lean, marked as the agent's reading, so work can start on what no
-decision touches.
+Jamie answered all five on 2026-11-14, and each spec now says what he decided.
 
-1. **Undo of a deleted image or large file** (H1). Lean: it cannot be undone and asks first. The
-   other way keeps bytes in the journal, which needs a byte read and a byte write the port does
-   not have. Needed before [undo-journal](../specs/undo-journal.md) starts (phase 5).
-2. **Context Manager's adoption as two PRs, not four** (H7). Lean: steps 1 to 3 together, the
-   lock apart. Needed before phase 6.
-3. **Where an app's facts are derived from file changes** (H3). The harness and the local host
-   both need "these files changed, moved or are new" turned into each app's facts. Lean: one
-   function per app in the app's package, which both hosts call. The local host spike called a
-   shared fact shape "surgery" and the specs kept it out; this is smaller, since no core changes,
-   and it is still a step that way. Needed before [host-runner](../specs/host-runner.md) starts
-   (phase 2, wave 2).
-4. **The md editor's save reflows a file** (stage 4's follow-up log). Once an app's files can be
-   unlocked and edited, a card opened in the md editor is rewritten on save. Lean: fix it in
-   phase 2, as a small PR beside the first wave; it is now the first seed in the pool. Needed
-   before phase 3 ends.
+1. **Undo of a deleted image or large file** (H1). **Agreed:** it cannot be undone, and the host
+   asks first. In [undo-journal](../specs/undo-journal.md).
+2. **Context Manager's adoption as two PRs, not four** (H7). **"Two is fine if less disruptive
+   overall."** Steps 1 to 3 together, the lock apart. In
+   [context-manager-adopts-apps](../specs/context-manager-adopts-apps.md).
+3. **Where an app's facts are derived from file changes** (H3). **"Sounds fine, something like
+   the format object?"** Yes: the module is the object a host registers, as a format's
+   descriptor is, and it gains one member, `fromChanges`, which is to an app what `apply` is to
+   a descriptor. The harness and the local host both call it; Context Manager, which knows
+   more, does not. In [app-module-grows](../specs/app-module-grows.md).
+4. **The md editor's save reflows a file** (stage 4's follow-up log). **"Please fix this
+   reflow, at least limit to the section changed. This is actually high priority for me, almost
+   bug level."** Fixed in [#111](https://github.com/stillpointlab/surfaces/pull/111): a save
+   rewrites the top-level blocks that changed and writes every other block back as the text it
+   was set with. What is left (an edit inside a list rewrites the whole list; the sheet
+   editor's save) is in the seed
+   [a save keeps the rest of the file](../../../unassigned/seeds/a-save-keeps-the-file.md).
 5. **The preview pages in Context Manager** (public, library, claim review) still mount without
-   the descriptors. Lean: not in stage 5's adoption, which is about the apps; it stays in
-   Context Manager's log.
+   the descriptors. They stay out of stage 5's adoption. **Jamie asked where this is captured,
+   since it reads as more than a follow-up, and whose it is.** The agent's answer, for him to
+   confirm: the pages are Context Manager's and so is the work, as a seed in its own pool. This
+   repository already supplies what they would mount through. If the mount Context Manager
+   wrote for its preview pane and the local host's pane turn out to be the same code twice,
+   that part is this repository's, as a seed here.
 
 ## Task list
 
@@ -277,4 +282,5 @@ decision touches.
 - [x] **H7, M9:** [context-manager-adopts-apps](../specs/context-manager-adopts-apps.md) amended.
 - [x] **M4, L2:** [app-module-grows](../specs/app-module-grows.md) amended.
 - [x] **M8, and the walks' selectors (H7):** [app-shells](../specs/app-shells.md) amended.
-- [ ] **Decisions 1 to 5:** Jamie.
+- [x] **Decisions 1 to 4:** Jamie, 2026-11-14.
+- [ ] **Decision 5:** where the preview pages' work is captured.

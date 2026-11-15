@@ -84,10 +84,11 @@ says where it went. Nothing was dropped.
 - 2026-11-14 (git-in-the-host): the md editor's save reflows a file: three lines became one and
   the final newline went. The Changes view makes it plain, and it matters more now that the
   editor writes files on disk and git shows the change.
-  - Moved 2026-11-14 to the seed [a save keeps the rest of the
-    file](../../tasks/unassigned/seeds/a-save-keeps-the-file.md), first in the pool. Whether it is
-    fixed before an app's files can be unlocked is decision 4 of the [stage 5
-    review](../../tasks/stage5/phase1/reviews/specs-against-stage-4.md).
+  - Closed 2026-11-14 (Jamie: fix it, high priority;
+    [#111](https://github.com/stillpointlab/surfaces/pull/111)): a save rewrites the top-level
+    blocks that changed and writes every other block back as it was set, final newline included.
+    What is left is in the seed [a save keeps the rest of the
+    file](../../tasks/unassigned/seeds/a-save-keeps-the-file.md).
 - 2026-11-14 (git-in-the-host): `HEAD` text is read with no filter, so a repository that
   converts line endings on checkout, or uses a smudge filter, shows every line as changed.
   - Carried 2026-11-14 to the [stage 5 log](../stage5/followups.md).

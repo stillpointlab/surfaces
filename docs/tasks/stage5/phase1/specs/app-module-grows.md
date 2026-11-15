@@ -53,7 +53,8 @@ _Added 2026-11-14._
 ## Work package
 
 - **Owns:** the additions to `packages/common/src/app.ts` and to the app suite; a `bounds.ts`,
-  `pages.ts` and `meta.ts` in each of `packages/apps/{inventory,tasks}/src/`.
+  `pages.ts`, `meta.ts` and `changes.ts` in each of `packages/apps/{inventory,tasks}/src/`; the
+  alias in `packages/common/src/host/index.ts`.
 - **Does not change:** Context Manager. Its copies stay until
   [context-manager-adopts-apps](context-manager-adopts-apps.md); the PR adds one line to the stage's
   follow-up log naming the duplication.
@@ -117,15 +118,50 @@ export function matchAppPage(
   pages: readonly AppPage[],
   subPath: string
 ): { page: AppPage; params: Record<string, string> } | null;
+
+/** One file that differs from the last check-in, as a host that knows only files reports it. */
+export interface AppFileChange {
+  path: string;
+  status: 'changed' | 'new' | 'moved' | 'deleted';
+  /** For a moved file, the path it had. */
+  from?: string;
+}
+
+/** What a module tells its core from file changes alone. */
+export interface AppKnown<Facts, S extends AppSnapshot> {
+  facts: Facts;
+  /** The snapshot's host parts: plain data the core reads beyond the files (tasks' pending moves). */
+  snapshot?: Partial<S>;
+}
 ```
 
-`AppModule` gains four members:
+`AppModule` gains five members:
 
 - `meta: AppMeta`;
 - `bounds: AppBounds<V, E, …>`;
 - `pages: readonly AppPage[]`;
 - `placeCreate(plan, paths)`: whether a seeded plan's files fit, which Context Manager's
-  registry holds today as `create.place`.
+  registry holds today as `create.place`;
+- `fromChanges(changes: readonly AppFileChange[], snapshot: S): AppKnown<Facts, S>`: the facts,
+  and the snapshot's host parts, for a host that knows nothing but which files changed.
+
+**`fromChanges` is to an app what `apply` is to a format's descriptor** (Jamie, 2026-11-14, on
+decision 3 of the review: "something like the format object?"). The module is the object a host
+registers, and this member is the one place the app says how file changes read in its own terms:
+data in, data out, and the host does not look inside. The harness's memory host and the local
+host both call it, over what their port reports. A host that knows more (Context Manager, with
+its drafts, pull requests and divergence) builds its facts itself and does not call it.
+
+- **Inventory:** `enabled: true`, and `dirty` as the changed and new files that are the
+  manifest or a zone.
+- **Tasks:** a changed card is `changed`; a new one is in the snapshot's `created`; a moved one
+  has `movedFrom` and an entry in the snapshot's `moves`. The order file and the housekeeping
+  files follow the same statuses. Everything about pull requests and divergence is absent,
+  which the board already accepts.
+
+`HostChange` in `common-format/host` has this shape already and becomes an alias of
+`AppFileChange`, so there is one. No core changes: this is not the shared fact shape the spike
+called "surgery", which stays a non-goal.
 
 ### What changes on the way
 
@@ -154,16 +190,18 @@ export function matchAppPage(
   the core projects;
 - a page that redirects answers its `base` followed by a sub-path, for a base that is a path
   (`/apps/x`) and for one that is a fragment (`#/app/docs/tasks/tasks.yaml`);
-- `meta.label` and `meta.icon` are not empty.
+- `meta.label` and `meta.icon` are not empty;
+- `fromChanges` over no changes, and over each fixture's changes, answers facts the core
+  projects with, and a moved card's state says where it moved from.
 
 ### Step 1: the contract, and inventory
 
-The types, `matchAppPage`, the suite's checks, and inventory's three files. Inventory is the
-smaller: two pages, four ops.
+The types, `matchAppPage`, the suite's checks, and inventory's three files and its
+`fromChanges`. Inventory is the smaller: two pages, four ops.
 
 ### Step 2: tasks
 
-Tasks' three files. Its landing page (`''`) keeps its rules: a legacy `?path=` redirect, the
+Tasks' three files and its `fromChanges`. Its landing page (`''`) keeps its rules: a legacy `?path=` redirect, the
 default board, and an empty view with extras when there is none.
 
 ## Clarifications
@@ -183,7 +221,8 @@ default board, and an empty view with extras when there is none.
 
 ## Acceptance / completion checklist
 
-- [ ] `AppModule` has `meta`, `bounds`, `pages` and `placeCreate`, and both modules supply them.
+- [ ] `AppModule` has `meta`, `bounds`, `pages`, `placeCreate` and `fromChanges`, and both
+      modules supply them.
 - [ ] Each schema's limits match Context Manager's at the commit the PR names, checked by tests
       that carry over that repository's cases for them.
 - [ ] `matchAppPage` has tests: an empty path, a parameter, two parameters, no match.

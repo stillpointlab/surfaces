@@ -69,7 +69,8 @@ _Added 2026-11-14, from stage 4's adoption (context-manager#1186) and Jamie's
   submodule pin.
 - **Does not change:** this repository, except a fix a step proves is needed, which goes in its
   own PR here first.
-- **Two PRs** (the agent's reading of the reflections; decision 2 of the review):
+- **Two PRs** (Jamie, 2026-11-14: "two is fine if less disruptive overall"; decision 2 of the
+  review):
   1. the adoption: the pin alone, then steps 1, 2 and 3, each its own commit. Both walk suites
      run on the pin's commit and on the tip. A failure at the tip is found by commit;
   2. the lock (step 4), after the first has merged, with one walk of its own.
@@ -171,9 +172,12 @@ saves; a reload hides the files again.
 - **Not adopted here:** the runner, the storage port, the undo journal, and the explorer's
   tree. The brief keeps the runner and the check-in shared core out of scope.
 - **The preview pages** (public, library, claim review) still mount without the format
-  descriptors, which stage 4's follow-up log left for this spec to decide. The agent's lean:
-  they do not join. They are format work, the walks do not open them, and Context Manager's own
-  follow-up log holds them. Decision 5 of the review.
+  descriptors, which stage 4's follow-up log left for this spec to decide. They do not join
+  this adoption: they are format work, and the walks do not open them. Jamie asked on
+  2026-11-14 where the work is captured, since it reads as more than a follow-up. The agent's
+  answer, not yet his: the pages are Context Manager's, so a seed in Context Manager's own
+  pool; this repository already supplies the descriptors they would mount through. Decision 5
+  of the review.
 
 ## Non-goals
 

@@ -128,8 +128,8 @@ Two kinds:
 
 - **Too large:** a step whose kept content is over the size limit.
 - **Not text:** a `delete` of a file the port cannot read (`HOST_NOT_TEXT`, or over 2 MiB). A
-  rename of such a file is kept, since its inverse carries no content. This is the agent's
-  reading of what stage 4's port allows; keeping bytes instead is decision 1 of the review.
+  rename of such a file is kept, since its inverse carries no content. Jamie agreed on
+  2026-11-14 (decision 1 of the review): it cannot be undone, and the host asks first.
 
 Either is handled the same way:
 

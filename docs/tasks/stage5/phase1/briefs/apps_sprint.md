@@ -79,14 +79,11 @@ What stage 4 did, kept, and what it taught:
 
 ## Open questions
 
-The review's [decisions for Jamie](../reviews/specs-against-stage-4.md#decisions-for-jamie), with
-the phase each is needed by:
+Jamie answered the review's [five decisions](../reviews/specs-against-stage-4.md#decisions-for-jamie)
+on 2026-11-14: a deleted image cannot be undone and the host asks first; Context Manager's
+adoption is two PRs; an app's facts come from a `fromChanges` member of its module; the md
+editor's save is fixed ahead of the sprint, in
+[#111](https://github.com/stillpointlab/surfaces/pull/111).
 
-1. Undo of a deleted image or large file: cannot be undone and asks first, or bytes in the
-   journal (phase 5).
-2. Context Manager's adoption as two PRs, not four (phase 6).
-3. Where an app's facts are derived from file changes: in the app's package, or in each host
-   (phase 2, wave 2).
-4. Whether the md editor's save, which reflows a file, is fixed in phase 2 (before phase 3
-   ends).
-5. Whether Context Manager's preview pages join the adoption (phase 6).
+One is left: where the work on Context Manager's preview pages is captured. It is not part of
+this sprint either way.
