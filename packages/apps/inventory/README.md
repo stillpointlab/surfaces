@@ -159,13 +159,24 @@ and lays one of them out under its bar, in light DOM.
   navigates itself, and otherwise the browser follows the link. The shell never sets `location`.
 - **Exports are the host's:** `extras.exports` is `{ all?: string; zone?(path): string }`, and the
   download controls are hidden for an export it leaves out.
-- **Ops.** The elements' ops bubble through unchanged, `link-editor` included; the shell asks
-  nothing itself (`opView` answers no view: no inventory reply depends on one). Its
-  `notification`, `reload-request` and `checkin-request` bubble through unchanged too.
+- **Ops.** The elements' ops bubble through unchanged, `link-editor` included; the shell's own
+  are `project`, `refresh` and `checkin` (`AppShellOps`), and `opView` answers no view: no
+  inventory reply depends on one. Its `notification` and `reload-request` bubble through
+  unchanged too.
+- **Check-in is the shell's.** It holds one `<checkin-review>`
+  (`@stillpointlab/checkin-review-component`) and takes its elements' `checkin-request`: the
+  request stops at the shell, and a host never hears it. The review opens on the dirty files of
+  the latest state or learned reply, each labelled `manifest`, `new` or `changed`, every one
+  checked, with no default title and the placeholder "Inventory check-in". It asks the host
+  `checkin` by path; a reply closes it with the reply's message as a `notification`. The words
+  are the host's (`input.checkin.words`) or the shell's own, which say "check in"; a branch is
+  offered only when the host gives one (`input.checkin.branch`). When the input is set again
+  while the review is open, its rows follow, each keeping its check.
 
 In the harness, the fixture "Shell over the memory host" shows the shell over the example workshop,
-with its links under a fragment base, `navigate` resolved through `inventoryPages` and `project`
-and `refresh` answered from the memory host's files.
+with its links under a fragment base, `navigate` resolved through `inventoryPages`, `project` and
+`refresh` answered from the memory host's files, and `checkin` answered by committing the chosen
+files in memory, after which the page is read again and their marks clear.
 
 ### The create form
 

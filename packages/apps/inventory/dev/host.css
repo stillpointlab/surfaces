@@ -40,3 +40,36 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+.inventory-harness .button-secondary {
+  background: var(--spl-background-secondary);
+}
+
+.inventory-harness .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.inventory-harness .form-label {
+  color: var(--spl-text-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.inventory-harness .form-input[aria-invalid='true'] {
+  border-color: var(--spl-error-color);
+}
+
+.inventory-harness .form-help {
+  margin: 0;
+  color: var(--spl-text-muted);
+  font-size: 0.8125rem;
+}
+
+.inventory-harness .form-message {
+  margin: 0;
+  color: var(--spl-error-color);
+  font-size: 0.8125rem;
+}

@@ -12,9 +12,12 @@ import './index.js';
 import { CONFIGURED_ZONE, LEGACY_ZONE, SPACE } from '../element/inventory.fixtures.js';
 import { inventoryModule } from '../module.js';
 
+import { INVENTORY_CHECKIN_WORDS as CHECKIN_WORDS } from './checkin.js';
+
 import type { InventoryApp } from './inventory-app.js';
 import type { InventoryOps } from '../element/types.js';
 import type { SharedInventorySpace, SharedInventoryZoneState } from '../types.js';
+import type { CheckinReview } from '@stillpointlab/checkin-review-component';
 import type { AppOp, AppShellInput, AppShellOps, Result } from '@stillpointlab/common-format/app';
 
 const PATH_BASE = '/project/p/repos/r/inventory/view_1';
@@ -76,6 +79,15 @@ function collectRequests(): { names: string[]; stop(): void } {
     },
   };
 }
+
+const reviewOf = (el: HTMLElement): CheckinReview => el.querySelector('checkin-review')!;
+
+const reviewRows = (el: HTMLElement) =>
+  [...reviewOf(el).querySelectorAll<HTMLElement>('.checkin-review-row')].map((row) => ({
+    checked: row.querySelector<HTMLInputElement>('input')!.checked,
+    path: row.querySelector('.checkin-review-path')!.textContent,
+    label: row.querySelector('.checkin-review-label')!.textContent,
+  }));
 
 const tick = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -329,18 +341,22 @@ describe('<spl-inventory-app> requests', () => {
     expect(seen).toEqual(['/project/p']);
   });
 
-  it('lets its elements’ requests through, bubbling', async () => {
+  it('lets its elements’ requests through, bubbling, except check-in, which it takes', async () => {
     const el = mountShell(
       spaceInput({ state: { ...SPACE, dirty: [{ path: 'rooms/kitchen.yaml', kind: 'zone' }] } })
     );
     const seen = collectRequests();
+    const onShell: string[] = [];
+    el.addEventListener('checkin-request', (event) => onShell.push(event.type));
     answerOps<InventoryOps>(el, () => ok({ space: SPACE }));
 
     el.querySelector<HTMLElement>('#inventory-checkin')!.click();
+    reviewOf(el).close();
     submitZone(el, 'Attic');
     await tick();
     seen.stop();
-    expect(seen.names).toEqual(['checkin-request', 'notification']);
+    expect(seen.names).toEqual(['notification']);
+    expect(onShell).toEqual([]);
   });
 
   it('lets a zone’s reload request through when its item is gone', async () => {
@@ -378,6 +394,109 @@ describe('<spl-inventory-app> requests', () => {
     await tick();
     expect(asked.map((op) => op.type)).toEqual(['link-editor']);
     expect(navigated).toEqual(['#editor']);
+  });
+});
+
+describe('<spl-inventory-app> check-in', () => {
+  const DIRTY: SharedInventorySpace['dirty'] = [
+    { path: 'inventory.yaml', kind: 'manifest' },
+    { path: 'rooms/kitchen.yaml', kind: 'zone' },
+    { path: 'rooms/attic.yaml', kind: 'zone', newFile: true },
+  ];
+
+  const checkIn = (el: InventoryApp): void =>
+    el.querySelector<HTMLElement>('#inventory-checkin')!.click();
+
+  it('opens its review on the state’s dirty files, in its own words, with no default title', () => {
+    const el = mountShell(spaceInput({ state: { ...SPACE, dirty: DIRTY } }));
+    checkIn(el);
+    const review = reviewOf(el);
+    expect(review.isOpen).toBe(true);
+    expect(reviewRows(el)).toEqual([
+      { checked: true, path: 'inventory.yaml', label: 'manifest' },
+      { checked: true, path: 'rooms/kitchen.yaml', label: 'changed' },
+      { checked: true, path: 'rooms/attic.yaml', label: 'new' },
+    ]);
+    const title = review.querySelector<HTMLInputElement>('.checkin-review-title')!;
+    expect(title.value).toBe('');
+    expect(title.placeholder).toBe('Inventory check-in');
+    expect(review.querySelector('.checkin-review-branch')).toBeNull();
+    const shown = review.textContent!.toLowerCase();
+    expect(shown).toContain('check in');
+    expect(shown).not.toContain('commit');
+    expect(shown).not.toContain('pull request');
+  });
+
+  it('opens on a zone’s dirty files too', () => {
+    const el = mountShell(zoneInput({ state: { ...CONFIGURED_ZONE, dirty: DIRTY.slice(1, 2) } }));
+    checkIn(el);
+    expect(reviewRows(el).map((row) => row.path)).toEqual(['rooms/kitchen.yaml']);
+  });
+
+  it('takes the host’s words and branch', () => {
+    const words = { ...CHECKIN_WORDS, heading: 'Commit', confirm: 'Commit' };
+    const el = mountShell(
+      spaceInput({
+        state: { ...SPACE, dirty: DIRTY },
+        checkin: { words, branch: { current: 'main', offerNew: true } },
+      })
+    );
+    checkIn(el);
+    const review = reviewOf(el);
+    expect(review.querySelector('modal-dialog')!.getAttribute('title')).toBe('Commit');
+    expect(review.querySelector('[data-answer="confirm"]')!.textContent).toBe('Commit');
+    expect(review.querySelector('.checkin-review-branch-name')).not.toBeNull();
+  });
+
+  it('follows the state set again while it is open, keeping the checks', () => {
+    const el = mountShell(spaceInput({ state: { ...SPACE, dirty: DIRTY } }));
+    checkIn(el);
+    reviewOf(el).querySelector<HTMLInputElement>('[data-path="rooms/kitchen.yaml"]')!.click();
+    el.setState(
+      spaceInput({
+        state: { ...SPACE, dirty: [DIRTY[1]!, { path: 'rooms/shed.yaml', kind: 'zone' }] },
+      })
+    );
+    expect(reviewRows(el)).toEqual([
+      { checked: false, path: 'rooms/kitchen.yaml', label: 'changed' },
+      { checked: false, path: 'rooms/shed.yaml', label: 'changed' },
+    ]);
+  });
+
+  it('opens on the dirty files of the latest reply it learned', () => {
+    const el = mountShell(spaceInput({ state: { ...SPACE, dirty: [] } }));
+    el.learn({ type: 'add-zone' }, ok({ space: { ...SPACE, dirty: DIRTY.slice(2) } }));
+    el.querySelector('spl-inventory-overview')!.dispatchEvent(
+      new CustomEvent('checkin-request', { bubbles: true, composed: true })
+    );
+    expect(reviewRows(el).map((row) => row.path)).toEqual(['rooms/attic.yaml']);
+  });
+
+  it('asks its host `checkin` by path, and a reply closes the review with its notice', async () => {
+    const el = mountShell(spaceInput({ state: { ...SPACE, dirty: DIRTY } }));
+    const asked: AppOp<InventoryOps & AppShellOps>[] = [];
+    answerOps<InventoryOps & AppShellOps>(el, (op): Result<object> => {
+      asked.push(op);
+      return ok({ status: 'done', message: 'Checked in 2 files.' });
+    });
+    const seen = collectRequests();
+    checkIn(el);
+    const review = reviewOf(el);
+    review.querySelector<HTMLInputElement>('[data-path="inventory.yaml"]')!.click();
+    review.querySelector<HTMLButtonElement>('[data-answer="confirm"]')!.click();
+    await tick();
+    seen.stop();
+    expect(asked).toEqual([{ type: 'checkin', paths: ['rooms/kitchen.yaml', 'rooms/attic.yaml'] }]);
+    expect(review.isOpen).toBe(false);
+    expect(seen.names).toEqual(['notification']);
+  });
+
+  it('is still there after the layout changes', () => {
+    const el = mountShell(spaceInput({ state: { ...SPACE, dirty: DIRTY } }));
+    el.setState(zoneInput({ state: { ...CONFIGURED_ZONE, dirty: DIRTY } }));
+    expect(el.querySelectorAll('checkin-review')).toHaveLength(1);
+    checkIn(el);
+    expect(reviewOf(el).isOpen).toBe(true);
   });
 });
 

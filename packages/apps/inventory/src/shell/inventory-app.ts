@@ -6,12 +6,19 @@
  * overview or the zone, and builds the links between the inventory's pages
  * from the base. It keeps the title current from each reply it learns.
  *
+ * Check-in is the shell's: it holds one `<checkin-review>`, takes its
+ * elements' `checkin-request` (a host never hears it), and opens the review on
+ * the dirty files, the latest state's or the latest reply's. The review asks
+ * the host `checkin`, in the host's words (`input.checkin`) or the shell's own.
+ * When the input is set again while the review is open, its rows follow.
+ *
  * What stays the host's: navigation (a link click raises `navigate`; the shell
  * never sets `location`), the exports (`extras.exports`; without them the
  * download controls are hidden), the editor link (`link-editor`, let through),
- * and the requests its elements raise (`notification`, `reload-request`,
- * `checkin-request`), which bubble through it unchanged.
+ * answering `checkin`, and the other requests its elements raise
+ * (`notification`, `reload-request`), which bubble through it unchanged.
  */
+import '@stillpointlab/checkin-review-component';
 import '@stillpointlab/spl-icon-component';
 import '../element/inventory-overview.js';
 import '../element/inventory-zone.js';
@@ -20,13 +27,26 @@ import { createReadyGate, pageHref } from '@stillpointlab/common-format/app';
 import { defineElement } from '@stillpointlab/common-format/elements';
 import { html, render } from '@stillpointlab/common-format/html';
 
+import { CHECKIN_REQUEST_EVENT } from '../element/types.js';
+
+import {
+  dirtyOf,
+  INVENTORY_CHECKIN_PLACEHOLDER,
+  INVENTORY_CHECKIN_WORDS,
+  inventoryCheckinFiles,
+} from './checkin.js';
 import { exportsOf, zoneHref, zoneSlugOfPath } from './links.js';
 import { shellStyles } from './shell.styles';
 
 import type { InventoryOverview } from '../element/inventory-overview.js';
 import type { InventoryZone } from '../element/inventory-zone.js';
 import type { InventoryLinks } from '../element/types.js';
-import type { SharedInventorySpace, SharedInventoryZoneState } from '../types.js';
+import type {
+  SharedInventoryDirtyFile,
+  SharedInventorySpace,
+  SharedInventoryZoneState,
+} from '../types.js';
+import type { CheckinReview } from '@stillpointlab/checkin-review-component';
 import type { AppShellElement, AppShellInput } from '@stillpointlab/common-format/app';
 import type { SafeHtml } from '@stillpointlab/common-format/html';
 
@@ -117,6 +137,9 @@ export class InventoryApp extends HTMLElement implements AppShellElement {
   private shown: Body | null = null;
   private bar: HTMLElement | null = null;
   private body: InventoryOverview | InventoryZone | null = null;
+  private review: CheckinReview | null = null;
+  /** The dirty files, from the input or a reply learned since, whichever came last. */
+  private dirty: SharedInventoryDirtyFile[] = [];
 
   private readonly links = new ShellLinks(() => this.input, this.slugs);
 
@@ -128,8 +151,10 @@ export class InventoryApp extends HTMLElement implements AppShellElement {
     this.input = input;
     const body = bodyOf(input);
     this.remember(input.state);
+    this.dirty = dirtyOf(input.state) ?? [];
     this.barTitle = titleOf(body, input.state);
     this.refresh();
+    if (this.review?.isOpen) this.review.setFiles(inventoryCheckinFiles(this.dirty));
   }
 
   learn(_op: { type: string }, reply: object): void {
@@ -138,6 +163,7 @@ export class InventoryApp extends HTMLElement implements AppShellElement {
     const state = body === 'space' ? answered.space : body === 'zone' ? answered.state : undefined;
     if (!isObject(state) || body === null) return;
     this.remember(state);
+    this.dirty = dirtyOf(state) ?? this.dirty;
     this.barTitle = titleOf(body, state);
     this.paintBar();
   }
@@ -149,11 +175,14 @@ export class InventoryApp extends HTMLElement implements AppShellElement {
 
   connectedCallback(): void {
     this.addEventListener('click', this.handleClick);
+    // Capture, so the shell takes the request before a host's listener on the shell hears it.
+    this.addEventListener(CHECKIN_REQUEST_EVENT, this.handleCheckinRequest, true);
     this.refresh();
   }
 
   disconnectedCallback(): void {
     this.removeEventListener('click', this.handleClick);
+    this.removeEventListener(CHECKIN_REQUEST_EVENT, this.handleCheckinRequest, true);
     this.ready.begin();
   }
 
@@ -173,6 +202,9 @@ export class InventoryApp extends HTMLElement implements AppShellElement {
         this.styleElement.textContent = shellStyles;
       }
       this.prepend(this.styleElement);
+      // The review outlives the layout: it goes back after each one.
+      this.review ??= document.createElement('checkin-review') as CheckinReview;
+      this.append(this.review);
       this.bar = this.querySelector<HTMLElement>(':scope > .inventory-bar');
       this.body = this.querySelector<InventoryOverview | InventoryZone>(
         ':scope > spl-inventory-overview, :scope > spl-inventory-zone'
@@ -238,6 +270,21 @@ export class InventoryApp extends HTMLElement implements AppShellElement {
       }
     }
   }
+
+  /** An element's check-in request stops here: the review opens on the dirty files. */
+  private readonly handleCheckinRequest = (event: Event): void => {
+    if (event.target === this) return;
+    event.stopPropagation();
+    const input = this.input;
+    if (!input || !this.review) return;
+    this.review.open({
+      files: inventoryCheckinFiles(this.dirty),
+      words: input.checkin?.words ?? INVENTORY_CHECKIN_WORDS,
+      title: '',
+      titlePlaceholder: INVENTORY_CHECKIN_PLACEHOLDER,
+      ...(input.checkin?.branch ? { branch: input.checkin.branch } : {}),
+    });
+  };
 
   /** A followed link is the host's to navigate: it claims `navigate`, or the browser follows it. */
   private readonly handleClick = (event: MouseEvent): void => {
