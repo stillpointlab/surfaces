@@ -66,3 +66,14 @@ are carried here as they were written.
   `packages/apps/inventory` (`bounds.ts`, `pages.ts`, `meta.ts`) and still in Context Manager
   (`services/inventory/opSchema.ts`, `services/inventory/pages.ts`, `client/apps/registry.ts`, the
   create noun in `services/apps/registry.ts`). Two copies until context-manager-adopts-apps.
+- 2026-11-14 (app-module-grows, step 1): `AppMeta` has no noun for the "… created" notice a host
+  shows after a create (Context Manager's client says "Inventory", "Task project"). The local
+  host will want one.
+- 2026-11-14 (app-module-grows, step 1): inventory's `fromChanges` counts changed and new files,
+  as its spec says, so a zone or a manifest renamed by hand is not dirty and an app's check-in
+  would not list it. The explorer's commit would.
+- 2026-11-14 (app-module-grows, step 1): the suite's page cases cannot say "the page answers a
+  view whose subject is missing, so the host gives not found" (`/room/garage` with no garage).
+  `answers: 'not-found'` covers no match and a page that refuses.
+- 2026-11-14 (app-module-grows, step 1): the module has no bound for its host ops
+  (`link-editor`); each host bounds them itself.

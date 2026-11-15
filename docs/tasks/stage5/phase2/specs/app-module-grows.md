@@ -204,6 +204,49 @@ The types, `matchAppPage`, the suite's checks, and inventory's three files and i
 Tasks' three files and its `fromChanges`. Its landing page (`''`) keeps its rules: a legacy `?path=` redirect, the
 default board, and an empty view with extras when there is none.
 
+## As built: step 1
+
+_2026-11-14, by an Opus 5.5 sub-agent; reviewed and checked by the orchestrating agent. Where the
+work departed from the text above, this is what step 2 and the later specs read._
+
+- **The five members are optional on `AppModule` in this step,** since tasks supplies them in
+  step 2. A module without them gets a to-do in the suite, which tasks shows today. Step 2 makes
+  them required.
+- **`AppModule` has a seventh type parameter, `CreateInput`,** which defaults to `Seed`. The
+  create bound answers the form's fields; the host adds the folder before `seed`. Inventory
+  passes `InventoryCreateFields`.
+- **`matchAppPage`,** where the text above is silent:
+  - the sub-path carries no query;
+  - `''` and `/` are the empty path, and one trailing slash is ignored;
+  - any other sub-path starts with `/`;
+  - a parameter is one non-empty segment, decoded, and a segment that does not decode matches
+    nothing;
+  - the first page that matches wins.
+- **A page's `params` and `query` are strings,** decoded and not yet checked. A zone slug the
+  rule refuses is not found, where Context Manager answered 400. The check is plain code, so
+  `pages.ts` loads no zod.
+- **`bounds.op` covers the core's ops.** A host op (`link-editor`) is refused, as Context
+  Manager's schema refused it; a host bounds its own.
+- **A refusal reads "The op is not valid: title: …",** with the schema's issues in `details`.
+  Context Manager's message was "Validation failed".
+- **`FileStatus` in `common-format/host` is `AppFileChange['status']`,** beside the `HostChange`
+  alias, so the status has one shape too.
+- **`meta` has its own entry, `@stillpointlab/inventory-app/meta`,** which a test and the built
+  file show loads no zod and none of the core.
+- **`meta.create.folderHelp` is plain text.** Inventory's has no markup. Tasks' has, in Context
+  Manager (`tasks.yaml` as code), and step 2 writes it plain.
+- **Inventory's `fromChanges` counts changed and new files.** A moved zone is not dirty. It is
+  in the follow-up log.
+- **Inventory has no page that redirects,** so the redirect check, over a path base and a
+  fragment base, runs on the suite's own sample module until tasks' landing page does.
+- **The suite checks more than the list above:** a page's title is not empty, `bounds.view`
+  refuses an unknown view, and a broken module fails (eleven tests of that).
+- **The bounds' cases carried from Context Manager** (at `8fa439ba`) are the six in its app host
+  and route tests. It has no test beside the schema file. The rest are one test a limit, at its
+  edge and past it.
+- **Not checked in this step:** Context Manager's build against the branch. It is checked once,
+  after step 2.
+
 ## Clarifications
 
 - **Entries.** A client that needs only `meta` must not pull in zod. `meta` is exported from a
