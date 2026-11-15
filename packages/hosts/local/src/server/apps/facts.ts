@@ -16,14 +16,16 @@ import { folderOf } from './discovery';
 
 import type { NodePort } from '../port';
 import type { AnyAppModule, AppFileChange } from '@stillpointlab/common-format/app';
-import type { LoadedInstance, RunnerHost } from '@stillpointlab/common-format/host';
+import type { LoadedInstance, RunnerHost, StoragePort } from '@stillpointlab/common-format/host';
 
 export interface Facts {
   /**
    * A runner host for one request: `know` from the changes, and `changes()`, a
-   * digest of the last changes it handed a module, for the host's revision.
+   * digest of the last changes it handed a module, for the host's revision. Its
+   * port is `writes` when given (the journal's, for an op or a create), and the
+   * node port otherwise.
    */
-  runner(): RunnerHost & { changesDigest(): string };
+  runner(writes?: StoragePort): RunnerHost & { changesDigest(): string };
   /** Drop the kept bases: `HEAD` or the index moved. */
   forget(): void;
 }
@@ -73,10 +75,10 @@ export function createFacts(port: NodePort): Facts {
   }
 
   return {
-    runner() {
+    runner(writes) {
       let last = digest('[]');
       return {
-        port,
+        port: writes ?? port,
         now: () => new Date().toISOString(),
         async know(module: AnyAppModule, loaded: LoadedInstance) {
           const changes = await changesFor(loaded);

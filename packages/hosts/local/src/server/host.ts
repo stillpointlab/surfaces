@@ -24,6 +24,17 @@
 // (`apps`), serves their pages and ops under `/api/apps`, and holds their lock.
 // A `PUT /api/files` that would write into a locked app's files is refused
 // before the port sees it; the runner's own writes go to the port directly.
+//
+// The journal (`journal/`): every write the host makes, except an editor's save,
+// is one step that `POST /api/undo` takes back and `POST /api/redo` does again.
+// `PUT /api/files` journals a call whose changes are all `create`, `move` or
+// `delete` (the explorer's), labelled from them; a call with a `write` is an
+// editor's save and goes to the port as it is. In the route the lock's check
+// comes first, then the journal, then the port. A step the journal cannot keep
+// is refused with `HOST_CANNOT_UNDO`, and the same call sent with
+// `"unjournaled": true` is written with no step, which empties the journal. An
+// app's op and a create are a step each (`apps/app-host.ts`). The stream sends
+// `{ type: 'journal' }` when the steps change.
 
 import { createHash } from 'node:crypto';
 import { constants, open } from 'node:fs/promises';
@@ -32,6 +43,8 @@ import { Readable } from 'node:stream';
 
 import { createAppHost } from './apps/app-host';
 import { DEFAULT_APPS, DEFAULT_HOST_OPS } from './apps/registry';
+import { createJournal } from './journal/journal';
+import { labelFor } from './journal/labels';
 import { LIST_LIMIT } from './limits';
 import { isInside, locate, outsideRoot, pathProblem } from './paths';
 import { createNodePort } from './port';
@@ -41,11 +54,17 @@ import { createFolderWatcher } from './watcher';
 import type { LocalHostEvent } from '../shared/apps';
 import type { Handler } from './apps/app-host';
 import type { ServerHostOps } from './apps/host-ops';
+import type { Journal } from './journal/journal';
 import type { PageHandler } from './page';
 import type { NodePort, PortStart } from './port';
 import type { FolderWatcher } from './watcher';
 import type { AnyAppModule } from '@stillpointlab/common-format/app';
-import type { HostCommitRequest, HostListing, HostRoot } from '@stillpointlab/common-format/host';
+import type {
+  HostCommitRequest,
+  HostListing,
+  HostRoot,
+  PortChange,
+} from '@stillpointlab/common-format/host';
 import type { FileHandle } from 'node:fs/promises';
 
 export interface Host {
@@ -86,6 +105,8 @@ export { statusFor } from './respond';
 export interface LocalHost extends Host {
   /** The port the host reads and writes through. */
   readonly port: NodePort;
+  /** The steps undo and redo take: every write the host makes but an editor's save. */
+  readonly journal: Journal;
   /** Resolves once the host has decided how it lists and is watching the folder. */
   ready(): Promise<PortStart>;
 }
@@ -216,8 +237,15 @@ export function createHost(options: HostOptions): LocalHost {
   }, 25_000);
   keepAlive.unref();
 
+  const journal = createJournal({
+    port,
+    index: port.index,
+    onChange: () => broadcast({ type: 'journal' }),
+  });
+
   const apps = createAppHost({
     port,
+    journal,
     modules: options.apps ?? DEFAULT_APPS,
     hostOps: options.hostOps ?? DEFAULT_HOST_OPS,
     send: broadcast,
@@ -283,14 +311,36 @@ export function createHost(options: HostOptions): LocalHost {
         } catch {
           return refuse('HOST_BAD_REQUEST', 'The body is not JSON.', 400);
         }
-        const changes = (parsed as { changes?: unknown } | null)?.changes;
-        if (!Array.isArray(changes)) {
-          return refuse('HOST_BAD_REQUEST', 'The body must be { "changes": [...] }.', 400);
+        const { changes, unjournaled } = (parsed ?? {}) as {
+          changes?: unknown;
+          unjournaled?: unknown;
+        };
+        if (!Array.isArray(changes) || (unjournaled !== undefined && unjournaled !== true)) {
+          return refuse(
+            'HOST_BAD_REQUEST',
+            'The body must be { "changes": [...], "unjournaled"?: true }.',
+            400
+          );
         }
         // An app's locked files take no write from here; the runner's go through the port.
         const locked = await apps.checkWrite(changes);
         if (locked) return refusal(locked);
-        const answer = await port.put(changes);
+        const answer = await writeFiles(changes as PortChange[], unjournaled === true);
+        return answer.ok ? json(answer) : refusal(answer);
+      },
+    },
+    '/api/journal': {
+      GET: async () => json({ ok: true, ...journal.labels() }),
+    },
+    '/api/undo': {
+      POST: async () => {
+        const answer = await journal.undo();
+        return answer.ok ? json(answer) : refusal(answer);
+      },
+    },
+    '/api/redo': {
+      POST: async () => {
+        const answer = await journal.redo();
         return answer.ok ? json(answer) : refusal(answer);
       },
     },
@@ -335,6 +385,25 @@ export function createHost(options: HostOptions): LocalHost {
     },
     ...apps.routes,
   };
+
+  /**
+   * `PUT /api/files` once the lock has passed it: the explorer's creates, moves
+   * and deletes as one step (or with none, when the person agreed), and an
+   * editor's save straight to the port.
+   */
+  function writeFiles(changes: readonly PortChange[], unjournaled: boolean) {
+    const explorers =
+      changes.length > 0 &&
+      changes.every(
+        (change) =>
+          typeof change === 'object' &&
+          change !== null &&
+          (change.kind === 'create' || change.kind === 'move' || change.kind === 'delete')
+      );
+    if (!explorers) return port.put(changes);
+    if (unjournaled) return journal.write(changes);
+    return journal.port(labelFor(changes), { unkept: 'refuse' }).put(changes);
+  }
 
   async function raw(path: string): Promise<Response> {
     const problem = pathProblem(path);
@@ -448,5 +517,5 @@ export function createHost(options: HostOptions): LocalHost {
     listeners.clear();
   }
 
-  return { fetch, close, port, ready: () => ready };
+  return { fetch, close, port, journal, ready: () => ready };
 }

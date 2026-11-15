@@ -26,6 +26,10 @@ export function statusFor(code: string): number {
     case 'HOST_APP_INVALID':
     case 'HOST_APP_OVERLAP':
     case 'HOST_NOTHING_TO_RESOLVE':
+    case 'HOST_NOTHING_TO_UNDO':
+    case 'HOST_NOTHING_TO_REDO':
+    case 'HOST_UNDO_CONFLICT':
+    case 'HOST_CANNOT_UNDO':
       return 409;
     case 'HOST_WRITE_FAILED':
     case 'HOST_GIT_FAILED':
@@ -48,8 +52,23 @@ export function json(body: unknown, status = 200, headers: Record<string, string
   });
 }
 
+/**
+ * A refusal's body: its code and message, and the two fields the journal's
+ * refusals carry when they have them: `reason` (why a step cannot be kept) and
+ * `path` (the file an undo met changed).
+ */
 export function refusal(failure: Failure, status = statusFor(failure.code)): Response {
-  return json({ ok: false, code: failure.code, message: failure.message }, status);
+  const { reason, path } = failure as Failure & { reason?: unknown; path?: unknown };
+  return json(
+    {
+      ok: false,
+      code: failure.code,
+      message: failure.message,
+      ...(typeof reason === 'string' ? { reason } : {}),
+      ...(typeof path === 'string' ? { path } : {}),
+    },
+    status
+  );
 }
 
 export function refuse(

@@ -19,6 +19,10 @@
 //   share a path with a found instance's (`HOST_APP_OVERLAP`), which the runner's
 //   `createInstance` does not check, and then runs it. The new instance is
 //   locked, as every instance starts.
+// - **The journal:** an op's runner host, and a create's, write through
+//   `journal.port(label)`, so each is one step ("Inventory: add-item",
+//   "Inventory: create"). A step the journal cannot keep is written with no step,
+//   and the answer carries `notice` beside it. A host op writes nothing.
 
 import { matchAppPage } from '@stillpointlab/common-format/app';
 import {
@@ -42,6 +46,8 @@ import type {
   FoundInstance,
   LocalHostEvent,
 } from '../../shared/apps';
+import type { CannotUndoNotice } from '../../shared/journal';
+import type { Journal, JournalPort } from '../journal/journal';
 import type { NodePort } from '../port';
 import type { ServerHostOps } from './host-ops';
 import type {
@@ -57,6 +63,8 @@ export type Handler = (request: Request, url: URL) => Promise<Response>;
 
 export interface AppHostOptions {
   port: NodePort;
+  /** What an op and a create write through, one step each: undo takes them back. */
+  journal: Journal;
   modules: readonly AnyAppModule[];
   /** The host ops the server answers, by app id, then op type. */
   hostOps?: Readonly<Record<string, ServerHostOps>>;
@@ -104,6 +112,11 @@ const isWithin = (path: string, folder: string): boolean =>
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
+
+/** The notice beside an answer whose write the journal could not keep. */
+function noticeOf(writes: JournalPort): { notice: CannotUndoNotice } | Record<string, never> {
+  return writes.unkept === null ? {} : { notice: { kind: 'cannot-undo', reason: writes.unkept } };
+}
 
 export function createAppHost(options: AppHostOptions): AppHost {
   const { port, modules } = options;
@@ -303,8 +316,11 @@ export function createAppHost(options: AppHostOptions): AppHost {
       const { ok: _ok, ...reply } = answered as { ok: true } & Record<string, unknown>;
       return json({ ok: true, reply });
     }
+    // One op is one step, labelled with the app's name and the op's type.
+    const writes = options.journal.port(`${at.module.meta.label}: ${type0}`);
+    const writer = facts.runner(writes);
     const answer = await runOp(
-      runner,
+      writer,
       at.module,
       at.instance.manifestPath,
       view === undefined ? { op: asked } : { op: asked, view }
@@ -313,7 +329,8 @@ export function createAppHost(options: AppHostOptions): AppHost {
     return json({
       ok: true,
       reply: answer.reply,
-      revision: hostRevision(answer.revision, runner.changesDigest()),
+      revision: hostRevision(answer.revision, writer.changesDigest()),
+      ...noticeOf(writes),
     });
   }
 
@@ -395,14 +412,16 @@ export function createAppHost(options: AppHostOptions): AppHost {
         409
       );
     }
-    const made = await createInstance(facts.runner(), module, {
+    // A create is one step: undo deletes the files it made.
+    const writes = options.journal.port(`${module.meta.label}: create`);
+    const made = await createInstance(facts.runner(writes), module, {
       folder,
       ...(confirmRoot !== undefined ? { confirmRoot } : {}),
       input,
     });
     if (!made.ok) return refusal(made, appStatus(module, made.code, 'create'));
     void findAgainSoon();
-    return json({ ok: true, manifestPath: made.manifestPath });
+    return json({ ok: true, manifestPath: made.manifestPath, ...noticeOf(writes) });
   }
 
   async function lock(request: Request): Promise<Response> {

@@ -3,6 +3,7 @@
 // the app routes. Types and one pure rule (the region), with nothing from Node or
 // the DOM, so both halves import it.
 
+import type { CannotUndoNotice } from './journal';
 import type { HostEvent } from '@stillpointlab/common-format/host';
 
 /** One instance discovery found: a manifest a module claims, whether or not it is valid. */
@@ -50,8 +51,12 @@ export function appBase(manifestPath: string): string {
   return `#/app/${manifestPath.split('/').map(encodeURIComponent).join('/')}`;
 }
 
-/** What the local host's event stream sends:the host's events, and `apps` when discovery's answer changed. */
-export type LocalHostEvent = HostEvent | { type: 'apps' };
+/**
+ * What the local host's event stream sends: the host's events, `apps` when
+ * discovery's answer changed, and `journal` when the steps undo and redo would
+ * take did.
+ */
+export type LocalHostEvent = HostEvent | { type: 'apps' } | { type: 'journal' };
 
 /** `GET /api/apps`. */
 export interface AppsAnswer {
@@ -85,6 +90,8 @@ export type AppPageAnswer = AppPageShown | AppPageRedirect;
 export interface AppOpAnswer {
   reply: object;
   revision?: string;
+  /** The op's change was written with no step: it cannot be undone. */
+  notice?: CannotUndoNotice;
 }
 
 /** `POST /api/apps/lock`'s success: on locking, what the lifecycle says of the manifest now. */
