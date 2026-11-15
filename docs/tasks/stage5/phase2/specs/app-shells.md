@@ -203,6 +203,75 @@ the later specs read._
   schemes read well in the shell. What reads badly is in the elements, and in the follow-up
   log.
 
+## As built: step 2
+
+_2026-11-14, by an Opus 5.5 sub-agent; rebased onto host-runner, reviewed and checked by the
+orchestrating agent, who looked at the screenshots._
+
+- **One rule for `navigate`.** Every `navigate` a host sees bubbles, can be cancelled and
+  carries `{ href }`, and a host claims it with `preventDefault()`. It comes from a link
+  clicked in the shell, from the tab strip (a phase or a board chosen, one just made or closed
+  to), and from the shell when Refresh leaves the page with nothing to show.
+- **Only a clicked link has a fallback.** Unclaimed, the browser follows the link. The other
+  two have no link behind them and go nowhere unclaimed, so **a host that mounts a shell
+  answers `navigate`** (the orchestrating agent's ruling: the alternative has the shell
+  navigating, which the text above forbids).
+- **The one change to an existing element:** `<spl-tasks-nav>`'s `navigate` can now be
+  cancelled. Unclaimed it still goes nowhere, and a host that listens without claiming, as
+  Context Manager does, is unaffected. `<spl-task-board>` is unchanged.
+- **`pageHref(base, path, params, query)` is in `common-format/app`,** beside `matchAppPage`.
+  Both shells build their links with it.
+- **The two ops the shell claims.** It hears `app-op` in the capture phase and stops
+  `refresh-stage` and `close-candidates` there, so no host sees them:
+  - `refresh-stage` answers the stage through `project`, or `TASKS_STAGE_NOT_FOUND`;
+  - `close-candidates` answers the board's cards (path, title, column), or
+    `TASKS_BOARD_NOT_FOUND`;
+  - a malformed one is `APP_OP_INVALID`, and a refused `project` goes back as it is.
+
+  `tasksModule.hostOps` still lists both, for the bare elements' fixtures.
+
+- **Refresh** asks `refresh`, then reads the nav and the view again, the newest read winning.
+  From the empty state, or a stage with no phases left, it raises `navigate` to the landing.
+  While it runs the button is busy and keeps focus. A refusal raises `notification` with the
+  host's message.
+- **`learn` reads the board again on a board view only,** as Context Manager did, and does not
+  read the reply.
+- **A new view is a new board and a new strip,** as a page load was. The same view with a new
+  state is `setState` on the board there.
+- **A view the shell does not know** is a line with a link to the landing. A board with no
+  state lets the board say so.
+- **The board's `storage-key` is `base`,** since a shell holds no ids. In Context Manager the
+  pool's collapsed state resets once.
+- **The empty state says "upstream"** where Context Manager's said GitHub.
+- **The sticky pool reads `--spl-tasks-app-sticky-top`** (0 by default) in place of Context
+  Manager's header height. The top margin stays the host's.
+- **Context Manager's page chrome the shell does not keep:**
+  - `.task-board-page` on the root, which carries its header margin and can stay on its own
+    container;
+  - the back icon's and the task icon's own `aria-label` (both are hidden from assistive
+    technology; the link carries the name);
+  - `storage-key` as an id.
+
+  Kept: `.tasks-topbar`, `.back-button`, `.task-board-repo`, the Refresh and Settings
+  buttons' classes, titles and labels, `.board-layout`, the strip's `aria-label`,
+  `spl-task-board[variant]`, and `.task-board-empty` with its heading. The options menu and
+  the check-in dialog were never in the layout and stay the host's.
+
+- **What Context Manager does when it mounts the shell:**
+  - passes `base`, `back` with the label its page has today, `location`, the view, the state
+    and `extras`, sets the sticky property to its header's height, and keeps its button and
+    form styles loaded;
+  - answers `project` and `refresh` (the second waits for its job), and drops its handlers
+    for the two claimed ops;
+  - claims `navigate` with `preventDefault()`, or a clicked link is followed twice;
+  - calls `learn(op, reply)`: its own `learn` took the two the other way round.
+- **No hook yet for a host to say a check-in is in flight,** or to have the shell read again
+  after one. [checkin-review](../../phase1/specs/checkin-review.md) adds `checkinSettled()`.
+- **By hand, in Chromium over the harness's memory host on the runner, light and dark:** the
+  strip to another phase and to a stage view, a card moved by its menu and by drag, a card
+  created, Settings, Refresh, a card's menu, Close phase, and another board. Both schemes read
+  well.
+
 ## Clarifications
 
 - **Navigation stays the host's.** A shell renders links and raises `navigate`; it never sets

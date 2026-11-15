@@ -118,3 +118,15 @@ are carried here as they were written.
   link to a path a card only passed through.
 - 2026-11-14 (host-runner): tasks' dirty mark reads a pool card's column as a board card's, as
   the harness did. The board does not draw `movedFrom`; it is in the state.
+- 2026-11-14 (app-shells, step 2): the harness's "Host answers ops" and "Refuse the next op"
+  controls do not reach a shell fixture's host.
+- 2026-11-14 (app-shells, step 2): in the harness the bare board, hidden, and the shell's board
+  both make their dialogs, so an id such as `#new-brief-title` is on the page twice.
+- 2026-11-14 (app-shells, step 2): a stage made with "+ stage" has no folder until it has a
+  card: the strip shows it because the pointer names it. "Close stage" then moves the pointer
+  on, and the empty stage is gone from the strip. The core writes nothing for an empty stage
+  by design; whether an empty stage should outlive its pointer is not decided.
+- 2026-11-14 (app-shells, step 2): `tasksModule.hostOps` still names `refresh-stage` and
+  `close-candidates`, which a shell answers itself. Drop them once every host mounts the shell.
+- 2026-11-14 (app-shells, step 2): tasks' build has no splitting either, so `./shell` carries
+  its own copy of the board and the strip (as inventory's, above).
