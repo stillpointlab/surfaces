@@ -10,7 +10,7 @@ _The [local host brief](../../../stage4/phase1/briefs/local_host.md), outcome 3.
 first wave. Two steps, each one PR here: the contract with inventory, then tasks._
 
 > Written with stage 4's specs, before any of stage 4 was built, and read again on 2026-11-14
-> against what stage 4 made. The [review](../reviews/specs-against-stage-4.md) lists what changed
+> against what stage 4 made. The [review](../../phase1/reviews/specs-against-stage-4.md) lists what changed
 > and why (M4, L2). "What stage 4 built" is what an implementer reads first.
 
 ## High-level goal
@@ -56,7 +56,7 @@ _Added 2026-11-14._
   `pages.ts`, `meta.ts` and `changes.ts` in each of `packages/apps/{inventory,tasks}/src/`; the
   alias in `packages/common/src/host/index.ts`.
 - **Does not change:** Context Manager. Its copies stay until
-  [context-manager-adopts-apps](context-manager-adopts-apps.md); the PR adds one line to the stage's
+  [context-manager-adopts-apps](../../phase1/specs/context-manager-adopts-apps.md); the PR adds one line to the stage's
   follow-up log naming the duplication.
 - **Step 2 can run beside** step 1 of [app-shells](app-shells.md), once step 1 here has merged.
   [host-runner](host-runner.md) waits for both steps, since its tests run both apps.
@@ -209,7 +209,7 @@ default board, and an empty view with extras when there is none.
 - **Entries.** A client that needs only `meta` must not pull in zod. `meta` is exported from a
   light entry of each package as well as on the module (the packages' `./paths` precedent).
 - **Check-in bodies stay in Context Manager.** They name files by its public ids.
-  [checkin-review](checkin-review.md) names files by path instead.
+  [checkin-review](../../phase1/specs/checkin-review.md) names files by path instead.
 - **Lifecycle policy stays a host's** (`notFoundCode`, `maxAdoptionsPerRun`, `skipPendingMoves`):
   it is about Context Manager's adoption, not the app.
 

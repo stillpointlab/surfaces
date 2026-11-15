@@ -12,7 +12,7 @@ the contract with inventory, then tasks. The two can go to two agents once step 
 merged._
 
 > Written with stage 4's specs, before any of stage 4 was built, and read again on 2026-11-14
-> against what stage 4 made. The [review](../reviews/specs-against-stage-4.md) lists what changed
+> against what stage 4 made. The [review](../../phase1/reviews/specs-against-stage-4.md) lists what changed
 > and why (M8, H7). "What stage 4 built" is what an implementer reads first.
 
 ## High-level goal
@@ -59,7 +59,7 @@ _Added 2026-11-14._
   `src/shell/` in each app package; each app's `dev/fixtures.ts` (one new fixture).
 - **Does not change:** the existing elements' ops or events, except the one named under
   "Inventory" below. Context Manager is not touched.
-- **Leaves for later:** the check-in dialog ([checkin-review](checkin-review.md)).
+- **Leaves for later:** the check-in dialog ([checkin-review](../../phase1/specs/checkin-review.md)).
 
 ## Technical requirement
 
@@ -145,7 +145,7 @@ zone?(path): string }`). Without it the export controls are hidden, which is the
 - **Markup the walks know.** Read Context Manager's walks before choosing a shell's markup, and
   keep an id or a class where keeping it costs nothing. Each PR lists the ids and classes of
   Context Manager's page chrome that the shell does not keep, so
-  [context-manager-adopts-apps](context-manager-adopts-apps.md) can change the walks in the
+  [context-manager-adopts-apps](../../phase1/specs/context-manager-adopts-apps.md) can change the walks in the
   commit that mounts the shell.
 
 ## Clarifications
@@ -159,11 +159,11 @@ zone?(path): string }`). Without it the export controls are hidden, which is the
 
 ## Non-goals
 
-- The check-in review ([checkin-review](checkin-review.md)); a shell lets `checkin-request`
+- The check-in review ([checkin-review](../../phase1/specs/checkin-review.md)); a shell lets `checkin-request`
   through unchanged for now.
 - Inventory's export in the local host (a follow-up; the controls are hidden there).
 - Context Manager mounting the shells
-  ([context-manager-adopts-apps](context-manager-adopts-apps.md)).
+  ([context-manager-adopts-apps](../../phase1/specs/context-manager-adopts-apps.md)).
 
 ## Acceptance / completion checklist
 

@@ -228,13 +228,14 @@ phase opens; phase 2's moved to `stage4/phase2/specs/` on 2026-11-13)
 | 3     | 1    | [git-in-the-host](../../phase3/specs/git-in-the-host.md)                               | 2   |
 | 4     | 1    | [context-manager-adopts-formats](../../phase4/specs/context-manager-adopts-formats.md) | 1   |
 
-**Stage 5: the apps in the host** (specs in `stage5/phase1/specs/`)
+**Stage 5: the apps in the host** (specs in `stage5/phase1/specs/` until their phase opens;
+phase 2's moved to `stage5/phase2/specs/` on 2026-11-14)
 
 | Phase | Wave | Spec                                                                                       | PRs |
 | ----- | ---- | ------------------------------------------------------------------------------------------ | --- |
-| 2     | 1    | [app-module-grows](../../../stage5/phase1/specs/app-module-grows.md)                       | 2   |
-| 2     | 2    | [host-runner](../../../stage5/phase1/specs/host-runner.md)                                 | 1   |
-| 2     | 2    | [app-shells](../../../stage5/phase1/specs/app-shells.md)                                   | 2   |
+| 2     | 1    | [app-module-grows](../../../stage5/phase2/specs/app-module-grows.md)                       | 2   |
+| 2     | 2    | [host-runner](../../../stage5/phase2/specs/host-runner.md)                                 | 1   |
+| 2     | 2    | [app-shells](../../../stage5/phase2/specs/app-shells.md)                                   | 2   |
 | 3     | 1    | [apps-in-the-local-host](../../../stage5/phase1/specs/apps-in-the-local-host.md)           | 2   |
 | 4     | 1    | [checkin-review](../../../stage5/phase1/specs/checkin-review.md)                           | 2   |
 | 5     | 1    | [undo-journal](../../../stage5/phase1/specs/undo-journal.md)                               | 1   |

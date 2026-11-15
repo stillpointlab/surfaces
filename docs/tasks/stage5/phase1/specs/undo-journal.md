@@ -39,7 +39,7 @@ change), undo across a restart, or undo of a deleted file the port cannot read (
 - `StoragePort.put` with `PortChange` and `base`
   ([host-server](../../../stage4/phase2/specs/host-server.md)); staging of moves and deletes
   ([git-in-the-host](../../../stage4/phase3/specs/git-in-the-host.md)); the runner and the memory
-  port ([host-runner](host-runner.md)); the lock
+  port ([host-runner](../../phase2/specs/host-runner.md)); the lock
   ([apps-in-the-local-host](apps-in-the-local-host.md)).
 
 ## What stage 4 built

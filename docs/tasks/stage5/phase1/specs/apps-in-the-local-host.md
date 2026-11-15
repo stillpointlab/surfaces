@@ -7,8 +7,8 @@ tags: [apps, dev-tooling, code, major-feature]
 # Spec: apps in the local host
 
 _The [local host brief](../../../stage4/phase1/briefs/local_host.md), outcomes 1 (the lock) and 3.
-Stage 5, phase 3: after [app-module-grows](app-module-grows.md), [host-runner](host-runner.md) and
-[app-shells](app-shells.md). Two steps, each one PR here: inventory with the lock, then tasks and
+Stage 5, phase 3: after [app-module-grows](../../phase2/specs/app-module-grows.md), [host-runner](../../phase2/specs/host-runner.md) and
+[app-shells](../../phase2/specs/app-shells.md). Two steps, each one PR here: inventory with the lock, then tasks and
 create._
 
 > Written with stage 4's specs, before any of stage 4 was built, and read again on 2026-11-14
@@ -24,8 +24,8 @@ writes until the person unlocks them. A new instance is created from the app's o
 ## Related context
 
 - The brief's outcome 1, "Inside an app's scope": the lock, as Jamie decided it.
-- The runner ([host-runner](host-runner.md)), the shells ([app-shells](app-shells.md)), and the
-  module's `meta`, `bounds` and `pages` ([app-module-grows](app-module-grows.md)).
+- The runner ([host-runner](../../phase2/specs/host-runner.md)), the shells ([app-shells](../../phase2/specs/app-shells.md)), and the
+  module's `meta`, `bounds` and `pages` ([app-module-grows](../../phase2/specs/app-module-grows.md)).
 - Stage 4's specs, each with an "As built" section:
   [host-server](../../../stage4/phase2/specs/host-server.md),
   [explorer-tree](../../../stage4/phase2/specs/explorer-tree.md),
@@ -93,7 +93,7 @@ _Added 2026-11-14. Paths are under `packages/hosts/local/src/`._
 
 Nothing else in the host names an app. The runner's `know` is one function for every app:
 `module.fromChanges` over what git reports (Jamie's decision 3 of the review, 2026-11-14; the
-member is [app-module-grows](app-module-grows.md)'s).
+member is [app-module-grows](../../phase2/specs/app-module-grows.md)'s).
 
 ### Finding instances
 
@@ -229,7 +229,7 @@ or a short list, and a dismiss button, in the same live region. The commit's mes
 
 Both apps' facts come from the port, and need no network: `know` hands `module.fromChanges`
 the changes in the instance's region, from `port.git.changes()`, which names a moved file's old
-path. What each app makes of them is in [app-module-grows](app-module-grows.md).
+path. What each app makes of them is in [app-module-grows](../../phase2/specs/app-module-grows.md).
 
 In a folder that is not a repository nothing is changed, new or moved.
 

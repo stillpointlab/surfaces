@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 110
+completed: 2026-11-14
 created: 2026-11-14T19:50:00-07:00
 tags: [apps, host-contract, dev-tooling, docs]
 ---
@@ -36,9 +38,9 @@ The local host brief's outcomes 3 to 6. In order:
 
 | Phase | Wave | Spec                                                                   | PRs | Where           |
 | ----- | ---- | ---------------------------------------------------------------------- | --- | --------------- |
-| 2     | 1    | [app-module-grows](../specs/app-module-grows.md)                       | 2   | here            |
-| 2     | 2    | [host-runner](../specs/host-runner.md)                                 | 1   | here            |
-| 2     | 2    | [app-shells](../specs/app-shells.md)                                   | 2   | here            |
+| 2     | 1    | [app-module-grows](../../phase2/specs/app-module-grows.md)             | 2   | here            |
+| 2     | 2    | [host-runner](../../phase2/specs/host-runner.md)                       | 1   | here            |
+| 2     | 2    | [app-shells](../../phase2/specs/app-shells.md)                         | 2   | here            |
 | 3     | 1    | [apps-in-the-local-host](../specs/apps-in-the-local-host.md)           | 2   | here            |
 | 4     | 1    | [checkin-review](../specs/checkin-review.md)                           | 2   | here            |
 | 5     | 1    | [undo-journal](../specs/undo-journal.md)                               | 1   | here            |
@@ -85,5 +87,5 @@ adoption is two PRs; an app's facts come from a `fromChanges` member of its modu
 editor's save is fixed ahead of the sprint, in
 [#111](https://github.com/stillpointlab/surfaces/pull/111).
 
-One is left: where the work on Context Manager's preview pages is captured. It is not part of
-this sprint either way.
+The work on Context Manager's preview pages is a seed in its own pool (context-manager#1199),
+and not part of this sprint.

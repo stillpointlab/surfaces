@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 110
+completed: 2026-11-14
 created: 2026-11-14T19:10:00-07:00
 tags: [apps, host-contract, dev-tooling, docs]
 ---
@@ -31,8 +33,10 @@ spec in this PR. Three of them rested on a choice that is Jamie's, and two more 
 up on the way. All five are under [Decisions for Jamie](#decisions-for-jamie), with his answers.
 
 > **Resolution status (2026-11-14):** every finding below is written into the spec it names, in
-> the PR that adds this review. Jamie answered the five decisions the same day; the fifth has a
-> question of his still open.
+> the PR that adds this review ([#110](https://github.com/stillpointlab/surfaces/pull/110)). Jamie
+> answered the five decisions the same day. The md editor's save was fixed in
+> [#111](https://github.com/stillpointlab/surfaces/pull/111), and the preview pages are a seed in
+> Context Manager's pool (context-manager#1199).
 
 ---
 
@@ -102,7 +106,7 @@ hold at its `main`.
 
 ### H3. The runner has no place for what a host knows beyond facts
 
-- **Where:** [host-runner](../specs/host-runner.md), `RunnerHost`; `TasksSnapshot` in
+- **Where:** [host-runner](../../phase2/specs/host-runner.md), `RunnerHost`; `TasksSnapshot` in
   `packages/apps/tasks/src/projection.ts`; `write` in `packages/apps/tasks/dev/workspace.ts`.
 - **What:** tasks' snapshot carries plain data only a host knows: the pending moves, the cards
   created and not yet checked in. Context Manager's host has a loader per app for it. The draft
@@ -174,7 +178,7 @@ hold at its `main`.
 `common-format/host` has a test that it exports nothing, and that its built text never says
 `process`, `Buffer`, `document` or `window`. The first half changes with the runner; the second
 stays, and applies to the runner's messages and comments as much as its code. In
-[host-runner](../specs/host-runner.md).
+[host-runner](../../phase2/specs/host-runner.md).
 
 ### M2. The memory port has to keep the node port's rules
 
@@ -194,7 +198,7 @@ above the tree.
 `#/app/<manifestPath>` followed by a sub-path is two slash-separated paths in a row. The page
 splits it by the instances it knows. An app's page builds a redirect by joining `base` and a
 sub-path as text, since the local host's base is a fragment
-([app-module-grows](../specs/app-module-grows.md)).
+([app-module-grows](../../phase2/specs/app-module-grows.md)).
 
 ### M5. The page has one notice, and it is the commit's
 
@@ -256,7 +260,7 @@ Jamie answered all five on 2026-11-14, and each spec now says what he decided.
    the format object?"** Yes: the module is the object a host registers, as a format's
    descriptor is, and it gains one member, `fromChanges`, which is to an app what `apply` is to
    a descriptor. The harness and the local host both call it; Context Manager, which knows
-   more, does not. In [app-module-grows](../specs/app-module-grows.md).
+   more, does not. In [app-module-grows](../../phase2/specs/app-module-grows.md).
 4. **The md editor's save reflows a file** (stage 4's follow-up log). **"Please fix this
    reflow, at least limit to the section changed. This is actually high priority for me, almost
    bug level."** Fixed in [#111](https://github.com/stillpointlab/surfaces/pull/111): a save
@@ -266,21 +270,21 @@ Jamie answered all five on 2026-11-14, and each spec now says what he decided.
    [a save keeps the rest of the file](../../../unassigned/seeds/a-save-keeps-the-file.md).
 5. **The preview pages in Context Manager** (public, library, claim review) still mount without
    the descriptors. They stay out of stage 5's adoption. **Jamie asked where this is captured,
-   since it reads as more than a follow-up, and whose it is.** The agent's answer, for him to
-   confirm: the pages are Context Manager's and so is the work, as a seed in its own pool. This
-   repository already supplies what they would mount through. If the mount Context Manager
-   wrote for its preview pane and the local host's pane turn out to be the same code twice,
-   that part is this repository's, as a seed here.
+   since it reads as more than a follow-up, and whose it is, and then asked for the seed.** The
+   pages are Context Manager's and so is the work: a seed in its own pool
+   (context-manager#1199). This repository already supplies what they would mount through. The
+   two hosts' mounts were compared for the seed: they share three lines (load, create the
+   element, `apply`), so nothing moves here.
 
 ## Task list
 
 - [x] **H1, H2:** [undo-journal](../specs/undo-journal.md) amended.
-- [x] **H3, M1, M2:** [host-runner](../specs/host-runner.md) amended.
+- [x] **H3, M1, M2:** [host-runner](../../phase2/specs/host-runner.md) amended.
 - [x] **H4, H5, M3, M4, M5, M7, M8, L1, L3, L4:**
       [apps-in-the-local-host](../specs/apps-in-the-local-host.md) amended.
 - [x] **H6, M6:** [checkin-review](../specs/checkin-review.md) amended.
 - [x] **H7, M9:** [context-manager-adopts-apps](../specs/context-manager-adopts-apps.md) amended.
-- [x] **M4, L2:** [app-module-grows](../specs/app-module-grows.md) amended.
-- [x] **M8, and the walks' selectors (H7):** [app-shells](../specs/app-shells.md) amended.
+- [x] **M4, L2:** [app-module-grows](../../phase2/specs/app-module-grows.md) amended.
+- [x] **M8, and the walks' selectors (H7):** [app-shells](../../phase2/specs/app-shells.md) amended.
 - [x] **Decisions 1 to 4:** Jamie, 2026-11-14.
-- [ ] **Decision 5:** where the preview pages' work is captured.
+- [x] **Decision 5:** a seed in Context Manager's pool (context-manager#1199), 2026-11-14.

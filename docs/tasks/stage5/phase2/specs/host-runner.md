@@ -11,7 +11,7 @@ second wave: after both steps of [app-module-grows](app-module-grows.md); beside
 [app-shells](app-shells.md). One PR here._
 
 > Written with stage 4's specs, before any of stage 4 was built, and read again on 2026-11-14
-> against what stage 4 made. The [review](../reviews/specs-against-stage-4.md) lists what changed
+> against what stage 4 made. The [review](../../phase1/reviews/specs-against-stage-4.md) lists what changed
 > and why (H3, M1, M2). "What stage 4 built" is what an implementer reads first.
 
 ## High-level goal
@@ -202,7 +202,7 @@ facts code in each `dev/host.ts` goes too.
 
 - Context Manager adopting the runner (the brief's out of scope).
 - Host ops. Each host answers its own.
-- Discovering instances in a folder: [apps-in-the-local-host](apps-in-the-local-host.md).
+- Discovering instances in a folder: [apps-in-the-local-host](../../phase1/specs/apps-in-the-local-host.md).
 
 ## Acceptance / completion checklist
 
