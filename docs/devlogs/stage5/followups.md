@@ -62,3 +62,7 @@ are carried here as they were written.
   `related-tasks.md` (a seed) to `../tasks/public_page_viewer_bootstrap.md`, and stage 2's
   `cm-app-prep.md` and changelog to the seed `result-types-for-app-cores.md`. Nothing checks
   links in CI.
+- 2026-11-14 (app-module-grows): inventory's bounds, pages and create copy are now in
+  `packages/apps/inventory` (`bounds.ts`, `pages.ts`, `meta.ts`) and still in Context Manager
+  (`services/inventory/opSchema.ts`, `services/inventory/pages.ts`, `client/apps/registry.ts`, the
+  create noun in `services/apps/registry.ts`). Two copies until context-manager-adopts-apps.
