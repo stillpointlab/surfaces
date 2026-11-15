@@ -9,7 +9,7 @@
  * Every limit, enum and pattern is Context Manager's at 8fa439ba, where these
  * bounded the generic op route, the view reads and the create route.
  */
-import { fail, ok } from '@stillpointlab/common-format/app';
+import { bounded } from '@stillpointlab/common-format/app';
 import { MAX_SHEET_DECIMAL_PLACES } from '@stillpointlab/sheet-format/presentation';
 import { z } from 'zod';
 
@@ -24,8 +24,7 @@ import {
 import type { InventoryViews } from './core.js';
 import type { InventoryCreateFields } from './createRules.js';
 import type { InventoryOps } from './elementOps.js';
-import type { AppBounds, AppOp, AppView, Result } from '@stillpointlab/common-format/app';
-import type { ZodType } from 'zod';
+import type { AppBounds, AppOp, AppView } from '@stillpointlab/common-format/app';
 
 const scalar = z.union([z.string().max(2000), z.number().finite(), z.boolean()]);
 
@@ -119,46 +118,23 @@ export const inventoryCreateInputSchema = z
   })
   .strict();
 
-/** `input` as `schema` parses it, or a refusal with `code`, the schema's issues in `details`. */
-function bounded<T>(
-  schema: ZodType,
-  input: unknown,
-  code: string,
-  what: string
-): Result<{ value: T }> {
-  const parsed = schema.safeParse(input);
-  if (parsed.success) return ok({ value: parsed.data as T });
-  const { issues } = parsed.error;
-  const causes = issues
-    .map(
-      (issue) =>
-        (issue.path.length > 0 ? `${issue.path.map(String).join('.')}: ` : '') + issue.message
-    )
-    .join('; ');
-  return fail(code, `${what} is not valid: ${causes}`, issues);
-}
-
-/** Answer a bounded value under the field the contract names. */
-function under<K extends string, T>(key: K, result: Result<{ value: T }>): Result<Record<K, T>> {
-  return result.ok ? ok({ [key]: result.value } as Record<K, T>) : result;
-}
-
 export const inventoryBounds: AppBounds<InventoryViews, InventoryOps, InventoryCreateFields> = {
   op: (input) =>
-    under('op', bounded<AppOp<InventoryOps>>(inventoryOpSchema, input, 'APP_OP_INVALID', 'The op')),
+    bounded<'op', AppOp<InventoryOps>>('op', inventoryOpSchema, input, 'APP_OP_INVALID', 'The op'),
   view: (input) =>
-    under(
+    bounded<'view', AppView<InventoryViews>>(
       'view',
-      bounded<AppView<InventoryViews>>(inventoryViewSchema, input, 'APP_VIEW_INVALID', 'The view')
+      inventoryViewSchema,
+      input,
+      'APP_VIEW_INVALID',
+      'The view'
     ),
   create: (input) =>
-    under(
+    bounded<'input', InventoryCreateFields>(
       'input',
-      bounded<InventoryCreateFields>(
-        inventoryCreateInputSchema,
-        input,
-        'APP_CREATE_INVALID',
-        'The inventory'
-      )
+      inventoryCreateInputSchema,
+      input,
+      'APP_CREATE_INVALID',
+      'The inventory'
     ),
 };
