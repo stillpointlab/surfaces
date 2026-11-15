@@ -228,7 +228,7 @@ describe('the row and the lock', () => {
     treeEvent('tree-menu', 'places/home', 'app');
     await choose('Lock files');
     expect(host.appCalls).toEqual(['lock:places/home/inventory.yaml:true']);
-    expect(notice().textContent).toContain('Maple St House’s files are locked again.');
+    expect(notice().textContent).toContain('The files of Maple St House are locked again.');
     expect([...notice().querySelectorAll('li')].map((li) => li.textContent)).toEqual([
       'inventory.yaml: version must be 1',
     ]);
@@ -277,7 +277,7 @@ describe('the row and the lock', () => {
     expect(location.hash).toBe('#/file/places/home/rooms/kitchen.md');
     expect($('.pane-body').firstElementChild!.localName).toBe('fake-preview');
     expect($('.pane-locked').textContent).toBe(
-      'This file is one of Maple St House’s files, which are locked, so it opens in its preview. Show the app’s files to edit it here.'
+      'This file belongs to Maple St House, whose files are locked, so it opens in its preview. Show the app’s files to edit it here.'
     );
     expect($('.pane-views').querySelector('[data-view="edit"]')).toBeNull();
     // Unlocked, it behaves as any other file.

@@ -145,7 +145,7 @@ export function createAppHost(options: AppHostOptions): AppHost {
           return {
             ok: false,
             code: 'HOST_SCOPE_LOCKED',
-            message: `${JSON.stringify(path)} is one of ${holder.label}’s files (the ${holder.app} app at ${holder.manifestPath}), which are locked. Show its files to change them here.`,
+            message: `${JSON.stringify(path)} belongs to ${holder.label} (the ${holder.app} app at ${holder.manifestPath}), whose files are locked. Show its files to change them here.`,
           };
         }
       }

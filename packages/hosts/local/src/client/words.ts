@@ -155,14 +155,14 @@ export const words = {
     unlockedTitle: 'Unlocked: this app’s files are listed, and changes to them skip its rules',
     holdsChanges: 'Holds changes',
     /** The notice after "Lock files": the problems the lifecycle reports follow it. */
-    locked: (label: string) => `${label}’s files are locked again.`,
+    locked: (label: string) => `The files of ${label} are locked again.`,
     lockedProblems: (label: string) =>
-      `${label}’s files are locked again. The app reports problems with them:`,
+      `The files of ${label} are locked again. The app reports problems with them:`,
     lockFailed: (message: string) => `The files could not be locked. ${message}`,
     unlockFailed: (message: string) => `The files could not be shown. ${message}`,
     /** The pane's line over a locked file, which opens in its preview. */
     lockedLine: (label: string) =>
-      `This file is one of ${label}’s files, which are locked, so it opens in its preview. Show the app’s files to edit it here.`,
+      `This file belongs to ${label}, whose files are locked, so it opens in its preview. Show the app’s files to edit it here.`,
     /** The app pane, when it has nothing to mount. */
     loading: 'Opening the app…',
     noApp: 'There is no app at this address.',
