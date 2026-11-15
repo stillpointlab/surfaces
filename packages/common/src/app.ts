@@ -305,6 +305,11 @@ export interface AppFileChange {
   status: 'changed' | 'new' | 'moved' | 'deleted';
   /** For a moved file, the path it had. */
   from?: string;
+  /**
+   * The file's text at the last check-in, when the host can read it: for a
+   * moved file, the text it had under `from`. Absent for a new file.
+   */
+  base?: string;
 }
 
 /** What a module tells its core from file changes alone. */
