@@ -170,6 +170,8 @@ export const words = {
     unknownApp: (app: string) => `This page cannot show the ${app} app.`,
     loadFailed: 'The app could not be loaded.',
     readFailed: (message: string) => `The app could not be read. ${message}`,
+    /** An app's check-in, until the pane commits its review's choice itself. */
+    checkinInExplorer: 'Here a check-in is a commit: choose the files in the Commit dialog.',
     /** An instance discovery found but cannot open: its manifest, or an overlap. */
     invalidTitle: (label: string) => `${label} cannot open`,
     invalidIntro: 'These are the problems with its files:',

@@ -10,16 +10,20 @@
 //   wait, and its reply to `shell.learn(op, reply)`;
 // - `project` reads one view; `refresh` reads the listing, the statuses and the
 //   instances again;
+// - `checkin`, the shell's check-in review confirmed, is for now the explorer's
+//   commit (a stopgap until the pane commits the review's choice itself): the
+//   reply is `started`, the commit dialog opens once the review has closed, and
+//   the shell hears `checkinSettled()` when the dialog closes;
 // - a host op the registration names (inventory's `link-editor`) is answered in
 //   the page; any other goes to the server.
 //
 // It answers the shell's requests: `navigate` to an address in the page is
 // claimed and opened through the page, `open-card` opens the file's preview, a
 // `notification` goes to the page's notice, `reload-request` resolves the page
-// again, `checkin-request` opens the explorer's commit dialog, and
-// `open-options-menu` (`{ items, anchor }`) opens the page's menu at the anchor,
-// a chosen entry answered with `options-menu-select` (`{ itemId }`) on the
-// element that asked.
+// again, and `open-options-menu` (`{ items, anchor }`) opens the page's menu at
+// the anchor, a chosen entry answered with `options-menu-select` (`{ itemId }`)
+// on the element that asked. A shell takes its elements' `checkin-request`
+// itself.
 //
 // Staying current: a `changed` event for a path in the instance's region, a
 // `listed` or a `status` resolves the page again. One that arrives while the
@@ -63,8 +67,8 @@ export interface AppPaneOptions {
   refresh(): Promise<void>;
   /** "Show files…", from the pane of an instance that cannot open. */
   showFiles(instance: FoundInstance): void;
-  /** The app's check-in button: the explorer's commit dialog. */
-  checkin(): void;
+  /** An app's check-in, for now: the explorer's commit dialog, settled when it closes. */
+  checkin(): Promise<unknown>;
   /** Open the page's menu with these items at the anchor; `choose` answers the one picked. */
   openMenu(request: {
     anchor: Element;
@@ -328,7 +332,6 @@ export class AppPane {
       { signal }
     );
     shell.addEventListener('reload-request', () => void this.resolveSoon(), { signal });
-    shell.addEventListener('checkin-request', () => this.options.checkin(), { signal });
     shell.addEventListener(
       'open-options-menu',
       (event) => {
@@ -378,6 +381,7 @@ export class AppPane {
       await this.options.refresh();
       return ok();
     }
+    if (op.type === 'checkin') return this.checkinInExplorer(mounted);
     const pageOp = mounted.app.pageOps?.[op.type];
     if (pageOp) return pageOp(op);
 
@@ -398,6 +402,20 @@ export class AppPane {
       if (this.shown) this.shown = { ...this.shown, revision: answer.revision };
     }
     return ok(answer.reply);
+  }
+
+  /**
+   * The stopgap for `checkin`: the review closes on a `started` reply, then the
+   * explorer's commit dialog opens on the folder's changes; when it closes, with
+   * a commit or without, the check-in has settled.
+   */
+  private checkinInExplorer(mounted: Mounted): Result<object> {
+    setTimeout(() => {
+      void Promise.resolve(this.options.checkin()).finally(() => {
+        if (this.mounted === mounted) mounted.shell.checkinSettled?.();
+      });
+    }, 0);
+    return ok({ status: 'started', message: words.apps.checkinInExplorer });
   }
 
   // ---- what else the pane shows ----

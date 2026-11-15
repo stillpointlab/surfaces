@@ -206,7 +206,7 @@ export function startPage(options: PageOptions): HostPage {
     notify: (shown) => showNotice(shown),
     refresh: () => refresh(),
     showFiles: (instance) => void showFiles(instance),
-    checkin: () => void openCommit(),
+    checkin: () => openCommit(),
     openMenu: ({ anchor, items, choose }) => {
       const box = anchor.getBoundingClientRect();
       menu.open({

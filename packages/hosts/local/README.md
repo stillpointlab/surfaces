@@ -107,7 +107,9 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
   here, and a locked file opens in its preview. The app opens at `#/app/<manifestPath>`, then
   its own sub-path and query, in the app pane beside the file pane; the pane resolves the page
   on the server, answers the shell's ops, opens the page's menu for `open-options-menu`, and
-  reads the page again on the host's events. A folder's menu, and the space under the rows,
+  reads the page again on the host's events. A shell's check-in review asks `checkin`; for now
+  the pane answers `started` and opens the explorer's commit dialog, and tells the shell
+  `checkinSettled()` when the dialog closes. A folder's menu, and the space under the rows,
   offer "Create <noun> here…" for each app with a create form: a dialog with the folder, the
   app's root consent where it asks one, and the app's own form.
 - **The notice** under the explorer's header is the page's one: a commit, an app's

@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { startPage } from '../page';
 import { fakeHost, fakeRegistry } from '../test-support';
+import { words } from '../words';
 
 import { editorLink } from './page-ops';
 import { appTreeView } from './tree-view';
@@ -22,6 +23,7 @@ import type { ModalDialog } from '@stillpointlab/modal-dialog-component';
 class FakeShell extends HTMLElement implements AppShellElement {
   inputs: AppShellInput[] = [];
   learned: { op: { type: string }; reply: object }[] = [];
+  settled = 0;
   setState(input: AppShellInput): void {
     this.inputs.push(input);
   }
@@ -32,6 +34,9 @@ class FakeShell extends HTMLElement implements AppShellElement {
     return op.type === 'add-item' ? { type: 'zone', slug: 'kitchen' } : undefined;
   }
   async whenReady(): Promise<void> {}
+  checkinSettled(): void {
+    this.settled += 1;
+  }
 }
 if (!customElements.get('fake-shell')) customElements.define('fake-shell', FakeShell);
 
@@ -537,13 +542,31 @@ describe('the app pane staying current', () => {
     expect(shell().inputs).toHaveLength(before);
   });
 
-  it('opens the explorer’s commit dialog for the app’s check-in', async () => {
+  it('answers an app’s check-in with the explorer’s commit dialog, settled when it closes', async () => {
     start('', [HOME, ROOT], (fake) => (fake.gitInfo = { state: 'repository', branch: 'main' }));
     await page.ready;
     await openHome();
+    const reads = () => host.gitCalls.filter((call) => call === 'changes').length;
+    const before = reads();
+    // The request is the shell's to take now: the pane does nothing with it.
     shell().dispatchEvent(new CustomEvent('checkin-request', { bubbles: true }));
     await settle();
-    expect(host.gitCalls).toContain('changes');
+    expect(reads()).toBe(before);
+
+    const reply = await requestOp(shell(), {
+      type: 'checkin',
+      paths: ['places/home/inventory.yaml'],
+    } as never);
+    expect(reply).toEqual({ ok: true, status: 'started', message: words.apps.checkinInExplorer });
+    await settle();
+    expect(reads()).toBe(before + 1);
+    const dialog = document.querySelector<ModalDialog>('modal-dialog.commit')!;
+    expect(dialog.isOpen).toBe(true);
+    expect(shell().settled).toBe(0);
+    dialog.querySelector<HTMLButtonElement>('[data-answer="cancel"]')!.click();
+    await settle();
+    expect(dialog.isOpen).toBe(false);
+    expect(shell().settled).toBe(1);
   });
 });
 
