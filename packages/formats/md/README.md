@@ -52,9 +52,25 @@ Or in HTML:
 | Member                          | Description                                       |
 | ------------------------------- | ------------------------------------------------- |
 | `setContent(markdown: string)`  | Replace the document with parsed markdown.        |
-| `getContent(): string`          | Serialize the current document to markdown.       |
+| `getContent(): string`          | The markdown; see "What a save keeps".            |
 | `readonly` attribute (`"true"`) | Render the editor read-only.                      |
 | `content-change` event          | Fired on edits; `detail.content` is the markdown. |
+
+### What a save keeps
+
+`getContent()` returns the text exactly as it was set until the user edits in the rich view. After
+an edit, each top-level block that did not change (a paragraph, a heading, a whole list, a whole
+table) is written back as the text it was set with: its line wrapping, its bullet characters, its
+blank lines. Only the blocks that changed are written by the serializer, and the text keeps its
+line endings and its final newline. So a file saved after one edit differs from the file on disk
+by that edit.
+
+The unit is the top-level block. An edit inside a list or a table rewrites that list or table,
+and a changed paragraph is written on one line.
+
+If the kept text would read differently beside its new neighbours (two lists that become
+adjacent join into one), nothing is kept and the whole document is written by the serializer, as
+it was before this rule.
 
 ### Rendering markdown (no DOM required)
 

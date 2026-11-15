@@ -10,10 +10,14 @@ import { Fragment, Mark, Node, Schema, Slice } from 'prosemirror-model';
 
 import { FRONTMATTER_BLOCK_PATTERN, createMarkdownIt, splitFrontmatterBlock } from '../markdown';
 
+import { buildSource, writeKeepingSource, writeWhole } from './markdown-source';
 import { getSchema } from './prosemirror-schema';
 import { getEditorPlugins } from './registry';
 
+import type { MarkdownSource } from './markdown-source';
 import type { MarkdownIt, Token } from 'markdown-it';
+
+export type { MarkdownSource } from './markdown-source';
 
 // markdown-it configured for the editor, including any plugin (e.g. citation)
 // inline rules contributed by registered plugins.
@@ -102,9 +106,27 @@ export interface ParseMarkdownOptions {
 // them from the body).
 const LEADING_BLANK_LINES = /^(?:[ \t]*\r?\n)+/;
 
+/** A parsed document, and the text its body's blocks came from (see `markdown-source.ts`). */
+export interface ParsedMarkdown {
+  doc: Node;
+  /** `null` when the text and the nodes do not line up; a save then writes the document whole. */
+  source: MarkdownSource | null;
+}
+
 export interface MarkdownDocParser {
   parse(text: string, options?: ParseMarkdownOptions): Node;
+  /** `parse`, with the source a later `serialize` keeps for the blocks that did not change. */
+  parseWithSource(text: string, options?: ParseMarkdownOptions): ParsedMarkdown;
   schema: Schema;
+}
+
+/** A document's top-level nodes after its frontmatter block, if it has one. */
+function bodyNodes(doc: Node): Node[] {
+  const nodes: Node[] = [];
+  doc.forEach((node) => {
+    if (node.type.name !== 'frontmatter') nodes.push(node);
+  });
+  return nodes;
 }
 
 let cachedParser: MarkdownDocParser | null = null;
@@ -135,6 +157,9 @@ export function getMarkdownParser(): MarkdownDocParser {
 
   cachedParser = {
     parse(text: string, options: ParseMarkdownOptions = {}): Node {
+      return this.parseWithSource(text, options).doc;
+    },
+    parseWithSource(text: string, options: ParseMarkdownOptions = {}): ParsedMarkdown {
       let frontmatterNode: Node | null = null;
       if (options.frontmatter !== false) {
         const split = frontmatterNodeFor(text);
@@ -143,11 +168,14 @@ export function getMarkdownParser(): MarkdownDocParser {
           text = split.body;
         }
       }
-      const attach = (doc: Node): Node =>
-        frontmatterNode ? doc.copy(Fragment.from(frontmatterNode).append(doc.content)) : doc;
-
-      // Token list from markdown-it (to detect tables).
+      // Token list from markdown-it (to detect tables, and to find each block's lines).
       const tokens = markdownIt.parse(text, {});
+
+      // The source is the body's: the frontmatter block keeps its own bytes (`raw`).
+      const attach = (doc: Node): ParsedMarkdown => ({
+        doc: frontmatterNode ? doc.copy(Fragment.from(frontmatterNode).append(doc.content)) : doc,
+        source: buildSource(text, tokens, bodyNodes(doc)),
+      });
 
       const doc = baseParser.parse(text);
 
@@ -455,7 +483,17 @@ const serializerMarks = {
   },
 };
 
-let cachedSerializer: { serialize(content: Node): string } | null = null;
+export interface MarkdownDocSerializer {
+  /**
+   * The document as Markdown. With the `source` it was parsed with, a block that
+   * has not changed is written as the text it came from, and the text keeps its
+   * line breaks and its final newline; without one, the whole document is
+   * written the serializer's way.
+   */
+  serialize(content: Node, source?: MarkdownSource | null): string;
+}
+
+let cachedSerializer: MarkdownDocSerializer | null = null;
 
 /**
  * Markdown for a frontmatter node. An untouched block re-emits its original
@@ -475,20 +513,26 @@ function frontmatterBlockString(node: Node): string {
 }
 
 /** Memoized ProseMirror → markdown serializer (base + plugin serializers). */
-export function getMarkdownSerializer(): { serialize(content: Node): string } {
+export function getMarkdownSerializer(): MarkdownDocSerializer {
   if (cachedSerializer) return cachedSerializer;
 
   const serializer = new MarkdownSerializer(buildSerializerNodes(), serializerMarks);
+  const whole = (doc: Node): string => serializer.serialize(doc, { tightLists: true });
   cachedSerializer = {
-    serialize: (content: Node) => {
+    serialize: (content: Node, source?: MarkdownSource | null) => {
       // Serialize the frontmatter block ourselves (byte control the base
       // serializer's blank-line semantics can't offer), then the rest.
       const first = content.firstChild;
-      if (first && first.type.name === 'frontmatter') {
-        const bodyDoc = content.copy(content.content.cut(first.nodeSize));
-        return frontmatterBlockString(first) + serializer.serialize(bodyDoc, { tightLists: true });
-      }
-      return serializer.serialize(content, { tightLists: true });
+      const frontmatter = first && first.type.name === 'frontmatter' ? first : null;
+      const head = frontmatter ? frontmatterBlockString(frontmatter) : '';
+      const body = frontmatter ? content.copy(content.content.cut(frontmatter.nodeSize)) : content;
+      if (!source) return head + whole(body);
+
+      const kept = writeKeepingSource(bodyNodes(body), source, {
+        write: (nodes) => whole(body.copy(Fragment.from(nodes))),
+        read: (text) => bodyNodes(getMarkdownParser().parse(text, { frontmatter: false })),
+      });
+      return head + (kept ?? writeWhole(whole(body), source));
     },
   };
 

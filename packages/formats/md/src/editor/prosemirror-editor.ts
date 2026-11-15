@@ -32,11 +32,15 @@ import { ProseMirrorToolbar } from './prosemirror-toolbar';
 import { getEditorPlugins } from './registry';
 
 import type { frontmatterViewPlugin } from './frontmatter-view';
+import type {
+  MarkdownDocParser,
+  MarkdownDocSerializer,
+  MarkdownSource,
+} from './prosemirror-markdown';
 import type { EditorElement } from '@stillpointlab/common-format';
 import type { baseKeymap, lift, setBlockType, toggleMark, wrapIn } from 'prosemirror-commands';
 import type { history, redo, undo } from 'prosemirror-history';
 import type { keymap } from 'prosemirror-keymap';
-import type { MarkdownParser, MarkdownSerializer } from 'prosemirror-markdown';
 import type {
   DOMParser,
   MarkType,
@@ -94,8 +98,8 @@ interface EditorModules {
   isInTable: typeof isInTable;
   TextSelection: typeof TextSelection;
   schema: Schema;
-  markdownSerializer: MarkdownSerializer;
-  markdownParser: MarkdownParser;
+  markdownSerializer: MarkdownDocSerializer;
+  markdownParser: MarkdownDocParser;
   createExtendedKeymap: any;
   createInputRules: any;
   inputRules: any;
@@ -198,6 +202,12 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
   // switching views never rewrite the Markdown; after a rich edit the serialiser's
   // output is the content.
   private richEdited = false;
+  // The text the document was parsed from, block by block: a rich edit rewrites
+  // the blocks it changed and no others (see `markdown-source.ts`).
+  private source: MarkdownSource | null = null;
+  // The last document written and its Markdown: an edit is written once, however
+  // often the host asks.
+  private written: { doc: unknown; markdown: string } | null = null;
   // A raw edit not yet applied to the ProseMirror document.
   private rawEdited = false;
   // A switch to rich that waits for a retried engine load, and its reason.
@@ -321,9 +331,9 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
     } = this.editorModules;
 
     // Parse initial content
-    const doc = this._content
-      ? markdownParser.parse(this._content)
-      : schema.topNodeType.createAndFill() || undefined;
+    const parsed = this._content ? markdownParser.parseWithSource(this._content) : null;
+    this.source = parsed?.source ?? null;
+    const doc = parsed?.doc ?? (schema.topNodeType.createAndFill() || undefined);
 
     // Create keymap
     const listKeymap = {
@@ -447,8 +457,7 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
     if (this.applyingContent) return; // a setContent, not an edit
     this.richEdited = true;
 
-    const { markdownSerializer } = this.editorModules;
-    const markdown = markdownSerializer.serialize(this.view.state.doc);
+    const markdown = this.writeDocument();
 
     this.dispatchEvent(
       new CustomEvent('content-change', {
@@ -461,7 +470,8 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
     if (!this.view || !this.editorModules) return;
 
     const { markdownParser } = this.editorModules;
-    const doc = markdownParser.parse(content);
+    const { doc, source } = markdownParser.parseWithSource(content);
+    this.source = source;
     const state = this.view.state;
     const tr = state.tr.replaceWith(0, state.doc.content.size, doc.content);
     this.applyingContent = true;
@@ -513,8 +523,17 @@ export class ProseMirrorEditor extends HTMLElement implements EditorElement {
   getContent(): string {
     // The text as set, until the user edits in the rich view (see `_content`).
     if (!this.richEdited || !this.view || !this.editorModules) return this._content;
-    const { markdownSerializer } = this.editorModules;
-    return markdownSerializer.serialize(this.view.state.doc);
+    return this.writeDocument();
+  }
+
+  /** The document as Markdown, with the blocks the user did not change as they were set. */
+  private writeDocument(): string {
+    const { doc } = this.view!.state;
+    if (this.written?.doc !== doc) {
+      const { markdownSerializer } = this.editorModules!;
+      this.written = { doc, markdown: markdownSerializer.serialize(doc, this.source) };
+    }
+    return this.written.markdown;
   }
 
   setContent(content: string) {
