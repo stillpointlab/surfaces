@@ -16,7 +16,10 @@
 // It answers the shell's requests: `navigate` to an address in the page is
 // claimed and opened through the page, `open-card` opens the file's preview, a
 // `notification` goes to the page's notice, `reload-request` resolves the page
-// again, and `checkin-request` opens the explorer's commit dialog.
+// again, `checkin-request` opens the explorer's commit dialog, and
+// `open-options-menu` (`{ items, anchor }`) opens the page's menu at the anchor,
+// a chosen entry answered with `options-menu-select` (`{ itemId }`) on the
+// element that asked.
 //
 // Staying current: a `changed` event for a path in the instance's region, a
 // `listed` or a `status` resolves the page again. One that arrives while the
@@ -62,11 +65,42 @@ export interface AppPaneOptions {
   showFiles(instance: FoundInstance): void;
   /** The app's check-in button: the explorer's commit dialog. */
   checkin(): void;
+  /** Open the page's menu with these items at the anchor; `choose` answers the one picked. */
+  openMenu(request: {
+    anchor: Element;
+    items: readonly OptionsMenuItem[];
+    choose(itemId: string): void;
+  }): void;
   /** What the pane shows changed its title (`null`: nothing open). */
   onTitle(title: string | null): void;
 }
 
+/** One entry an element asks the page's menu for. */
+export interface OptionsMenuItem {
+  id: string;
+  label: string;
+  disabled?: boolean;
+  title?: string;
+}
+
 type Op = { type: string } & Record<string, unknown>;
+
+/** The items an `open-options-menu` carries, keeping only what has the right shape. */
+function itemsOf(value: unknown): OptionsMenuItem[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item: unknown) => {
+    const { id, label, disabled, title } = (item ?? {}) as Record<string, unknown>;
+    if (typeof id !== 'string' || typeof label !== 'string') return [];
+    return [
+      {
+        id,
+        label,
+        ...(disabled === true ? { disabled: true } : {}),
+        ...(typeof title === 'string' ? { title } : {}),
+      },
+    ];
+  });
+}
 type Shell = AppShellElement & HTMLElement;
 
 interface Mounted {
@@ -295,6 +329,22 @@ export class AppPane {
     );
     shell.addEventListener('reload-request', () => void this.resolveSoon(), { signal });
     shell.addEventListener('checkin-request', () => this.options.checkin(), { signal });
+    shell.addEventListener(
+      'open-options-menu',
+      (event) => {
+        const detail = (event as CustomEvent<{ items?: unknown; anchor?: unknown }>).detail;
+        const asker = event.target;
+        const anchor = detail?.anchor;
+        if (!(anchor instanceof Element) || !(asker instanceof EventTarget)) return;
+        this.options.openMenu({
+          anchor,
+          items: itemsOf(detail.items),
+          choose: (itemId) =>
+            asker.dispatchEvent(new CustomEvent('options-menu-select', { detail: { itemId } })),
+        });
+      },
+      { signal }
+    );
     this.body.replaceChildren(shell);
   }
 

@@ -174,6 +174,24 @@ export const words = {
     invalidTitle: (label: string) => `${label} cannot open`,
     invalidIntro: 'These are the problems with its files:',
     invalidHelp: 'Show its files to fix them, then lock them again.',
+    /** Creating an instance from a folder's menu: the app's own `meta.create` copy beside these. */
+    create: {
+      /** The menu's entry. `noun` carries its article: "an inventory". */
+      entry: (noun: string) => `Create ${noun} here…`,
+      title: (noun: string) => `Create ${noun}`,
+      folder: 'Folder',
+      folderExample: (example: string) => `For example ${example}.`,
+      rootHelp: 'Leave it empty to create at the root of the served folder.',
+      confirm: 'Create',
+      cancel: 'Cancel',
+      loadFailed: 'The form could not be loaded.',
+      check: {
+        leadingSlash: 'Start the folder inside the served folder, without a leading slash.',
+        dotDot: 'A folder cannot have a “..” segment.',
+        empty: 'A folder’s name cannot be empty between two slashes.',
+        consent: 'Tick the box above to create at the root of the served folder.',
+      },
+    },
   },
 
   /** The Commit button, its dialog, and the notice after a commit. */

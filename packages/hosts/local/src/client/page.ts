@@ -32,7 +32,10 @@
 //   instance's files are left out of the tree, and its folder is the app's row;
 //   an instance at the served root has a row above the tree. The row's menu
 //   shows or locks the files. A file in a locked region opens in its preview, and
-//   a folder above one cannot be renamed or deleted here.
+//   a folder above one cannot be renamed or deleted here. A folder's menu, and
+//   the space under the rows, offer to create each app that can be created
+//   (`apps/create-dialog.ts`); the new instance's row shows and the pane opens it.
+// - an app's `open-options-menu` opens the page's one menu at its anchor.
 
 import '@stillpointlab/modal-dialog-component';
 import '@stillpointlab/spl-icon-component';
@@ -43,6 +46,7 @@ import { inRegion } from '../shared/apps';
 
 import { appAddress, formatAddress, parseAddress } from './address';
 import { AppPane } from './apps/app-pane';
+import { CreateDialog } from './apps/create-dialog';
 import { appTreeView, holdsChanges, holdsLocked, lockedBy } from './apps/tree-view';
 import { CommitDialog } from './commit/dialog';
 import { createConfirm } from './confirm';
@@ -95,6 +99,8 @@ export interface HostPage {
   readonly fileOps: FileOps;
   /** The commit dialog. */
   readonly commit: CommitDialog;
+  /** The dialog that creates an app's instance. */
+  readonly createDialog: CreateDialog;
   /** The instances, as last read. */
   readonly instances: readonly FoundInstance[];
   /** Open the commit dialog, as the Commit button does; the commit made, or null. */
@@ -109,6 +115,8 @@ export interface HostPage {
   showFiles(instance: FoundInstance): Promise<boolean>;
   /** "Lock files": lock the instance's files again, and show what the lock reports. */
   lockFiles(instance: FoundInstance): Promise<boolean>;
+  /** Create an instance of an app, starting from `folder`; then open it. Its manifest path, or null. */
+  createApp(appId: string, folder: string): Promise<string | null>;
   /** List the folder again. */
   refresh(): Promise<void>;
   /** Stop listening to the host and the window. */
@@ -199,6 +207,20 @@ export function startPage(options: PageOptions): HostPage {
     refresh: () => refresh(),
     showFiles: (instance) => void showFiles(instance),
     checkin: () => void openCommit(),
+    openMenu: ({ anchor, items, choose }) => {
+      const box = anchor.getBoundingClientRect();
+      menu.open({
+        x: box.left,
+        y: box.bottom,
+        entries: items.map((item) => ({
+          label: item.label,
+          action: () => choose(item.id),
+          ...(item.disabled ? { disabled: true } : {}),
+          ...(item.title !== undefined ? { title: item.title } : {}),
+        })),
+        returnFocus: () => (anchor as HTMLElement).focus?.(),
+      });
+    },
     onTitle: () => showTitle(),
   });
 
@@ -608,13 +630,52 @@ export function startPage(options: PageOptions): HostPage {
     return entries;
   }
 
+  /** One entry per app that can be created, in a folder's menu or the space under the rows. */
+  function createEntries(folder: string): MenuEntry[] {
+    if (folder !== '' && (listingIndex ??= indexListing(nodes, truncated)).separate.has(folder)) {
+      return [];
+    }
+    return Object.entries(apps).flatMap(([id, app]) =>
+      app.meta.create && app.create
+        ? [
+            {
+              label: words.apps.create.entry(app.meta.create.noun),
+              action: () => void createApp(id, folder),
+            },
+          ]
+        : []
+    );
+  }
+
+  const createDialog = new CreateDialog(host, client);
+
+  async function createApp(appId: string, folder: string): Promise<string | null> {
+    const app = Object.hasOwn(apps, appId) ? apps[appId] : undefined;
+    const create = app?.meta.create;
+    if (!app || !create) return null;
+    const start = folder === '' ? create.defaultFolder : `${folder}/${create.defaultFolder}`;
+    const manifestPath = await createDialog.open(appId, app, start);
+    if (manifestPath === null) return null;
+    await refresh();
+    await navigate(appAddress(manifestPath));
+    const instance = instanceAt(manifestPath);
+    if (instance && instance.folder !== '') tree.reveal(instance.folder);
+    return manifestPath;
+  }
+
   function openMenu(detail: TreeMenuDetail): void {
     const instance =
       detail.kind === 'app' ? instances.find((found) => found.folder === detail.path) : undefined;
+    const entries = instance
+      ? appEntries(instance)
+      : [
+          ...fileOps.entriesFor(detail),
+          ...(detail.kind === 'folder' || detail.path === '' ? createEntries(detail.path) : []),
+        ];
     menu.open({
       x: detail.x,
       y: detail.y,
-      entries: instance ? appEntries(instance) : fileOps.entriesFor(detail),
+      entries,
       label: instance ? words.apps.menuLabel(instance.label) : words.menu.label(detail.path),
       // Back to the row it was asked on; for the space under the rows, to what had focus.
       ...(detail.path === '' ? {} : { returnFocus: () => void fileOps.focusRow(detail.path) }),
@@ -796,6 +857,8 @@ export function startPage(options: PageOptions): HostPage {
     menu,
     fileOps,
     commit,
+    createDialog,
+    createApp,
     get instances() {
       return instances;
     },
@@ -813,6 +876,7 @@ export function startPage(options: PageOptions): HostPage {
       menu.destroy();
       fileOps.destroy();
       commit.destroy();
+      createDialog.destroy();
     },
   };
 }

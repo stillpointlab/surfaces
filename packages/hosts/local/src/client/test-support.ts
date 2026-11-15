@@ -83,6 +83,10 @@ export interface FakeHost extends HostClient {
   releaseOp(): void;
   /** What `setAppLock` answers on a lock. */
   lockAnswer: AppLockAnswer;
+  /** The creates asked for, in order. */
+  readonly creates: { app: string; folder: string; confirmRoot?: boolean; input: unknown }[];
+  /** How `appCreate` answers; by default the instance is added, locked, and said so. */
+  createAnswer?: (request: { app: string; folder: string }) => Result<{ manifestPath: string }>;
 }
 
 export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHost {
@@ -120,6 +124,7 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
     ops: [],
     holdOp: false,
     lockAnswer: { errors: [], warnings: [] },
+    creates: [],
     pageAnswer: (manifestPath, path, query) => ({
       ok: true,
       view: { type: 'page', path },
@@ -317,6 +322,26 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
       host.ops.push({ manifestPath, op, view });
       if (host.holdOp) await new Promise<void>((go) => heldOps.push(go));
       return host.opAnswer(manifestPath, op, view);
+    },
+    async appCreate(request) {
+      host.creates.push({ ...request });
+      if (host.createAnswer) return host.createAnswer(request);
+      const manifestPath = `${request.folder === '' ? '' : `${request.folder}/`}${request.app}.yaml`;
+      host.disk.set(manifestPath, '');
+      stamp(manifestPath);
+      host.instances.push({
+        app: request.app,
+        manifestPath,
+        folder: request.folder,
+        label: request.app,
+        icon: 'task',
+        valid: true,
+        errors: [],
+        unlocked: false,
+        ...(request.folder === '' ? { scope: [manifestPath] } : {}),
+      });
+      queueMicrotask(() => host.emit({ type: 'apps' }));
+      return { ok: true, manifestPath };
     },
     async setAppLock(manifestPath, locked) {
       host.appCalls.push(`lock:${manifestPath}:${locked}`);

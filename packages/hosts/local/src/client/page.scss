@@ -876,3 +876,56 @@ host-file-tree {
     outline-offset: 1px;
   }
 }
+
+// The dialog that creates an app's instance (apps/create-dialog.ts): the host's
+// folder and root consent above the app's own create form.
+.app-create-body {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  min-width: min(32rem, calc(100vw - 4rem));
+}
+
+.app-create-folder {
+  font-family: ui-monospace, monospace;
+}
+
+.app-create-root {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid $warning-border;
+  border-radius: $border-radius-md;
+  color: $warning-color;
+  background: $warning-bg;
+  font-size: 0.875rem;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.app-create-warning {
+  margin: 0;
+}
+
+.app-create-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-xs;
+  font-weight: 600;
+
+  input {
+    margin-top: 0.2em;
+  }
+}
+
+.app-create-error {
+  margin-bottom: $spacing-sm;
+}
+
+.app-create-form:empty {
+  display: none;
+}

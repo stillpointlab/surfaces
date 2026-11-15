@@ -72,6 +72,16 @@ export interface HostClient {
   ): Promise<Result<{ state: object | null; revision: string }>>;
   /** One op on an instance; `view` is what the shell's `opView` answered for it. */
   appOp(manifestPath: string, op: unknown, view?: unknown): Promise<Result<AppOpAnswer>>;
+  /**
+   * Create an instance of `app` in `folder` (`''`: the served root, which an app
+   * may ask consent for) from its create form's `input`.
+   */
+  appCreate(request: {
+    app: string;
+    folder: string;
+    confirmRoot?: boolean;
+    input: unknown;
+  }): Promise<Result<{ manifestPath: string }>>;
   /** Lock an instance's files, or unlock them; locking answers the manifest's problems now. */
   setAppLock(manifestPath: string, locked: boolean): Promise<Result<AppLockAnswer>>;
   watch(listener: (event: LocalHostEvent) => void): () => void;
@@ -153,6 +163,7 @@ export function createHttpClient(base = ''): HostClient {
         '/api/apps/op',
         post(view === undefined ? { manifestPath, op } : { manifestPath, op, view })
       ),
+    appCreate: (request) => result('/api/apps/create', post(request)),
     setAppLock: (manifestPath, locked) => result('/api/apps/lock', post({ manifestPath, locked })),
     put: (changes) =>
       result('/api/files', {
