@@ -148,6 +148,61 @@ zone?(path): string }`). Without it the export controls are hidden, which is the
   [context-manager-adopts-apps](../../phase1/specs/context-manager-adopts-apps.md) can change the walks in the
   commit that mounts the shell.
 
+## As built: step 1
+
+_2026-11-14, by an Opus 5.5 sub-agent; reviewed and checked by the orchestrating agent, who
+looked at the screenshots. Where the work departed from the text above, this is what step 2 and
+the later specs read._
+
+- **The contract is as written:** `AppShellInput`, `AppShellElement` and `AppShellOps`, one
+  block at the end of `packages/common/src/app.ts`.
+- **`navigate` can be cancelled.** A plain click on a link in the shell raises `navigate` with
+  `{ href }`. A host that claims it calls `preventDefault()` and navigates itself; unclaimed,
+  the browser follows the link. A click with a modifier, on a download, or for another target
+  raises nothing. The nav element's own `navigate` is not cancelable today, and step 2 has to
+  make the two one rule.
+- **Back on a zone's page is the shell's own:** it links to `base`, "Back to inventory
+  overview". The host's `back` shows on the overview only.
+- **The shell holds no editor links.** A file that is already linked shows the "Open in editor"
+  button and asks `link-editor`, where Context Manager rendered a link from its own map of
+  paths. A host answers the op from whatever it holds.
+- **Inventory's shell asks neither `project` nor `refresh`,** and `opView` answers nothing: no
+  inventory reply reads the view. The harness answers both ops all the same.
+- **The empty states:** no view, or the overview with no state, is the overview's own "no
+  inventory" notice; a zone with no state, or a view the shell does not know, is a line with a
+  link to the overview.
+- **`learn` takes a reply only when it is for the view on screen.** The title is the space's
+  label on the overview, and "space — zone" on a zone.
+- **A zone's link uses the slug the state gave;** without one, the file's name less its
+  extension, which is the rule that moved in.
+- **The link helpers** (`pageHref`, which joins `base` and a page's path as text) are in
+  inventory's `shell/links.ts`. Tasks needs the same, and step 2 moves it beside
+  `matchAppPage`.
+- **The page's top margin stays the host's.** The shell has the column, the padding and the
+  bar.
+- **`InventoryLinks.exportAll` and `exportZone` are optional,** which is the change to the two
+  elements: a link that is absent has no control.
+- **No splitting in the package's build:** `./shell` carries its own copy of the two elements,
+  so a page that loads `./element` and `./shell` defines them twice and is warned. In the
+  follow-up log.
+- **The markup rule's lint** now covers `packages/apps/*/src/shell/`.
+- **Context Manager's page chrome that the shell does not keep:**
+  - `.inventory-page` on the root, which Context Manager can keep on its own container;
+  - `data-variant`, which is on `<spl-inventory-app>` now;
+  - the back icon's own `aria-label`; the link carries the name, and the icon is hidden from
+    assistive technology.
+
+  Kept: `.inventory-bar`, `.back-button`, `#inventory-title`, `.inventory-title`,
+  `.inventory-repo`, and both back links' accessible names. The check-in dialog's chrome is
+  [checkin-review](../../phase1/specs/checkin-review.md)'s.
+
+- **What Context Manager passes when it mounts the shell:** `extras.exports` (two walks click
+  the downloads), `back` with the label its page has today, and `location`.
+- **By hand, in Chromium over the harness's memory host, light and dark:** the overview, a zone
+  added, its link followed, an item added, back, and the exports shown and hidden. Both
+  schemes read well in the shell. What reads badly is in the elements, and in the follow-up
+  log.
+
 ## Clarifications
 
 - **Navigation stays the host's.** A shell renders links and raises `navigate`; it never sets

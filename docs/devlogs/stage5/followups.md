@@ -91,3 +91,14 @@ are carried here as they were written.
   from Context Manager that can never be true.
 - 2026-11-14 (app-module-grows, step 2): tasks' `fromChanges` takes every new `.gitkeep` among
   the changes as housekeeping, wherever it is. A host hands it the instance's changes only.
+- 2026-11-14 (app-shells, step 1): inventory's build has no splitting, so `./element` and
+  `./shell` each carry the two elements, and a page that loads both defines them twice. The
+  format packages' splitting (with `dist/chunks` in `sideEffects`) would give one copy.
+- 2026-11-14 (app-shells, step 1): seen in the inventory elements in a dark scheme: the
+  download link is the browser's default purple (it has no colour of its own), and the NEW
+  badge is faint.
+- 2026-11-14 (app-shells, step 1): in the zone's quick add, the Title field runs under the
+  Owner field, in both schemes. At phone width the overview's rows do not wrap, and the page
+  scrolls sideways.
+- 2026-11-14 (app-shells, step 1): the harness's Dark toggle sets a class and does not follow
+  the system's colour scheme, so a check in dark has to tick it.
