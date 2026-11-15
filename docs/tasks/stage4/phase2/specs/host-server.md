@@ -46,7 +46,7 @@ about a page yet: [host-page](host-page.md) builds on its API.
 ### The storage port
 
 In `@stillpointlab/common-format/host`. Types only in this spec; the runner joins them in
-[host-runner](../../../stage5/phase1/specs/host-runner.md). DOM-free and Node-free.
+[host-runner](../../../stage5/phase2/specs/host-runner.md). DOM-free and Node-free.
 
 ```ts
 export type FileStatus = 'changed' | 'new' | 'moved' | 'deleted';

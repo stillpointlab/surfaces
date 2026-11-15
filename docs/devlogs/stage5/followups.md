@@ -57,3 +57,8 @@ are carried here as they were written.
   attributes without content would remove it, and the local host's rename would use it too.
 
 ## Stage 5
+
+- 2026-11-14 (phase 1's close): three relative links in older docs point at files that are gone:
+  `related-tasks.md` (a seed) to `../tasks/public_page_viewer_bootstrap.md`, and stage 2's
+  `cm-app-prep.md` and changelog to the seed `result-types-for-app-cores.md`. Nothing checks
+  links in CI.

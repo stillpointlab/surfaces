@@ -25,8 +25,8 @@ files.
 
 - The [local host spike](../../../stage4/phase1/spikes/local-host.md), finding 7: what each move
   lets Context Manager drop.
-- The specs whose output this consumes: [app-module-grows](app-module-grows.md),
-  [app-shells](app-shells.md), [checkin-review](checkin-review.md). Each PR for those lists the
+- The specs whose output this consumes: [app-module-grows](../../phase2/specs/app-module-grows.md),
+  [app-shells](../../phase2/specs/app-shells.md), [checkin-review](checkin-review.md). Each PR for those lists the
   ids and classes of Context Manager's page chrome it did not keep.
 - [context-manager-adopts-formats](../../../stage4/phase4/specs/context-manager-adopts-formats.md),
   "As built": how stage 4's adoption went.
@@ -174,10 +174,10 @@ saves; a reload hides the files again.
 - **The preview pages** (public, library, claim review) still mount without the format
   descriptors, which stage 4's follow-up log left for this spec to decide. They do not join
   this adoption: they are format work, and the walks do not open them. Jamie asked on
-  2026-11-14 where the work is captured, since it reads as more than a follow-up. The agent's
-  answer, not yet his: the pages are Context Manager's, so a seed in Context Manager's own
-  pool; this repository already supplies the descriptors they would mount through. Decision 5
-  of the review.
+  2026-11-14 where the work is captured, since it reads as more than a follow-up, and then
+  for the seed: it is in Context Manager's own pool (context-manager#1199), since the pages
+  are its own and this repository already supplies the descriptors they would mount through.
+  Decision 5 of the review.
 
 ## Non-goals
 
