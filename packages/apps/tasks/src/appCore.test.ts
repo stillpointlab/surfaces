@@ -13,6 +13,7 @@ import {
   removeManifestListEntry,
   rewriteManifestCurrent,
 } from './manifestRewrite.js';
+import { tasksModule } from './module.js';
 import { parseOrderFileDetailed } from './pool.js';
 
 import type { TreeNode } from './types.js';
@@ -183,6 +184,9 @@ describeAppCore('tasks', {
   lifecycle: tasksLifecycle,
   fixtures: { minimal, configured, 'surfaces-shaped': surfacesShaped },
   mount,
+  // The module checks wait for its meta, bounds, pages, placeCreate and
+  // fromChanges (app-module-grows, step 2): listed as to do until then.
+  module: { module: tasksModule },
   rewrites: [
     {
       name: 'move a card',
