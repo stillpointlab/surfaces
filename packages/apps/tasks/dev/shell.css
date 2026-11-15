@@ -33,6 +33,39 @@
   font: inherit;
 }
 
+.tasks-shell-harness .button-secondary {
+  background: var(--spl-background-secondary);
+}
+
+.tasks-shell-harness .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.tasks-shell-harness .form-label {
+  color: var(--spl-text-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.tasks-shell-harness .form-input[aria-invalid='true'] {
+  border-color: var(--spl-error-color);
+}
+
+.tasks-shell-harness .form-help {
+  margin: 0;
+  color: var(--spl-text-muted);
+  font-size: 0.8125rem;
+}
+
+.tasks-shell-harness .form-message {
+  margin: 0;
+  color: var(--spl-error-color);
+  font-size: 0.8125rem;
+}
+
 .tasks-harness-menu {
   position: fixed;
   z-index: 1000;

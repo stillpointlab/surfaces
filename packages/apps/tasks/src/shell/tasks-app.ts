@@ -15,15 +15,26 @@
  * that only read a view, `refresh-stage` and `close-candidates`, are its own,
  * answered through `project`, so they never reach the host.
  *
+ * Check-in is the shell's too: it holds one `<checkin-review>`, takes the
+ * board's `checkin-request` (a host never hears it), and opens the review on
+ * the request's cards, order file and housekeeping, grouped by phase on a stage
+ * view, titled "Tasks check-in: <board>", with the board's path and the stage
+ * as the op's context. The review asks the host `checkin`, in the host's words
+ * (`input.checkin`) or the shell's own. After a `started` reply the board marks
+ * the paths in flight until the host calls `checkinSettled()`. When the board
+ * is given a new state while the review is open, its rows follow.
+ *
  * What stays the host's: navigation (a link click, and every page the strip or
  * a refresh goes to, raise `navigate`; the shell never sets `location`), the
- * options menu, opening a card, check-in, reloading and the banner: the
- * elements' requests bubble through it unchanged.
+ * options menu, opening a card, answering `checkin`, reloading and the banner:
+ * the elements' other requests bubble through it unchanged.
  */
+import '@stillpointlab/checkin-review-component';
 import '@stillpointlab/spl-icon-component';
 import '../element/task-board.js';
 import '../element/tasks-nav.js';
 
+import { CHECKIN_ACCEPTED_EVENT } from '@stillpointlab/checkin-review-component';
 import {
   APP_OP_EVENT,
   createReadyGate,
@@ -36,6 +47,13 @@ import { defineElement } from '@stillpointlab/common-format/elements';
 import { html, render } from '@stillpointlab/common-format/html';
 
 import {
+  checkinContextOf,
+  checkinRequestOf,
+  tasksCheckinFiles,
+  TASKS_CHECKIN_WORDS,
+  tasksCheckinTitle,
+} from './checkin.js';
+import {
   asNavProjection,
   currentOf,
   docsRootOf,
@@ -47,9 +65,10 @@ import {
 import { shellStyles } from './shell.styles';
 
 import type { TasksShellView } from './links.js';
-import type { TaskBoard } from '../element/task-board.js';
+import type { TaskBoard, TaskBoardCheckinRequest } from '../element/task-board.js';
 import type { TasksNav } from '../element/tasks-nav.js';
 import type { SharedTaskBoardState, SharedTaskStageState } from '../types.js';
+import type { CheckinAccepted, CheckinReview } from '@stillpointlab/checkin-review-component';
 import type {
   AppOpDetail,
   AppShellElement,
@@ -81,6 +100,9 @@ const READS_THE_BOARD_AGAIN: ReadonlySet<string> = new Set([
 
 /** The elements' host ops the shell answers itself, through `project`. */
 const CLAIMED_OPS: ReadonlySet<string> = new Set(['refresh-stage', 'close-candidates']);
+
+/** The board's request to check in what changed; it stops at the shell. */
+const CHECKIN_REQUEST_EVENT = 'checkin-request';
 
 const REFRESH_LABEL = '⟳ Refresh';
 const SETTINGS_UNAVAILABLE = 'Board settings is unavailable — the board state did not load.';
@@ -133,6 +155,7 @@ export class TasksApp extends HTMLElement implements AppShellElement {
   private bar: HTMLElement | null = null;
   private board: TaskBoard | null = null;
   private strip: TasksNav | null = null;
+  private review: CheckinReview | null = null;
   private refreshing = false;
   private settingsUnavailable = false;
   /** Issue order of the reads: only the newest may settle what it read (Context Manager's rule). */
@@ -147,6 +170,12 @@ export class TasksApp extends HTMLElement implements AppShellElement {
     this.input = input;
     this.stale = true;
     this.refresh();
+    this.reviewFollows();
+  }
+
+  /** A check-in the host answered `started` has settled: the board's in-flight marks go. */
+  checkinSettled(): void {
+    this.board?.clearCheckinInFlight();
   }
 
   /** After a dialog's change lands, the board behind it is read again. */
@@ -166,12 +195,17 @@ export class TasksApp extends HTMLElement implements AppShellElement {
     this.addEventListener('click', this.handleClick);
     // Capture, so the shell claims its two ops before a host's listener on the shell sees them.
     this.addEventListener(APP_OP_EVENT, this.claimOps, true);
+    // And so it takes the board's check-in request before a host's listener hears it.
+    this.addEventListener(CHECKIN_REQUEST_EVENT, this.openCheckin, true);
+    this.addEventListener(CHECKIN_ACCEPTED_EVENT, this.checkinAccepted);
     this.refresh();
   }
 
   disconnectedCallback(): void {
     this.removeEventListener('click', this.handleClick);
     this.removeEventListener(APP_OP_EVENT, this.claimOps, true);
+    this.removeEventListener(CHECKIN_REQUEST_EVENT, this.openCheckin, true);
+    this.removeEventListener(CHECKIN_ACCEPTED_EVENT, this.checkinAccepted);
     this.ready.begin();
   }
 
@@ -216,6 +250,9 @@ export class TasksApp extends HTMLElement implements AppShellElement {
         this.styleElement.textContent = shellStyles;
       }
       this.prepend(this.styleElement);
+      // The review outlives the layout: it goes back after each one.
+      this.review ??= document.createElement('checkin-review') as CheckinReview;
+      this.append(this.review);
       this.bar = this.querySelector<HTMLElement>(':scope > .tasks-topbar');
       this.board = this.querySelector<TaskBoard>(':scope > .board-layout > spl-task-board');
       this.strip = this.querySelector<TasksNav>(':scope > .board-layout spl-tasks-nav');
@@ -357,6 +394,7 @@ export class TasksApp extends HTMLElement implements AppShellElement {
     this.input = { ...this.input, state: res.state };
     if (view.type === 'stage') this.board.setStageState(res.state as SharedTaskStageState);
     else this.board.setState(res.state as SharedTaskBoardState);
+    this.reviewFollows();
   }
 
   /**
@@ -435,6 +473,42 @@ export class TasksApp extends HTMLElement implements AppShellElement {
         column: card.column,
       })),
     });
+  }
+
+  // ---- Check-in ----------------------------------------------------------------------
+
+  /** The board's check-in request stops here: the review opens on what it carries. */
+  private readonly openCheckin = (event: Event): void => {
+    if (event.target === this) return;
+    event.stopPropagation();
+    const request = (event as CustomEvent<TaskBoardCheckinRequest>).detail;
+    const input = this.input;
+    if (!input || !this.review || !request || !Array.isArray(request.cards)) return;
+    this.review.open({
+      files: tasksCheckinFiles(request),
+      words: input.checkin?.words ?? TASKS_CHECKIN_WORDS,
+      title: tasksCheckinTitle(request.boardLabel),
+      context: checkinContextOf(request),
+      ...(input.checkin?.branch ? { branch: input.checkin.branch } : {}),
+    });
+  };
+
+  /** A check-in the host took: one that runs on marks its paths in flight on the board. */
+  private readonly checkinAccepted = (event: Event): void => {
+    if (event.target !== this.review) return;
+    const { op, reply } = (event as CustomEvent<CheckinAccepted>).detail;
+    if (reply.status === 'started') this.board?.markCheckinInFlight(op.paths);
+  };
+
+  /** The rows of an open review follow the state the board was given. */
+  private reviewFollows(): void {
+    const review = this.review;
+    const state = this.input?.state;
+    if (!review?.isOpen || !state) return;
+    const body = bodyOf(this.view());
+    if (body !== 'board' && body !== 'stage') return;
+    const request = checkinRequestOf(state as SharedTaskBoardState | SharedTaskStageState, body);
+    review.setFiles(tasksCheckinFiles(request));
   }
 
   // ---- Requests --------------------------------------------------------------------

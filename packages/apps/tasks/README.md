@@ -296,18 +296,34 @@ and lays them out under its top bar, in light DOM.
 - **Ops.** The elements' ops bubble through to the host, except two the shell answers itself
   through `project`: `refresh-stage` (the stage view) and `close-candidates` (the board at the
   path, as `{ path, title, column }`). It claims them before a listener on the shell sees them,
-  so a host that mounts the shell answers neither. Its own two are `project` and `refresh`
-  (`AppShellOps`).
+  so a host that mounts the shell answers neither. Its own are `project`, `refresh` and
+  `checkin` (`AppShellOps`).
+- **Check-in is the shell's.** It holds one `<checkin-review>`
+  (`@stillpointlab/checkin-review-component`) and takes the board's `checkin-request`: the
+  request stops at the shell, and a host never hears it. The review opens on the request's
+  changed cards, the pool's order file and the housekeeping files, every one checked, labelled as
+  Context Manager's dialog labels them (`moved`, with the old path as the row's `from`; a column
+  move as `todo → done`, a missing column as `needs attention`; `content edited`;
+  `backlog priority`; `pointer / tags`; `new folder`). On a stage view the cards are in path order
+  and every row sits under its phase (`Phase 2`) or `Pool & config`. The title starts as
+  "Tasks check-in: `<board>`" and the op's `context` is `{ boardPath, stage }`. After a `started`
+  reply the board marks the op's paths in flight (`markCheckinInFlight`) until the host calls
+  **`checkinSettled()`**. The words are the host's (`input.checkin.words`) or the shell's own,
+  which say "check in"; a branch is offered only when the host gives one. When the board is given
+  a new state while the review is open (the input set again, or the board read again), its rows
+  follow, each keeping its check.
 - **Requests** bubble through unchanged: `navigate`, `notification`, `reload-request`,
-  `checkin-request`, `open-card` and both elements' `open-options-menu` (the host's menu answers
-  with `options-menu-select` on the element that asked).
+  `open-card` and both elements' `open-options-menu` (the host's menu answers with
+  `options-menu-select` on the element that asked).
 - **Styles** read the shared tokens. A host with a fixed header sets
   `--spl-tasks-app-sticky-top` to its height, so the pool sidebar sticks below it. The board's
   and the strip's dialogs use a host's `.button` and form classes, as they did on its page.
 
 In the harness, the fixture "Shell over the memory host" shows the shell over the workshop, under
 a fragment base, with `navigate` resolved through `tasksPages`, `project` and `refresh` answered
-from the memory host's files, every op answered and learned, and a small options menu.
+from the memory host's files, every op answered and learned, `checkin` answered by committing
+the chosen files in memory (the page is read again after it, so their marks clear), and a small
+options menu.
 
 ### The create form
 

@@ -21,12 +21,15 @@ import { tasksCore } from '../core.js';
 import { tasksModule } from '../module.js';
 import { tasksPages } from '../pages.js';
 
+import { TASKS_CHECKIN_WORDS } from './checkin.js';
+
 import type { TasksApp } from './tasks-app.js';
 import type { TaskBoard } from '../element/task-board.js';
 import type { TasksNav } from '../element/tasks-nav.js';
 import type { TasksElementOps } from '../module.js';
 import type { TasksNavProjection, TasksSnapshot } from '../projection.js';
 import type { SharedTaskBoardState, SharedTaskStageState } from '../types.js';
+import type { CheckinReview } from '@stillpointlab/checkin-review-component';
 import type {
   AppOp,
   AppOpDetail,
@@ -171,6 +174,18 @@ function confirmNewCard(el: HTMLElement, title: string): void {
   input.dispatchEvent(new Event('input', { bubbles: true }));
   el.querySelector<HTMLElement>('#confirm-new-brief')!.click();
 }
+
+const reviewOf = (el: HTMLElement): CheckinReview => el.querySelector('checkin-review')!;
+
+const reviewRows = (el: HTMLElement) =>
+  [...reviewOf(el).querySelectorAll<HTMLElement>('.checkin-review-row')].map((row) => ({
+    checked: row.querySelector<HTMLInputElement>('input')!.checked,
+    path: row.querySelector('.checkin-review-path')!.textContent,
+    label: row.querySelector('.checkin-review-label')!.textContent,
+    group:
+      row.closest('.checkin-review-group')?.querySelector('.checkin-review-group-name')
+        ?.textContent ?? null,
+  }));
 
 const tick = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -698,17 +713,21 @@ describe('<spl-tasks-app> requests', () => {
     expect(seen.events[0]!.bubbles && seen.events[0]!.cancelable).toBe(true);
   });
 
-  it('lets the board’s requests through, bubbling', async () => {
+  it('lets the board’s requests through, bubbling, except check-in, which it takes', async () => {
     const changed = structuredClone(BOARD_STATE);
     changed.cards[0]!.changed = true;
     const el = mountShell(boardInput({ state: changed }));
     const seen = collect(['open-card', 'checkin-request', 'open-options-menu', 'notification']);
+    const onShell: string[] = [];
+    el.addEventListener('checkin-request', (event) => onShell.push(event.type));
     attachHost(el, snapshotOf(), {});
 
     const cardEl = boardOf(el).querySelector<HTMLElement>('.task-board .board-card')!;
     cardEl.click();
     boardOf(el).querySelector<HTMLElement>('.task-board .board-card')!.click();
     boardOf(el).querySelector<HTMLElement>('.board-checkin')!.click();
+    expect(reviewOf(el).isOpen).toBe(true);
+    reviewOf(el).close();
     boardOf(el).querySelector<HTMLElement>('.task-board .card-menu-btn')!.click();
     // A move the host refuses: the board says so.
     boardOf(el).dispatchEvent(
@@ -718,10 +737,10 @@ describe('<spl-tasks-app> requests', () => {
     seen.stop();
     expect(seen.events.map((event) => event.type)).toEqual([
       'open-card',
-      'checkin-request',
       'open-options-menu',
       'notification',
     ]);
+    expect(onShell).toEqual([]);
   });
 
   it('lets the strip’s requests through, bubbling', async () => {
@@ -742,6 +761,178 @@ describe('<spl-tasks-app> requests', () => {
       'notification',
       'reload-request',
     ]);
+  });
+});
+
+describe('<spl-tasks-app> check-in', () => {
+  const ONBOARDING = `${BOARD}/briefs/onboarding.md`;
+  const LOGIN = `${BOARD}/specs/login.md`;
+
+  /** A board with a column move, an edit, a moved pool card, the order file and housekeeping. */
+  function changedBoard(): SharedTaskBoardState {
+    const state = structuredClone(BOARD_STATE);
+    const [onboarding, login] = state.cards;
+    Object.assign(onboarding!, {
+      changed: true,
+      dirty: true,
+      versionColumn: 'todo',
+      column: 'done',
+    });
+    Object.assign(login!, { changed: true, dirty: false });
+    state.pool.cards = state.pool.cards.map((card) => ({
+      ...card,
+      changed: true,
+      movedFrom: 'docs/tasks/unassigned/briefs/old-idea.md',
+    }));
+    state.pool.order = { changed: true };
+    state.housekeeping = [
+      { path: MANIFEST, kind: 'manifest' },
+      { path: 'docs/tasks/stage1/phase2/specs/.gitkeep', kind: 'scaffold' },
+    ];
+    return state;
+  }
+
+  function changedStage(): SharedTaskStageState {
+    const board = changedBoard();
+    const state = structuredClone(STAGE_STATE);
+    state.phases[0]!.cards = board.cards;
+    state.pool = board.pool;
+    state.housekeeping = board.housekeeping;
+    return state;
+  }
+
+  const checkIn = (el: TasksApp): void =>
+    boardOf(el).querySelector<HTMLElement>('.board-checkin')!.click();
+
+  it('opens its review on the request’s cards, order file and housekeeping, in its own words', () => {
+    const state = changedBoard();
+    const el = mountShell(boardInput({ state }));
+    checkIn(el);
+    const review = reviewOf(el);
+    expect(review.isOpen).toBe(true);
+    expect(reviewRows(el)).toEqual([
+      { checked: true, path: ONBOARDING, label: 'todo → done', group: null },
+      { checked: true, path: LOGIN, label: 'content edited', group: null },
+      {
+        checked: true,
+        path: 'docs/tasks/unassigned/briefs/old-idea.md → docs/tasks/unassigned/briefs/idea.md',
+        label: 'moved',
+        group: null,
+      },
+      { checked: true, path: state.pool.orderPath, label: 'backlog priority', group: null },
+      { checked: true, path: MANIFEST, label: 'pointer / tags', group: null },
+      {
+        checked: true,
+        path: 'docs/tasks/stage1/phase2/specs/.gitkeep',
+        label: 'new folder',
+        group: null,
+      },
+    ]);
+    expect(review.querySelector<HTMLInputElement>('.checkin-review-title')!.value).toBe(
+      `Tasks check-in: ${state.board.label}`
+    );
+    const shown = review.textContent!.toLowerCase();
+    expect(shown).toContain('check in');
+    expect(shown).not.toContain('commit');
+    expect(shown).not.toContain('pull request');
+  });
+
+  it('groups a stage’s rows by phase, the pool and config apart', () => {
+    const el = mountShell(stageInput({ state: changedStage() }));
+    checkIn(el);
+    expect(reviewRows(el).map((row) => [row.group, row.label])).toEqual([
+      ['Phase 1', 'todo → done'],
+      ['Phase 1', 'content edited'],
+      ['Pool & config', 'moved'],
+      ['Pool & config', 'backlog priority'],
+      ['Pool & config', 'pointer / tags'],
+      // A folder made for a phase sits under it, the groups in the order they first appear.
+      ['Phase 2', 'new folder'],
+    ]);
+    expect(reviewOf(el).querySelector<HTMLInputElement>('.checkin-review-title')!.value).toBe(
+      'Tasks check-in: Stage 1'
+    );
+  });
+
+  it('asks `checkin` by path, a moved card’s old path too, with the board and stage as context', async () => {
+    const state = changedBoard();
+    const el = mountShell(boardInput({ state }));
+    const asked: AppOp<TasksElementOps & AppShellOps>[] = [];
+    answerOps<TasksElementOps & AppShellOps>(el, (op) => {
+      asked.push(op);
+      return ok({ status: 'done' });
+    });
+    checkIn(el);
+    const review = reviewOf(el);
+    for (const path of [LOGIN, state.pool.orderPath, MANIFEST]) {
+      review.querySelector<HTMLInputElement>(`[data-path="${path}"]`)!.click();
+    }
+    review.querySelector<HTMLButtonElement>('[data-answer="confirm"]')!.click();
+    await tick();
+    expect(asked).toEqual([
+      {
+        type: 'checkin',
+        paths: [
+          ONBOARDING,
+          'docs/tasks/unassigned/briefs/idea.md',
+          'docs/tasks/unassigned/briefs/old-idea.md',
+          'docs/tasks/stage1/phase2/specs/.gitkeep',
+        ],
+        title: `Tasks check-in: ${state.board.label}`,
+        context: { boardPath: BOARD, stage: null },
+      },
+    ]);
+    expect(review.isOpen).toBe(false);
+    // `done`: nothing is left in flight.
+    expect(boardOf(el).querySelector('.card-badge--checkin-pending')).toBeNull();
+  });
+
+  it('after `started`, marks the paths in flight until the host says it settled', async () => {
+    const el = mountShell(boardInput({ state: changedBoard() }));
+    answerOps<AppShellOps>(el, () => ok({ status: 'started', message: 'Checking in…' }));
+    checkIn(el);
+    const review = reviewOf(el);
+    review.querySelector<HTMLInputElement>(`[data-path="${LOGIN}"]`)!.click();
+    review.querySelector<HTMLButtonElement>('[data-answer="confirm"]')!.click();
+    await tick();
+    const pending = (): string[] =>
+      [...boardOf(el).querySelectorAll('.card-badge--checkin-pending')].map(
+        (badge) => badge.closest<HTMLElement>('[data-path]')!.dataset.path!
+      );
+    expect(pending().sort()).toEqual([ONBOARDING, 'docs/tasks/unassigned/briefs/idea.md']);
+    expect(pending()).not.toContain(LOGIN);
+    el.checkinSettled();
+    expect(pending()).toEqual([]);
+  });
+
+  it('follows the state set again while it is open, keeping the checks', () => {
+    const state = changedBoard();
+    const el = mountShell(boardInput({ state }));
+    checkIn(el);
+    reviewOf(el).querySelector<HTMLInputElement>(`[data-path="${ONBOARDING}"]`)!.click();
+    const next = structuredClone(state);
+    next.housekeeping = [];
+    next.pool.order = { changed: false };
+    el.setState(boardInput({ state: next }));
+    expect(reviewRows(el).map((row) => [row.path, row.checked])).toEqual([
+      [ONBOARDING, false],
+      [LOGIN, true],
+      ['docs/tasks/unassigned/briefs/old-idea.md → docs/tasks/unassigned/briefs/idea.md', true],
+    ]);
+  });
+
+  it('takes the host’s words and branch', () => {
+    const words = { ...TASKS_CHECKIN_WORDS, heading: 'Commit', confirm: 'Commit' };
+    const el = mountShell(
+      boardInput({
+        state: changedBoard(),
+        checkin: { words, branch: { current: null, offerNew: true } },
+      })
+    );
+    checkIn(el);
+    const review = reviewOf(el);
+    expect(review.querySelector('[data-answer="confirm"]')!.textContent).toBe('Commit');
+    expect(review.querySelector('.checkin-review-detached')).not.toBeNull();
   });
 });
 
