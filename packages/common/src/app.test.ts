@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   answerOps,
   APP_OP_EVENT,
+  bounded,
   createReadyGate,
   fail,
   matchAppPage,
@@ -13,7 +14,7 @@ import {
 } from './app';
 import { describeAppElementContract } from './testing/app-element';
 
-import type { AppElement, AppOpDetail, AppPage, Result } from './app';
+import type { AppElement, AppOpDetail, AppPage, BoundSchema, Result } from './app';
 
 type SampleOps = {
   rename: { op: { path: string; title: string }; reply: { title: string } };
@@ -131,6 +132,46 @@ describe('ok and fail', () => {
       code: 'CODE',
       message: 'message',
       details: [{ path: ['a'] }],
+    });
+  });
+});
+
+describe('bounded', () => {
+  // A schema as zod shapes `safeParse`, written by hand: `common` has no schema library.
+  const title: BoundSchema = {
+    safeParse: (input) => {
+      const value = (input as { title?: unknown } | null)?.title;
+      if (typeof value === 'string' && value.trim() !== '') {
+        return { success: true, data: { title: value.trim() } };
+      }
+      return {
+        success: false,
+        error: {
+          issues: [
+            { path: ['title'], message: 'Too small' },
+            { path: [], message: 'Nothing to take' },
+          ],
+        },
+      };
+    },
+  };
+
+  it('answers what the schema parses under the key', () => {
+    expect(bounded('op', title, { title: ' Lamp ' }, 'APP_OP_INVALID', 'The op')).toEqual({
+      ok: true,
+      op: { title: 'Lamp' },
+    });
+  });
+
+  it('refuses with the code, the issues joined in the message, and the issues as details', () => {
+    expect(bounded('op', title, { title: ' ' }, 'APP_OP_INVALID', 'The op')).toEqual({
+      ok: false,
+      code: 'APP_OP_INVALID',
+      message: 'The op is not valid: title: Too small; Nothing to take',
+      details: [
+        { path: ['title'], message: 'Too small' },
+        { path: [], message: 'Nothing to take' },
+      ],
     });
   });
 });

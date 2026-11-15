@@ -223,6 +223,43 @@ export interface AppBounds<V extends AppViewMap, E extends AppOpMap, CreateInput
   create(input: unknown): Result<{ input: CreateInput }>;
 }
 
+/**
+ * What a bound reads of a schema: its `safeParse`, shaped as zod's, so an app
+ * passes its own schema and `common` imports no schema library.
+ */
+export interface BoundSchema {
+  safeParse(input: unknown):
+    | { success: true; data: unknown }
+    | {
+        success: false;
+        error: { issues: readonly { path: readonly PropertyKey[]; message: string }[] };
+      };
+}
+
+/**
+ * One bound: `input` as `schema` parses it, answered under `key`, or a refusal
+ * with `code` that reads "<what> is not valid: <field>: <message>; …", the
+ * schema's issues in `details`. `T` is what the parsed input is to the app.
+ */
+export function bounded<K extends string, T>(
+  key: K,
+  schema: BoundSchema,
+  input: unknown,
+  code: string,
+  what: string
+): Result<{ [P in K]: T }> {
+  const parsed = schema.safeParse(input);
+  if (parsed.success) return ok({ [key]: parsed.data } as { [P in K]: T });
+  const { issues } = parsed.error;
+  const causes = issues
+    .map(
+      (issue) =>
+        (issue.path.length > 0 ? `${issue.path.map(String).join('.')}: ` : '') + issue.message
+    )
+    .join('; ');
+  return fail(code, `${what} is not valid: ${causes}`, [...issues]);
+}
+
 /** What a page resolves from. */
 export interface AppPageInput {
   /** The sub-path's parameters, by name, as `matchAppPage` read them (decoded, not yet checked). */
