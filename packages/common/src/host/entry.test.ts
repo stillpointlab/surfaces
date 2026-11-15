@@ -30,12 +30,6 @@ function importGraph(file: string, seen = new Map<string, string[]>()): Map<stri
 }
 
 describe('the ./host entry', () => {
-  it('is types only: it exports no values', async () => {
-    const entry = await import('@stillpointlab/common-format/host');
-
-    expect(Object.keys(entry)).toEqual([]);
-  });
-
   it('imports nothing from Node or the DOM, directly or through a chunk', () => {
     for (const file of ['../../dist/host.js', '../../dist/host.cjs']) {
       for (const [module, specifiers] of importGraph(file)) {
