@@ -396,6 +396,66 @@ from disk, the dot, a commit from the explorer clearing the app's marks with no 
 files shown and locked again, a zone file edited as a file, a locked file by its address, a
 folder above the instance, and a write to a locked file refused with 409.
 
+## As built: step 2
+
+_2026-11-14, by the same Opus 5.5 sub-agent; reviewed and checked by the orchestrating agent,
+who looked at the screenshots._
+
+**Server:**
+
+- **The default apps are inventory and tasks.**
+- **Host ops are a second option,** `createHost({ apps, hostOps })`, keyed by app and then by
+  op. Both defaults are in `server/apps/registry.ts`, so adding an app still touches the two
+  registration files. A host op is answered before the runner, as `{ ok, reply }` with no
+  `revision`.
+- **Tasks' three:** `read-file` answers `{ content }` from the port, for any path the port
+  reads; `scan-references` answers the core's `referencesTo` over the instance as the host
+  knows it; `resolve` is refused, `HOST_NOTHING_TO_RESOLVE` (409).
+- **`POST /api/apps/create`** takes `{ app, folder, confirmRoot?, input }` and answers
+  `{ ok, manifestPath }`. In order: the body's shape (`HOST_BAD_REQUEST`), the app
+  (`HOST_APP_NOT_FOUND`), the folder's path (`HOST_PATH_OUTSIDE_ROOT`), the overlap
+  (`HOST_APP_OVERLAP`, 409), then `createInstance`, whose refusals take the module's class. The
+  new instance starts locked.
+- **The overlap rule for a create:** in a folder, an instance whose folder is within it or
+  above it, or a root instance with a path under it. At the root, the files the seed would
+  write and the scope the lifecycle would give the new manifest over the folder as it is,
+  which is what discovery would find afterwards.
+
+**Page:**
+
+- **The menu's entry is "Create `<noun>` here…",** not "New `<noun>` here…": the noun carries
+  its article ("an inventory"). It is on a folder and on the space under the rows, and not on
+  a separate repository, a file or an app's row.
+- **The create dialog:** the folder, starting at `<folder>/<the app's default>`; its help; the
+  root consent, shown only for an empty folder and an app that has one; the app's own form;
+  Cancel and Create. The folder is checked before anything is sent. A refusal goes back to the
+  form, which shows it, and the dialog stays. A create that lands closes it, and the page
+  opens the new instance and shows its row.
+- **`HostClient.appCreate`.**
+- **`open-options-menu`:** the page's menu opens at the anchor's lower left, and focus goes
+  back to the anchor. An item without an `id` and a `label` is left out. The choice is
+  dispatched on the element that raised the request.
+- **`--spl-tasks-app-sticky-top` is not set:** nothing sits above the pane in its scroll box.
+- **Development mode** reads each package's own build entries, so an entry whose source is
+  outside the usual place (an app's `./create-element`) resolves to it.
+- **Words** not given above are drafts in `words.ts`, under `apps.create`.
+
+**By hand,** against the built server in Chromium, light and dark:
+
+- **On a copy of this repository:** the Tasks row at `docs/tasks`; the landing going to the
+  current phase; the strip to a stage and to another phase; a card moved to another column,
+  with its file changed on disk, its mark and the row's dot; a card moved to another phase,
+  which git reports as a rename; a commit from the explorer clearing the marks with no reload;
+  a card opened in its preview, locked; the files shown, a card edited as a file, and locked
+  again; Settings, a card's menu, Set title and Refresh.
+- **In a scratch folder:** an inventory created from a folder's menu, with a zone and an item,
+  and committed; a task project created, with a card; one inside the other refused, with the
+  reason in the form.
+
+**Seen, and not changed:** a card moved to another phase carries where it came from, and the
+board draws no mark for it, as in Context Manager: the board's mark is for a column that
+moved. It counts among the uncommitted changes. In the follow-up log.
+
 ## Clarifications
 
 - **"Runs the app's own projection" on lock** is met by `validateAndScope`, which is the part

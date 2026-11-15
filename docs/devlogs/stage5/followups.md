@@ -144,3 +144,15 @@ are carried here as they were written.
   invalid with it, and its row is hidden by the outer one's lock until that is unlocked.
 - 2026-11-14 (apps-in-the-local-host, step 1): a root instance's row shows a dot for changes
   and no status letter. An instance whose app the page has no shell for still gets a row.
+- 2026-11-14 (apps-in-the-local-host, step 2): a card moved to another phase has `movedFrom` in
+  its state and no mark on the board, in the local host as in Context Manager. The board marks
+  a column that moved, not a file that did.
+- 2026-11-14 (apps-in-the-local-host, step 2): each app's create copy says "repository" (the
+  folder help, tasks' root warning), which is Context Manager's word. The local host serves a
+  folder.
+- 2026-11-14 (apps-in-the-local-host, step 2): tasks' `read-file` answers any file the port
+  reads, not only the instance's.
+- 2026-11-14 (apps-in-the-local-host, step 2): in the md editor, a click in the document and
+  Control+End put the cursor in the frontmatter block, and typing added a line there.
+- 2026-11-14 (apps-in-the-local-host, step 2): creating an app at the served root, with its
+  consent, is covered by tests and was not done by hand.
