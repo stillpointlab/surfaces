@@ -297,9 +297,9 @@ export class InventoryZone extends InventoryElement<ZoneState> implements AppEle
 
   private downloadHtml(state: ZoneState): SafeHtml {
     const links = this.links;
-    const enabled =
-      links !== null && state.schema.mode !== 'invalid' && state.zone.items.length > 0;
-    return enabled
+    // A page without an export shows no download control.
+    if (links !== null && !links.exportZone) return html``;
+    return links?.exportZone && state.schema.mode !== 'invalid' && state.zone.items.length > 0
       ? html`<a class="inventory-download" href="${links.exportZone(state.zone.path)}" download>Download zone CSV</a>`
       : html`<span class="inventory-download is-disabled" title="${state.schema.mode === 'invalid' ? 'Repair inventory.yaml before exporting' : 'Nothing to export yet'}">Download zone CSV</span>`;
   }

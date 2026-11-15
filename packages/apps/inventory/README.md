@@ -107,7 +107,9 @@ wherever it lands.
 
 - **Links in.** `links: InventoryLinks` builds the URLs the elements render as anchors:
   `zone(path)`, `exportAll()`, `exportZone(path)`, and `editor(path)`, which returns `undefined` for
-  a file not yet linked. Without links, zone names render as text and exports as disabled.
+  a file not yet linked. The two exports are optional: a page without one leaves it out, and that
+  download control is not shown. Without links at all, zone names render as text and exports as
+  disabled.
 - **Ops out**, each asked through `requestOp` and naming a zone by its file's path:
 
   | Op            | Fields                  | Reply                         |
