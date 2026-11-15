@@ -2,9 +2,11 @@
 // This is a host's client half, as the local host or Context Manager drives the
 // shell: it answers the shell's ops (a core op through the module with the
 // shell's `opView`, its reply passed to `learn`; the host ops; `project` and
-// `refresh` from the files in memory), resolves `navigate` through the module's
-// pages under a fragment base, reads the page again on `reload-request`, and
-// opens a small options menu for `open-options-menu`. The shell answers
+// `refresh` from the files in memory; `checkin` as the memory port's `commit` of
+// the op's paths, answered `done`, after which the page is read again so the
+// marks clear), resolves `navigate` through the module's pages under a fragment
+// base, reads the page again on `reload-request`, and opens a small options
+// menu for `open-options-menu`. The shell answers
 // `refresh-stage` and `close-candidates` itself, so this host does not: were
 // one to reach it, it would be refused as unknown.
 import './shell.css';
@@ -143,6 +145,13 @@ function attach(h: ShellHarness): void {
       if (op.type === 'project') return projectView(ws(), op.view);
       // The memory host's files are their own source: there is nothing to bring up to date.
       if (op.type === 'refresh') return ok();
+      if (op.type === 'checkin') {
+        ws().port.commit(op.paths);
+        // The page is read again after the reply, as a host's status event would have it.
+        setTimeout(() => void open(h, h.href), 0);
+        const files = op.paths.length === 1 ? '1 file' : `${op.paths.length} files`;
+        return ok({ status: 'done', message: `Checked in ${files} in memory.` });
+      }
       // The memory host reads the view before its first await, so it is this op's alone.
       opView = shell.opView(op) as AppView<TasksViews> | undefined;
       const pending = inMemory(op as Op);

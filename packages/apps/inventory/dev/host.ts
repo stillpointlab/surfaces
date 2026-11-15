@@ -1,12 +1,14 @@
 // The harness's inventory host: an inventory's files in a memory port,
 // answered through the inventory module by the harness's one memory host
-// (common's runner). There are no drafts, check-in or repository: the files a
-// fixture starts with are the last commit, and a file an op changes or adds is
-// dirty, as the module's `fromChanges` reads the port's changes. A hand-built
-// state has no files, so its ops are refused. The shell is answered as a
-// host's client half answers it: a core op with the shell's `opView`, its
-// reply passed to `learn`, and the shell's own `project` and `refresh` from
-// the files in memory.
+// (common's runner). There are no drafts or repository: the files a fixture
+// starts with are the last commit, and a file an op changes or adds is dirty,
+// as the module's `fromChanges` reads the port's changes. A hand-built state
+// has no files, so its ops are refused. The shell is answered as a host's
+// client half answers it: a core op with the shell's `opView`, its reply passed
+// to `learn`, and the shell's own `project` and `refresh` from the files in
+// memory. Its `checkin` is the port's `commit` of the op's paths, answered
+// `done`; then `checkedIn` runs, and the fixture reads the page again, so the
+// marks clear.
 import { answerOps, fail, isCoreOp, ok } from '@stillpointlab/common-format/app';
 import { createMemoryPort } from '@stillpointlab/common-format/host';
 
@@ -97,7 +99,8 @@ export interface HarnessHost {
 
 export function attachHost(
   elements: readonly HTMLElement[],
-  shell: InventoryApp | null = null
+  shell: InventoryApp | null = null,
+  checkedIn: () => void = () => {}
 ): HarnessHost {
   let ws: Workspace | null = null;
   let stops: (() => void)[] = [];
@@ -129,6 +132,19 @@ export function attachHost(
     }
     // The memory host's files are their own source: there is nothing to bring up to date.
     if (op.type === 'refresh') return ok();
+    if (op.type === 'checkin') {
+      if (failCode !== null) {
+        const code = failCode;
+        failCode = null;
+        return fail(code, `The harness refused this check-in (${code})`);
+      }
+      if (!ws) return fail('HARNESS_NO_FILES', 'No files to check in');
+      ws.port.commit(op.paths);
+      // The page is read again after the reply, as a host's status event would have it.
+      setTimeout(checkedIn, 0);
+      const files = op.paths.length === 1 ? '1 file' : `${op.paths.length} files`;
+      return ok({ status: 'done', message: `Checked in ${files} in memory.` });
+    }
     opView = shell!.opView(op) as AppView<InventoryViews> | undefined;
     // Read when the op starts: the view goes with this op alone.
     const replying = answer(op);

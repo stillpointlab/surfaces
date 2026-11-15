@@ -610,6 +610,46 @@ export interface AppShellInput {
   view: ({ type: string } & Record<string, unknown>) | null;
   state: object | null;
   extras?: Record<string, unknown>;
+  /**
+   * What a check-in is to the host: the review's words, and the branch it may go
+   * on. Absent: the shell's own words, which say "check in", and no branch.
+   */
+  checkin?: { words?: CheckinWords; branch?: CheckinBranch };
+}
+
+/**
+ * Every word a check-in review shows that depends on what a check-in is to its
+ * host: "Check in" to a shell, "Commit" to a host over git, a pull request to
+ * another. The optional ones have neutral defaults in the review.
+ */
+export interface CheckinWords {
+  /** The dialog's heading: "Check in", "Commit". */
+  heading: string;
+  /** A line above the files. */
+  help?: string;
+  /** The title field's label: "Title", "Summary". */
+  title: string;
+  /** The body field's label: "Description (optional)", "Details (optional)". */
+  body: string;
+  /** The confirm button: "Check in", "Commit". */
+  confirm: string;
+  cancel: string;
+  /** The confirm button while the host answers: "Checking in…", "Committing…". */
+  busy?: string;
+  /** Under the form when no file is checked. */
+  noFiles?: string;
+  /** Under the form when a required title is empty. */
+  noTitle?: string;
+  /** Why only a new branch is offered when `HEAD` is detached. */
+  detached?: string;
+  /** In place of the rows when there are none. */
+  nothing?: string;
+}
+
+/** The branch a check-in may go on: the current one (`null` when detached), and whether a new one may be named. */
+export interface CheckinBranch {
+  current: string | null;
+  offerNew: boolean;
 }
 
 /**
@@ -623,6 +663,11 @@ export interface AppShellElement extends AppElement<AppShellInput> {
   learn(op: { type: string }, reply: object): void;
   /** The view an op's reply depends on, for the host to send with it. */
   opView(op: { type: string }): ({ type: string } & Record<string, unknown>) | undefined;
+  /**
+   * A check-in the host answered `started` has settled, whatever its outcome:
+   * the shell drops what it marked in flight. A shell that marks nothing has none.
+   */
+  checkinSettled?(): void;
 }
 
 /** The ops a shell itself asks its host, beside its module's. */
@@ -634,4 +679,21 @@ export type AppShellOps = {
   };
   /** Bring the instance up to date with its source, whatever that means to the host. */
   refresh: { op: Record<never, never>; reply: Record<never, never> };
+  /**
+   * Check in chosen files, by path (a moved file's old path too). `title` and
+   * `body` are what was typed, trimmed, and absent when empty; `branch` names a
+   * new branch; `context` is the app's own, passed back untouched. `done`: it is
+   * checked in. `started`: the host's check-in runs on, and the host calls the
+   * shell's `checkinSettled()` when it ends. `message` is for the page's notice.
+   */
+  checkin: {
+    op: {
+      paths: string[];
+      title?: string;
+      body?: string;
+      branch?: string;
+      context?: Record<string, unknown>;
+    };
+    reply: { status: 'done' | 'started'; message?: string };
+  };
 };

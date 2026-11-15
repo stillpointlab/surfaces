@@ -188,7 +188,9 @@ function attachHost(
     asked.push(op);
     if (op.type === 'project') return options.project?.(op.view) ?? projectIn(snapshot, op.view);
     if (op.type === 'refresh') return options.refresh?.() ?? ok();
-    if (!isCoreOp(tasksModule, op.type)) return fail('TEST_HOST_OP', `Not answered: ${op.type}`);
+    if (op.type === 'checkin' || !isCoreOp(tasksModule, op.type)) {
+      return fail('TEST_HOST_OP', `Not answered: ${op.type}`);
+    }
     const applied = tasksModule.core.apply(
       snapshot,
       tasksModule.toCoreOp(op, { now: '2026-11-14T12:00:00Z' })

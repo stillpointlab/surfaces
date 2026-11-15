@@ -13,7 +13,8 @@
 // the example workshop, under a fragment base as the local host mounts it. The
 // fixture is the host's client half: it answers the shell's ops (host.ts),
 // resolves a `navigate` through the module's pages and sets the shell's input,
-// and reads the view again on `reload-request`.
+// and reads the view again on `reload-request` and after a check-in, which
+// commits the chosen files in memory (the shell's review asks it `checkin`).
 import '../src/element/index.js';
 import '../src/element/create.js';
 import '../src/shell/index.js';
@@ -103,7 +104,7 @@ function prepare(elements: HarnessElements): {
     pane?.classList.add('inventory-harness');
     if (pane) pane.style.height = 'auto';
   }
-  host ??= attachHost([overview, zone], shell);
+  host ??= attachHost([overview, zone], shell, () => void readAgain(shell));
   if (!shellWired) {
     shellWired = true;
     shell.addEventListener('navigate', (event) => followLink(shell, event as CustomEvent));
