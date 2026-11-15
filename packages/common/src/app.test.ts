@@ -9,6 +9,7 @@ import {
   fail,
   matchAppPage,
   ok,
+  pageHref,
   placeNewFiles,
   requestOp,
 } from './app';
@@ -116,6 +117,64 @@ describe('matchAppPage', () => {
       expect(matchAppPage(pages, subPath), subPath).toBeNull();
     }
     expect(matchAppPage([], '')).toBeNull();
+  });
+});
+
+describe('pageHref', () => {
+  const PATH_BASE = '/project/p/repos/r/tasks/view_1';
+  const FRAGMENT_BASE = '#/app/docs/tasks/tasks.yaml';
+
+  it('answers the base itself for the empty path, trailing slash and all', () => {
+    expect(pageHref(PATH_BASE, '')).toBe(PATH_BASE);
+    expect(pageHref(`${PATH_BASE}/`, '')).toBe(`${PATH_BASE}/`);
+    expect(pageHref(FRAGMENT_BASE, '')).toBe(FRAGMENT_BASE);
+  });
+
+  it('joins a path to a path base and to a fragment base as text', () => {
+    expect(pageHref(PATH_BASE, '/room/:roomSlug', { roomSlug: 'kitchen' })).toBe(
+      `${PATH_BASE}/room/kitchen`
+    );
+    expect(pageHref(FRAGMENT_BASE, '/stage/:stage/phase/:phase', { stage: '2', phase: '3' })).toBe(
+      `${FRAGMENT_BASE}/stage/2/phase/3`
+    );
+  });
+
+  it('drops one trailing slash from the base before a path', () => {
+    expect(pageHref(`${PATH_BASE}/`, '/stage/:stage', { stage: '1' })).toBe(`${PATH_BASE}/stage/1`);
+  });
+
+  it('encodes each parameter, and fills a missing one with nothing', () => {
+    expect(pageHref(PATH_BASE, '/room/:roomSlug', { roomSlug: 'pantry & a/b' })).toBe(
+      `${PATH_BASE}/room/${encodeURIComponent('pantry & a/b')}`
+    );
+    expect(pageHref(PATH_BASE, '/room/:roomSlug')).toBe(`${PATH_BASE}/room/`);
+  });
+
+  it('adds a query, encoded, after a path base or inside a fragment base', () => {
+    const path = 'docs/tasks/research notes';
+    expect(pageHref(PATH_BASE, '', {}, { path })).toBe(
+      `${PATH_BASE}?path=${encodeURIComponent(path)}`
+    );
+    expect(pageHref(FRAGMENT_BASE, '', {}, { path })).toBe(
+      `${FRAGMENT_BASE}?path=${encodeURIComponent(path)}`
+    );
+    expect(pageHref(`${PATH_BASE}?x=1`, '', {}, { 'a&b': 'c=d' })).toBe(
+      `${PATH_BASE}?x=1&a%26b=c%3Dd`
+    );
+    expect(pageHref(PATH_BASE, '', {}, {})).toBe(PATH_BASE);
+  });
+
+  it('builds what matchAppPage reads back', () => {
+    const pages: AppPage[] = ['/stage/:stage/phase/:phase', '/room/:roomSlug'].map((path) => ({
+      path,
+      resolve: async () => ({ notFound: true }),
+      title: () => path,
+      emptyWhenMissing: false,
+    }));
+    const href = pageHref(FRAGMENT_BASE, '/room/:roomSlug', { roomSlug: 'a/b c' });
+    expect(matchAppPage(pages, href.slice(FRAGMENT_BASE.length))?.params).toEqual({
+      roomSlug: 'a/b c',
+    });
   });
 });
 

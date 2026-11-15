@@ -426,6 +426,34 @@ export function matchAppPage(
   return null;
 }
 
+/**
+ * One page's href under `base`, the counterpart of `matchAppPage`: the page's
+ * path joined to `base` as text, each `:name` segment filled with its
+ * parameter, encoded, then the query, each key and value encoded. The empty
+ * path is `base` itself; one trailing slash on `base` is dropped before a path
+ * is joined. A base is never parsed as a `URL`: it is a path (`/apps/x`) or a
+ * fragment (`#/app/docs/tasks/tasks.yaml`), and the query follows either.
+ */
+export function pageHref(
+  base: string,
+  path: string,
+  params: Record<string, string> = {},
+  query: Record<string, string> = {}
+): string {
+  const filled = path
+    .split('/')
+    .map((segment) =>
+      segment.startsWith(':') ? encodeURIComponent(params[segment.slice(1)] ?? '') : segment
+    )
+    .join('/');
+  const joined = path === '' ? base : `${base.endsWith('/') ? base.slice(0, -1) : base}${filled}`;
+  const pairs = Object.entries(query).map(
+    ([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`
+  );
+  if (pairs.length === 0) return joined;
+  return `${joined}${joined.includes('?') ? '&' : '?'}${pairs.join('&')}`;
+}
+
 /** A sub-path's segments: `''` and `/` have none; anything else starts with `/`. */
 function segmentsOf(path: string): string[] | null {
   const trimmed = path.endsWith('/') ? path.slice(0, -1) : path;
