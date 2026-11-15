@@ -53,6 +53,12 @@ modal-dialog:not(:defined) {
   text-overflow: ellipsis;
 }
 
+// Undo and Redo: disabled with nothing to do, their step's label as the title.
+.explorer-undo,
+.explorer-redo {
+  flex: none;
+}
+
 // The Commit button and the number of changed files on it.
 .explorer-commit {
   display: inline-flex;
@@ -692,6 +698,20 @@ host-file-tree {
 
   &[aria-invalid='true'] {
     border-color: $error-border;
+  }
+}
+
+// The question a delete asks when the host cannot keep it to undo.
+.file-op-question {
+  margin: 0;
+  padding: $spacing-xs $spacing-sm;
+  border: 1px solid $warning-border;
+  border-radius: $border-radius-md;
+  color: $warning-color;
+  background: $warning-bg;
+
+  &[hidden] {
+    display: none;
   }
 }
 

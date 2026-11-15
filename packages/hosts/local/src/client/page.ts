@@ -40,6 +40,16 @@
 //   the space under the rows, offer to create each app that can be created
 //   (`apps/create-dialog.ts`); the new instance's row shows and the pane opens it.
 // - an app's `open-options-menu` opens the page's one menu at its anchor.
+// - undo and redo: the Undo and Redo buttons in `.explorer-header` take back, or
+//   do again, the host's last step (the explorer's create, rename or delete, an
+//   app's op, a create), each titled with its step's label and disabled with
+//   nothing to do; a `journal` event reads the labels again. Ctrl+Z and
+//   Ctrl+Shift+Z (Cmd on a Mac) do the same when focus is in neither an editor
+//   nor a text field, nor in a dialog or a menu: there the key is theirs. The open
+//   file follows an undo as it follows the explorer's write
+//   (`FilePane.followWrite`), so no banner shows for it; a file with unsaved edits
+//   that an undo deletes keeps them, under the banner. What else moved, the
+//   events the page already handles bring up to date.
 
 import '@stillpointlab/modal-dialog-component';
 import '@stillpointlab/spl-icon-component';
@@ -56,7 +66,7 @@ import { CommitReview } from './commit/review';
 import { createConfirm } from './confirm';
 import { createFileOps } from './file-ops/file-ops';
 import { indexListing } from './file-ops/paths';
-import { HostMenu } from './menu/menu';
+import { deepActiveElement, HostMenu } from './menu/menu';
 import { pageStyles } from './page.styles';
 import { FilePane } from './pane';
 import { readOpenFolders, writeOpenFolders } from './stored';
@@ -68,7 +78,13 @@ import type { Notice } from './apps/app-pane';
 import type { ClientApps } from './apps/registry';
 import type { Confirm } from './confirm';
 import type { FileOps } from './file-ops/file-ops';
-import type { FoundInstance, HostClient, HostGit, LocalHostEvent } from './host-client';
+import type {
+  FoundInstance,
+  HostClient,
+  HostGit,
+  JournalLabels,
+  LocalHostEvent,
+} from './host-client';
 import type { MenuEntry } from './menu/menu';
 import type { PaneState } from './pane';
 import type { HostFileTree, TreeEventDetail, TreeMenuDetail } from './tree/host-file-tree';
@@ -128,6 +144,12 @@ export interface HostPage {
   createApp(appId: string, folder: string): Promise<string | null>;
   /** List the folder again. */
   refresh(): Promise<void>;
+  /**
+   * Take back the host's last step, or do the last one undone again, as the
+   * buttons and the keys do. True when it landed; a refusal shows in the notice.
+   */
+  undo(): Promise<boolean>;
+  redo(): Promise<boolean>;
   /** Stop listening to the host and the window. */
   destroy(): void;
 }
@@ -144,6 +166,11 @@ function indexOf(state: unknown): number | null {
 
 let styled = false;
 
+/** Cmd, not Ctrl, is the key a Mac undoes with. */
+const IS_MAC =
+  typeof navigator !== 'undefined' &&
+  /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+
 export function startPage(options: PageOptions): HostPage {
   const { client, registry } = options;
   const apps = options.apps ?? {};
@@ -157,13 +184,15 @@ export function startPage(options: PageOptions): HostPage {
 
   render(
     host,
-    html`<div class="host-page"><nav class="explorer" aria-label="${words.explorer}"><header class="explorer-header"><span class="explorer-name"></span><button type="button" class="button explorer-commit" hidden>${words.commit.button}<span class="explorer-commit-count"></span></button></header><div class="page-notice" role="status"></div><p class="explorer-note" hidden></p><div class="app-roots" role="group" aria-label="${words.apps.rootRows}" hidden></div><host-file-tree></host-file-tree></nav><main class="pane"><div class="file-pane"></div><div class="app-pane" hidden></div></main></div>`
+    html`<div class="host-page"><nav class="explorer" aria-label="${words.explorer}"><header class="explorer-header"><span class="explorer-name"></span><button type="button" class="button explorer-undo" data-step="undo" disabled>${words.journal.undo}</button><button type="button" class="button explorer-redo" data-step="redo" disabled>${words.journal.redo}</button><button type="button" class="button explorer-commit" hidden>${words.commit.button}<span class="explorer-commit-count"></span></button></header><div class="page-notice" role="status"></div><p class="explorer-note" hidden></p><div class="app-roots" role="group" aria-label="${words.apps.rootRows}" hidden></div><host-file-tree></host-file-tree></nav><main class="pane"><div class="file-pane"></div><div class="app-pane" hidden></div></main></div>`
   );
   const tree = host.querySelector('host-file-tree') as HostFileTree;
   const rootName = host.querySelector<HTMLElement>('.explorer-name')!;
   const note = host.querySelector<HTMLElement>('.explorer-note')!;
   const commitButton = host.querySelector<HTMLButtonElement>('.explorer-commit')!;
   const commitCount = host.querySelector<HTMLElement>('.explorer-commit-count')!;
+  const undoButton = host.querySelector<HTMLButtonElement>('.explorer-undo')!;
+  const redoButton = host.querySelector<HTMLButtonElement>('.explorer-redo')!;
   const notice = host.querySelector<HTMLElement>('.page-notice')!;
   const rootRows = host.querySelector<HTMLElement>('.app-roots')!;
   const filePaneElement = host.querySelector<HTMLElement>('.file-pane')!;
@@ -187,6 +216,10 @@ export function startPage(options: PageOptions): HostPage {
   const notes: { git: string | null; list: string | null } = { git: null, list: null };
   /** Which pane shows: a file's, or an app's. */
   let showing: 'file' | 'app' = 'file';
+  /** The labels of the steps undo and redo would take, as last read. */
+  let journal: JournalLabels = { undo: null, redo: null };
+  /** An undo or a redo on its way: the next waits for it to land. */
+  let stepping: Promise<boolean> | null = null;
 
   const pane: FilePane = new FilePane(filePaneElement, {
     client,
@@ -245,6 +278,109 @@ export function startPage(options: PageOptions): HostPage {
     commitButton.disabled = count === 0;
     commitCount.textContent = count === 0 ? '' : String(count);
     commitButton.setAttribute('aria-label', words.commit.buttonLabel(count));
+  }
+
+  /** The Undo and Redo buttons: each titled with its step's label, disabled with none. */
+  function showJournal(): void {
+    // Not disabled while one runs: a button with focus would lose it, and the
+    // next waits for the one before anyway.
+    const show = (button: HTMLButtonElement, label: string | null, which: 'undo' | 'redo') => {
+      button.disabled = label === null;
+      const title =
+        label === null
+          ? words.journal[which === 'undo' ? 'nothingToUndo' : 'nothingToRedo']
+          : words.journal[which === 'undo' ? 'undoTitle' : 'redoTitle'](label);
+      button.title = title;
+      button.setAttribute('aria-label', title);
+    };
+    show(undoButton, journal.undo, 'undo');
+    show(redoButton, journal.redo, 'redo');
+  }
+
+  /** Read the labels again: after a step, an undo or a redo, or a `journal` event. */
+  async function readJournal(): Promise<void> {
+    try {
+      const answer = await client.journal();
+      if (answer.ok) journal = { undo: answer.undo, redo: answer.redo };
+    } catch {
+      // the buttons keep what they last showed
+    }
+    showJournal();
+  }
+
+  /**
+   * Undo or redo the host's last step. The open file follows what it moved and
+   * deleted; one with unsaved edits that it deleted keeps them, and the banner
+   * says the file is gone. A refusal (a file changed since, nothing to do) shows
+   * in the notice.
+   */
+  function step(which: 'undo' | 'redo'): Promise<boolean> {
+    if (stepping) return stepping.then(() => step(which));
+    stepping = (async () => {
+      const before = pane.current;
+      const answer = await pane.followWrite(
+        which === 'undo' ? client.undo() : client.redo(),
+        (path, done) => {
+          const moved = done.moved.find((move) => move.from === path);
+          if (moved) return moved.path;
+          if (done.deleted.includes(path)) return pane.current?.dirty ? undefined : null;
+          return undefined;
+        }
+      );
+      if (!answer.ok) {
+        showNotice({
+          text: words.journal.failed(which, answer.code, answer.message),
+          tone: 'error',
+        });
+        await readJournal();
+        return false;
+      }
+      const now = pane.current;
+      if (showing === 'file' && before && now?.path !== before.path) writeAddress(now, 'replace');
+      showNotice({ text: words.journal.done(which, answer.label), tone: 'info' });
+      await Promise.all([refresh(), readJournal()]);
+      return true;
+    })().finally(() => {
+      stepping = null;
+    });
+    return stepping;
+  }
+
+  /** Whether Ctrl+Z (Cmd+Z) is the page's: focus is in no editor, text field, dialog or menu. */
+  function keyIsThePage(event: KeyboardEvent): boolean {
+    if (event.defaultPrevented) return false;
+    if (host.querySelector('modal-dialog[is-open]')) return false;
+    const path = event.composedPath();
+    const inside = path.some(
+      (node) =>
+        node instanceof Element &&
+        (node.localName === 'modal-dialog' ||
+          node.localName === 'dialog' ||
+          node.getAttribute('role') === 'dialog' ||
+          node.getAttribute('role') === 'menu')
+    );
+    if (inside) return false;
+    // An editor's key is its own: anything in the file pane's body while it edits.
+    const editor = filePaneElement.querySelector('.pane-body');
+    if (
+      showing === 'file' &&
+      pane.current?.view === 'edit' &&
+      path.some((node) => node === editor)
+    ) {
+      return false;
+    }
+    const active = deepActiveElement();
+    if (!active) return true;
+    if (active.isContentEditable) return false;
+    const tag = active.localName;
+    if (tag === 'textarea' || tag === 'select') return false;
+    if (tag === 'input') {
+      const type = (active as HTMLInputElement).type;
+      return ['button', 'checkbox', 'radio', 'submit', 'reset', 'range', 'color', 'file'].includes(
+        type
+      );
+    }
+    return true;
   }
 
   /** The page's one notice: a line and a short list, or nothing. */
@@ -519,6 +655,10 @@ export function startPage(options: PageOptions): HostPage {
   }
 
   function onHostEvent(event: LocalHostEvent): void {
+    if (event.type === 'journal') {
+      void readJournal();
+      return;
+    }
     if (event.type === 'apps' || event.type === 'listed') {
       void refresh();
     } else if (event.type === 'changed') {
@@ -794,6 +934,19 @@ export function startPage(options: PageOptions): HostPage {
       { signal }
     );
     commitButton.addEventListener('click', () => void openCommit(), { signal });
+    undoButton.addEventListener('click', () => void step('undo'), { signal });
+    redoButton.addEventListener('click', () => void step('redo'), { signal });
+    window.addEventListener(
+      'keydown',
+      (event) => {
+        const mod = IS_MAC ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
+        if (!mod || event.altKey || event.key.toLowerCase() !== 'z') return;
+        if (!keyIsThePage(event)) return;
+        event.preventDefault();
+        void step(event.shiftKey ? 'redo' : 'undo');
+      },
+      { signal }
+    );
     notice.addEventListener(
       'click',
       (event) => {
@@ -869,7 +1022,7 @@ export function startPage(options: PageOptions): HostPage {
       showNote();
     }
     await asked;
-    await refresh();
+    await Promise.all([refresh(), readJournal()]);
     listed();
     if (rootId !== null) tree.openPaths = readOpenFolders(rootId);
     const address = parseAddress(location.hash, manifests());
@@ -902,6 +1055,8 @@ export function startPage(options: PageOptions): HostPage {
     showFiles,
     lockFiles,
     refresh,
+    undo: () => step('undo'),
+    redo: () => step('redo'),
     destroy() {
       controller.abort();
       unwatch();

@@ -159,11 +159,13 @@ describe('the Commit button', () => {
     expect(host.gitCalls).toEqual([]);
   });
 
-  it('the header is a row: the folder’s name, then the button', async () => {
+  it('the header is a row: the folder’s name, Undo and Redo, then the button', async () => {
     await start();
     const header = $('.explorer-header');
     expect([...header.children].map((child) => child.className)).toEqual([
       'explorer-name',
+      'button explorer-undo',
+      'button explorer-redo',
       'button explorer-commit',
     ]);
   });

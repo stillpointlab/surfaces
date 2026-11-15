@@ -9,7 +9,8 @@
 // drafts; the review's choice ("On <branch>", "On a new branch") is its own. The apps' words
 // (`apps`) are the apps-in-the-local-host spec's where it gives them (the "Show
 // files…" question, the folder's reason, the menu's entries), and drafts beside
-// them.
+// them. Undo and redo (`journal`): the buttons' titles and the delete dialog's two
+// questions are the undo-journal spec's; the rest are drafts.
 
 export interface Confirmation {
   question: string;
@@ -122,6 +123,16 @@ export const words = {
     deleteUnsaved: (name: string) => `${name} has unsaved edits. Delete it anyway?`,
     /** A folder's delete when the open file, with unsaved edits, is inside it. */
     deleteUnsavedInside: (name: string) => `${name} has unsaved edits, which will be lost.`,
+    /**
+     * The undo-journal spec's: asked when the host cannot keep a delete to undo,
+     * by its reason (the second is the spec's draft). Delete sends it again,
+     * written with no step.
+     */
+    cannotUndo: {
+      'too-large': 'This is too large to undo. Delete anyway?',
+      'not-text':
+        'An image or a large file is among these, and deleting it cannot be undone. Delete anyway?',
+    },
     check: {
       empty: 'Enter a path.',
       noName: 'Enter a name after the last slash.',
@@ -194,6 +205,30 @@ export const words = {
         consent: 'Tick the box above to create at the root of the served folder.',
       },
     },
+  },
+
+  /** Undo and Redo: the explorer header's buttons, the keys, and what they say after. */
+  journal: {
+    undo: 'Undo',
+    redo: 'Redo',
+    /** The buttons' titles: the spec's "Undo: Delete notes.md". */
+    undoTitle: (label: string) => `Undo: ${label}`,
+    redoTitle: (label: string) => `Redo: ${label}`,
+    nothingToUndo: 'Nothing to undo',
+    nothingToRedo: 'Nothing to redo',
+    /** The notice after one lands. */
+    done: (which: 'undo' | 'redo', label: string) =>
+      `${which === 'undo' ? 'Undone' : 'Redone'}: ${label}`,
+    /** The notice after a refusal: a file changed since says which, in the host's words. */
+    failed: (which: 'undo' | 'redo', code: string, message: string) =>
+      code === 'HOST_UNDO_CONFLICT'
+        ? message
+        : `Could not ${which === 'undo' ? 'undo' : 'redo'}. ${message}`,
+    /** An app's op the host wrote with no step. */
+    opCannotUndo: (reason: 'too-large' | 'not-text') =>
+      reason === 'too-large'
+        ? 'This change was too large to keep, so it cannot be undone.'
+        : 'This change touched a file that is not text, so it cannot be undone.',
   },
 
   /**

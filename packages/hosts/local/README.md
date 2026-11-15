@@ -34,7 +34,7 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
 | ---------------- | ---------------------------------------------------------------------------------------- |
 | `main.ts`        | The entry: the HTTP client, the five formats, md's sanitizing renderer                   |
 | `host-client.ts` | `HostClient` and `createHttpClient`: the only module that calls `fetch` or `EventSource` |
-| `page.ts`        | `startPage`: the layout, the tree's events, the address, the host's events               |
+| `page.ts`        | `startPage`: the layout, the tree's events, the address, the host's events, undo, redo   |
 | `pane.ts`        | `FilePane`: what is open, opening, saving, a change on disk, and the Changes view        |
 | `registry.ts`    | md, xmdl, sheet, image and code, in that order, with code as the fallback                |
 | `markdown.ts`    | The renderer `<md-preview>` is given: markdown-it, then DOMPurify                        |
@@ -150,7 +150,10 @@ beside it: `HostCommitRequest` in, `HostCommit` out, under the port's write lock
 | `GET /api/list`         | `{ nodes, truncated }`: every file and folder; past 20,000 nodes cut, and saying so                  |
 | `GET /api/file?path=`   | `{ ok: true, text, version }`, or a refusal                                                          |
 | `GET /api/raw?path=`    | the bytes, typed by extension, with `nosniff` and `Content-Security-Policy: sandbox`                 |
-| `PUT /api/files`        | body `{ changes: PortChange[] }`; `{ ok: true, versions }`, or a refusal                             |
+| `PUT /api/files`        | body `{ changes: PortChange[], unjournaled?: true }`; `{ ok: true, versions }`, or a refusal         |
+| `GET /api/journal`      | `{ ok: true, undo, redo }`: the label of the step each would take next, or `null`                    |
+| `POST /api/undo`        | `{ ok: true, label, moved: [{ from, path }], deleted }`: what undoing the newest step did            |
+| `POST /api/redo`        | the same, for the step last undone                                                                   |
 | `GET /api/status`       | `{ [path]: status }`: what differs from `HEAD`, deleted files included (`{}` outside git)            |
 | `GET /api/git`          | `{ state, branch }`: `repository`, `no-repository` or `no-git`; `branch` `null` if detached          |
 | `GET /api/changes`      | `{ ok: true, changes }`, each `{ path, status, from? }` (`from` for a moved file)                    |
@@ -161,8 +164,8 @@ beside it: `HostCommitRequest` in, `HostCommit` out, under the port's write lock
 | `POST /api/apps/lock`   | body `{ manifestPath, locked }`; `{ ok: true, errors, warnings }` (on lock, the lifecycle's)         |
 | `GET /api/apps/page`    | `?manifestPath=&path=&query=`; `{ ok, view, state, extras?, title, revision }` or `{ ok, redirect }` |
 | `GET /api/apps/project` | `?manifestPath=&view=<JSON>`; `{ ok: true, state, revision }`                                        |
-| `POST /api/apps/op`     | body `{ manifestPath, op, view? }`; `{ ok: true, reply, revision }`                                  |
-| `POST /api/apps/create` | body `{ app, folder, confirmRoot?, input }`; `{ ok: true, manifestPath }`                            |
+| `POST /api/apps/op`     | body `{ manifestPath, op, view? }`; `{ ok: true, reply, revision, notice? }`                         |
+| `POST /api/apps/create` | body `{ app, folder, confirmRoot?, input }`; `{ ok: true, manifestPath, notice? }`                   |
 | `GET /api/events`       | server-sent events (below)                                                                           |
 | `GET /`, `GET /<file>`  | the page: `dist/client`, or Vite in development mode (any path outside `/api/`)                      |
 
@@ -179,6 +182,8 @@ query value). A version is a SHA-256 of the file's bytes, as hex; only equality 
 | 409    | `HOST_APP_INVALID`: an app route for an instance discovery marks invalid (its manifest, or an overlap)                    |
 | 409    | `HOST_APP_OVERLAP`: a create whose region would share a path with a found instance's                                      |
 | 409    | `HOST_NOTHING_TO_RESOLVE`: tasks' `resolve`, since a folder has no upstream to differ from                                |
+| 409    | `HOST_NOTHING_TO_UNDO`, `HOST_NOTHING_TO_REDO`; `HOST_UNDO_CONFLICT` with the `path` that changed since the step          |
+| 409    | `HOST_CANNOT_UNDO` with its `reason` (`too-large`, `not-text`): send the same changes again with `unjournaled: true`      |
 | 409    | `HOST_PATH_EXISTS`, `HOST_FILE_CHANGED`; `HOST_NOT_A_REPOSITORY`, `HOST_GIT_NOT_FOUND` (a git route outside `repository`) |
 | 409    | A commit: `HOST_NOT_CHANGED`, `HOST_PATH_CONFLICTED`, `HOST_GIT_IN_PROGRESS`, `HOST_DETACHED_HEAD`, `HOST_BRANCH_EXISTS`  |
 | 400    | `HOST_PATH_OUTSIDE_ROOT`, `HOST_NOT_TEXT`, `HOST_FILE_TOO_LARGE`, `HOST_BAD_REQUEST`                                      |
@@ -192,7 +197,8 @@ query value). A version is a SHA-256 of the file's bytes, as hex; only equality 
 **Events** are unnamed server-sent events, one JSON object per `data:` line:
 `{"type":"changed","paths":[...]}` (these files' contents changed, appeared or went),
 `{"type":"listed"}` (the set of paths changed, so the list is stale), `{"type":"apps"}` (the
-instances found, or a lock, changed) and `{"type":"status"}`
+instances found, or a lock, changed), `{"type":"journal"}` (the steps undo and redo would take
+changed) and `{"type":"status"}`
 (git's `HEAD` or index changed: a commit, a stage or a switch, the host's own staging
 included, so the statuses are stale). The stream opens with `retry: 1000` and sends a comment
 every 25 seconds. The server's own writes are reported too.
@@ -216,6 +222,34 @@ every 25 seconds. The server's own writes are reported too.
   moved into an ignored folder stays tracked. An untracked file, a file in conflict, a `write`
   and a `create` stage nothing. If staging fails (another git holds `index.lock`), the write
   stands, `put` succeeds, and the host warns on its terminal.
+
+## Undo and redo
+
+`src/server/journal/`: the journal, in the server's memory for the run. It wraps the port and
+git's index (`port.index`), and nothing else, so its tests run over the memory port.
+
+- **What is a step:** the explorer's create, rename and delete (a `PUT /api/files` whose
+  changes are all `create`, `move` or `delete`, labelled from them: "Delete notes.md",
+  "Rename docs to notes", "Delete 3 files in drafts"), an app's op ("Inventory: add-item") and
+  a create ("Tasks: create"). A `PUT /api/files` with a `write` is an editor's save and is not
+  one. A commit, a lock and an unlock are not either, and a commit does not clear the journal.
+- **Before a step** the journal reads the old text of each `write`, `delete` and `move` with
+  content, and the index entries its deletes will remove, and sends each change at the version
+  it read (a writer's own `base` is kept): a file changed between the read and the write
+  refuses the step.
+- **Undo** writes the newest step's inverse in one `put`, each change at the version the step
+  left (a `create` at none), then puts back the index entries the step's deletes removed, with
+  `git update-index --index-info`. A file changed since (by anyone) refuses it with
+  `HOST_UNDO_CONFLICT`, naming the file; the step stays and nothing is written. **Redo** is the
+  same with the step's forward changes. Neither is refused by the lock, and neither adds a step.
+- **A step that cannot be kept:** a delete of a file the port cannot read as text (an image,
+  or over 2 MiB), or a step whose text is over 256 MiB. From the explorer it is refused with
+  `HOST_CANNOT_UNDO`; the page asks, and sends it again with `unjournaled: true`. From an app it
+  is written, and the answer carries `notice: { kind: 'cannot-undo', reason }`. Either way the
+  journal empties. A rename of an image carries no text, and is kept.
+- **Limits:** 1,000 steps and 256 MiB of kept text (`limits.ts`); past either, the oldest go.
+- **The page:** Undo and Redo in the explorer's header, with the step's label as the title;
+  Ctrl+Z and Ctrl+Shift+Z (Cmd on a Mac) when focus is in no editor, text field, dialog or menu.
 
 ## Safety
 

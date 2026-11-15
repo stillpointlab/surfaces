@@ -9,7 +9,8 @@
 // one offered. It answers the shell's ops (`answerOps`):
 //
 // - a core op goes to the server with `shell.opView(op)`, read before the first
-//   wait, and its reply to `shell.learn(op, reply)`;
+//   wait, and its reply to `shell.learn(op, reply)`; one the host wrote with no
+//   undo step (its `notice`) says so in the page's notice;
 // - `project` reads one view; `refresh` reads the listing, the statuses and the
 //   instances again;
 // - `checkin`, the shell's check-in review confirmed, is the page's commit of
@@ -415,6 +416,13 @@ export class AppPane {
       this.ops.delete(sending);
     }
     if (!answer.ok) return answer;
+    // Written, but with no step: say it cannot be undone.
+    if (answer.notice?.kind === 'cannot-undo') {
+      this.options.notify({
+        text: words.journal.opCannotUndo(answer.notice.reason),
+        tone: 'warning',
+      });
+    }
     if (answer.revision !== undefined && this.mounted === mounted) {
       mounted.shell.learn(op, answer.reply);
       // What the reply showed is what the page now is.

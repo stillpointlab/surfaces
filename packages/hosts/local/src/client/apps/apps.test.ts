@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { COMMIT_WORDS } from '../commit/rows';
 import { startPage } from '../page';
 import { fakeHost, fakeRegistry } from '../test-support';
+import { words } from '../words';
 
 import { editorLink } from './page-ops';
 import { appTreeView } from './tree-view';
@@ -371,6 +372,22 @@ describe('the app pane', () => {
     expect(shell().learned).toEqual([
       { op: { type: 'add-item', path: 'x.yaml' }, reply: { done: 1 } },
     ]);
+  });
+
+  it('says in the notice when the host wrote an op with no undo step', async () => {
+    start();
+    await page.ready;
+    await openHome();
+    host.opAnswer = () => ({
+      ok: true,
+      reply: { done: true },
+      revision: 'r1',
+      notice: { kind: 'cannot-undo', reason: 'not-text' },
+    });
+    const reply = await requestOp(shell(), { type: 'add-item', path: 'x.yaml' } as never);
+    expect(reply).toEqual({ ok: true, done: true });
+    expect(notice().dataset.tone).toBe('warning');
+    expect(notice().textContent).toContain(words.journal.opCannotUndo('not-text'));
   });
 
   it('answers project and refresh, and link-editor with the file’s editor address', async () => {

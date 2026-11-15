@@ -5,6 +5,10 @@
 // kept, and only a write that landed closes it. While a write runs, a second
 // confirm, Enter and Escape do nothing.
 //
+// A write may answer with one more question (`FollowUp`): a delete the host cannot
+// keep to undo asks whether to delete anyway. The question shows in the dialog,
+// the confirm button takes its words, and confirming runs the follow-up's write.
+//
 // Not `close-on-overlay-click`, for the reason `confirm.ts` gives.
 
 import '@stillpointlab/modal-dialog-component';
@@ -14,8 +18,15 @@ import { words } from '../words';
 
 import type { ModalDialog } from '@stillpointlab/modal-dialog-component';
 
-/** The write a confirm runs: null when it landed, or the message to show. */
-export type Run<T> = (value: T) => Promise<string | null>;
+/** One more question a write asks before it lands, and the write that answers it. */
+export interface FollowUp {
+  question: string;
+  confirm: string;
+  run: () => Promise<string | null>;
+}
+
+/** The write a confirm runs: null when it landed, the message to show, or one more question. */
+export type Run<T> = (value: T) => Promise<string | null | FollowUp>;
 
 export interface FieldRequest {
   title: string;
@@ -130,8 +141,9 @@ export class FileOpDialog {
     confirm: string,
     danger: boolean,
     focus: () => void,
-    submit: () => Promise<string | null>
+    first: () => Promise<string | null | FollowUp>
   ): Promise<boolean> {
+    let submit = first;
     // One at a time: a second, while the first is open, is declined.
     if (this.asking) return Promise.resolve(false);
     this.asking = true;
@@ -139,9 +151,10 @@ export class FileOpDialog {
     dialog.title = title;
     render(
       dialog,
-      html`<div slot="body" class="file-op-body">${body}<p id="${ERROR_ID}" class="file-op-error" role="alert" hidden></p></div><div slot="footer" class="confirm-actions"><button type="button" class="button" data-answer="cancel">${words.fileOps.cancel}</button><button type="button" class="button ${danger ? 'button-danger' : 'button-primary'}" data-answer="confirm">${confirm}</button></div>`
+      html`<div slot="body" class="file-op-body">${body}<p class="file-op-question" role="alert" hidden></p><p id="${ERROR_ID}" class="file-op-error" role="alert" hidden></p></div><div slot="footer" class="confirm-actions"><button type="button" class="button" data-answer="cancel">${words.fileOps.cancel}</button><button type="button" class="button ${danger ? 'button-danger' : 'button-primary'}" data-answer="confirm">${confirm}</button></div>`
     );
     const error = dialog.querySelector<HTMLElement>(`#${ERROR_ID}`)!;
+    const question = dialog.querySelector<HTMLElement>('.file-op-question')!;
 
     const show = (message: string | null) => {
       error.hidden = message === null;
@@ -172,13 +185,25 @@ export class FileOpDialog {
       const go = async () => {
         if (this.busy) return;
         setBusy(true);
-        let message: string | null;
+        let message: string | null | FollowUp;
         try {
           message = await submit();
         } catch (error) {
           message = String(error);
         }
         setBusy(false);
+        if (message !== null && typeof message === 'object') {
+          // One more question: confirming now runs its write.
+          const followUp = message;
+          submit = followUp.run;
+          show(null);
+          question.hidden = false;
+          question.textContent = followUp.question;
+          const button = this.confirmButton();
+          if (button) button.textContent = followUp.confirm;
+          button?.focus();
+          return;
+        }
         if (message === null) {
           landed = true;
           dialog.close();
