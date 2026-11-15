@@ -228,6 +228,76 @@ writes are the server's own: the lock does not refuse them, and they add no new 
 - With an app open, the keys undo the app's last op, since focus is in neither an editor nor a
   text field. In an app's dialog with a field focused, they are the field's.
 
+## As built
+
+_2026-11-15, by an Opus 5.5 sub-agent; reviewed and checked by the orchestrating agent, who
+looked at the screenshots. Where the work departed from the text above, this is the record. The
+package's README has the routes in full._
+
+**Server:**
+
+- **`createJournal({ port, index?, … })`** answers `port(label)`, `write(changes)` for a write
+  with no step, `undo()`, `redo()` and `labels()`. Every step, undo and redo goes through one
+  queue, so a step's read and its write are never split by another of the journal's own.
+- **`PUT /api/files`** takes `{ changes, unjournaled? }`. A call with a `write` in it is an
+  editor's save and goes straight to the port.
+- **`GET /api/journal`** answers `{ ok, undo, redo }`, each a label or `null`. **`POST
+/api/undo`** and **`POST /api/redo`** answer `{ ok, label, moved, deleted }`: the paths the
+  step's own write moved and deleted, for the page to follow.
+- **An app's op and a create** answer a `notice`, `{ kind: 'cannot-undo', reason }`, when the
+  step could not be kept. The create dialog does not show it yet.
+- **Codes, all 409:** `HOST_NOTHING_TO_UNDO`, `HOST_NOTHING_TO_REDO` (the text above named
+  only the first), `HOST_UNDO_CONFLICT` with the `path`, for a redo too, and `HOST_CANNOT_UNDO`
+  with its `reason`, `too-large` or `not-text`.
+- **A conflict's words:** "“`<label>`” cannot be undone: "`<path>`" changed since. Nothing was
+  written." Or there is a file at the path now, or the path is gone.
+- **The `journal` event** is sent on every change to the steps.
+- **A step's `bytes`** counts the text of its inverse and of its forward changes.
+- **Redo puts the index back too.** The redo side keeps the entries the undo's own deletes
+  removed, so a created file the person staged, undone and done again, is staged again.
+- **A write or a move with content of a file the port cannot read** is `not-text` as well; only
+  an app's op can send one.
+- **The journal is emptied only when the unkept write lands.**
+- **The labels are worded in the server** (`journal/labels.ts`): "Delete x.md", "Rename a.md to
+  b.md", "Move a.md to docs", "Delete 3 files in notes", "Rename docs to notes", "Inventory:
+  add-item", "Tasks: move-file", "Inventory: create".
+- **The node port's git** has `indexEntries(paths)` and `restoreIndex(entries)`. The restore
+  takes the port's write lock on its own, after the undo's `put`, so a commit could come
+  between the two. A restore that fails is a warning.
+
+**Page:**
+
+- **The buttons are two glyphs, ↶ and ↷,** not the words: with the words the header cut the
+  folder's name to a letter beside a Commit count. The title and the name are "Undo: `<label>`"
+  and "Redo: `<label>`", or "Nothing to undo" and "Nothing to redo".
+- **A notice after an undo or a redo,** "Undone: `<label>`" or "Redone: `<label>`", which the
+  text above did not have: a key pressed in an app otherwise says nothing.
+- **The keys are not the page's** when a dialog is open, a menu has the event, the file pane
+  shows its editor and the event came from it, or the focused element is a text field.
+- **An undo that deletes the open file while it has unsaved edits leaves it open,** under the
+  "deleted on disk" banner, so the edits are not lost. A file with none closes.
+- **The delete's second question** is a warning in the same dialog, with Delete as its button.
+- **`FilePane.followWrite`** hands the write's answer to the function that says where a path
+  went.
+
+**By hand,** against the built server in Chromium, light and dark, in a scratch repository:
+
+- a folder of text files deleted, undone from the header with `git status` empty again, and
+  redone;
+- a file open with unsaved edits renamed and the rename undone: the editor kept its edits
+  under the old name, with no banner;
+- Ctrl+Z in the md editor undoing text and no host step;
+- a folder with an image: the question, Cancel leaving it, Delete writing it with no step and
+  the journal emptied;
+- a card moved to another column, undone from the header, by the key with focus on the page,
+  and by the key with focus on a card's button, the board and the file following each time;
+- a card moved to another phase and undone, `git status` empty;
+- an inventory item added and undone; an inventory created from a folder's menu and undone,
+  its row gone;
+- a file changed from a shell after a step: the undo refused, the file named, nothing
+  written, and working once the text was put back;
+- a commit between a step and its undo: the undo is a new change.
+
 ## Clarifications
 
 - **A commit does not clear the journal.** Undoing a committed step makes a new uncommitted
