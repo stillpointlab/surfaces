@@ -1,16 +1,24 @@
 /**
  * The tasks app as a host runs it (the app contract's `AppModule`): the
  * lifecycle and the core, which of the board's and the strip's ops are the
- * core's, the elements' replies, and how a host treats each refusal.
+ * core's, the elements' replies, how a host treats each refusal, and what a
+ * host would otherwise keep a file for: the copy, the bounds, the pages, where
+ * a create's files fit, and the facts file changes make.
  */
 import { fail, ok } from '@stillpointlab/common-format/app';
 
+import { tasksBounds } from './bounds.js';
+import { tasksFromChanges } from './changes.js';
 import { tasksCore } from './core.js';
+import { placeTasksCreate } from './create.js';
 import { tasksLifecycle } from './lifecycle.js';
+import { tasksMeta } from './meta.js';
+import { tasksPages } from './pages.js';
 import { projectResolvedCard, resolveTasks } from './projection.js';
 
 import type { TasksCoreOps, TasksViews } from './core.js';
-import type { CreateTasksInput } from './create.js';
+import type { CreateTasksInput, TasksCreatePlan } from './create.js';
+import type { TasksCreateFields } from './createRules.js';
 import type { TaskBoardOps, TasksNavOps } from './elementOps.js';
 import type { TasksHostFacts, TasksSnapshot } from './projection.js';
 import type { AppCoreOp, AppModule, Result, RefusalClass } from '@stillpointlab/common-format/app';
@@ -76,7 +84,8 @@ export const tasksModule: AppModule<
   TasksHostFacts,
   CreateTasksInput,
   TasksSnapshot,
-  TasksElementOps
+  TasksElementOps,
+  TasksCreateFields
 > = {
   id: 'tasks',
   lifecycle: tasksLifecycle,
@@ -135,4 +144,10 @@ export const tasksModule: AppModule<
     if (op === 'add-tag' && TAG_REWRITE_REFUSALS.has(code)) return 'invalid';
     return REFUSAL_CLASS[code] ?? 'invalid';
   },
+  meta: tasksMeta,
+  bounds: tasksBounds,
+  pages: tasksPages,
+  // The plan is the core's `seed`'s; placing it reads only its files.
+  placeCreate: (plan, paths) => placeTasksCreate(plan as TasksCreatePlan, paths),
+  fromChanges: tasksFromChanges,
 };

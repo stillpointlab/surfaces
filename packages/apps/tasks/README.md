@@ -13,6 +13,10 @@ entry (`.`) exports:
 - seeds: `tasksManifestSeedContent`; and the pool's `formatOrderFile` and `rewriteOrderFile`;
 - the lifecycle: `tasksLifecycle`, the `AppLifecycle` a host mounts a tasks folder with (its scope,
   and the boards its tree shows);
+- the module: `tasksModule`, the `AppModule` a host runs the app with (below), and what it carries
+  beside the core: `tasksMeta` (name, icon, create copy), `tasksBounds` (the op, view and create
+  schemas a host checks input with), `tasksPages` (the landing at `''`, `/stage/:stage` and
+  `/stage/:stage/phase/:phase`) and `tasksFromChanges` (the facts from a host's file changes);
 - no exceptions for rules: the manifest patches answer `Result<{ content }>` from
   `@stillpointlab/common-format/app`, and a refusal carries a `code`, a `message` and, where there
   are some, zod `details`, which the host maps to its own errors.
@@ -28,6 +32,8 @@ manifest's zod schemas at module scope, which a bundler cannot drop):
 A third, `./create`, is the create form's checks (`checkTasksCreate`, with the limits and default
 columns and kinds the form shows). It imports only `./paths` and `./types`, and `planTasksCreate`
 runs the same checks, so the form and the plan cannot drift.
+`./meta` is `tasksMeta` alone; it imports only `./paths`, so a host page that lists the apps loads
+no zod.
 
 It was moved as-is from Context Manager (source commit `30428c3c`), where the host side stays:
 drafts, check-in, the pool and board services, routes and the task board. The rest of this README
@@ -138,6 +144,20 @@ move or a new card, the pool of the view on screen for a reorder, the stage and 
 one. `create-card` is stamped with the host's time. Refusals keep the statuses Context Manager's
 endpoints send. The op maps both elements ask with (`TaskBoardOps`, `TasksNavOps`) live in
 `elementOps.ts`, DOM-free, and the element entry re-exports them.
+
+Beside the core, the module carries what a host would otherwise keep a file for. `bounds` checks an
+op (the core's twelve; a host bounds its own), a view and a create's columns and kinds, refusing
+with `APP_OP_INVALID`, `APP_VIEW_INVALID` or `APP_CREATE_INVALID` and the schema's issues. `pages`
+are the landing (the pointer's phase, else the highest, as a redirect; an old `?path=` link to a
+phase redirects for good, and one to a board outside the convention shows it), a stage and a
+phase, each with the strip's state as `extras.nav` and the manifest's folder as `extras.docsRoot`.
+A page answers not found for a number that is not positive and when there is no nav to project,
+and joins a redirect as text onto its base, so a fragment base works. `placeCreate` is
+`placeTasksCreate`. `fromChanges` reads a host's file statuses as facts: a changed, new or moved
+card is `changed`, a new one is in the snapshot's `created`, a moved one has `movedFrom` and a
+pending move; the order file is `changed` the same way; the manifest and new `.gitkeep` files are
+the housekeeping. What statuses cannot say (a column that moved, a divergence, pull requests) it
+leaves out.
 
 **Drafts.** When to rebase a diverged draft is the host's decision; the comparison is the core's.
 `metadataOnlyCheck(draft, base)` says whether a draft changes only its base's frontmatter, or
