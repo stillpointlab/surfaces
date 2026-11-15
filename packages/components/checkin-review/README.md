@@ -40,6 +40,9 @@ alone. Each row's label carries its text as `data-label` too, so a host can colo
 - `setFiles(files)` gives it the files again while it is open: a row keeps its check, a row that
   went goes, and a row that appeared starts unchecked. Files set while the host answers are shown
   once it has.
+- `showMessage(message)` puts a host's line under the form, where a refusal goes, that is not a
+  refusal (a read that failed while it was open); `null` clears it. Focus stays where it is, and
+  the next change to the form clears it.
 - `close()` closes it, asking nothing. An answer already asked for still raises its events.
 - `isOpen` and `isBusy` (the host is answering).
 

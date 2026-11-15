@@ -18,6 +18,10 @@
 // `checkin-accepted` with the op and the reply. While the host answers, a
 // second confirm, Enter, Escape and the close button do nothing.
 //
+// `showMessage` puts the host's own line under the form, where a refusal goes,
+// without moving focus; the next change to the form clears it, as it clears a
+// refusal.
+//
 // `setFiles` while it is open reads the rows again: a row keeps its check, a
 // row that went goes, and a row that appeared starts unchecked, so nothing is
 // checked in that was not on screen when it was checked. Files set while the
@@ -70,6 +74,11 @@ export interface CheckinReviewElement extends HTMLElement {
   open(input: CheckinReviewInput): void;
   /** The files changed while the review is open. Checks are kept as the commit dialog keeps them. */
   setFiles(files: readonly CheckinFile[]): void;
+  /**
+   * A message from the host under the form that is not a refusal (a read that
+   * failed while the review is open), or `null` to clear it. Focus stays put.
+   */
+  showMessage(message: string | null): void;
   close(): void;
 }
 
@@ -203,6 +212,11 @@ export class CheckinReview extends HTMLElement implements CheckinReviewElement {
     }
     this.rows = rowsFor(files, this.rows);
     this.showRows();
+  }
+
+  showMessage(message: string | null): void {
+    if (!this.isOpen) return;
+    this.showError(message);
   }
 
   /** Close it, without asking anything; an answer already asked for still raises its events. */

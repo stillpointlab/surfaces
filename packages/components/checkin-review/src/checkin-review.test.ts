@@ -200,6 +200,20 @@ describe('the rows', () => {
     expect(asked).toEqual([]);
   });
 
+  it('shows a message from the host under the form, leaving focus where it is', () => {
+    open();
+    box('a.md').focus();
+    review.showMessage(`The changes could not be read. ${HOSTILE_PAYLOAD}`);
+    expect(error()).toBe(`The changes could not be read. ${HOSTILE_PAYLOAD}`);
+    expectNoHostileMarkup(review);
+    expect(document.activeElement).toBe(box('a.md'));
+    box('a.md').click();
+    expect(error()).toBeNull();
+    review.showMessage('Again.');
+    review.showMessage(null);
+    expect(error()).toBeNull();
+  });
+
   it('setFiles on a closed review does nothing', () => {
     review = document.createElement('checkin-review') as CheckinReview;
     document.body.append(review);
