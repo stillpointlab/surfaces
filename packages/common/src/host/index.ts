@@ -5,10 +5,10 @@
 //
 // A light entry (`@stillpointlab/common-format/host`).
 
-import type { FileChange, FolderNode, Result } from '../app';
+import type { AppFileChange, FileChange, FolderNode, Result } from '../app';
 
 /** How a file differs from the last commit. */
-export type FileStatus = 'changed' | 'new' | 'moved' | 'deleted';
+export type FileStatus = AppFileChange['status'];
 
 /**
  * A change a host writes. `base` is the version the writer read; absent means
@@ -67,13 +67,10 @@ export interface HostGit {
 
 /**
  * One file that differs from the last commit, deleted files included. A moved
- * file carries the path it had (`from`), so a commit can name both.
+ * file carries the path it had (`from`), so a commit can name both. The app
+ * contract's `AppFileChange`: what a host reports is what a module reads.
  */
-export interface HostChange {
-  path: string;
-  status: FileStatus;
-  from?: string;
-}
+export type HostChange = AppFileChange;
 
 /**
  * A commit of chosen files. `paths` are relative to the host's root; naming

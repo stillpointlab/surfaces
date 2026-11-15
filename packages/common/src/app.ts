@@ -186,6 +186,97 @@ export interface AppHostInput {
   now: string;
 }
 
+/** What a host shows for the app before any instance is open: its name, its icon, its create copy. */
+export interface AppMeta {
+  /** The app's name in a host's tree and menus: `Inventory`. */
+  label: string;
+  /** Its icon there: an `<spl-icon>` name. */
+  icon: string;
+  /** How a host offers to create one. Absent: the app is not created from nothing. */
+  create?: {
+    /** The app as a sentence names one: "This repository already has an inventory at …". */
+    noun: string;
+    /** The folder a create form fills in. */
+    defaultFolder: string;
+    /** The folder rule's example: `“inventory” or “home/inventory”`. */
+    folderExample?: string;
+    /** Under the folder field: where the app's files live. Plain text. */
+    folderHelp?: string;
+    /** Asked before creating at the root of a folder: the warning, and the checkbox that consents. */
+    rootConsent?: { warning: string; confirm: string };
+  };
+}
+
+/**
+ * The app's bounds on what reaches its core from outside: untyped input in, the
+ * typed thing (trimmed, defaults applied) or a refusal out. A refusal's `code` is
+ * `APP_OP_INVALID`, `APP_VIEW_INVALID` or `APP_CREATE_INVALID`, with the schema's
+ * causes in `details`. Each app builds them from its own schemas, so `common`
+ * carries no schema library.
+ */
+export interface AppBounds<V extends AppViewMap, E extends AppOpMap, CreateInput> {
+  /** One of the module's core ops, as an element raised it. */
+  op(input: unknown): Result<{ op: AppOp<E> }>;
+  /** One view, as a page or a read asks for it. */
+  view(input: unknown): Result<{ view: AppView<V> }>;
+  /** A create form's input: the seed, less what the host adds (the folder). */
+  create(input: unknown): Result<{ input: CreateInput }>;
+}
+
+/** What a page resolves from. */
+export interface AppPageInput {
+  /** The sub-path's parameters, by name, as `matchAppPage` read them (decoded, not yet checked). */
+  params: Record<string, string>;
+  /** The query's parameters, decoded. */
+  query: Record<string, string>;
+  /**
+   * Where the app's pages hang, for a redirect: a path (`/apps/x`) or a fragment
+   * (`#/app/docs/tasks/tasks.yaml`). A page joins it as text, never as a `URL`.
+   */
+  base: string;
+  /** The instance's manifest. */
+  manifestPath: string;
+  /** Project any view of the instance (null: nothing to project), for a page that chooses its view from another. */
+  project(view: { type: string } & Record<string, unknown>): Promise<object | null>;
+}
+
+/**
+ * What a page shows: a view (null: none, and the app renders its empty state)
+ * with what it embeds beside the state, a redirect to the page that shows it,
+ * or nothing (a parameter the page refuses, or a subject it cannot find).
+ */
+export type AppPageResolution =
+  | { view: ({ type: string } & Record<string, unknown>) | null; extras?: Record<string, unknown> }
+  | { redirect: string; permanent?: boolean }
+  | { notFound: true };
+
+/** One of an app's pages: a sub-path under the app's base, and what it shows. */
+export interface AppPage {
+  /** The path under the app's base: `''`, `/room/:roomSlug`. A `:name` segment is a parameter. */
+  path: string;
+  /** What the page shows. It checks its own parameters, and answers `{ notFound: true }` for a bad one. */
+  resolve(input: AppPageInput): Promise<AppPageResolution>;
+  /** The document title, from the projected state (null: the app's empty state). */
+  title(state: object | null): string;
+  /** Whether a missing subject renders an empty page instead of not found. */
+  emptyWhenMissing: boolean;
+}
+
+/** One file that differs from the last check-in, as a host that knows only files reports it. */
+export interface AppFileChange {
+  path: string;
+  status: 'changed' | 'new' | 'moved' | 'deleted';
+  /** For a moved file, the path it had. */
+  from?: string;
+}
+
+/** What a module tells its core from file changes alone. */
+export interface AppKnown<Facts, S extends AppSnapshot> {
+  facts: Facts;
+  /** The snapshot's host parts: plain data the core reads beyond the files (tasks' pending moves). */
+  snapshot?: Partial<S>;
+}
+
 /**
  * What a module's reply reads: the instance after the op's changes are
  * written, the host's facts about it, and the view the page shows (an op whose
@@ -201,8 +292,11 @@ export interface AppReplyContext<S extends AppSnapshot, Facts, V extends AppView
  * Everything a host needs to run one app without knowing which app it is: the
  * lifecycle and the core, which element ops are the core's and which the host
  * answers itself, how an element op becomes a core op and how the core's
- * answer becomes the element's reply, and how to treat each refusal. DOM-free:
- * a host finds the element through its own registration.
+ * answer becomes the element's reply, and how to treat each refusal; and what
+ * is the app's own beyond its core: its copy, its bounds, its pages, where a
+ * create's files fit, and what file changes mean to it. DOM-free: a host finds
+ * the element through its own registration. `CreateInput` is what the create
+ * bound answers: the seed, less what a host adds to it.
  */
 export interface AppModule<
   V extends AppViewMap,
@@ -211,6 +305,7 @@ export interface AppModule<
   Seed,
   S extends AppSnapshot,
   E extends AppOpMap,
+  CreateInput = Seed,
 > {
   /** The app's name: `inventory`, `tasks`. */
   id: string;
@@ -233,6 +328,69 @@ export interface AppModule<
   ): Result<object>;
   /** How a host treats the core's refusal of one op. */
   refusalClass(code: string, op: string): RefusalClass;
+  // The five below keep a host from holding a file per app. Optional until
+  // every app supplies them (app-module-grows, step 2).
+  /** The app's name, icon and create copy. */
+  meta?: AppMeta;
+  /** The app's bounds on an op, a view and a create input. */
+  bounds?: AppBounds<V, E, CreateInput>;
+  /** The app's pages under its base. */
+  pages?: readonly AppPage[];
+  /**
+   * Whether a seeded plan's files fit among a host's paths: the files still to
+   * create, or the app's refusal for the first path in the way. `reusable` are
+   * files an earlier, unfinished attempt at the same create left.
+   */
+  placeCreate?(
+    plan: { manifestPath: string; files: FileChange[] },
+    paths: { taken: readonly string[]; reusable?: readonly string[] }
+  ): Result<{ files: FileChange[] }>;
+  /**
+   * The facts, and the snapshot's host parts, for a host that knows nothing but
+   * which files changed since the last check-in: the app's counterpart of a
+   * format descriptor's `apply`. A host that knows more builds its facts itself.
+   */
+  fromChanges?(changes: readonly AppFileChange[], snapshot: S): AppKnown<Facts, S>;
+}
+
+/**
+ * The page a sub-path names, with its parameters, or `null`. The sub-path is
+ * what follows the app's base, without its query: `''` or `/room/kitchen`; one
+ * trailing slash is ignored. A parameter is one non-empty segment, decoded; a
+ * segment that does not decode matches nothing. The first page that matches wins.
+ */
+export function matchAppPage(
+  pages: readonly AppPage[],
+  subPath: string
+): { page: AppPage; params: Record<string, string> } | null {
+  const segments = segmentsOf(subPath);
+  if (segments === null) return null;
+  for (const page of pages) {
+    const pattern = segmentsOf(page.path);
+    if (pattern === null || pattern.length !== segments.length) continue;
+    const params: Record<string, string> = {};
+    const matched = pattern.every((part, i) => {
+      const segment = segments[i];
+      if (!part.startsWith(':')) return part === segment;
+      if (segment === '') return false;
+      try {
+        params[part.slice(1)] = decodeURIComponent(segment);
+        return true;
+      } catch {
+        return false;
+      }
+    });
+    if (matched) return { page, params };
+  }
+  return null;
+}
+
+/** A sub-path's segments: `''` and `/` have none; anything else starts with `/`. */
+function segmentsOf(path: string): string[] | null {
+  const trimmed = path.endsWith('/') ? path.slice(0, -1) : path;
+  if (trimmed === '') return [];
+  if (!trimmed.startsWith('/')) return null;
+  return trimmed.slice(1).split('/');
 }
 
 /** Any app's module, for a host that runs whichever it is given. */

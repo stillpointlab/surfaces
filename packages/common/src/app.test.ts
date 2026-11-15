@@ -6,13 +6,14 @@ import {
   APP_OP_EVENT,
   createReadyGate,
   fail,
+  matchAppPage,
   ok,
   placeNewFiles,
   requestOp,
 } from './app';
 import { describeAppElementContract } from './testing/app-element';
 
-import type { AppElement, AppOpDetail, Result } from './app';
+import type { AppElement, AppOpDetail, AppPage, Result } from './app';
 
 type SampleOps = {
   rename: { op: { path: string; title: string }; reply: { title: string } };
@@ -60,6 +61,60 @@ describe('placeNewFiles', () => {
       ok: false,
       path: 'inventory',
     });
+  });
+});
+
+describe('matchAppPage', () => {
+  const page = (path: string): AppPage => ({
+    path,
+    resolve: async () => ({ notFound: true }),
+    title: () => path,
+    emptyWhenMissing: false,
+  });
+  const landing = page('');
+  const room = page('/room/:roomSlug');
+  const phase = page('/stage/:stage/phase/:phase');
+  const stage = page('/stage/:stage');
+  const pages = [landing, room, phase, stage];
+
+  it('matches the empty path with no parameters, a trailing slash ignored', () => {
+    expect(matchAppPage(pages, '')).toEqual({ page: landing, params: {} });
+    expect(matchAppPage(pages, '/')).toEqual({ page: landing, params: {} });
+  });
+
+  it('reads a parameter, decoded', () => {
+    expect(matchAppPage(pages, '/room/kitchen')).toEqual({
+      page: room,
+      params: { roomSlug: 'kitchen' },
+    });
+    expect(matchAppPage(pages, '/room/a%2Fb/')).toEqual({
+      page: room,
+      params: { roomSlug: 'a/b' },
+    });
+  });
+
+  it('reads two parameters, and tells a page from a shorter one', () => {
+    expect(matchAppPage(pages, '/stage/2/phase/3')).toEqual({
+      page: phase,
+      params: { stage: '2', phase: '3' },
+    });
+    expect(matchAppPage(pages, '/stage/2')).toEqual({ page: stage, params: { stage: '2' } });
+  });
+
+  it('answers null when no page matches', () => {
+    for (const subPath of [
+      '/room',
+      '/room/',
+      '/room//',
+      '/room/kitchen/extra',
+      '/zone/kitchen',
+      'room/kitchen',
+      '/room/%E0%A4%A',
+      '/stage/2/phase',
+    ]) {
+      expect(matchAppPage(pages, subPath), subPath).toBeNull();
+    }
+    expect(matchAppPage([], '')).toBeNull();
   });
 });
 
