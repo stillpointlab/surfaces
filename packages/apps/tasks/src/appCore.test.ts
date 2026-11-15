@@ -1,4 +1,5 @@
 import { describeAppCore } from '@stillpointlab/common-format/testing/app';
+import { expect } from 'vitest';
 
 import { detectBoards, detectPool, kindPathsOf } from './boardDetection.js';
 import { tasksCore } from './core.js';
@@ -16,9 +17,13 @@ import {
 import { tasksModule } from './module.js';
 import { parseOrderFileDetailed } from './pool.js';
 
-import type { TreeNode } from './types.js';
+import type { SharedTaskBoardState, SharedTaskStageState, TreeNode } from './types.js';
 import type { Result } from '@stillpointlab/common-format/app';
-import type { AppFixture, AppMountResult } from '@stillpointlab/common-format/testing/app';
+import type {
+  AppCoreRoundTrip,
+  AppFixture,
+  AppMountResult,
+} from '@stillpointlab/common-format/testing/app';
 
 function written(result: Result<{ content: string }>): string {
   if (!result.ok) throw new Error(`the rewrite refused: ${result.code} ${result.message}`);
@@ -150,6 +155,21 @@ const surfacesShaped = {
   'spec.template.md': '# Spec\n',
 };
 
+// A board outside the stage/phase convention, which the strip lists under
+// "Boards" and an old `?path=` link shows.
+const flat = {
+  'tasks.yaml': [
+    'version: 1',
+    'columns:',
+    '  - id: todo',
+    '    label: Todo',
+    'kinds:',
+    '  - id: spec',
+    '',
+  ].join('\n'),
+  'roadmap/specs/plan.md': '---\ncolumn: todo\n---\n\n# Spec: plan\n',
+};
+
 /** Mount the way Context Manager's tasks lifecycle derives the scope. */
 function mount(files: AppFixture, manifestPath: string): AppMountResult {
   const parsed = parseTasksManifest(files[manifestPath] ?? '');
@@ -179,14 +199,286 @@ const cardParses = (text: string): boolean => parseFrontmatter(text).parseError 
 const card = 'stage1/phase2/specs/move-the-core.md';
 const exists = (path: string): boolean => path in configured;
 
+/** The ops the round trip applies, as the core takes them. */
+const ROUND_TRIPS: AppCoreRoundTrip[] = [
+  {
+    name: 'move a card to a column',
+    fixture: 'configured',
+    op: { type: 'move', path: card, column: 'done' },
+    view: { type: 'board', path: 'stage1/phase2' },
+  },
+  {
+    name: 'move a card that has no frontmatter',
+    fixture: 'configured',
+    op: { type: 'move', path: 'stage1/phase2/specs/no-frontmatter.md', column: 'done' },
+    view: { type: 'board', path: 'stage1/phase2' },
+  },
+  {
+    name: "move a card's file to the pool, relinking it",
+    fixture: 'configured',
+    op: { type: 'move-file', path: card, target: { pool: true } },
+    view: { type: 'board', path: 'stage1/phase2' },
+  },
+  {
+    name: "move a card's file to an empty phase",
+    fixture: 'minimal',
+    op: {
+      type: 'move-file',
+      path: 'stage1/phase1/specs/first.md',
+      target: { boardPath: 'stage1/phase2', column: 'done' },
+    },
+    view: { type: 'stage', stage: 1 },
+  },
+  {
+    name: "set a card's title",
+    fixture: 'configured',
+    op: { type: 'set-title', path: card, title: 'Move the core' },
+    view: { type: 'board', path: 'stage1/phase2' },
+  },
+  {
+    name: "set a card's tags",
+    fixture: 'configured',
+    op: { type: 'set-tags', path: card, tags: ['CODE', 'docs'] },
+    view: { type: 'board', path: 'stage1/phase2' },
+  },
+  {
+    name: 'create a card from its template',
+    fixture: 'configured',
+    op: {
+      type: 'create-card',
+      boardPath: 'stage1/phase2',
+      title: 'Write the walks',
+      kind: 'spec',
+      now: '2026-11-09T12:00:00.000Z',
+    },
+    view: { type: 'board', path: 'stage1/phase2' },
+  },
+  {
+    name: 'create a card from a stub, in the pool',
+    fixture: 'configured',
+    op: {
+      type: 'create-card',
+      boardPath: 'unassigned',
+      title: 'An idea',
+      kind: 'seed',
+      now: '2026-11-09T12:00:00.000Z',
+    },
+    view: { type: 'nav' },
+  },
+  {
+    name: 'reorder the pool, keeping its comments',
+    fixture: 'configured',
+    op: {
+      type: 'reorder-pool',
+      paths: ['unassigned/specs/later.md', 'unassigned/seeds/idea.md'],
+    },
+    view: { type: 'board', path: 'stage1/phase2' },
+  },
+  {
+    name: 'move a pool card to a phase, pruning the order file',
+    fixture: 'configured',
+    op: {
+      type: 'move-file',
+      path: 'unassigned/specs/later.md',
+      target: { boardPath: 'stage1/phase2', column: 'todo' },
+    },
+    view: { type: 'board', path: 'stage1/phase2' },
+  },
+  {
+    name: 'fix the references to a moved card',
+    fixture: 'configured',
+    op: {
+      type: 'fix-references',
+      path: 'unassigned/seeds/idea.md',
+      referencingPaths: ['stage1/phase2/specs/follow-up.md'],
+    },
+    snapshot: { moves: { 'unassigned/seeds/idea.md': ['stage1/phase1/seeds/idea.md'] } },
+    view: { type: 'board', path: 'stage1/phase2' },
+  },
+  {
+    name: 'add a tag to the registry',
+    fixture: 'configured',
+    op: { type: 'add-tag', tag: 'infra' },
+    view: { type: 'board', path: 'stage1/phase2' },
+  },
+  {
+    name: 'add a column',
+    fixture: 'configured',
+    op: { type: 'edit-manifest', edit: { op: 'add-column', id: 'review', label: 'Review' } },
+    view: { type: 'board', path: 'stage1/phase2' },
+  },
+  {
+    name: 'relabel a kind, keeping its comment',
+    fixture: 'configured',
+    op: { type: 'edit-manifest', edit: { op: 'update-kind', id: 'seed', label: 'Seed' } },
+    view: { type: 'nav' },
+  },
+  {
+    name: 'set the done column',
+    fixture: 'surfaces-shaped',
+    op: { type: 'edit-manifest', edit: { op: 'set-done-column', id: 'todo' } },
+    view: { type: 'board', path: 'stage2/phase3' },
+  },
+  {
+    name: 'create the next phase',
+    fixture: 'surfaces-shaped',
+    op: { type: 'create-stage-phase', kind: 'phase', stage: 2 },
+    view: { type: 'nav' },
+  },
+  {
+    name: 'point current at a phase',
+    fixture: 'surfaces-shaped',
+    op: { type: 'set-current', stage: 2, phase: 1 },
+    view: { type: 'nav' },
+  },
+  {
+    name: 'close a phase, bringing a card along',
+    fixture: 'surfaces-shaped',
+    op: { type: 'close', kind: 'phase', paths: ['stage2/phase3/specs/tasks-core.md'] },
+    view: { type: 'stage', stage: 2 },
+  },
+];
+
+/** An op as the board raises it: a new card's time is the host's to add. */
+function asRaised(op: AppCoreRoundTrip['op']): AppCoreRoundTrip['op'] {
+  const { now: _now, ...raised } = op;
+  return op.type === 'create-card' ? raised : op;
+}
+
+/** A landing's redirect: the base, then a phase's page. */
+const phase = (stage: number, phaseNumber: number) => ({
+  redirect: `/stage/${stage}/phase/${phaseNumber}`,
+});
+
+/** One card on a board's state, or on any row of a stage's. */
+function cardOn(state: object, path: string): object | undefined {
+  const cards =
+    'phases' in state
+      ? (state as SharedTaskStageState).phases.flatMap((row) => row.cards)
+      : (state as SharedTaskBoardState).cards;
+  return cards.find((each) => each.path === path);
+}
+
 describeAppCore('tasks', {
   manifest: 'tasks.yaml',
   lifecycle: tasksLifecycle,
-  fixtures: { minimal, configured, 'surfaces-shaped': surfacesShaped },
+  fixtures: { minimal, configured, 'surfaces-shaped': surfacesShaped, flat },
   mount,
-  // The module checks wait for its meta, bounds, pages, placeCreate and
-  // fromChanges (app-module-grows, step 2): listed as to do until then.
-  module: { module: tasksModule },
+  module: {
+    module: tasksModule,
+    ops: ROUND_TRIPS.map(({ name, fixture, op, snapshot }) => ({
+      name,
+      fixture,
+      op: asRaised(op),
+      ...(snapshot ? { snapshot } : {}),
+    })),
+    overLong: { type: 'set-title', path: card, title: 'x'.repeat(201) },
+    pages: [
+      { name: 'the pointer’s phase', fixture: 'configured', path: '', answers: phase(1, 2) },
+      { name: 'the highest phase', fixture: 'minimal', path: '', answers: phase(1, 1) },
+      { name: 'the pointer, shaped', fixture: 'surfaces-shaped', path: '', answers: phase(2, 3) },
+      {
+        name: 'an old link to a phase',
+        fixture: 'configured',
+        path: '',
+        query: { path: 'stage1/phase2' },
+        answers: phase(1, 2),
+      },
+      {
+        name: 'an old link to a board outside the convention',
+        fixture: 'flat',
+        path: '',
+        query: { path: 'roadmap' },
+      },
+      { name: 'a bare manifest’s first phase', fixture: 'flat', path: '', answers: phase(1, 1) },
+      { name: 'a stage', fixture: 'configured', path: '/stage/1' },
+      { name: 'a stage, shaped', fixture: 'surfaces-shaped', path: '/stage/2' },
+      { name: 'a phase', fixture: 'configured', path: '/stage/1/phase/2' },
+      { name: 'a phase with no folder yet', fixture: 'configured', path: '/stage/1/phase/9' },
+      {
+        name: 'a stage that is no number',
+        fixture: 'configured',
+        path: '/stage/x',
+        answers: 'not-found',
+      },
+      { name: 'phase 0', fixture: 'configured', path: '/stage/1/phase/0', answers: 'not-found' },
+      {
+        name: 'a manifest gone',
+        fixture: 'configured',
+        path: '/stage/1/phase/2',
+        snapshot: { paths: [] },
+        answers: 'not-found',
+      },
+      { name: 'no such page', fixture: 'configured', path: '/board/x', answers: 'not-found' },
+    ],
+    changes: [
+      {
+        name: 'an edited card',
+        fixture: 'configured',
+        changes: [{ path: card, status: 'changed' }],
+        view: { type: 'board', path: 'stage1/phase2' },
+        shows: (state) => expect(cardOn(state, card)).toMatchObject({ changed: true }),
+      },
+      {
+        name: 'a card moved in from another phase',
+        fixture: 'configured',
+        changes: [
+          {
+            path: 'stage1/phase2/specs/follow-up.md',
+            status: 'moved',
+            from: 'stage1/phase1/specs/follow-up.md',
+          },
+        ],
+        view: { type: 'board', path: 'stage1/phase2' },
+        shows: (state) =>
+          expect(cardOn(state, 'stage1/phase2/specs/follow-up.md')).toMatchObject({
+            changed: true,
+            movedFrom: 'stage1/phase1/specs/follow-up.md',
+          }),
+      },
+      {
+        name: 'a new pool card, the order file, the manifest and a new folder',
+        fixture: 'configured',
+        changes: [
+          { path: 'unassigned/seeds/idea.md', status: 'new' },
+          { path: 'unassigned/order.yaml', status: 'changed' },
+          { path: 'tasks.yaml', status: 'changed' },
+          { path: 'stage1/phase3/.gitkeep', status: 'new' },
+          { path: 'notes.md', status: 'changed' },
+        ],
+        view: { type: 'board', path: 'stage1/phase2' },
+        shows: (state) => {
+          const board = state as SharedTaskBoardState;
+          expect(
+            board.pool.cards.find((each) => each.path === 'unassigned/seeds/idea.md')
+          ).toMatchObject({
+            changed: true,
+          });
+          expect(board.pool.order).toEqual({ changed: true });
+          expect(board.housekeeping).toEqual([
+            { path: 'stage1/phase3/.gitkeep', kind: 'scaffold' },
+            { path: 'tasks.yaml', kind: 'manifest' },
+          ]);
+        },
+      },
+      {
+        name: 'a card moved on the stage’s rows',
+        fixture: 'surfaces-shaped',
+        changes: [
+          {
+            path: 'stage2/phase3/specs/tasks-core.md',
+            status: 'moved',
+            from: 'stage2/phase1/specs/tasks-core.md',
+          },
+        ],
+        view: { type: 'stage', stage: 2 },
+        shows: (state) =>
+          expect(cardOn(state, 'stage2/phase3/specs/tasks-core.md')).toMatchObject({
+            movedFrom: 'stage2/phase1/specs/tasks-core.md',
+          }),
+      },
+    ],
+  },
   rewrites: [
     {
       name: 'move a card',
@@ -291,143 +583,6 @@ describeAppCore('tasks', {
         : path.endsWith('order.yaml')
           ? !parseOrderFileDetailed(text).invalid
           : cardParses(text),
-    ops: [
-      {
-        name: 'move a card to a column',
-        fixture: 'configured',
-        op: { type: 'move', path: card, column: 'done' },
-        view: { type: 'board', path: 'stage1/phase2' },
-      },
-      {
-        name: 'move a card that has no frontmatter',
-        fixture: 'configured',
-        op: { type: 'move', path: 'stage1/phase2/specs/no-frontmatter.md', column: 'done' },
-        view: { type: 'board', path: 'stage1/phase2' },
-      },
-      {
-        name: "move a card's file to the pool, relinking it",
-        fixture: 'configured',
-        op: { type: 'move-file', path: card, target: { pool: true } },
-        view: { type: 'board', path: 'stage1/phase2' },
-      },
-      {
-        name: "move a card's file to an empty phase",
-        fixture: 'minimal',
-        op: {
-          type: 'move-file',
-          path: 'stage1/phase1/specs/first.md',
-          target: { boardPath: 'stage1/phase2', column: 'done' },
-        },
-        view: { type: 'stage', stage: 1 },
-      },
-      {
-        name: "set a card's title",
-        fixture: 'configured',
-        op: { type: 'set-title', path: card, title: 'Move the core' },
-        view: { type: 'board', path: 'stage1/phase2' },
-      },
-      {
-        name: "set a card's tags",
-        fixture: 'configured',
-        op: { type: 'set-tags', path: card, tags: ['CODE', 'docs'] },
-        view: { type: 'board', path: 'stage1/phase2' },
-      },
-      {
-        name: 'create a card from its template',
-        fixture: 'configured',
-        op: {
-          type: 'create-card',
-          boardPath: 'stage1/phase2',
-          title: 'Write the walks',
-          kind: 'spec',
-          now: '2026-11-09T12:00:00.000Z',
-        },
-        view: { type: 'board', path: 'stage1/phase2' },
-      },
-      {
-        name: 'create a card from a stub, in the pool',
-        fixture: 'configured',
-        op: {
-          type: 'create-card',
-          boardPath: 'unassigned',
-          title: 'An idea',
-          kind: 'seed',
-          now: '2026-11-09T12:00:00.000Z',
-        },
-        view: { type: 'nav' },
-      },
-      {
-        name: 'reorder the pool, keeping its comments',
-        fixture: 'configured',
-        op: {
-          type: 'reorder-pool',
-          paths: ['unassigned/specs/later.md', 'unassigned/seeds/idea.md'],
-        },
-        view: { type: 'board', path: 'stage1/phase2' },
-      },
-      {
-        name: 'move a pool card to a phase, pruning the order file',
-        fixture: 'configured',
-        op: {
-          type: 'move-file',
-          path: 'unassigned/specs/later.md',
-          target: { boardPath: 'stage1/phase2', column: 'todo' },
-        },
-        view: { type: 'board', path: 'stage1/phase2' },
-      },
-      {
-        name: 'fix the references to a moved card',
-        fixture: 'configured',
-        op: {
-          type: 'fix-references',
-          path: 'unassigned/seeds/idea.md',
-          referencingPaths: ['stage1/phase2/specs/follow-up.md'],
-        },
-        snapshot: { moves: { 'unassigned/seeds/idea.md': ['stage1/phase1/seeds/idea.md'] } },
-        view: { type: 'board', path: 'stage1/phase2' },
-      },
-      {
-        name: 'add a tag to the registry',
-        fixture: 'configured',
-        op: { type: 'add-tag', tag: 'infra' },
-        view: { type: 'board', path: 'stage1/phase2' },
-      },
-      {
-        name: 'add a column',
-        fixture: 'configured',
-        op: { type: 'edit-manifest', edit: { op: 'add-column', id: 'review', label: 'Review' } },
-        view: { type: 'board', path: 'stage1/phase2' },
-      },
-      {
-        name: 'relabel a kind, keeping its comment',
-        fixture: 'configured',
-        op: { type: 'edit-manifest', edit: { op: 'update-kind', id: 'seed', label: 'Seed' } },
-        view: { type: 'nav' },
-      },
-      {
-        name: 'set the done column',
-        fixture: 'surfaces-shaped',
-        op: { type: 'edit-manifest', edit: { op: 'set-done-column', id: 'todo' } },
-        view: { type: 'board', path: 'stage2/phase3' },
-      },
-      {
-        name: 'create the next phase',
-        fixture: 'surfaces-shaped',
-        op: { type: 'create-stage-phase', kind: 'phase', stage: 2 },
-        view: { type: 'nav' },
-      },
-      {
-        name: 'point current at a phase',
-        fixture: 'surfaces-shaped',
-        op: { type: 'set-current', stage: 2, phase: 1 },
-        view: { type: 'nav' },
-      },
-      {
-        name: 'close a phase, bringing a card along',
-        fixture: 'surfaces-shaped',
-        op: { type: 'close', kind: 'phase', paths: ['stage2/phase3/specs/tasks-core.md'] },
-        view: { type: 'stage', stage: 2 },
-      },
-    ],
+    ops: ROUND_TRIPS,
   },
 });
