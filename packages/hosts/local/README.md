@@ -243,13 +243,17 @@ git's index (`port.index`), and nothing else, so its tests run over the memory p
   `HOST_UNDO_CONFLICT`, naming the file; the step stays and nothing is written. **Redo** is the
   same with the step's forward changes. Neither is refused by the lock, and neither adds a step.
 - **A step that cannot be kept:** a delete of a file the port cannot read as text (an image,
-  or over 2 MiB), or a step whose text is over 256 MiB. From the explorer it is refused with
+  one over 2 MiB, or one the server has no permission to read), or a step whose text is over
+  256 MiB. From the explorer it is refused with
   `HOST_CANNOT_UNDO`; the page asks, and sends it again with `unjournaled: true`. From an app it
   is written, and the answer carries `notice: { kind: 'cannot-undo', reason }`. Either way the
   journal empties. A rename of an image carries no text, and is kept.
 - **Limits:** 1,000 steps and 256 MiB of kept text (`limits.ts`); past either, the oldest go.
 - **The page:** Undo and Redo in the explorer's header, with the step's label as the title;
   Ctrl+Z and Ctrl+Shift+Z (Cmd on a Mac) when focus is in no editor, text field, dialog or menu.
+  On a layout with no Latin letters (Russian, Greek) the keys are the physical Z, and S for
+  Save, as the browser's own shortcuts are. The labels are read again when the event stream
+  reconnects, since a server that restarted has no steps.
 
 ## Safety
 
