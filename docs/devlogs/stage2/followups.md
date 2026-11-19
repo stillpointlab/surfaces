@@ -105,7 +105,7 @@ during this stage's setup, each entry struck with where it went.
   migration across existing repositories: detection would read both folders, and a check-in or a
   one-off pull request would move the files. The routes would need redirects. The question is
   seed-sized and has no card yet.
-  - Moved 2026-11-10 to the seed [inventory's `zones/` folder](../../tasks/unassigned/seeds/inventory-zones-folder.md).
+  - Moved 2026-11-10 to the seed [inventory says zone in its URLs and its folders](../../tasks/unassigned/seeds/inventory-says-zone-in-urls-and-folders.md).
 - 2026-11-09 (inventory-rules): the inventory elements' op types stay loose
   (`Record<string, unknown>` for an item and its changes). The harness casts them to the core's
   `AddInventoryItemInput` and `UpdateInventoryItemInput`. Tightening them touches the element's form
