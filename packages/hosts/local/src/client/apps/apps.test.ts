@@ -559,6 +559,44 @@ describe('the app pane staying current', () => {
     expect(shell().inputs).toHaveLength(before);
   });
 
+  it('sets the page again when the shell asks, at the revision an op’s reply stamped', async () => {
+    await opened();
+    // An op whose reply shows the shell part of its page: the pane takes the op's
+    // revision as shown, and the page's answer comes at the same one.
+    host.opAnswer = () => ({ ok: true, reply: {}, revision: 'op1' });
+    revisionWill('op1');
+    await requestOp(shell(), { type: 'set-current', stage: 1, phase: 2 } as never);
+    await settle();
+    const before = shell().inputs.length;
+    // The write's own event sets nothing: the reply is taken to have shown it.
+    host.emit({ type: 'changed', paths: ['places/home/inventory.yaml'] });
+    await settle();
+    expect(shell().inputs).toHaveLength(before);
+    // The shell asks for its page (the strip after Set current): it is given it.
+    shell().dispatchEvent(new CustomEvent('reload-request', { bubbles: true }));
+    await settle();
+    expect(shell().inputs).toHaveLength(before + 1);
+    expect(shell().inputs.at(-1)!.state).toEqual({ revision: 'op1' });
+  });
+
+  it('sets the page again when the shell navigates to the page on screen', async () => {
+    await opened();
+    host.opAnswer = () => ({ ok: true, reply: {}, revision: 'op1' });
+    revisionWill('op1');
+    await requestOp(shell(), { type: 'close', kind: 'phase', paths: [] } as never);
+    await settle();
+    const before = shell().inputs.length;
+    const address = location.hash;
+    const followed = shell().dispatchEvent(
+      new CustomEvent('navigate', { detail: { href: address }, bubbles: true, cancelable: true })
+    );
+    await settle();
+    // Claimed, the address where it was, and the shell shown its page again.
+    expect(followed).toBe(false);
+    expect(location.hash).toBe(address);
+    expect(shell().inputs).toHaveLength(before + 1);
+  });
+
   it('gives the shell a commit’s words and the branch, and sets it again when the branch moves', async () => {
     start('', [HOME, ROOT], (fake) => (fake.gitInfo = { state: 'repository', branch: 'main' }));
     await page.ready;

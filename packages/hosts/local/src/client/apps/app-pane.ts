@@ -263,6 +263,17 @@ export class AppPane {
     return this.resolving;
   }
 
+  /**
+   * Read the page again and give the shell what comes back, even at the revision
+   * it last showed: an op's reply shows the shell only part of the page (a
+   * board, not the strip beside it), so a shell that asks for its page again
+   * has not seen the rest.
+   */
+  private showAgain(): Promise<void> {
+    this.shown = null;
+    return this.resolveSoon();
+  }
+
   // ---- the page ----
 
   private async resolve(): Promise<void> {
@@ -351,7 +362,7 @@ export class AppPane {
       },
       { signal }
     );
-    shell.addEventListener('reload-request', () => void this.resolveSoon(), { signal });
+    shell.addEventListener('reload-request', () => void this.showAgain(), { signal });
     shell.addEventListener(
       'open-options-menu',
       (event) => {
@@ -383,6 +394,12 @@ export class AppPane {
     const href = (event as CustomEvent<{ href?: unknown }>).detail?.href;
     if (typeof href !== 'string' || !href.startsWith('#/')) return;
     event.preventDefault();
+    // To the page on screen (a close whose next phase is the one shown): the
+    // address does not move, so the shell is shown its page again.
+    if (this.address && href === formatAddress(this.address)) {
+      void this.showAgain();
+      return;
+    }
     this.options.navigate(href);
   }
 
