@@ -1,5 +1,5 @@
 ---
-column: todo
+column: in-progress
 created: 2026-11-18T19:25:00-07:00
 tags: [dev-tooling, code]
 ---
@@ -94,24 +94,23 @@ Two parts. The first is the fix; the second is the honest answer where the first
 - Directories' modes. A folder the delete emptied is made again by the create, with the default
   mode.
 
-## Open question for Jamie
+## Decision
 
-The first part could be left out and the second widened: an executable's delete would also ask
-first, with no new capability. It is less code and more questions asked of the person. The
-recommendation is as written: keep the mode, and ask only for a link.
+Jamie, 2026-11-18: build it as recommended. The mode is kept, and only a link's delete asks. The
+alternative was to keep no mode and ask before an executable's delete as well.
 
 ## Acceptance / completion checklist
 
-- [ ] Delete and undo of a `755` file leaves `git status` empty, in a repository and with the
+- [x] Delete and undo of a `755` file leaves `git status` empty, in a repository and with the
       mode intact outside one.
-- [ ] Undo after a redo of that delete does the same.
-- [ ] A link's delete from the explorer asks; Cancel writes nothing; Delete removes the link, with
+- [x] Undo after a redo of that delete does the same.
+- [x] A link's delete from the explorer asks; Cancel writes nothing; Delete removes the link, with
       no step, and the journal empties.
-- [ ] A folder holding a link asks once for the whole delete.
-- [ ] An app's op that deletes a link is written, and the notice says it cannot be undone.
-- [ ] The journal's tests over the memory port pass unchanged; the new ones run over a temporary
+- [x] A folder holding a link asks once for the whole delete.
+- [x] An app's op that deletes a link is written, and the notice says it cannot be undone.
+- [x] The journal's tests over the memory port pass unchanged; the new ones run over a temporary
       folder (`journal/host.test.ts`).
-- [ ] The undo-journal spec's As built and the package's README say what is kept.
+- [x] The undo-journal spec's As built and the package's README say what is kept.
 
 ## Implementation plan
 
@@ -120,3 +119,29 @@ recommendation is as written: keep the mode, and ask only for a link.
 2. The node port's `files` capability; `host.ts` passes it with the index.
 3. `'link'` in `UnkeptReason`, the refusal's message, the page's two sets of words.
 4. Tests, then the docs.
+
+## As built
+
+_2026-11-18, by the claude agent, in the pull request stacked on the review's._
+
+- **`JournalFiles`** is `{ kind(path), setMode(path, mode) }`, as above, and the node port's
+  `files` supplies it. `kind` reads the name itself (`lstat`), inside the port's confinement.
+  `setMode` runs under the write lock, warns when it fails, and does nothing when a link stands at
+  the path by then.
+- **Every deleted file's bits are kept,** not only an executable's: a `600` file comes back `600`.
+  A step with no capability, or whose `kind` could not say, keeps none and undoes as before.
+- **The link is asked about before the read,** so a link to an image, or one that leads nowhere,
+  is `link` and not `not-text`.
+- **The words** follow the image's, which speak of a folder's files: "A link is among these, and
+  deleting it cannot be undone. Delete anyway?", and for an app's op "This change removed a link,
+  so it cannot be undone." The draft above named the file.
+- **The refusal's message** is "`<path>` is a symbolic link, so deleting it cannot be undone.
+  Send it again with "unjournaled": true to write it anyway."
+- **Not built, as the non-goals say:** a `move` with content of a link (only an app's op sends
+  one) still leaves a regular file at the new path, and its undo a regular file at the old one.
+
+**Checked** over a temporary folder and repository (`journal/host.test.ts`): a `755` script
+deleted, undone, done again and undone, with `git status` empty each time; `750` and `600` kept
+outside a repository; a link's delete refused, then removing the link alone; a folder holding a
+link asking once; a renamed link still a link after the undo. And by hand against the built
+server.

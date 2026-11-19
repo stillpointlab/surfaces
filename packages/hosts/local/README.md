@@ -174,25 +174,25 @@ query value). A version is a SHA-256 of the file's bytes, as hex; only equality 
 
 **Refusals** are `{ ok: false, code, message }`:
 
-| Status | Codes                                                                                                                     |
-| ------ | ------------------------------------------------------------------------------------------------------------------------- |
-| 404    | `HOST_FILE_NOT_FOUND`, and `HOST_NO_ROUTE` for a route that does not exist                                                |
-| 404    | `HOST_APP_NOT_FOUND` (no instance at the manifest path), `HOST_APP_PAGE_NOT_FOUND` (the app has no page there)            |
-| 409    | `HOST_SCOPE_LOCKED`: a `PUT /api/files` change's path, or a move's `from`, is in a locked app's files                     |
-| 409    | `HOST_APP_INVALID`: an app route for an instance discovery marks invalid (its manifest, or an overlap)                    |
-| 409    | `HOST_APP_OVERLAP`: a create whose region would share a path with a found instance's                                      |
-| 409    | `HOST_NOTHING_TO_RESOLVE`: tasks' `resolve`, since a folder has no upstream to differ from                                |
-| 409    | `HOST_NOTHING_TO_UNDO`, `HOST_NOTHING_TO_REDO`; `HOST_UNDO_CONFLICT` with the `path` that changed since the step          |
-| 409    | `HOST_CANNOT_UNDO` with its `reason` (`too-large`, `not-text`): send the same changes again with `unjournaled: true`      |
-| 409    | `HOST_PATH_EXISTS`, `HOST_FILE_CHANGED`; `HOST_NOT_A_REPOSITORY`, `HOST_GIT_NOT_FOUND` (a git route outside `repository`) |
-| 409    | A commit: `HOST_NOT_CHANGED`, `HOST_PATH_CONFLICTED`, `HOST_GIT_IN_PROGRESS`, `HOST_DETACHED_HEAD`, `HOST_BRANCH_EXISTS`  |
-| 400    | `HOST_PATH_OUTSIDE_ROOT`, `HOST_NOT_TEXT`, `HOST_FILE_TOO_LARGE`, `HOST_BAD_REQUEST`                                      |
-| 400    | A commit: `HOST_COMMIT_NO_PATHS`, `HOST_COMMIT_NO_MESSAGE`, `HOST_BRANCH_INVALID`                                         |
-| 403    | `HOST_FORBIDDEN`: the `Host`, `Origin` or `Sec-Fetch-Site` checks below                                                   |
-| 405    | `HOST_METHOD_NOT_ALLOWED`, with an `Allow` header                                                                         |
-| 413    | `HOST_BODY_TOO_LARGE`: a `PUT` body over 64 MiB                                                                           |
-| 500    | `HOST_WRITE_FAILED`: a write failed part way (a full disk); what it wrote was taken back                                  |
-| 500    | `HOST_GIT_FAILED`: git ran and failed (its message says why)                                                              |
+| Status | Codes                                                                                                                        |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| 404    | `HOST_FILE_NOT_FOUND`, and `HOST_NO_ROUTE` for a route that does not exist                                                   |
+| 404    | `HOST_APP_NOT_FOUND` (no instance at the manifest path), `HOST_APP_PAGE_NOT_FOUND` (the app has no page there)               |
+| 409    | `HOST_SCOPE_LOCKED`: a `PUT /api/files` change's path, or a move's `from`, is in a locked app's files                        |
+| 409    | `HOST_APP_INVALID`: an app route for an instance discovery marks invalid (its manifest, or an overlap)                       |
+| 409    | `HOST_APP_OVERLAP`: a create whose region would share a path with a found instance's                                         |
+| 409    | `HOST_NOTHING_TO_RESOLVE`: tasks' `resolve`, since a folder has no upstream to differ from                                   |
+| 409    | `HOST_NOTHING_TO_UNDO`, `HOST_NOTHING_TO_REDO`; `HOST_UNDO_CONFLICT` with the `path` that changed since the step             |
+| 409    | `HOST_CANNOT_UNDO` with its `reason` (`too-large`, `not-text`, `link`): send the same changes again with `unjournaled: true` |
+| 409    | `HOST_PATH_EXISTS`, `HOST_FILE_CHANGED`; `HOST_NOT_A_REPOSITORY`, `HOST_GIT_NOT_FOUND` (a git route outside `repository`)    |
+| 409    | A commit: `HOST_NOT_CHANGED`, `HOST_PATH_CONFLICTED`, `HOST_GIT_IN_PROGRESS`, `HOST_DETACHED_HEAD`, `HOST_BRANCH_EXISTS`     |
+| 400    | `HOST_PATH_OUTSIDE_ROOT`, `HOST_NOT_TEXT`, `HOST_FILE_TOO_LARGE`, `HOST_BAD_REQUEST`                                         |
+| 400    | A commit: `HOST_COMMIT_NO_PATHS`, `HOST_COMMIT_NO_MESSAGE`, `HOST_BRANCH_INVALID`                                            |
+| 403    | `HOST_FORBIDDEN`: the `Host`, `Origin` or `Sec-Fetch-Site` checks below                                                      |
+| 405    | `HOST_METHOD_NOT_ALLOWED`, with an `Allow` header                                                                            |
+| 413    | `HOST_BODY_TOO_LARGE`: a `PUT` body over 64 MiB                                                                              |
+| 500    | `HOST_WRITE_FAILED`: a write failed part way (a full disk); what it wrote was taken back                                     |
+| 500    | `HOST_GIT_FAILED`: git ran and failed (its message says why)                                                                 |
 
 **Events** are unnamed server-sent events, one JSON object per `data:` line:
 `{"type":"changed","paths":[...]}` (these files' contents changed, appeared or went),
@@ -225,8 +225,10 @@ every 25 seconds. The server's own writes are reported too.
 
 ## Undo and redo
 
-`src/server/journal/`: the journal, in the server's memory for the run. It wraps the port and
-git's index (`port.index`), and nothing else, so its tests run over the memory port.
+`src/server/journal/`: the journal, in the server's memory for the run. It wraps the port,
+git's index (`port.index`) and what the folder knows of a file beyond its text (`port.files`: its
+permission bits, and whether it is a symbolic link), and nothing else, so its tests run over the
+memory port.
 
 - **What is a step:** the explorer's create, rename and delete (a `PUT /api/files` whose
   changes are all `create`, `move` or `delete`, labelled from them: "Delete notes.md",
@@ -234,20 +236,21 @@ git's index (`port.index`), and nothing else, so its tests run over the memory p
   a create ("Tasks: create"). A `PUT /api/files` with a `write` is an editor's save and is not
   one. A commit, a lock and an unlock are not either, and a commit does not clear the journal.
 - **Before a step** the journal reads the old text of each `write`, `delete` and `move` with
-  content, and the index entries its deletes will remove, and sends each change at the version
+  content, and the index entries and permission bits of the files it deletes, and sends each change at the version
   it read (a writer's own `base` is kept): a file changed between the read and the write
   refuses the step.
 - **Undo** writes the newest step's inverse in one `put`, each change at the version the step
-  left (a `create` at none), then puts back the index entries the step's deletes removed, with
+  left (a `create` at none), gives each file it brought back the permission bits it had (a
+  script comes back executable), then puts back the index entries the step's deletes removed, with
   `git update-index --index-info`. A file changed since (by anyone) refuses it with
   `HOST_UNDO_CONFLICT`, naming the file; the step stays and nothing is written. **Redo** is the
   same with the step's forward changes. Neither is refused by the lock, and neither adds a step.
 - **A step that cannot be kept:** a delete of a file the port cannot read as text (an image,
-  one over 2 MiB, or one the server has no permission to read), or a step whose text is over
-  256 MiB. From the explorer it is refused with
+  one over 2 MiB, or one the server has no permission to read), a delete of a symbolic link
+  (nothing the port writes makes a link again), or a step whose text is over 256 MiB. From the explorer it is refused with
   `HOST_CANNOT_UNDO`; the page asks, and sends it again with `unjournaled: true`. From an app it
   is written, and the answer carries `notice: { kind: 'cannot-undo', reason }`. Either way the
-  journal empties. A rename of an image carries no text, and is kept.
+  journal empties. A rename of an image carries no text, and is kept, as a rename of a link is.
 - **Limits:** 1,000 steps and 256 MiB of kept text (`limits.ts`); past either, the oldest go.
 - **The page:** Undo and Redo in the explorer's header, with the step's label as the title;
   Ctrl+Z and Ctrl+Shift+Z (Cmd on a Mac) when focus is in no editor, text field, dialog or menu.

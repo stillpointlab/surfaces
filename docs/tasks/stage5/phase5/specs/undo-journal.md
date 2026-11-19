@@ -260,9 +260,9 @@ package's README has the routes in full._
 - **A file the server has no permission to read** is `not-text` too, since the
   [stage 5 review](../reviews/stage-5-code-review.md) (H3): its delete asks first, as an
   image's does. Before, the read threw and the route answered 500.
-- **An undone delete does not bring back a file's mode or a symbolic link** (the review's H2):
-  the file comes back as plain text. That is
-  [undo-keeps-modes-and-links](undo-keeps-modes-and-links.md).
+- **An undone delete brings back the file's mode, and a link's delete asks first** (the
+  review's H2), since [undo-keeps-modes-and-links](undo-keeps-modes-and-links.md). Before it,
+  a script came back without its executable bit and a link as a copy of its target's text.
 - **The journal is emptied only when the unkept write lands.**
 - **The labels are worded in the server** (`journal/labels.ts`): "Delete x.md", "Rename a.md to
   b.md", "Move a.md to docs", "Delete 3 files in notes", "Rename docs to notes", "Inventory:
