@@ -7,12 +7,17 @@ import { describe, expect, it } from 'vitest';
 import { createJournal } from './journal';
 import { labelFor } from './labels';
 
-import type { IndexEntry, JournalIndex } from './journal';
+import type { IndexEntry, JournalFiles, JournalIndex } from './journal';
 import type { MemoryPort } from '@stillpointlab/common-format/host';
 
 function setUp(
   files: Record<string, string>,
-  options: { maxSteps?: number; maxBytes?: number; index?: JournalIndex } = {}
+  options: {
+    maxSteps?: number;
+    maxBytes?: number;
+    index?: JournalIndex;
+    files?: JournalFiles;
+  } = {}
 ) {
   const port = createMemoryPort(files);
   let changes = 0;
@@ -412,6 +417,91 @@ describe('the index', () => {
     entries.delete('n.md');
     await journal.redo();
     expect(restored).toEqual([[{ mode: '100644', oid: 'nnn', stage: '0', path: 'n.md' }]]);
+  });
+});
+
+describe('a file’s mode, and a link', () => {
+  /** What a folder knows of each path, and the modes an undo set. */
+  function folder(kinds: Record<string, number | 'link'>) {
+    const set: [string, number][] = [];
+    const files: JournalFiles = {
+      kind: async (path) => (Object.hasOwn(kinds, path) ? kinds[path] : null),
+      setMode: async (path, mode) => void set.push([path, mode]),
+    };
+    return { files, set };
+  }
+
+  it('keeps a deleted file’s mode, and sets it again on undo, and on the undo after a redo', async () => {
+    const { files, set } = folder({ 'run.sh': 0o755, 'a.md': 0o644 });
+    const { port, journal } = setUp({ 'run.sh': '#!/bin/sh\n', 'a.md': 'a' }, { files });
+    await journal.port('Delete 2 files').put([
+      { kind: 'delete', path: 'run.sh' },
+      { kind: 'delete', path: 'a.md' },
+    ]);
+    expect(journal.steps().undo[0].modes).toEqual({ 'run.sh': 0o755, 'a.md': 0o644 });
+    expect(set).toEqual([]);
+
+    expect((await journal.undo()).ok).toBe(true);
+    expect(port.files()).toEqual({ 'run.sh': '#!/bin/sh\n', 'a.md': 'a' });
+    expect([...set].sort()).toEqual([
+      ['a.md', 0o644],
+      ['run.sh', 0o755],
+    ]);
+
+    // Done again and undone again: the step still holds its modes.
+    expect((await journal.redo()).ok).toBe(true);
+    set.length = 0;
+    expect((await journal.undo()).ok).toBe(true);
+    expect(set).toHaveLength(2);
+  });
+
+  it('sets no mode for a write or a move, which the port keeps itself', async () => {
+    const { files, set } = folder({ 'run.sh': 0o755 });
+    const { journal } = setUp({ 'run.sh': 'one' }, { files });
+    await journal.port('Write').put([{ kind: 'write', path: 'run.sh', content: 'two' }]);
+    await journal.port('Move').put([{ kind: 'move', from: 'run.sh', path: 'go.sh' }]);
+    await journal.undo();
+    await journal.undo();
+    expect(set).toEqual([]);
+  });
+
+  it('a link’s delete cannot be kept: refused to the explorer, written for an op, and its rename kept', async () => {
+    const { files } = folder({ 'link.md': 'link', 'docs/link.md': 'link' });
+    const { port, journal } = setUp({ 'link.md': 'the target’s text', 'a.md': 'a' }, { files });
+    const refusing = journal.port('Delete 2 files', { unkept: 'refuse' });
+    const refused = await refusing.put([
+      { kind: 'delete', path: 'a.md' },
+      { kind: 'delete', path: 'link.md' },
+    ]);
+    expect(refused).toMatchObject({ ok: false, code: 'HOST_CANNOT_UNDO', reason: 'link' });
+    expect((refused as { message: string }).message).toContain('"link.md" is a symbolic link');
+    expect(port.files()).toHaveProperty('a.md');
+
+    expect(
+      (await journal.port('Move').put([{ kind: 'move', from: 'link.md', path: 'docs/link.md' }])).ok
+    ).toBe(true);
+    expect(journal.labels().undo).toBe('Move');
+
+    const writing = journal.port('Op');
+    expect((await writing.put([{ kind: 'delete', path: 'docs/link.md' }])).ok).toBe(true);
+    expect(writing.unkept).toBe('link');
+    expect(journal.labels()).toEqual({ undo: null, redo: null });
+  });
+
+  it('a capability that cannot say, or a mode that cannot be set, leaves the step and the undo as they were', async () => {
+    const files: JournalFiles = {
+      kind: async () => {
+        throw new Error('EIO');
+      },
+      setMode: async () => {
+        throw new Error('EPERM');
+      },
+    };
+    const { port, journal } = setUp({ 'a.md': 'a' }, { files });
+    expect((await journal.port('Delete').put([{ kind: 'delete', path: 'a.md' }])).ok).toBe(true);
+    expect(journal.steps().undo[0].modes).toBeUndefined();
+    expect((await journal.undo()).ok).toBe(true);
+    expect(port.files()).toEqual({ 'a.md': 'a' });
   });
 });
 

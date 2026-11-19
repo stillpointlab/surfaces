@@ -125,13 +125,14 @@ export const words = {
     deleteUnsavedInside: (name: string) => `${name} has unsaved edits, which will be lost.`,
     /**
      * The undo-journal spec's: asked when the host cannot keep a delete to undo,
-     * by its reason (the second is the spec's draft). Delete sends it again,
-     * written with no step.
+     * by its reason (the second is the spec's draft, the third a draft in its
+     * shape). Delete sends it again, written with no step.
      */
     cannotUndo: {
       'too-large': 'This is too large to undo. Delete anyway?',
       'not-text':
         'An image or a large file is among these, and deleting it cannot be undone. Delete anyway?',
+      link: 'A link is among these, and deleting it cannot be undone. Delete anyway?',
     },
     check: {
       empty: 'Enter a path.',
@@ -226,10 +227,12 @@ export const words = {
         ? message
         : `Could not ${which === 'undo' ? 'undo' : 'redo'}. ${message}`,
     /** An app's op the host wrote with no step. */
-    opCannotUndo: (reason: 'too-large' | 'not-text') =>
+    opCannotUndo: (reason: 'too-large' | 'not-text' | 'link') =>
       reason === 'too-large'
         ? 'This change was too large to keep, so it cannot be undone.'
-        : 'This change touched a file that is not text, so it cannot be undone.',
+        : reason === 'link'
+          ? 'This change removed a link, so it cannot be undone.'
+          : 'This change touched a file that is not text, so it cannot be undone.',
   },
 
   /**

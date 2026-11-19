@@ -50,7 +50,7 @@ import { isInside, locate, outsideRoot, pathProblem } from './paths';
 import { decodeText } from './text';
 
 import type { HostGitAccess } from './git/repository';
-import type { JournalIndex } from './journal/journal';
+import type { JournalFiles, JournalIndex } from './journal/journal';
 import type { Location } from './paths';
 import type { Failure, FolderNode, Result } from '@stillpointlab/common-format/app';
 import type {
@@ -88,6 +88,13 @@ export interface NodePort extends StoragePort {
    * is a warning.
    */
   readonly index: JournalIndex;
+  /**
+   * What the journal asks of a file beyond its text: its permission bits, or
+   * that it is a symbolic link, read before a delete; and setting the bits
+   * again after an undo, under the write lock. A failure to set them is a
+   * warning.
+   */
+  readonly files: JournalFiles;
   /** How the port lists. The first call asks `git`; later calls answer the same. */
   start(): Promise<PortStart>;
   /**
@@ -592,7 +599,32 @@ export function createNodePort(options: NodePortOptions): NodePort {
       }),
   };
 
-  return { root, git, index, start, list, get, put, status, commit };
+  const files: JournalFiles = {
+    async kind(path) {
+      const placed = await place(path);
+      if ('ok' in placed || placed.at.kind !== 'file') return null;
+      // The name itself, not what it leads to: a link is a link wherever it points.
+      const info = await lstat(placed.at.entry);
+      return info.isSymbolicLink() ? 'link' : info.mode & 0o7777;
+    },
+    setMode: (path, mode) =>
+      exclusive(async () => {
+        try {
+          const placed = await place(path);
+          if ('ok' in placed || placed.at.kind !== 'file') return;
+          const { entry } = placed.at;
+          // Never through a link put there since: only the file the undo made.
+          if ((await lstat(entry)).isSymbolicLink()) return;
+          await chmod(entry, mode);
+        } catch (error) {
+          warn(
+            `${JSON.stringify(path)} was put back, but its permissions could not be set: ${String(error)}`
+          );
+        }
+      }),
+  };
+
+  return { root, git, index, files, start, list, get, put, status, commit };
 }
 
 /** Remove `folder` and the folders above it while they are empty, up to the root. */

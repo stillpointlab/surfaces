@@ -240,6 +240,7 @@ export function createHost(options: HostOptions): LocalHost {
   const journal = createJournal({
     port,
     index: port.index,
+    files: port.files,
     onChange: () => broadcast({ type: 'journal' }),
   });
 

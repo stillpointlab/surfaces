@@ -2,8 +2,12 @@
 // redo: the labels the buttons show, what an undo or a redo did, and why a write
 // could not be kept. Types only, so both halves import them.
 
-/** Why a write could not be kept in the journal: its text is over the limit, or a file in it is not text. */
-export type UnkeptReason = 'too-large' | 'not-text';
+/**
+ * Why a write could not be kept in the journal: its text is over the limit, a
+ * file in it is not text, or it deletes a symbolic link (an undo could only
+ * bring back a copy of what the link led to).
+ */
+export type UnkeptReason = 'too-large' | 'not-text' | 'link';
 
 /** `GET /api/journal`: the label of the step undo and redo would take next, or `null`. */
 export interface JournalLabels {

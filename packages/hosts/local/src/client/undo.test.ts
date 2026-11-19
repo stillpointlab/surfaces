@@ -277,6 +277,22 @@ describe('the delete dialog', () => {
     expect(host.putOptions).toEqual([undefined]);
   });
 
+  it('asks with the link’s words when a link is among the files', async () => {
+    await start();
+    host.refuseNextPut = {
+      code: 'HOST_CANNOT_UNDO',
+      message: '"docs/link.md" is a symbolic link.',
+      reason: 'link',
+    };
+    await deleteFolder('docs');
+    await confirm();
+    expect(question()).toBe(words.fileOps.cannotUndo.link);
+    expect(host.disk.has('docs/b.md')).toBe(true);
+    await confirm();
+    expect(host.disk.has('docs/b.md')).toBe(false);
+    expect(host.putOptions.at(-1)).toEqual({ unjournaled: true });
+  });
+
   it('Delete sends it again, saying so, and the journal empties', async () => {
     await start();
     await explorerWrite([{ kind: 'create', path: 'new.md', content: '' }]);

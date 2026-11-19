@@ -1,11 +1,12 @@
 // The journal: undo and redo of what the host writes, in the server's memory for
-// the run. A wrapper around a `StoragePort` and one optional capability, git's
-// index (`JournalIndex`), and nothing else, so its tests run over the memory port.
+// the run. A wrapper around a `StoragePort` and two optional capabilities, git's
+// index (`JournalIndex`) and what a folder knows of a file beyond its text
+// (`JournalFiles`), and nothing else, so its tests run over the memory port.
 //
 // A writer asks `journal.port(label)` for a port whose `put` is one step. Before
 // that `put` the journal reads what the step's inverse needs: the old text of a
-// `write`, of a `delete` and of a `move` with content, and the index entries of
-// the paths it deletes. A change the writer gave no `base` is sent with the
+// `write`, of a `delete` and of a `move` with content, and the index entries and
+// the permission bits of the paths it deletes. A change the writer gave no `base` is sent with the
 // version the journal read, so a file that changed between the read and the
 // write refuses the step rather than leaving a wrong inverse. The step keeps its
 // inverse, its forward changes, each touched path's version after it (from the
@@ -15,9 +16,10 @@
 // `delete`; a `move` is a `move` back, with the old text when it carried new
 // text; a `delete` is a `create` of the old text.
 //
-// A step that cannot be kept: one whose kept text is over `maxBytes`, or one
-// with a file the port cannot read as text (a `delete` of an image, or of a file
-// over 2 MiB; a rename of one carries no text and is kept). A port made with
+// A step that cannot be kept: one whose kept text is over `maxBytes`, one with a
+// file the port cannot read as text (a `delete` of an image, or of a file over
+// 2 MiB; a rename of one carries no text and is kept), or one that deletes a
+// symbolic link (the port has no change that makes a link; a rename keeps it). A port made with
 // `unkept: 'refuse'` refuses it with `HOST_CANNOT_UNDO` and its `reason`, and
 // writes nothing; one made with `unkept: 'write'` writes it with no step and says
 // why in `unkept`. A write with no step empties the journal, since an older step
@@ -25,8 +27,9 @@
 // person agreed cannot be undone).
 //
 // Undo writes the newest step's inverse in one `put`, each change at the version
-// the step left (a `create` needs none: a path that exists refuses it), then puts
-// back the index entries the step's deletes removed. A refusal that means the
+// the step left (a `create` needs none: a path that exists refuses it), then
+// gives each file it brought back the permission bits it had, and puts back the
+// index entries the step's deletes removed. A refusal that means the
 // file moved on (`HOST_FILE_CHANGED`, `HOST_PATH_EXISTS`, `HOST_FILE_NOT_FOUND`)
 // is `HOST_UNDO_CONFLICT` with the file named; the step stays and nothing is
 // written. Redo is the same with the forward changes, at the versions the undo
@@ -59,6 +62,8 @@ export interface JournalStep {
   after: Record<string, string | null>;
   /** The index entries the step's deletes removed, for undo to put back. */
   index?: IndexEntry[];
+  /** The permission bits of the files the step deleted, for undo to set again. */
+  modes?: Record<string, number>;
   /** The size, as UTF-8, of the text the step keeps (its inverse's and its forward's). */
   bytes: number;
 }
@@ -69,6 +74,18 @@ export interface JournalIndex {
   entries(paths: readonly string[]): Promise<IndexEntry[]>;
   /** Put entries back as `entries` read them. */
   restore(entries: readonly IndexEntry[]): Promise<void>;
+}
+
+/**
+ * What the journal needs to know of a file that a `StoragePort` does not say.
+ * The node port supplies it; without it a deleted file comes back with the
+ * mode a new file gets, and a link's delete is kept as its target's text.
+ */
+export interface JournalFiles {
+  /** A file's permission bits, `'link'` for a symbolic link, or `null` when no file is there. */
+  kind(path: string): Promise<number | 'link' | null>;
+  /** Set a file's permission bits; a failure is the capability's own to warn of. */
+  setMode(path: string, mode: number): Promise<void>;
 }
 
 /** `HOST_CANNOT_UNDO`, with its reason. */
@@ -110,6 +127,8 @@ export interface JournalOptions {
   port: StoragePort;
   /** git's index, in a repository. */
   index?: JournalIndex;
+  /** A file's mode and whether it is a link, over a folder. */
+  files?: JournalFiles;
   /** The steps kept; past it the oldest go (`JOURNAL_MAX_STEPS`). */
   maxSteps?: number;
   /** The text kept, as UTF-8; past it the oldest go, and one step over it is not kept (`JOURNAL_MAX_BYTES`). */
@@ -251,7 +270,7 @@ interface Undone {
 }
 
 export function createJournal(options: JournalOptions): Journal {
-  const { port, index } = options;
+  const { port, index, files } = options;
   const maxSteps = options.maxSteps ?? JOURNAL_MAX_STEPS;
   const maxBytes = options.maxBytes ?? JOURNAL_MAX_BYTES;
   const done: JournalStep[] = [];
@@ -307,6 +326,32 @@ export function createJournal(options: JournalOptions): Journal {
     }
   }
 
+  /** What `files` says of a path; `null` without the capability, or when it cannot say. */
+  async function kindOf(path: string): Promise<number | 'link' | null> {
+    if (!files) return null;
+    try {
+      return await files.kind(path);
+    } catch {
+      return null;
+    }
+  }
+
+  /** Give the files an undo's creates brought back the modes the step kept. */
+  async function setModes(
+    created: readonly PortChange[],
+    modes: Readonly<Record<string, number>> | undefined
+  ): Promise<void> {
+    if (!files || !modes) return;
+    for (const change of created) {
+      if (change.kind !== 'create' || !Object.hasOwn(modes, change.path)) continue;
+      try {
+        await files.setMode(change.path, modes[change.path]);
+      } catch {
+        // the capability's own warning says so; the text is back either way
+      }
+    }
+  }
+
   /** A write with no step: the journal empties once it lands. */
   async function unjournaled(
     changes: readonly PortChange[]
@@ -317,15 +362,20 @@ export function createJournal(options: JournalOptions): Journal {
   }
 
   /** What a step's inverse needs, read; or why the step cannot be kept, or `null` to let the port refuse. */
-  async function plan(
-    changes: readonly PortChange[]
-  ): Promise<
-    | { kind: 'step'; forward: PortChange[]; sent: PortChange[]; inverse: PortChange[] }
+  async function plan(changes: readonly PortChange[]): Promise<
+    | {
+        kind: 'step';
+        forward: PortChange[];
+        sent: PortChange[];
+        inverse: PortChange[];
+        modes: Record<string, number>;
+      }
     | { kind: 'unkept'; reason: UnkeptReason; path?: string }
     | { kind: 'port' }
   > {
     const sent: PortChange[] = [];
     const inverse: PortChange[] = [];
+    const modes: Record<string, number> = {};
     for (const change of changes) {
       if (change.kind === 'create') {
         sent.push(change);
@@ -336,6 +386,12 @@ export function createJournal(options: JournalOptions): Journal {
         sent.push(change);
         inverse.unshift({ kind: 'move', from: change.path, path: change.from });
         continue;
+      }
+      if (change.kind === 'delete') {
+        // A link cannot be made again, and its target's text is not the link.
+        const kind = await kindOf(change.path);
+        if (kind === 'link') return { kind: 'unkept', reason: 'link', path: change.path };
+        if (kind !== null) modes[change.path] = kind;
       }
       // A write, a delete, or a move with new text: the old text is read first.
       let read: Awaited<ReturnType<StoragePort['get']>>;
@@ -362,7 +418,7 @@ export function createJournal(options: JournalOptions): Journal {
         inverse.unshift({ kind: 'move', from: change.path, path: change.from, content: read.text });
       }
     }
-    return { kind: 'step', forward: changes.map(bare), sent, inverse };
+    return { kind: 'step', forward: changes.map(bare), sent, inverse, modes };
   }
 
   async function step(
@@ -399,7 +455,9 @@ export function createJournal(options: JournalOptions): Journal {
             'HOST_CANNOT_UNDO',
             unkept.reason === 'too-large'
               ? `This is too large to undo: the journal keeps at most ${Math.round(maxBytes / 1024 / 1024)} MiB. Send it again with "unjournaled": true to write it anyway.`
-              : `${JSON.stringify(unkept.path)} is not text, is over 2 MiB or cannot be read, so deleting it cannot be undone. Send it again with "unjournaled": true to write it anyway.`
+              : unkept.reason === 'link'
+                ? `${JSON.stringify(unkept.path)} is a symbolic link, so deleting it cannot be undone. Send it again with "unjournaled": true to write it anyway.`
+                : `${JSON.stringify(unkept.path)} is not text, is over 2 MiB or cannot be read, so deleting it cannot be undone. Send it again with "unjournaled": true to write it anyway.`
           ),
           reason: unkept.reason,
         };
@@ -420,6 +478,7 @@ export function createJournal(options: JournalOptions): Journal {
       forward: kept.forward,
       after: versionsAfter(kept.sent, written.versions),
       ...(entries.length > 0 ? { index: entries } : {}),
+      ...(Object.keys(kept.modes).length > 0 ? { modes: kept.modes } : {}),
       bytes,
     });
     undone.length = 0;
@@ -501,6 +560,8 @@ export function createJournal(options: JournalOptions): Journal {
         removed: taken.removed,
       });
       changed();
+      // Before the index, so git finds each file at the mode its entry holds.
+      await setModes(last.inverse, last.modes);
       // A move needs nothing: the port moved its entry with it.
       await restore(last.index ?? []);
       return ok(movesOf(last.label, last.inverse));
