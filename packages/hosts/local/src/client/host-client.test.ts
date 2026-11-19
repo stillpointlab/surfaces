@@ -209,7 +209,7 @@ describe('createHttpClient', () => {
     await expect(createHttpClient().list()).rejects.toThrow('Not from here.');
   });
 
-  it('watches the event stream, says the list is stale after a reconnection, and stops', () => {
+  it('watches the event stream, says the list and the journal are stale after a reconnection, and stops', () => {
     vi.stubGlobal('EventSource', FakeSource);
     const client = createHttpClient();
     const events: LocalHostEvent[] = [];
@@ -227,7 +227,9 @@ describe('createHttpClient', () => {
       { type: 'listed' },
       { type: 'changed', paths: ['a.md'] },
       { type: 'status' },
+      // The reconnection: the list, and the journal (a restarted server has no steps).
       { type: 'listed' },
+      { type: 'journal' },
     ]);
     stop();
     expect(source.closed).toBe(true);

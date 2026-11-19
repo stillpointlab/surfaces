@@ -208,6 +208,23 @@ describe('the keys', () => {
     expect(host.disk.has('new.md')).toBe(false);
   });
 
+  it('take the physical key on a layout with no Latin letters, and the layout’s own letter otherwise', async () => {
+    await start();
+    await explorerWrite([{ kind: 'create', path: 'new.md', content: '' }]);
+    // Dvorak: the key marked Z types a semicolon, and is not the page's undo.
+    key(document.body, { ctrlKey: true, key: ';', code: 'KeyZ' });
+    await settle();
+    expect(host.disk.has('new.md')).toBe(true);
+    // Russian: the same key types я, and is.
+    const event = key(document.body, { ctrlKey: true, key: 'я', code: 'KeyZ' });
+    expect(event.defaultPrevented).toBe(true);
+    await settle();
+    expect(host.disk.has('new.md')).toBe(false);
+    key(document.body, { ctrlKey: true, shiftKey: true, key: 'Я', code: 'KeyZ' });
+    await settle();
+    expect(host.disk.has('new.md')).toBe(true);
+  });
+
   it('do nothing while a dialog is open, or with Alt', async () => {
     await start();
     await explorerWrite([{ kind: 'create', path: 'new.md', content: '' }]);

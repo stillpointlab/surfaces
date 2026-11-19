@@ -166,6 +166,18 @@ function indexOf(state: unknown): number | null {
 
 let styled = false;
 
+/**
+ * The letter a key event means for one of the page's shortcuts: the key's own,
+ * or, on a layout with no Latin letters (Cyrillic, Greek), the letter on the
+ * physical key, as the browser's own shortcuts take it. A Latin layout that
+ * moves the letters (Dvorak) keeps its own.
+ */
+function shortcutLetter(event: Pick<KeyboardEvent, 'key' | 'code'>): string {
+  const key = event.key.toLowerCase();
+  const physical = /^Key([A-Z])$/.exec(event.code);
+  return physical && key.length === 1 && key.charCodeAt(0) > 0x7f ? physical[1].toLowerCase() : key;
+}
+
 /** Cmd, not Ctrl, is the key a Mac undoes with. */
 const IS_MAC =
   typeof navigator !== 'undefined' &&
@@ -940,7 +952,7 @@ export function startPage(options: PageOptions): HostPage {
       'keydown',
       (event) => {
         const mod = IS_MAC ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
-        if (!mod || event.altKey || event.key.toLowerCase() !== 'z') return;
+        if (!mod || event.altKey || shortcutLetter(event) !== 'z') return;
         if (!keyIsThePage(event)) return;
         event.preventDefault();
         void step(event.shiftKey ? 'redo' : 'undo');
@@ -966,7 +978,7 @@ export function startPage(options: PageOptions): HostPage {
           (event.ctrlKey || event.metaKey) &&
           !event.altKey &&
           !event.shiftKey &&
-          event.key.toLowerCase() === 's'
+          shortcutLetter(event) === 's'
         ) {
           // Never the browser's own Save Page, here.
           event.preventDefault();

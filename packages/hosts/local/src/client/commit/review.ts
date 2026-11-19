@@ -48,6 +48,8 @@ export class CommitReview {
   /** Settles `open()` with the commit made, when the review closes. */
   private closed: ((made: HostCommit | null) => void) | null = null;
   private landed: HostCommit | null = null;
+  /** `open()` is reading, before the review shows: a second call waits for nothing and opens nothing. */
+  private opening = false;
   private reading: Promise<void> | null = null;
   private readAgain = false;
   private readonly listening = new AbortController();
@@ -102,10 +104,11 @@ export class CommitReview {
    * commit, or could not read.
    */
   async open(): Promise<HostCommit | null> {
-    if (this.closed !== null || this.isOpen) return null;
+    if (this.opening || this.closed !== null || this.isOpen) return null;
     const { client } = this.context;
     let changes: HostChange[];
     let branch: string | null;
+    this.opening = true;
     try {
       const [git, read] = await Promise.all([client.git(), client.changes()]);
       if (!read.ok) {
@@ -117,6 +120,8 @@ export class CommitReview {
     } catch (error) {
       this.context.notify({ text: words.commit.readFailed(String(error)), tone: 'error' });
       return null;
+    } finally {
+      this.opening = false;
     }
     if (changes.length === 0) {
       this.context.notify({ text: words.commit.nothing, tone: 'info' });
