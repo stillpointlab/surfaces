@@ -39,7 +39,7 @@ right for a board and wrong for whatever sits beside it, and any new shell part 
 board should be checked against it.
 
 > **Resolution status (2026-11-18):** H1, H3, L1, L2, L3 and L4 are fixed in the pull request
-> that adds this review (branch `fix/stage5-review`, stacked on #128), each with a test that
+> that adds this review ([#131](https://github.com/stillpointlab/surfaces/pull/131), stacked on #128), each with a test that
 > fails without its fix. H2 is the spec
 > [undo-keeps-modes-and-links](../specs/undo-keeps-modes-and-links.md), not yet built. M1 is the
 > seed [a-tasks-page-whose-phase-is-gone](../../../unassigned/seeds/a-tasks-page-whose-phase-is-gone.md).
