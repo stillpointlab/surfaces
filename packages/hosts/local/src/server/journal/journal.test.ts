@@ -234,6 +234,32 @@ describe('the journal', () => {
     expect(journal.labels()).toEqual({ undo: null, redo: null });
   });
 
+  it('a delete of a file the port cannot open cannot be kept: refused to the explorer, written for an op', async () => {
+    const memory = createMemoryPort({ 'locked.txt': 'secret', 'a.md': 'a' });
+    // A file with no permission to read it: the port's read throws, its delete works.
+    const port = {
+      ...memory,
+      get: async (path: string) => {
+        if (path === 'locked.txt') throw new Error('EACCES: permission denied');
+        return memory.get(path);
+      },
+    };
+    const journal = createJournal({ port });
+    const refusing = journal.port('Delete locked.txt', { unkept: 'refuse' });
+    expect(await refusing.put([{ kind: 'delete', path: 'locked.txt' }])).toMatchObject({
+      ok: false,
+      code: 'HOST_CANNOT_UNDO',
+      reason: 'not-text',
+    });
+    expect(memory.files()).toHaveProperty('locked.txt');
+
+    const writing = journal.port('Op');
+    expect((await writing.put([{ kind: 'delete', path: 'locked.txt' }])).ok).toBe(true);
+    expect(writing.unkept).toBe('not-text');
+    expect(memory.files()).toEqual({ 'a.md': 'a' });
+    expect(journal.labels()).toEqual({ undo: null, redo: null });
+  });
+
   it('a file changed between the read and the write refuses the step', async () => {
     const port = createMemoryPort({ 'a.md': 'a' });
     // A port whose first read lets another writer in before the step's write.

@@ -338,7 +338,14 @@ export function createJournal(options: JournalOptions): Journal {
         continue;
       }
       // A write, a delete, or a move with new text: the old text is read first.
-      const read = await port.get(sourceOf(change));
+      let read: Awaited<ReturnType<StoragePort['get']>>;
+      try {
+        read = await port.get(sourceOf(change));
+      } catch {
+        // A file the port cannot open (no permission to read it) cannot be kept
+        // either. Whether it can be written is the port's to say.
+        return { kind: 'unkept', reason: 'not-text', path: sourceOf(change) };
+      }
       if (!read.ok) {
         if (NOT_TEXT.has(read.code)) {
           return { kind: 'unkept', reason: 'not-text', path: sourceOf(change) };
@@ -392,7 +399,7 @@ export function createJournal(options: JournalOptions): Journal {
             'HOST_CANNOT_UNDO',
             unkept.reason === 'too-large'
               ? `This is too large to undo: the journal keeps at most ${Math.round(maxBytes / 1024 / 1024)} MiB. Send it again with "unjournaled": true to write it anyway.`
-              : `${JSON.stringify(unkept.path)} is not text, or is over 2 MiB, so deleting it cannot be undone. Send it again with "unjournaled": true to write it anyway.`
+              : `${JSON.stringify(unkept.path)} is not text, is over 2 MiB or cannot be read, so deleting it cannot be undone. Send it again with "unjournaled": true to write it anyway.`
           ),
           reason: unkept.reason,
         };

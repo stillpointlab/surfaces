@@ -3,7 +3,7 @@
 // delete and rename, a file changed since a step, the event, git's index put
 // back as it was, and an app's op and create as one step each.
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -126,6 +126,39 @@ describe('the routes', () => {
       code: 'HOST_BAD_REQUEST',
     });
   });
+});
+
+describe('a change the label cannot read', () => {
+  it.each([
+    ['a delete with no path', { kind: 'delete' }],
+    ['a move with no source', { kind: 'move', path: 'a/b.md' }],
+    ['a create whose path is not text', { kind: 'create', path: 5, content: '' }],
+    ['a move whose source is not text', { kind: 'move', from: 5, path: 'b.md' }],
+  ])('%s is the port’s to refuse: 400, and no step', async (_what, change) => {
+    await start({ 'a.md': 'a' });
+    expect(await put([change])).toMatchObject({ status: 400, code: 'HOST_BAD_REQUEST' });
+    expect(await labels()).toMatchObject({ undo: null, redo: null });
+  });
+});
+
+describe('a file the server cannot read', () => {
+  // Root reads any file, so there is nothing to refuse.
+  it.skipIf(process.getuid?.() === 0)(
+    'its delete is refused with HOST_CANNOT_UNDO, and written when asked again',
+    async () => {
+      await start({ 'locked.txt': 'secret', 'a.md': 'a' });
+      chmodSync(join(root, 'locked.txt'), 0o000);
+      const changes = [{ kind: 'delete', path: 'locked.txt' }];
+      expect(await put(changes)).toMatchObject({
+        status: 409,
+        code: 'HOST_CANNOT_UNDO',
+        reason: 'not-text',
+      });
+      expect(there('locked.txt')).toBe(true);
+      expect(await put(changes, true)).toMatchObject({ status: 200, ok: true });
+      expect(there('locked.txt')).toBe(false);
+    }
+  );
 });
 
 describe('a file that is not text', () => {
