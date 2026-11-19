@@ -122,7 +122,7 @@ alternative was to keep no mode and ask before an executable's delete as well.
 
 ## As built
 
-_2026-11-18, by the claude agent, in the pull request stacked on the review's._
+_2026-11-18, by the claude agent, in [#132](https://github.com/stillpointlab/surfaces/pull/132), stacked on the review's._
 
 - **`JournalFiles`** is `{ kind(path), setMode(path, mode) }`, as above, and the node port's
   `files` supplies it. `kind` reads the name itself (`lstat`), inside the port's confinement.

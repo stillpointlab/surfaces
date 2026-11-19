@@ -41,7 +41,9 @@ board should be checked against it.
 > **Resolution status (2026-11-18):** H1, H3, L1, L2, L3 and L4 are fixed in the pull request
 > that adds this review ([#131](https://github.com/stillpointlab/surfaces/pull/131), stacked on #128), each with a test that
 > fails without its fix. H2 is the spec
-> [undo-keeps-modes-and-links](../specs/undo-keeps-modes-and-links.md), not yet built. M1 is the
+> [undo-keeps-modes-and-links](../specs/undo-keeps-modes-and-links.md), built in
+> [#132](https://github.com/stillpointlab/surfaces/pull/132), stacked on that one: Jamie chose
+> to keep the mode and ask only for a link. M1 is the
 > seed [a-tasks-page-whose-phase-is-gone](../../../unassigned/seeds/a-tasks-page-whose-phase-is-gone.md).
 > The observations under [For Jamie](#for-jamie) changed nothing.
 
@@ -150,7 +152,7 @@ Known and already a seed: an image a markdown file names by a relative path is a
 
 ### P1 — before or soon after the merge, Jamie's call
 
-- [ ] **H2:** [undo-keeps-modes-and-links](../specs/undo-keeps-modes-and-links.md).
+- [x] **H2:** [undo-keeps-modes-and-links](../specs/undo-keeps-modes-and-links.md), in #132.
 
 ### P2 — the pool
 
