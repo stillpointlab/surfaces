@@ -18,7 +18,22 @@ Where it stands:
 - The local host's pane opens a locked or unlocked app file through the code format like any
   other file, and says nothing of what the app thinks of it.
 
+Jamie, later the same day: the zone's page, where the full error shows, should also link to
+that edit page, so the way from the error to the place it is fixed is one click.
+
+- The inventory element already has that link for two other cases: "Open in editor" beside a
+  zone that is read-only, and "Open inventory.yaml in editor" under the manifest's errors
+  (`editorRecoveryHtml` in `packages/apps/inventory/src/element/render.ts`, a link when the host
+  gives one and otherwise the `link-editor` op). The notice for a zone that could not be parsed
+  (`inventory-zone.ts`) has none.
+- In the local host a followed editor link to a locked file opens its preview, with "Show the
+  app's files to edit it here".
+
 What a spec would have to settle (the claude agent's list, not Jamie's):
+
+- the link from the zone's parse error to the file's editor, and whether it carries the position
+  (the editor opening at line 3, column 1). In the local host, whether following it from an
+  error offers to show the app's files, since the editor is the point;
 
 - the shape of a problem: a message, a severity, and a range (line and column, perhaps an end),
   kept as data from the parser on, with the message's words as the fallback;
