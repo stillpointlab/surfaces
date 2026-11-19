@@ -34,7 +34,6 @@ What a spec would have to settle (the claude agent's list, not Jamie's):
 - the link from the zone's parse error to the file's editor, and whether it carries the position
   (the editor opening at line 3, column 1). In the local host, whether following it from an
   error offers to show the app's files, since the editor is the point;
-
 - the shape of a problem: a message, a severity, and a range (line and column, perhaps an end),
   kept as data from the parser on, with the message's words as the fallback;
 - the format contract: an optional member on a preview and an editor that take problems
