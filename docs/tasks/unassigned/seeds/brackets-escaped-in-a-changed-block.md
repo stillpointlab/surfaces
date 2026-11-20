@@ -25,14 +25,28 @@ escaped bracket is a bracket. But a renderer that draws task checkboxes (GitHub'
 one for `\[x\]`: it shows the literal `[x]`. And the file's source and its diffs carry backslashes
 nobody typed.
 
-What to decide:
+## Fixed, 2026-11-20
 
-- **Task list items.** The schema has no task item: `[x]` is text in a list item's paragraph.
-  Either the serializer leaves `[ ]` and `[x]` alone at the start of a list item, or the editor
-  learns task items as nodes of their own (a checkbox to click is the reason to).
-- **Brackets in prose.** An escape is needed only where a bracket would otherwise start a link or
-  an image. Escape those and leave the rest, or keep the text the block had wherever the edit did not touch it (see below).
+The narrow fix, in stage 5's phase 7 (Jamie's ruling, the same day): the serializer writes a
+block its own way, and when that put a backslash before a bracket it writes the block again with
+the brackets as typed. The second writing is used when it reads back as the first does, with
+the document's link definitions present. So:
+
+- `- [x] done` and `[brackets]` in prose are written as they were typed;
+- a pair that `(`, `[` or `:` follows keeps its backslashes, since bare it would read as a link,
+  a reference or a definition (`\[text\](target)`, a footnote's `\[^1\]:`);
+- a `\[name\]` that a definition elsewhere in the file would turn into a link keeps them too.
+
+Over the 933 Markdown files of this repository and of Context Manager's, the serializer wrote
+6,617 escaped brackets before and 12 after. No file read back differently from before, and no
+output differed in anything but those backslashes.
+
+## What is left
+
+**Task list items as nodes of their own.** The schema still has no task item: `[x]` is text in a
+list item's paragraph. A checkbox to click is the reason to give it a node, and that is a
+feature, not this defect.
 
 Related: [a save keeps the rest of the file](a-save-keeps-the-file.md), whose "inside a list or a
-table" point is the same rewrite seen from the other side: keeping each list item's text would
-hide this for every item the edit did not touch.
+table" point is the same rewrite seen from the other side: an edit to one item still rewrites the
+whole list, now without touching its boxes.
