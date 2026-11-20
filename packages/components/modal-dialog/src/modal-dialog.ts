@@ -15,6 +15,8 @@ export class ModalDialog extends HTMLElement {
   }
 
   private previouslyFocusedElement: HTMLElement | null = null;
+  /** Which way the last Tab went, until an edge has used it. */
+  private tabbedBackward: boolean | null = null;
 
   // Set as text, so the stylesheet never goes through markup; each render puts it
   // back first in the shadow root.
@@ -122,9 +124,9 @@ export class ModalDialog extends HTMLElement {
       if (focusAlreadyInside) return;
 
       const slottedAutofocus = this.querySelector<HTMLElement>('[data-autofocus], [autofocus]');
-      const slotted = this.getFocusableElements().find((el) => this.contains(el));
+      const slotted = this.tabbables().find((el) => this.contains(el));
       const shadowFocusable = this.shadowRoot?.querySelector<HTMLElement>(
-        '[tabindex], button, input, select, textarea, a[href]'
+        '[tabindex]:not(.modal-edge), button, input, select, textarea, a[href]'
       );
       const modalContainer = this.shadowRoot?.querySelector<HTMLElement>('.modal');
       const target = slottedAutofocus ?? slotted ?? shadowFocusable ?? modalContainer;
@@ -156,14 +158,20 @@ export class ModalDialog extends HTMLElement {
     if (event.key === 'Escape' && this.isOpen) {
       this.close();
     }
-    // Basic focus trap (can be expanded)
     if (event.key === 'Tab' && this.isOpen) {
       this.trapFocus(event);
     }
   };
 
-  private getFocusableElements(): HTMLElement[] {
-    if (!this.shadowRoot) return [];
+  /**
+   * What Tab stops at in the dialog, in the order Tab reaches it: the slots'
+   * content where the slots are, and inside a slotted element's own shadow root.
+   * A closed shadow root, or a frame, cannot be read, which is why nothing here
+   * decides where focus is: the two edges do (see `turnAt`).
+   */
+  private tabbables(): HTMLElement[] {
+    const modal = this.shadowRoot?.querySelector('.modal');
+    if (!modal) return [];
 
     const isVisible = (el: HTMLElement): boolean => {
       const style = window.getComputedStyle(el);
@@ -175,51 +183,80 @@ export class ModalDialog extends HTMLElement {
         el.offsetHeight > 0
       );
     };
-
-    // Consider slotted content too:
-    const focusableInShadow = Array.from(
-      this.shadowRoot.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      )
-    ).filter((el) => !el.hasAttribute('disabled') && isVisible(el));
-
-    const slotElements = Array.from(
-      this.querySelectorAll<HTMLElement>( // Query light DOM children (slotted)
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      )
-    ).filter((el) => !el.hasAttribute('disabled') && isVisible(el));
-
-    return [...focusableInShadow, ...slotElements];
+    const found: HTMLElement[] = [];
+    const visit = (node: Element): void => {
+      if (node instanceof HTMLSlotElement) {
+        const assigned = node.assignedElements();
+        for (const child of assigned.length > 0 ? assigned : Array.from(node.children))
+          visit(child);
+        return;
+      }
+      if (
+        node instanceof HTMLElement &&
+        node.matches(TABBABLE) &&
+        !node.hasAttribute('disabled') &&
+        isVisible(node)
+      ) {
+        found.push(node);
+      }
+      for (const child of Array.from((node.shadowRoot ?? node).children)) visit(child);
+    };
+    visit(modal);
+    return found;
   }
 
-  private trapFocus(event: KeyboardEvent): void {
-    const focusableElements = this.getFocusableElements();
-
-    if (focusableElements.length === 0) return;
-
-    const firstFocusable = focusableElements[0];
-    const lastFocusable = focusableElements[focusableElements.length - 1];
-    const activeElement = document.activeElement; // Could also be this.shadowRoot.activeElement if focus is in shadow
-
-    if (event.shiftKey) {
-      // Shift + Tab
-      if (
-        activeElement === firstFocusable ||
-        (!this.contains(activeElement as Node) && !this.shadowRoot?.contains(activeElement as Node))
-      ) {
-        lastFocusable.focus();
-        event.preventDefault();
-      }
-    } else {
-      // Tab
-      if (
-        activeElement === lastFocusable ||
-        (!this.contains(activeElement as Node) && !this.shadowRoot?.contains(activeElement as Node))
-      ) {
-        firstFocusable.focus();
-        event.preventDefault();
-      }
+  /** Whether `node` is in the dialog, through its slots and any shadow root. */
+  private holds(node: Node): boolean {
+    for (
+      let at: Node | null = node;
+      at;
+      at = at.parentNode ?? (at as Partial<ShadowRoot>).host ?? null
+    ) {
+      if (at === this) return true;
     }
+    return false;
+  }
+
+  /**
+   * The focused element when it is in the dialog. At the document, focus inside
+   * a shadow root reads as that root's host, so this follows it down.
+   */
+  private focusedInside(): Element | null {
+    let active = document.activeElement;
+    while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+    return active && this.holds(active) ? active : null;
+  }
+
+  /**
+   * Tab inside the dialog is the browser's to move: it knows every stop, and
+   * the two edges turn it round. This notes which way the key goes, and takes
+   * the one case no edge sees: focus that is outside the dialog (the page behind
+   * it, or nothing) comes in at the end the key points to.
+   */
+  private trapFocus(event: KeyboardEvent): void {
+    // Something inside took the key for itself: an editor that indents with Tab.
+    if (event.defaultPrevented) return;
+    this.tabbedBackward = event.shiftKey;
+    if (this.focusedInside()) return;
+    this.turnAt(event.shiftKey ? 'start' : 'end');
+    event.preventDefault();
+  }
+
+  /**
+   * Focus reached an edge: one of the two stops that sit before and after
+   * everything else in the dialog, which nothing else can be tabbed past. It
+   * goes on to the first stop, or backward to the last, so Tab never leaves. The
+   * key's direction says which; with no key (focus sent here some other way), the
+   * edge does.
+   */
+  private turnAt(edge: 'start' | 'end'): void {
+    const backward = this.tabbedBackward ?? edge === 'start';
+    this.tabbedBackward = null;
+    const tabbables = this.tabbables();
+    const target =
+      (backward ? tabbables[tabbables.length - 1] : tabbables[0]) ??
+      this.shadowRoot?.querySelector<HTMLElement>('.modal');
+    target?.focus();
   }
 
   private setupEventListeners(): void {
@@ -235,6 +272,12 @@ export class ModalDialog extends HTMLElement {
     });
 
     closeButton?.addEventListener('click', () => this.close());
+
+    for (const edge of ['start', 'end'] as const) {
+      this.shadowRoot
+        ?.querySelector(`.modal-edge[data-edge="${edge}"]`)
+        ?.addEventListener('focus', () => this.turnAt(edge));
+    }
   }
 
   private render(): void {
@@ -245,6 +288,7 @@ export class ModalDialog extends HTMLElement {
         ? html`
                 <div class="modal-overlay" title="">
                 <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title-id" tabindex="-1" aria-hidden="false" title="">
+                    <div class="modal-edge" data-edge="start" tabindex="0"></div>
                     <header class="modal-header">
                         <slot name="header">
                             <h2 id="modal-title-id" class="modal-title"></h2>
@@ -257,6 +301,7 @@ export class ModalDialog extends HTMLElement {
                     <footer class="modal-footer">
                         <slot name="footer"></slot>
                     </footer>
+                    <div class="modal-edge" data-edge="end" tabindex="0"></div>
                 </div>
                 </div>
             `
@@ -269,5 +314,9 @@ export class ModalDialog extends HTMLElement {
     this.setupEventListeners();
   }
 }
+
+/** What Tab stops at, but for the dialog's own two edges. */
+const TABBABLE =
+  ':is(button, [href], input, select, textarea, [contenteditable]:not([contenteditable="false"]), [tabindex]):not([tabindex="-1"], .modal-edge)';
 
 defineElement('modal-dialog', ModalDialog);

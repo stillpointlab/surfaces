@@ -47,6 +47,16 @@ $mobile-breakpoint: 768px;
   }
 }
 
+// The two stops Tab cannot pass (see `turnAt`): focusable, never seen, and out
+// of the column's flow.
+.modal-edge {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  outline: none;
+}
+
 // Modal header
 .modal-header {
   display: flex;

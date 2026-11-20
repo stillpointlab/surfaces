@@ -249,3 +249,145 @@ describe('ModalDialog markup', () => {
     expect(shadow.querySelector('.modal')).toBeNull();
   });
 });
+
+// jsdom moves no focus for a Tab key, so these do what a browser does: the key
+// goes to the document, and then focus lands on whatever is next. Inside the
+// dialog the next stop past either end is one of its two edges.
+describe('ModalDialog keeps Tab inside', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  class Inner extends HTMLElement {
+    constructor() {
+      super();
+      this.attachShadow({ mode: 'open' }).innerHTML =
+        '<button id="one">one</button><button id="two">two</button>';
+      this.shadowRoot?.querySelectorAll<HTMLElement>('button').forEach(stubLayout);
+    }
+  }
+  if (!customElements.get('x-inner-stops')) customElements.define('x-inner-stops', Inner);
+
+  const FOOTER = '<button id="cancel">Cancel</button><button id="save">Save</button>';
+
+  async function opened(bodyHtml: string): Promise<ModalDialog> {
+    const { dialog } = mount(bodyHtml);
+    await openAndSettle(dialog);
+    const close = dialog.shadowRoot?.querySelector<HTMLElement>('.modal-close-button');
+    if (close) stubLayout(close);
+    return dialog;
+  }
+
+  const closeButton = (dialog: ModalDialog): HTMLElement =>
+    dialog.shadowRoot?.querySelector('.modal-close-button') as HTMLElement;
+
+  const edge = (dialog: ModalDialog, which: 'start' | 'end'): HTMLElement =>
+    dialog.shadowRoot?.querySelector(`.modal-edge[data-edge="${which}"]`) as HTMLElement;
+
+  /** The key as the document hears it. Answers whether the dialog took it. */
+  function tab(options: { shift?: boolean; prevented?: boolean } = {}): boolean {
+    const event = new KeyboardEvent('keydown', {
+      key: 'Tab',
+      shiftKey: options.shift ?? false,
+      bubbles: true,
+      cancelable: true,
+    });
+    if (options.prevented) event.preventDefault();
+    document.dispatchEvent(event);
+    return !options.prevented && event.defaultPrevented;
+  }
+
+  /** The focused element, followed down through shadow roots. */
+  function focused(): Element | null {
+    let active = document.activeElement;
+    while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+    return active;
+  }
+
+  it('Shift+Tab from the close button goes to the last control', async () => {
+    const dialog = await opened(`<input id="name" type="text" />${FOOTER}`);
+    closeButton(dialog).focus();
+
+    // Focus is in the dialog's shadow root, where the document sees only the dialog.
+    expect(document.activeElement).toBe(dialog);
+    expect(tab({ shift: true })).toBe(false);
+    edge(dialog, 'start').focus();
+
+    expect(focused()).toBe(dialog.querySelector('#save'));
+  });
+
+  it('Tab from the last control goes to the first', async () => {
+    const dialog = await opened(`<input id="name" type="text" />${FOOTER}`);
+    dialog.querySelector<HTMLElement>('#save')?.focus();
+
+    expect(tab()).toBe(false);
+    edge(dialog, 'end').focus();
+
+    expect(focused()).toBe(closeButton(dialog));
+  });
+
+  it('counts the stops inside a slotted element’s own shadow root', async () => {
+    const dialog = await opened('<button id="outer">outer</button><x-inner-stops></x-inner-stops>');
+    const inner = dialog.querySelector('x-inner-stops') as HTMLElement;
+    closeButton(dialog).focus();
+
+    tab({ shift: true });
+    edge(dialog, 'start').focus();
+
+    expect(focused()).toBe(inner.shadowRoot?.querySelector('#two'));
+  });
+
+  it('leaves Tab alone while focus is inside such an element', async () => {
+    const dialog = await opened('<button id="outer">outer</button><x-inner-stops></x-inner-stops>');
+    const inner = dialog.querySelector('x-inner-stops') as HTMLElement;
+    const last = inner.shadowRoot?.querySelector<HTMLElement>('#two');
+    last?.focus();
+
+    // The document sees the slotted element, not the button in it; the dialog must
+    // not take that for focus having left.
+    expect(tab()).toBe(false);
+    expect(focused()).toBe(last);
+  });
+
+  it('goes forward to the first control from the start edge', async () => {
+    // Tab with focus on the dialog itself (where it opens with nothing to focus)
+    // lands on the start edge going forward.
+    const dialog = await opened(`<input id="name" type="text" />${FOOTER}`);
+
+    tab();
+    edge(dialog, 'start').focus();
+
+    expect(focused()).toBe(closeButton(dialog));
+  });
+
+  it('brings focus in from the page behind', async () => {
+    const outside = document.createElement('button');
+    document.body.append(outside);
+    const dialog = await opened(`<input id="name" type="text" />${FOOTER}`);
+
+    outside.focus();
+    expect(tab()).toBe(true);
+    expect(focused()).toBe(closeButton(dialog));
+
+    outside.focus();
+    expect(tab({ shift: true })).toBe(true);
+    expect(focused()).toBe(dialog.querySelector('#save'));
+  });
+
+  it('leaves alone a Tab that something inside took for itself', async () => {
+    const outside = document.createElement('button');
+    document.body.append(outside);
+    await opened(`<input id="name" type="text" />${FOOTER}`);
+    outside.focus();
+
+    expect(tab({ prevented: true })).toBe(false);
+    expect(focused()).toBe(outside);
+  });
+
+  it('does not open with focus on an edge', async () => {
+    const dialog = await opened('<p>Nothing to focus.</p>');
+
+    expect(dialog.shadowRoot?.activeElement?.classList.contains('modal-edge')).toBe(false);
+    expect(dialog.shadowRoot?.activeElement).not.toBeNull();
+  });
+});

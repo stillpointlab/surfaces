@@ -226,3 +226,8 @@ are carried here as they were written.
 - 2026-11-15 (undo-journal): the page knows an editor's keys from the file pane alone. An
   editor anywhere else would need the same care.
 - 2026-11-15 (undo-journal): on the board's stage view a phase with no card takes no drop.
+- 2026-11-20 (phase 7, the dialog's Tab fix): two of the local host's tests (`port.test.ts`,
+  `git/repository.test.ts`) take a fresh folder under the system's temporary directory for "not a
+  repository". With a `.git` entry anywhere above it (an empty `/tmp/.git` appeared on the
+  development machine) the host says `no-git`, rightly, and both fail. They should make their
+  own ceiling, or say why they were skipped.

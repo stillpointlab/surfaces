@@ -46,6 +46,15 @@ Opening focuses `[data-autofocus]` or `[autofocus]` in the slotted content, then
 slotted control, then the close button. A page should use `data-autofocus`: before the element is
 defined, its content is ordinary in-flow DOM, and native `autofocus` would scroll the page to it.
 
+While it is open, Tab stays inside. The browser moves focus between the dialog's stops, in the
+order they are on the page, and through a slotted element's own shadow root. The dialog has two
+stops of its own that nothing shows, one before everything and one after: focus that reaches
+either goes on to the first stop, or backward to the last. Focus that is outside the dialog comes
+in at the end the key points to. A Tab that something inside has already handled (an editor that
+indents with it) is left alone. One limit: going backward past the first stop lands on the last
+stop the dialog can read, which leaves out the inside of a closed shadow root or a frame at the
+very end; going forward reaches them.
+
 ## Events
 
 All bubble and are composed.
