@@ -12,9 +12,10 @@ are carried here as they were written.
 
 - 2026-11-14 (format-descriptors): the splitting setup (`splitting: true` and `chunkNames`) is
   repeated in five `tsup.config.ts` files. `tooling/tsup.ts` could carry it.
-  - Closed 2026-11-20 (Jamie: fix now; [#136](https://github.com/stillpointlab/surfaces/pull/136)): `splitPackage` in `tooling/tsup.ts` carries it,
-    for the five formats and the two apps. `common` splits with its chunks beside its entries,
-    as before.
+  - Closed 2026-11-20 (Jamie: fix now;
+    [#136](https://github.com/stillpointlab/surfaces/pull/136)): `splitPackage` in
+    `tooling/tsup.ts` carries it, for the five formats and the two apps. `common` splits with
+    its chunks beside its entries, as before.
 - 2026-11-14 (format-descriptors): `<image-preview>` reports a failed load twice when `alt` and
   `src` change together: a stale `load` from the previous image renders over the new source. The
   local host does not hit it, because it makes a new element for each file.
@@ -97,9 +98,10 @@ are carried here as they were written.
 - 2026-11-14 (app-shells, step 1): inventory's build has no splitting, so `./element` and
   `./shell` each carry the two elements, and a page that loads both defines them twice. The
   format packages' splitting (with `dist/chunks` in `sideEffects`) would give one copy.
-  - Closed 2026-11-20 (Jamie: fix now, before Context Manager's pin moves; [#136](https://github.com/stillpointlab/surfaces/pull/136)): the build
-    splits. `./element` and `./shell` together are 81 kB built where they were 148 kB, and the
-    two elements are defined in one shared file.
+  - Closed 2026-11-20 (Jamie: fix now, before Context Manager's pin moves;
+    [#136](https://github.com/stillpointlab/surfaces/pull/136)): the build splits. `./element`
+    and `./shell` together are 81 kB built where they were 148 kB, and the two elements are
+    defined in one shared file.
 - 2026-11-14 (app-shells, step 1): seen in the inventory elements in a dark scheme: the
   download link is the browser's default purple (it has no colour of its own), and the NEW
   badge is faint.
@@ -136,7 +138,8 @@ are carried here as they were written.
   `close-candidates`, which a shell answers itself. Drop them once every host mounts the shell.
 - 2026-11-14 (app-shells, step 2): tasks' build has no splitting either, so `./shell` carries
   its own copy of the board and the strip (as inventory's, above).
-  - Closed 2026-11-20 ([#136](https://github.com/stillpointlab/surfaces/pull/136)), with inventory's: 127 kB together where they were 221 kB.
+  - Closed 2026-11-20 ([#136](https://github.com/stillpointlab/surfaces/pull/136)), with
+    inventory's: 127 kB together where they were 221 kB.
 - 2026-11-14 (phase 2's read for phase 3): the app elements take their buttons' and form
   fields' looks from classes their host must style (`.button`, `.form-input` and six more).
   Each host styles them again; the harness has stand-ins. A shared partial in `common`'s styles
