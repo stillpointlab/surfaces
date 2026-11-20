@@ -20,7 +20,10 @@ it with `getMarkdownSerializer().serialize(doc)`. Jamie hit it in Context Manage
 
 Since [#111](https://github.com/stillpointlab/surfaces/pull/111) a save writes only the blocks
 that changed, so an untouched task list keeps its text. Edit any item, though, and the whole list
-is rewritten with every checkbox escaped. The text still reads the same once rendered, since an escaped bracket is a bracket. But a renderer that draws task checkboxes (GitHub's) no longer draws one for `\[x\]`: it shows the literal `[x]`. And the file's source and its diffs carry backslashes nobody typed.
+is rewritten with every checkbox escaped. The text still reads the same once rendered, since an
+escaped bracket is a bracket. But a renderer that draws task checkboxes (GitHub's) no longer draws
+one for `\[x\]`: it shows the literal `[x]`. And the file's source and its diffs carry backslashes
+nobody typed.
 
 What to decide:
 
