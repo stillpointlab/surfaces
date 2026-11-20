@@ -1,10 +1,10 @@
 /**
  * What a host shows for the inventory before one is open (the app contract's
  * `AppMeta`): its name and icon in the host's tree, and the create form's copy.
- * The `./meta` entry: it imports `./paths` alone, so a host page that lists the
- * apps loads none of the core (and no zod).
+ * The `./meta` entry: it imports the default folder alone, so a host page that
+ * lists the apps loads none of the core (and no zod), nor the naming rules.
  */
-import { INVENTORY_DEFAULT_FOLDER } from './paths.js';
+import { INVENTORY_DEFAULT_FOLDER } from './defaultFolder.js';
 
 import type { AppMeta } from '@stillpointlab/common-format/app';
 

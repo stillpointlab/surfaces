@@ -4,8 +4,10 @@ import { splitPackage } from '../../../tooling/tsup';
 // `./paths` (the naming rules and creation defaults) import nothing, for a
 // client that needs them without the core: the manifest's zod schemas are built
 // at module scope, so a bundler cannot shake them out of `.`. `./meta` (the
-// app's name, icon and create copy) imports `./paths` alone, for the same reason. `./create` is the
-// create form's checks, which the core's plan runs too; it imports `./paths`.
+// app's name, icon and create copy) imports the default folder alone
+// (`defaultFolder.ts`), so a page that lists the apps carries no naming rules
+// either. `./create` is the create form's checks, which the core's plan runs
+// too; it imports `./paths`.
 // `./element` is `<spl-inventory-overview>` and `<spl-inventory-zone>`, and
 // `./create-element` is `<spl-inventory-create>`, kept apart so a page that
 // only shows an inventory does not load the form. They import `./types`,

@@ -2,10 +2,10 @@
  * What a host shows for the tasks app before a board is open (the app
  * contract's `AppMeta`): its name and icon in the host's tree, and the create
  * form's copy, with the consent a create at the root asks for. The `./meta`
- * entry: it imports `./paths` alone, so a host page that lists the apps loads
- * none of the core (and no zod).
+ * entry: it imports the default folder alone, so a host page that lists the
+ * apps loads none of the core (and no zod), nor the naming rules.
  */
-import { TASKS_DEFAULT_FOLDER } from './paths.js';
+import { TASKS_DEFAULT_FOLDER } from './defaultFolder.js';
 
 import type { AppMeta } from '@stillpointlab/common-format/app';
 

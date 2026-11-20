@@ -4,7 +4,8 @@ import { splitPackage } from '../../../tooling/tsup';
 // constants) and `./paths` (the naming rules) import nothing, for a client that
 // needs them without the core: the manifest's zod schemas are built at module
 // scope, so a bundler cannot shake them out of `.`. `./meta` (the app's name,
-// icon and create copy) imports `./paths` alone, for the same reason.
+// icon and create copy) imports the default folder alone (`defaultFolder.ts`),
+// so a page that lists the apps carries no naming rules either.
 // `./create` is the create form's checks, which the core's plan runs too; it
 // imports `./paths` and `./types`. `./element` is `<spl-task-board>` and
 // `<spl-tasks-nav>`, and `./create-element` is `<spl-tasks-create>`, kept apart

@@ -8,7 +8,7 @@
  */
 
 /** Create defaults into a folder; the dialog encourages keeping it. */
-export const TASKS_DEFAULT_FOLDER = 'tasks';
+export { TASKS_DEFAULT_FOLDER } from './defaultFolder.js';
 
 /**
  * Manifest slug rule (columns, kinds — `manifest.ts`'s `SLUG_PATTERN`,

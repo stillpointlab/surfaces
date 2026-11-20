@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
-// The `./meta` entry loads no zod and none of the core: a host page that lists
-// the apps imports it (the `./paths` precedent).
+// The `./meta` entry loads no zod, none of the core and none of the naming
+// rules in `./paths`: a host page that lists the apps imports it, and in a host
+// whose every page does, whatever it loads is on every page.
 
 const evaluated = vi.hoisted(() => new Set<string>());
 
@@ -17,9 +18,13 @@ vi.mock('./core.js', async (load) => {
   evaluated.add('core');
   return load();
 });
+vi.mock('./paths.js', async (load) => {
+  evaluated.add('paths');
+  return load();
+});
 
 describe('the ./meta entry', () => {
-  it('loads neither zod nor the core', async () => {
+  it('loads neither zod, the core nor the naming rules', async () => {
     const { tasksMeta } = await import('./meta.js');
 
     expect(tasksMeta.label).toBe('Tasks');

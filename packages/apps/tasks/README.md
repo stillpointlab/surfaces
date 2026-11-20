@@ -32,8 +32,9 @@ manifest's zod schemas at module scope, which a bundler cannot drop):
 A third, `./create`, is the create form's checks (`checkTasksCreate`, with the limits and default
 columns and kinds the form shows). It imports only `./paths` and `./types`, and `planTasksCreate`
 runs the same checks, so the form and the plan cannot drift.
-`./meta` is `tasksMeta` alone; it imports only `./paths`, so a host page that lists the apps loads
-no zod. `./element` is the board and the tab strip, `./create-element` the create form, and
+`./meta` is `tasksMeta` alone; it imports only the default folder (`defaultFolder.ts`, which
+`./paths` exports too), so a host page that lists the apps loads no zod and none of the naming
+rules. `./element` is the board and the tab strip, `./create-element` the create form, and
 `./shell` the page around the board and the strip (below).
 
 It was moved as-is from Context Manager (source commit `30428c3c`), where the host side stays:
