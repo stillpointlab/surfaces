@@ -70,6 +70,9 @@ are carried here as they were written.
   `packages/apps/inventory` (`bounds.ts`, `pages.ts`, `meta.ts`) and still in Context Manager
   (`services/inventory/opSchema.ts`, `services/inventory/pages.ts`, `client/apps/registry.ts`, the
   create noun in `services/apps/registry.ts`). Two copies until context-manager-adopts-apps.
+  - Carried 2026-11-20 (Jamie) to phase 7,
+    [drain-followups](../../tasks/stage5/phase7/specs/drain-followups.md): closed when the
+    adoption's step 1 merges.
 - 2026-11-14 (app-module-grows, step 1): `AppMeta` has no noun for the "… created" notice a host
   shows after a create (Context Manager's client says "Inventory", "Task project"). The local
   host will want one.
@@ -87,6 +90,8 @@ are carried here as they were written.
 - 2026-11-14 (app-module-grows, step 2): tasks' bounds, pages and create copy are now in
   `packages/apps/tasks` (`bounds.ts`, `pages.ts`, `meta.ts`) and still in Context Manager. Two
   copies until context-manager-adopts-apps, as for inventory.
+  - Carried 2026-11-20 (Jamie) to phase 7,
+    [drain-followups](../../tasks/stage5/phase7/specs/drain-followups.md), with inventory's.
 - 2026-11-14 (app-module-grows, step 2): tasks' `fromChanges` cannot say whether a card's column
   moved (`dirty`, `versionColumn`): that needs the last check-in's content, not a status. The
   harness's workspace works it out from its base files today. host-runner has to choose: the
@@ -94,6 +99,8 @@ are carried here as they were written.
 - 2026-11-14 (app-module-grows, step 2): tasks' pages read a stage or phase with `parseInt`, as
   Context Manager's did, so `/stage/3x` opens stage 3. Tighten it once Context Manager has
   adopted the pages.
+  - Carried 2026-11-20 (Jamie) to phase 7,
+    [drain-followups](../../tasks/stage5/phase7/specs/drain-followups.md), after the adoption.
 - 2026-11-14 (app-module-grows, step 2): the `add-kind` bound carries a reserved-folder check
   from Context Manager that can never be true.
   - Closed 2026-11-20 ([#137](https://github.com/stillpointlab/surfaces/pull/137)): the
@@ -141,6 +148,8 @@ are carried here as they were written.
   by design; whether an empty stage should outlive its pointer is not decided.
 - 2026-11-14 (app-shells, step 2): `tasksModule.hostOps` still names `refresh-stage` and
   `close-candidates`, which a shell answers itself. Drop them once every host mounts the shell.
+  - Carried 2026-11-20 (Jamie) to phase 7,
+    [drain-followups](../../tasks/stage5/phase7/specs/drain-followups.md), after the adoption.
 - 2026-11-14 (app-shells, step 2): tasks' build has no splitting either, so `./shell` carries
   its own copy of the board and the strip (as inventory's, above).
   - Closed 2026-11-20 ([#136](https://github.com/stillpointlab/surfaces/pull/136)), with
@@ -171,6 +180,12 @@ are carried here as they were written.
   reads, not only the instance's.
 - 2026-11-14 (apps-in-the-local-host, step 2): in the md editor, a click in the document and
   Control+End put the cursor in the frontmatter block, and typing added a line there.
+  - Closed 2026-11-20 (Jamie: could not reproduce is fine). Tried in Chromium against the built
+    local host at `04764d0`, over sixteen paths: clicks in the text, below it and around the
+    frontmatter's chip, Control+End and Control+Home, Preview then Edit, and one of this
+    repository's own cards. A click on the chip opens the frontmatter and puts the cursor in
+    it, by design, and Control+End from there goes to the document's end. The likeliest cause
+    is a script's click landing on the chip.
 - 2026-11-14 (apps-in-the-local-host, step 2): creating an app at the served root, with its
   consent, is covered by tests and was not done by hand.
 - 2026-11-14 (checkin-review, step 1): tasks' shell works out the board's check-in request from
