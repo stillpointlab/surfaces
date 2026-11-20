@@ -55,16 +55,34 @@ touch what Context Manager adopts were ruled on first, so that its pin moves onc
    are, roughly: the local host's server and page, the harness, the two apps' elements and
    shells, the check-in review, and the format packages (most of stage 4's carried entries).
 
-Items 1 and 2 need a pin move in Context Manager after they land, with its walks.
+Two defects join the phase (Jamie, 2026-11-20). They were found in Context Manager during its
+stage 7, in elements that live here, and arrived as seeds
+([#140](https://github.com/stillpointlab/surfaces/pull/140)). They are not log entries, and each
+seed leaves the pool when its fix lands:
+
+5. **A changed block comes back with its brackets escaped**
+   ([seed](../../../unassigned/seeds/brackets-escaped-in-a-changed-block.md)). The narrow fix:
+   the md serializer leaves `[ ]` and `[x]` alone at the start of a list item, and escapes a
+   bracket only where it would otherwise start a link or an image. Task items as nodes of their
+   own, with a checkbox to click, are a feature and stay in the seed.
+6. **A dialog keeps Tab inside it** (the seed `a-dialog-keeps-tab-inside`, which the fix removes:
+   [#144](https://github.com/stillpointlab/surfaces/pull/144)). The defect was read from the
+   code and not seen in a browser, so the first step is a test that fails. Then: read the
+   focused element down through the shadow roots, and trap with a sentinel at each end of the
+   dialog in place of a list of focusable elements, which covers a slotted component with a
+   shadow root of its own.
+
+Items 1, 2, 5 and 6 need a pin move in Context Manager after they land, with its walks.
 
 ## Non-goals
 
 - New features. An entry that wants one becomes a seed.
-- The seeds already in the pool.
+- The seeds already in the pool, but for the two defects above.
 
 ## Acceptance / completion checklist
 
-- [ ] Items 1 and 2 merged here, and Context Manager's pin moved past them with both walk suites.
+- [ ] Items 1, 2, 5 and 6 merged here, each with a test that fails without it, and Context
+      Manager's pin moved past them with both walk suites.
 - [ ] Item 3's two entries closed by the adoption's first pull request.
 - [ ] Every entry in the follow-up log has its line, each from a ruling of Jamie's.
 - [ ] The stage's changelog lists what was fixed, seeded and dropped.
@@ -72,5 +90,6 @@ Items 1 and 2 need a pin move in Context Manager after they land, with its walks
 ## Implementation plan
 
 1. After the adoption's first pull request merges: one pull request here for items 1 and 2.
-2. The remaining entries in batches, a pull request for each batch's fixes and seeds.
-3. One pin move in Context Manager for everything the drain changed, walked.
+2. Items 5 and 6, a pull request each.
+3. The remaining entries in batches, a pull request for each batch's fixes and seeds.
+4. One pin move in Context Manager for everything the phase changed, walked.
