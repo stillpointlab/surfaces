@@ -28,8 +28,9 @@ the folder and currency defaults, the field-id and currency patterns), and `./ty
 types. A client that needs only those imports them there: `.` builds the manifest's zod schemas at
 module scope, which a bundler cannot drop. `./create` is the create form's checks
 (`checkInventoryCreate`, with the limits and defaults the form shows); it imports only `./paths`.
-`./meta` is `inventoryMeta` alone; it imports only `./paths`, so a host page that lists the apps
-loads no zod. `./element` is the app's two elements, `./create-element` its create form, and
+`./meta` is `inventoryMeta` alone; it imports only the default folder (`defaultFolder.ts`, which
+`./paths` exports too), so a host page that lists the apps loads no zod and none of the naming
+rules. `./element` is the app's two elements, `./create-element` its create form, and
 `./shell` the page around the two elements (below).
 
 The core was moved as-is from Context Manager (source commit `373a20ae`), and the elements followed

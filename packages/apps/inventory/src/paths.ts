@@ -6,7 +6,7 @@
  */
 
 /** Create defaults into a folder; the dialog encourages keeping it. */
-export const INVENTORY_DEFAULT_FOLDER = 'inventory';
+export { INVENTORY_DEFAULT_FOLDER } from './defaultFolder.js';
 
 /** Written explicitly into every seeded manifest, default or not. */
 export const INVENTORY_DEFAULT_CURRENCY = 'USD';
