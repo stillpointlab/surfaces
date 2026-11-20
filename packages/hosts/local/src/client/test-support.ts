@@ -54,7 +54,7 @@ export interface FakeHost extends HostClient {
   holdStep: boolean;
   releaseStep(): void;
   /** Answer the next `put` with this refusal instead of writing. */
-  refuseNextPut?: { code: string; message: string };
+  refuseNextPut?: { code: string; message: string; reason?: string };
   /** Hold every `put` until `releasePut()`. */
   holdPut: boolean;
   releasePut(): void;

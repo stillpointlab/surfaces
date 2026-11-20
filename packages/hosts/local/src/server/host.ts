@@ -240,6 +240,7 @@ export function createHost(options: HostOptions): LocalHost {
   const journal = createJournal({
     port,
     index: port.index,
+    files: port.files,
     onChange: () => broadcast({ type: 'journal' }),
   });
 
@@ -398,7 +399,10 @@ export function createHost(options: HostOptions): LocalHost {
         (change) =>
           typeof change === 'object' &&
           change !== null &&
-          (change.kind === 'create' || change.kind === 'move' || change.kind === 'delete')
+          (change.kind === 'create' || change.kind === 'move' || change.kind === 'delete') &&
+          // The label reads these; a change without them is the port's to refuse.
+          typeof change.path === 'string' &&
+          (change.kind !== 'move' || typeof change.from === 'string')
       );
     if (!explorers) return port.put(changes);
     if (unjournaled) return journal.write(changes);

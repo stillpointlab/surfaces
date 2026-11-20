@@ -181,6 +181,22 @@ describe('<spl-inventory-overview>', () => {
     );
   });
 
+  it('says briefly that a zone could not be parsed, and leaves the parser’s words to the zone’s page', () => {
+    const parserSays =
+      'YAML parse error: Flow sequence in block collection must be sufficiently indented and end with a ] at line 3, column 1';
+    const { el } = mountOverview({
+      ...SEEDED,
+      zones: [
+        ...SEEDED.zones,
+        { ...SEEDED.zones[0], path: 'rooms/cellar.yaml', label: 'cellar', parseError: parserSays },
+      ],
+    });
+    const row = el.querySelector('.inventory-zone-row.is-broken')!;
+    expect(row.querySelector('.inventory-zone-problem')!.textContent).toBe('could not be parsed');
+    expect(row.querySelector('.inventory-zone-name')!.textContent).toContain('cellar');
+    expect(el.textContent).not.toContain('Flow sequence');
+  });
+
   it('renders hostile repository text as text', () => {
     const space = hostile(
       {

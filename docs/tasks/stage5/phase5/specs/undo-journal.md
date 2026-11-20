@@ -257,6 +257,12 @@ package's README has the routes in full._
   removed, so a created file the person staged, undone and done again, is staged again.
 - **A write or a move with content of a file the port cannot read** is `not-text` as well; only
   an app's op can send one.
+- **A file the server has no permission to read** is `not-text` too, since the
+  [stage 5 review](../reviews/stage-5-code-review.md) (H3): its delete asks first, as an
+  image's does. Before, the read threw and the route answered 500.
+- **An undone delete brings back the file's mode, and a link's delete asks first** (the
+  review's H2), since [undo-keeps-modes-and-links](undo-keeps-modes-and-links.md). Before it,
+  a script came back without its executable bit and a link as a copy of its target's text.
 - **The journal is emptied only when the unkept write lands.**
 - **The labels are worded in the server** (`journal/labels.ts`): "Delete x.md", "Rename a.md to
   b.md", "Move a.md to docs", "Delete 3 files in notes", "Rename docs to notes", "Inventory:
@@ -272,6 +278,9 @@ package's README has the routes in full._
   and "Redo: `<label>`", or "Nothing to undo" and "Nothing to redo".
 - **A notice after an undo or a redo,** "Undone: `<label>`" or "Redone: `<label>`", which the
   text above did not have: a key pressed in an app otherwise says nothing.
+- **The keys take the physical Z** on a layout with no Latin letters, and the layout's own
+  letter otherwise (the review's L3).
+- **The labels are read again when the event stream reconnects** (the review's L1).
 - **The keys are not the page's** when a dialog is open, a menu has the event, the file pane
   shows its editor and the event came from it, or the focused element is a text field.
 - **An undo that deletes the open file while it has unsaved edits leaves it open,** under the

@@ -10,13 +10,21 @@
 # From Jamie's first pass over the local host (2026-11-14).
 - docs/tasks/unassigned/seeds/revert-a-changed-file.md
 
+# From Jamie's pass over stage 5 in the local host (2026-11-18). The first was
+# "inventory's zones/ folder", carried from stage 2's follow-ups, and now has the URL.
+- docs/tasks/unassigned/seeds/inventory-says-zone-in-urls-and-folders.md
+- docs/tasks/unassigned/seeds/app-errors-in-the-explorer.md
+- docs/tasks/unassigned/seeds/errors-at-line-and-column.md
+
+# From the stage 5 code review (2026-11-18).
+- docs/tasks/unassigned/seeds/a-tasks-page-whose-phase-is-gone.md
+
 # From stage 4's follow-ups (2026-11-14).
 - docs/tasks/unassigned/seeds/a-save-keeps-the-file.md
 - docs/tasks/unassigned/seeds/markdown-relative-links.md
 - docs/tasks/unassigned/seeds/dark-scheme-pass.md
 
 # Carried from stage 2's follow-ups.
-- docs/tasks/unassigned/seeds/inventory-zones-folder.md
 - docs/tasks/unassigned/seeds/results-everywhere.md
 - docs/tasks/unassigned/seeds/inventory-element-op-types.md
 - docs/tasks/unassigned/seeds/icons-that-are-not-buttons.md

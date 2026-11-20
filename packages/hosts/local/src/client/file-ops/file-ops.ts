@@ -176,7 +176,10 @@ export function createFileOps(host: HTMLElement, context: FileOpsContext): FileO
           // The host cannot keep it to undo: ask, and send it again saying so.
           const { reason } = result as { reason?: unknown };
           return {
-            question: words.fileOps.cannotUndo[reason === 'too-large' ? 'too-large' : 'not-text'],
+            question:
+              words.fileOps.cannotUndo[
+                reason === 'too-large' || reason === 'link' ? reason : 'not-text'
+              ],
             confirm: words.fileOps.deleteConfirm,
             run: async () => landed(await write(true)),
           };

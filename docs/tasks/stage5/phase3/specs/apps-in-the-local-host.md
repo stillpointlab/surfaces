@@ -252,7 +252,9 @@ the kind, and `navigate`, the title and the history handling treat it as they tr
      is left to the browser;
    - `open-card`: the file's preview, through `navigate`;
    - `notification`: the page's notice;
-   - `reload-request`: the page is resolved again;
+   - `reload-request`: the page is resolved again, and the shell is given it even at the
+     revision an op's reply stamped, as it is for a `navigate` to the page on screen (the
+     [stage 5 review](../../phase5/reviews/stage-5-code-review.md), H1);
    - `open-options-menu` carries `{ items, anchor }`. The page opens `HostMenu` at the anchor's
      corner with an entry per item (its `label` and `title`), and a chosen entry dispatches
      `options-menu-select` with `{ itemId }` on the element that asked, which is what the board

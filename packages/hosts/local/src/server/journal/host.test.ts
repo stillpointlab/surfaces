@@ -3,7 +3,15 @@
 // delete and rename, a file changed since a step, the event, git's index put
 // back as it was, and an app's op and create as one step each.
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  lstatSync,
+  readFileSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -128,6 +136,39 @@ describe('the routes', () => {
   });
 });
 
+describe('a change the label cannot read', () => {
+  it.each([
+    ['a delete with no path', { kind: 'delete' }],
+    ['a move with no source', { kind: 'move', path: 'a/b.md' }],
+    ['a create whose path is not text', { kind: 'create', path: 5, content: '' }],
+    ['a move whose source is not text', { kind: 'move', from: 5, path: 'b.md' }],
+  ])('%s is the port’s to refuse: 400, and no step', async (_what, change) => {
+    await start({ 'a.md': 'a' });
+    expect(await put([change])).toMatchObject({ status: 400, code: 'HOST_BAD_REQUEST' });
+    expect(await labels()).toMatchObject({ undo: null, redo: null });
+  });
+});
+
+describe('a file the server cannot read', () => {
+  // Root reads any file, so there is nothing to refuse.
+  it.skipIf(process.getuid?.() === 0)(
+    'its delete is refused with HOST_CANNOT_UNDO, and written when asked again',
+    async () => {
+      await start({ 'locked.txt': 'secret', 'a.md': 'a' });
+      chmodSync(join(root, 'locked.txt'), 0o000);
+      const changes = [{ kind: 'delete', path: 'locked.txt' }];
+      expect(await put(changes)).toMatchObject({
+        status: 409,
+        code: 'HOST_CANNOT_UNDO',
+        reason: 'not-text',
+      });
+      expect(there('locked.txt')).toBe(true);
+      expect(await put(changes, true)).toMatchObject({ status: 200, ok: true });
+      expect(there('locked.txt')).toBe(false);
+    }
+  );
+});
+
 describe('a file that is not text', () => {
   it('a delete of an image is refused with HOST_CANNOT_UNDO, and written when asked again', async () => {
     await start({ 'pics/dot.png': PNG, 'pics/a.md': 'a', 'b.md': 'b' });
@@ -165,6 +206,86 @@ describe('a file that is not text', () => {
     expect(there('dot.png')).toBe(false);
     expect((await redo()).status).toBe(200);
     expect(new Uint8Array(readFileSync(join(root, 'dot.png')))).toEqual(PNG);
+  });
+});
+
+describe('a file’s mode, and a link', () => {
+  const mode = (path: string) => statSync(join(root, path)).mode & 0o777;
+
+  it('an undone delete brings an executable back executable, and git sees no change', async () => {
+    await start({ 'scripts/run.sh': '#!/bin/sh\necho hi\n', 'a.md': 'a\n' }, true);
+    chmodSync(join(root, 'scripts/run.sh'), 0o755);
+    git(root, env, 'commit', '-qam', 'executable');
+    expect(git(root, env, 'status', '--porcelain')).toBe('');
+
+    expect((await put([{ kind: 'delete', path: 'scripts/run.sh' }])).status).toBe(200);
+    expect(there('scripts/run.sh')).toBe(false);
+    expect(await undo()).toMatchObject({ status: 200, label: 'Delete run.sh' });
+    expect(mode('scripts/run.sh')).toBe(0o755);
+    expect(git(root, env, 'status', '--porcelain')).toBe('');
+
+    // And after a redo and a second undo.
+    expect((await redo()).status).toBe(200);
+    expect((await undo()).status).toBe(200);
+    expect(mode('scripts/run.sh')).toBe(0o755);
+    expect(git(root, env, 'status', '--porcelain')).toBe('');
+  });
+
+  it('keeps the mode outside a repository too', async () => {
+    await start({ 'run.sh': '#!/bin/sh\n', 'quiet.txt': 'q' });
+    chmodSync(join(root, 'run.sh'), 0o750);
+    chmodSync(join(root, 'quiet.txt'), 0o600);
+    await put([
+      { kind: 'delete', path: 'run.sh' },
+      { kind: 'delete', path: 'quiet.txt' },
+    ]);
+    expect((await undo()).status).toBe(200);
+    expect(mode('run.sh')).toBe(0o750);
+    expect(mode('quiet.txt')).toBe(0o600);
+  });
+
+  it('a link’s delete is refused with HOST_CANNOT_UNDO, and removes the link alone when asked again', async () => {
+    await start({ 'notes/beta.md': 'beta\n', 'a.md': 'a\n' }, true);
+    symlinkSync('../notes/beta.md', join(root, 'scripts-link.md'));
+    symlinkSync('notes/beta.md', join(root, 'link.md'));
+    git(root, env, 'add', '-A');
+    git(root, env, 'commit', '-qm', 'links');
+    await put([{ kind: 'create', path: 'c.md', content: 'c' }]);
+
+    const changes = [{ kind: 'delete', path: 'link.md' }];
+    const refused = await put(changes);
+    expect(refused).toMatchObject({ status: 409, code: 'HOST_CANNOT_UNDO', reason: 'link' });
+    expect(lstatSync(join(root, 'link.md')).isSymbolicLink()).toBe(true);
+    expect(await labels()).toMatchObject({ undo: 'Create c.md' });
+
+    expect(await put(changes, true)).toMatchObject({ status: 200, ok: true });
+    expect(existsSync(join(root, 'link.md'))).toBe(false);
+    expect(read('notes/beta.md')).toBe('beta\n');
+    // Written with no step: nothing left that would bring back a copy.
+    expect(await labels()).toMatchObject({ undo: null, redo: null });
+  });
+
+  it('a link among a folder’s files makes the whole delete ask', async () => {
+    await start({ 'docs/a.md': 'a', 'docs/b.md': 'b', 'target.md': 't' });
+    symlinkSync('../target.md', join(root, 'docs/link.md'));
+    const changes = ['docs/a.md', 'docs/b.md', 'docs/link.md'].map((path) => ({
+      kind: 'delete',
+      path,
+    }));
+    expect(await put(changes)).toMatchObject({ status: 409, reason: 'link' });
+    expect(there('docs/a.md')).toBe(true);
+    expect(await put(changes, true)).toMatchObject({ status: 200 });
+    expect(there('docs')).toBe(false);
+    expect(there('target.md')).toBe(true);
+  });
+
+  it('a renamed link is still a link after the rename and its undo', async () => {
+    await start({ 'target.md': 't' });
+    symlinkSync('target.md', join(root, 'link.md'));
+    expect((await put([{ kind: 'move', from: 'link.md', path: 'other.md' }])).status).toBe(200);
+    expect(lstatSync(join(root, 'other.md')).isSymbolicLink()).toBe(true);
+    expect((await undo()).status).toBe(200);
+    expect(lstatSync(join(root, 'link.md')).isSymbolicLink()).toBe(true);
   });
 });
 

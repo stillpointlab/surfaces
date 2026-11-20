@@ -214,7 +214,8 @@ export function createHttpClient(base = ''): HostClient {
         listener(event);
       };
       // The browser reconnects by itself. Whatever changed while the stream was
-      // down was not sent, so a reconnection says the list is stale.
+      // down was not sent, so a reconnection says the list is stale, and the
+      // journal with it: a server that restarted has no steps.
       source.onerror = () => {
         dropped = true;
       };
@@ -222,6 +223,7 @@ export function createHttpClient(base = ''): HostClient {
         if (!dropped) return;
         dropped = false;
         listener({ type: 'listed' });
+        listener({ type: 'journal' });
       };
       return () => source.close();
     },

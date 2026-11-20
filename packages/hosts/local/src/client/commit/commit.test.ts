@@ -441,6 +441,19 @@ describe('the review', () => {
     expect($('.page-notice').dataset.tone).toBe('error');
   });
 
+  it('a second open while the first is reading opens nothing, and the first still settles', async () => {
+    await start();
+    const first = page.openCommit();
+    const second = page.openCommit();
+    expect(await second).toBeNull();
+    await settle();
+    expect(review().isOpen).toBe(true);
+    type(summary(), 'kept');
+    await press('cancel');
+    expect(await first).toBeNull();
+    expect(host.commits).toEqual([]);
+  });
+
   it('Cancel commits nothing', async () => {
     await start();
     const { opened } = await openReview();
