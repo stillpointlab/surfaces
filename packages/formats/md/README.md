@@ -92,6 +92,11 @@ const md = createMarkdownIt({
 const html = md.render('**hi**');
 ```
 
+A line break inside a paragraph is rendered as a space, as CommonMark has it and as GitHub
+renders a Markdown file: a paragraph wrapped by hand reads as one paragraph, and a break the
+writer asked for (two trailing spaces, or a backslash, before the line break) is still a break.
+Pass `breaks: true` for text that is typed line by line, such as a chat message.
+
 > ⚠️ **Sanitization is the caller's responsibility.** `renderMarkdown` returns
 > raw HTML. Run it through a sanitizer (e.g. DOMPurify) before inserting it into
 > the page.

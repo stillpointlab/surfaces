@@ -15,11 +15,20 @@ export type MarkdownItPlugin = (md: MarkdownIt) => void;
 export interface CreateMarkdownItOptions {
   /** Extra markdown-it plugins to apply (e.g. a host-specific citation plugin). */
   plugins?: MarkdownItPlugin[];
+  /**
+   * Show a line break inside a paragraph as a line break. Off by default: a
+   * document is rendered as CommonMark has it and as GitHub renders a Markdown
+   * file, where one line break is a space and a paragraph wrapped by hand reads
+   * as one paragraph. A break the writer asked for (two trailing spaces, or a
+   * backslash, before the line break) is a break either way. A host turns this
+   * on for text that is typed line by line, such as a chat message.
+   */
+  breaks?: boolean;
 }
 
 /**
  * Create a markdown-it instance configured for this editor: CommonMark + GFM
- * strikethrough + tables, with linkify/typographer/breaks. Citation or other
+ * strikethrough + tables, with linkify and typographer. Citation or other
  * host-specific syntax is added via `options.plugins`.
  */
 export function createMarkdownIt(options: CreateMarkdownItOptions = {}): MarkdownIt {
@@ -27,7 +36,7 @@ export function createMarkdownIt(options: CreateMarkdownItOptions = {}): Markdow
     html: false,
     linkify: true,
     typographer: true,
-    breaks: true,
+    breaks: options.breaks ?? false,
   });
 
   // linkify-it 6 disables fuzzy links and email addresses by default. Keep the
