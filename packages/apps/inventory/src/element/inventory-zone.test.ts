@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import './inventory-zone.js';
 import { ATTRIBUTE_PAYLOADS, CONFIGURED_ZONE, LEGACY_ZONE } from './inventory.fixtures.js';
-import { INVENTORY_BASE, linkedEditors, mountInventory } from './inventory.testing.js';
+import { INVENTORY_BASE, LINKS, linkedEditors, mountInventory } from './inventory.testing.js';
 
 import type { InventoryZone } from './inventory-zone.js';
 import type { Answer } from './inventory.testing.js';
@@ -128,6 +128,19 @@ describe('<spl-inventory-zone> rendering a legacy zone', () => {
 
     expect(el.querySelector('a.inventory-download')).toBeNull();
     expect(el.querySelector('.inventory-download.is-disabled')).not.toBeNull();
+  });
+
+  it('shows no export control when the page has no zone export', () => {
+    const { exportZone: _exportZone, ...links } = LINKS;
+    const { el } = mountInventory<InventoryZone, SharedInventoryZoneState>(
+      'spl-inventory-zone',
+      LEGACY_ZONE,
+      undefined,
+      { links }
+    );
+
+    expect(el.querySelector('.inventory-download')).toBeNull();
+    expect(el.querySelector('.inventory-totals')).not.toBeNull();
   });
 
   it('asks the page to check in from its check-in bar', () => {

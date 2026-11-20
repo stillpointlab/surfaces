@@ -26,7 +26,7 @@ files.
 - The [local host spike](../../../stage4/phase1/spikes/local-host.md), finding 7: what each move
   lets Context Manager drop.
 - The specs whose output this consumes: [app-module-grows](../../phase2/specs/app-module-grows.md),
-  [app-shells](../../phase2/specs/app-shells.md), [checkin-review](checkin-review.md). Each PR for those lists the
+  [app-shells](../../phase2/specs/app-shells.md), [checkin-review](../../phase4/specs/checkin-review.md). Each PR for those lists the
   ids and classes of Context Manager's page chrome it did not keep.
 - [context-manager-adopts-formats](../../../stage4/phase4/specs/context-manager-adopts-formats.md),
   "As built": how stage 4's adoption went.
@@ -133,7 +133,7 @@ and the review are additions.
   no unlocked state.
 
 The local host built the same lock first
-([apps-in-the-local-host](apps-in-the-local-host.md), with its "As built" section by then). What
+([apps-in-the-local-host](../../phase3/specs/apps-in-the-local-host.md), with its "As built" section by then). What
 carries over: the listing stays whole and the page hides the files; the lock covers the
 manifest's folder and everything under it; a file in a locked scope opens in its preview with a
 line saying why; the server's refusal has one code.

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { planTasksCreate } from './create.js';
 import { tasksModule } from './module.js';
 
 import type { TasksElementOps } from './module.js';
@@ -139,5 +140,24 @@ describe('tasksModule', () => {
     ['SOMETHING_NEW', 'move', 'invalid'],
   ])('treats %s on %s as %s', (code, op, refusal) => {
     expect(tasksModule.refusalClass(code, op)).toBe(refusal);
+  });
+
+  it('places a create’s files as placeTasksCreate does', () => {
+    const plan = planTasksCreate({
+      folder: 'docs/tasks',
+      columns: [{ id: 'todo', label: 'Todo' }],
+      kinds: [{ id: 'task' }],
+    });
+    if (!plan.ok) throw new Error(plan.message);
+    const { placeCreate } = tasksModule;
+    expect(placeCreate(plan, { taken: [] })).toEqual({ ok: true, files: plan.files });
+    expect(placeCreate(plan, { taken: [MANIFEST], reusable: [MANIFEST] })).toEqual({
+      ok: true,
+      files: [],
+    });
+    expect(placeCreate(plan, { taken: ['docs'] })).toMatchObject({
+      ok: false,
+      code: 'TASKS_PATH_EXISTS',
+    });
   });
 });

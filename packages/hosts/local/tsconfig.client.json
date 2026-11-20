@@ -1,14 +1,24 @@
 {
   "extends": "../../../tsconfig.base.json",
   // The page and its harness fixtures, with the DOM and no Node types. The formats
-  // the page registers are read from their sources, as Vite resolves them, so the
-  // typecheck needs none of them built.
+  // and the apps the page registers are read from their sources, as Vite resolves
+  // them, so the typecheck needs none of them built.
   "compilerOptions": {
     "types": ["vite/client"],
     "paths": {
       "@stillpointlab/code-format/*": [
         "../../formats/code/src/*/index.ts",
         "../../formats/code/src/*.ts"
+      ],
+      "@stillpointlab/inventory-app/create-element": ["../../apps/inventory/src/element/create.ts"],
+      "@stillpointlab/inventory-app/*": [
+        "../../apps/inventory/src/*/index.ts",
+        "../../apps/inventory/src/*.ts"
+      ],
+      "@stillpointlab/tasks-app/create-element": ["../../apps/tasks/src/element/create.ts"],
+      "@stillpointlab/tasks-app/*": [
+        "../../apps/tasks/src/*/index.ts",
+        "../../apps/tasks/src/*.ts"
       ],
       "@stillpointlab/image-format/*": [
         "../../formats/image/src/*/index.ts",
@@ -28,5 +38,5 @@
       ]
     }
   },
-  "include": ["src/client", "dev"]
+  "include": ["src/client", "src/shared", "dev"]
 }

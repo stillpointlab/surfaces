@@ -6,16 +6,16 @@ few **components** they share. Formats and apps
 are stateless clients of the same host contract (`get` / `list` / `put`, where `put` is a proposal),
 so they share one toolchain, one `common` package and, in time, one scaffold.
 
-| Package                  | npm name                          | Ships                                                       |
-| ------------------------ | --------------------------------- | ----------------------------------------------------------- |
-| `packages/common`        | `@stillpointlab/common-format`    | logging, contracts, ready gate, tokens, conformance suites  |
-| `packages/formats/md`    | `@stillpointlab/md-format`        | core + `<md-preview>` + `<md-editor>`                       |
-| `packages/formats/code`  | `@stillpointlab/code-format`      | core + `<code-preview>` + `<code-editor>`, `<code-diff>`    |
-| `packages/formats/sheet` | `@stillpointlab/sheet-format`     | core + `<sheet-preview>` + `<sheet-editor>`, `<sheet-grid>` |
-| `packages/formats/xmdl`  | `@stillpointlab/xmdl-format`      | core + `<xmdl-preview>` + `<xmdl-editor>`                   |
-| `packages/formats/image` | `@stillpointlab/image-format`     | `<image-preview>` only                                      |
-| `packages/apps/`         |                                   | tasks and inventory arrive with the apps breakout           |
-| `packages/components/`   | `@stillpointlab/<name>-component` | shared UI elements: `<modal-dialog>`, `<spl-icon>`          |
+| Package                  | npm name                          | Ships                                                                  |
+| ------------------------ | --------------------------------- | ---------------------------------------------------------------------- |
+| `packages/common`        | `@stillpointlab/common-format`    | logging, contracts, ready gate, tokens, conformance suites             |
+| `packages/formats/md`    | `@stillpointlab/md-format`        | core + `<md-preview>` + `<md-editor>`                                  |
+| `packages/formats/code`  | `@stillpointlab/code-format`      | core + `<code-preview>` + `<code-editor>`, `<code-diff>`               |
+| `packages/formats/sheet` | `@stillpointlab/sheet-format`     | core + `<sheet-preview>` + `<sheet-editor>`, `<sheet-grid>`            |
+| `packages/formats/xmdl`  | `@stillpointlab/xmdl-format`      | core + `<xmdl-preview>` + `<xmdl-editor>`                              |
+| `packages/formats/image` | `@stillpointlab/image-format`     | `<image-preview>` only                                                 |
+| `packages/apps/`         |                                   | tasks and inventory arrive with the apps breakout                      |
+| `packages/components/`   | `@stillpointlab/<name>-component` | shared UI elements: `<modal-dialog>`, `<spl-icon>`, `<checkin-review>` |
 
 Every format opens in the one harness (`npm run dev`, <http://localhost:5180>); see
 [the harness](#the-harness) below.

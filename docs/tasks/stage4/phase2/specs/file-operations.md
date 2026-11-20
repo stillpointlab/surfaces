@@ -23,7 +23,7 @@ explorer. The tree only asks for the menu. The host owns the menu, the dialogs a
   with `PortChange` ([host-server](host-server.md), [host-page](host-page.md)).
 - The tasks board's `open-options-menu` request (`packages/apps/tasks/src/element/task-board.ts`):
   the same menu will answer it in
-  [apps-in-the-local-host](../../../stage5/phase1/specs/apps-in-the-local-host.md).
+  [apps-in-the-local-host](../../../stage5/phase3/specs/apps-in-the-local-host.md).
 
 ## Work package
 
@@ -82,8 +82,8 @@ server's message.
 - **Moves are not staged here.** Staging a move or a delete is
   [git-in-the-host](../../phase3/specs/git-in-the-host.md), which changes the server's `put`, not this page.
 - **An app's scope** is not special yet. The lock arrives with
-  [apps-in-the-local-host](../../../stage5/phase1/specs/apps-in-the-local-host.md).
-- **Nothing is undone here.** [undo-journal](../../../stage5/phase1/specs/undo-journal.md) adds
+  [apps-in-the-local-host](../../../stage5/phase3/specs/apps-in-the-local-host.md).
+- **Nothing is undone here.** [undo-journal](../../../stage5/phase5/specs/undo-journal.md) adds
   that under the same writes.
 
 ## Non-goals

@@ -13,6 +13,10 @@ entry (`.`) exports:
 - seeds: `tasksManifestSeedContent`; and the pool's `formatOrderFile` and `rewriteOrderFile`;
 - the lifecycle: `tasksLifecycle`, the `AppLifecycle` a host mounts a tasks folder with (its scope,
   and the boards its tree shows);
+- the module: `tasksModule`, the `AppModule` a host runs the app with (below), and what it carries
+  beside the core: `tasksMeta` (name, icon, create copy), `tasksBounds` (the op, view and create
+  schemas a host checks input with), `tasksPages` (the landing at `''`, `/stage/:stage` and
+  `/stage/:stage/phase/:phase`) and `tasksFromChanges` (the facts from a host's file changes);
 - no exceptions for rules: the manifest patches answer `Result<{ content }>` from
   `@stillpointlab/common-format/app`, and a refusal carries a `code`, a `message` and, where there
   are some, zod `details`, which the host maps to its own errors.
@@ -28,6 +32,9 @@ manifest's zod schemas at module scope, which a bundler cannot drop):
 A third, `./create`, is the create form's checks (`checkTasksCreate`, with the limits and default
 columns and kinds the form shows). It imports only `./paths` and `./types`, and `planTasksCreate`
 runs the same checks, so the form and the plan cannot drift.
+`./meta` is `tasksMeta` alone; it imports only `./paths`, so a host page that lists the apps loads
+no zod. `./element` is the board and the tab strip, `./create-element` the create form, and
+`./shell` the page around the board and the strip (below).
 
 It was moved as-is from Context Manager (source commit `30428c3c`), where the host side stays:
 drafts, check-in, the pool and board services, routes and the task board. The rest of this README
@@ -139,6 +146,20 @@ one. `create-card` is stamped with the host's time. Refusals keep the statuses C
 endpoints send. The op maps both elements ask with (`TaskBoardOps`, `TasksNavOps`) live in
 `elementOps.ts`, DOM-free, and the element entry re-exports them.
 
+Beside the core, the module carries what a host would otherwise keep a file for. `bounds` checks an
+op (the core's twelve; a host bounds its own), a view and a create's columns and kinds, refusing
+with `APP_OP_INVALID`, `APP_VIEW_INVALID` or `APP_CREATE_INVALID` and the schema's issues. `pages`
+are the landing (the pointer's phase, else the highest, as a redirect; an old `?path=` link to a
+phase redirects for good, and one to a board outside the convention shows it), a stage and a
+phase, each with the strip's state as `extras.nav` and the manifest's folder as `extras.docsRoot`.
+A page answers not found for a number that is not positive and when there is no nav to project,
+and joins a redirect as text onto its base, so a fragment base works. `placeCreate` is
+`placeTasksCreate`. `fromChanges` reads a host's file statuses as facts: a changed, new or moved
+card is `changed`, a new one is in the snapshot's `created`, a moved one has `movedFrom` and a
+pending move; the order file is `changed` the same way; the manifest and new `.gitkeep` files are
+the housekeeping. What statuses cannot say (a column that moved, a divergence, pull requests) it
+leaves out.
+
 **Drafts.** When to rebase a diverged draft is the host's decision; the comparison is the core's.
 `metadataOnlyCheck(draft, base)` says whether a draft changes only its base's frontmatter, or
 answers the reconstruction the host formats its own way and compares with the draft.
@@ -226,7 +247,8 @@ places it.
   | `close-candidates`   | `path`           | `{ cards: [{ path, title, column }] }`          |
   | `close`              | `kind`, `paths`  | `{ target: { stage, phase }, moved, created? }` |
 
-- **Requests:** `navigate { href }` (a phase or board chosen, or one just created or closed to),
+- **Requests:** `navigate { href }` (a phase or board chosen, or one just created or closed to;
+  cancelable, so a host that goes there claims it with `preventDefault()`),
   `reload-request` (after Set current; `RELOAD_REQUEST_EVENT`), `notification`, and `open-options-menu` from "Close…",
   answered with `options-menu-select` (`close-phase` or `close-stage`) on the strip.
 - **The close dialog** comes with it: a `<modal-dialog id="close-dialog">` listing the pointer
@@ -241,6 +263,67 @@ a moved card names its anchor). The fixtures cover every card state (a hand-buil
 few facts no file shows), the stage view, an empty board, this repository's own `docs/tasks/`,
 and each dialog open. The strip sits above the board in every fixture, and the "Nav:" fixtures
 show a phase that is not current, a board outside the stages, no pointer, and the close dialog.
+
+### The shell
+
+`@stillpointlab/tasks-app/shell` registers `<spl-tasks-app>`, the tasks app's page: the app
+contract's `AppShellElement`, from `common-format/app`. It registers the board and the strip too,
+and lays them out under its top bar, in light DOM.
+
+- **Input.** `setState({ base, back?, location?, view, state, extras? })`. `extras` is what
+  `tasksPages` answer beside a view (`TasksPageExtras`): `nav`, the strip's state with the page's
+  selection, and `docsRoot`, the folder the empty state names. A `board` view shows
+  `<spl-task-board>`, a `stage` view the board's swimlanes, and no view the empty state ("No boards
+  yet") in the board's place; the strip is beside each. A view it does not know is a line with a
+  link to the landing. A new view gets a new board, as a page load did.
+- **The top bar** (`.tasks-topbar`): a back link (`.back-button`, absent without `back`), the task
+  icon, the location (`.task-board-repo`), **Refresh** (`.tasks-refresh`) and, on a board,
+  **Settings** (`.tasks-board-settings`), which opens the board's settings dialog, or says it is
+  unavailable when the board has no state to edit.
+- **Links** are built from `base` and `tasksPages`, joined as text with `pageHref` (a base can be
+  a fragment): a stage is `base/stage/<n>`, a phase `base/stage/<n>/phase/<m>`, and a board
+  outside the stages `base?path=<path>`. A followed link raises `navigate { href }` (bubbling,
+  cancelable); a host that claims it navigates itself, and otherwise the browser follows the link.
+  The strip's own `navigate` (a phase or board chosen, one created or closed to) is cancelable too,
+  and so is the shell's when a refresh leaves the page with nothing to show. Neither has a link
+  behind it, so unclaimed it goes nowhere. The shell never sets `location`.
+- **Refresh** asks the host `refresh`, then reads the nav and the view again with `project`,
+  keeping the strip's selection. From the empty state, or a stage the nav no longer has, it goes
+  to the landing instead.
+- **`learn(op, reply)`** reads the board again with `project` after `edit-manifest`,
+  `create-card`, `set-title` or `set-tags`, the dialogs' changes. **`opView(op)`** answers the
+  view on screen for `reorder-pool`, whose reply is that view's pool.
+- **Ops.** The elements' ops bubble through to the host, except two the shell answers itself
+  through `project`: `refresh-stage` (the stage view) and `close-candidates` (the board at the
+  path, as `{ path, title, column }`). It claims them before a listener on the shell sees them,
+  so a host that mounts the shell answers neither. Its own are `project`, `refresh` and
+  `checkin` (`AppShellOps`).
+- **Check-in is the shell's.** It holds one `<checkin-review>`
+  (`@stillpointlab/checkin-review-component`) and takes the board's `checkin-request`: the
+  request stops at the shell, and a host never hears it. The review opens on the request's
+  changed cards, the pool's order file and the housekeeping files, every one checked, labelled as
+  Context Manager's dialog labels them (`moved`, with the old path as the row's `from`; a column
+  move as `todo → done`, a missing column as `needs attention`; `content edited`;
+  `backlog priority`; `pointer / tags`; `new folder`). On a stage view the cards are in path order
+  and every row sits under its phase (`Phase 2`) or `Pool & config`. The title starts as
+  "Tasks check-in: `<board>`" and the op's `context` is `{ boardPath, stage }`. After a `started`
+  reply the board marks the op's paths in flight (`markCheckinInFlight`) until the host calls
+  **`checkinSettled()`**. The words are the host's (`input.checkin.words`) or the shell's own,
+  which say "check in"; a branch is offered only when the host gives one. When the board is given
+  a new state while the review is open (the input set again, or the board read again), its rows
+  follow, each keeping its check.
+- **Requests** bubble through unchanged: `navigate`, `notification`, `reload-request`,
+  `open-card` and both elements' `open-options-menu` (the host's menu answers with
+  `options-menu-select` on the element that asked).
+- **Styles** read the shared tokens. A host with a fixed header sets
+  `--spl-tasks-app-sticky-top` to its height, so the pool sidebar sticks below it. The board's
+  and the strip's dialogs use a host's `.button` and form classes, as they did on its page.
+
+In the harness, the fixture "Shell over the memory host" shows the shell over the workshop, under
+a fragment base, with `navigate` resolved through `tasksPages`, `project` and `refresh` answered
+from the memory host's files, every op answered and learned, `checkin` answered by committing
+the chosen files in memory (the page is read again after it, so their marks clear), and a small
+options menu.
 
 ### The create form
 

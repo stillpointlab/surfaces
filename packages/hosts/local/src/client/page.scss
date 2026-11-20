@@ -53,12 +53,28 @@ modal-dialog:not(:defined) {
   text-overflow: ellipsis;
 }
 
+// Undo and Redo: a glyph each, disabled with nothing to do, their step's label as
+// the title and the name. Square, so the folder's name keeps its room.
+.explorer-undo,
+.explorer-redo {
+  flex: none;
+  min-width: 2rem;
+  padding-inline: $spacing-xs;
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
 // The Commit button and the number of changed files on it.
 .explorer-commit {
   display: inline-flex;
   flex: none;
   align-items: center;
   gap: $spacing-xs;
+}
+
+// No count when nothing has changed: the button is disabled instead.
+.explorer-commit-count:empty {
+  display: none;
 }
 
 .explorer-commit-count {
@@ -72,16 +88,34 @@ modal-dialog:not(:defined) {
   text-align: center;
 }
 
-// The notice after a commit: a live region, there and empty until a commit.
-.commit-notice {
+// The page's one notice: a live region, there and empty until something is said
+// (a commit, an app's notification, what a lock reports). Its tone colours it.
+.page-notice {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: $spacing-sm;
   padding: $spacing-xs $spacing-md;
   border-bottom: 1px solid $border-light;
-  color: $success-color;
-  background: $success-bg;
+  color: $info-color;
+  background: $info-bg;
   font-size: 0.8125rem;
+
+  &[data-tone='success'] {
+    color: $success-color;
+    background: $success-bg;
+  }
+
+  &[data-tone='warning'] {
+    border-bottom-color: $warning-border;
+    color: $warning-color;
+    background: $warning-bg;
+  }
+
+  &[data-tone='error'] {
+    border-bottom-color: $error-border;
+    color: $error-color;
+    background: $error-bg;
+  }
 
   &:empty {
     padding: 0;
@@ -89,13 +123,18 @@ modal-dialog:not(:defined) {
   }
 }
 
-.commit-notice-text {
+.page-notice-text {
   flex: 1 1 auto;
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
-.commit-notice-close {
+.page-notice-lines {
+  margin: $spacing-xs 0 0;
+  padding-left: 1.25em;
+}
+
+.page-notice-close {
   flex: none;
   padding: 0 $spacing-xs;
   border: 0;
@@ -130,6 +169,99 @@ modal-dialog:not(:defined) {
   display: block;
 }
 
+// The rows above the tree for the apps at the served folder's root: the app's
+// icon and label on a button, and its menu button, like a tree row.
+.app-roots {
+  display: flex;
+  flex-direction: column;
+  padding: $spacing-xs 0;
+  border-bottom: 1px solid $border-light;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.app-root {
+  display: flex;
+  align-items: center;
+  padding: 0 $spacing-xs 0 0;
+
+  &:hover {
+    background: $background-hover;
+  }
+}
+
+.app-root-open {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: $spacing-xs;
+  min-width: 0;
+  padding: 2px $spacing-md;
+  border: 0;
+  color: $text-primary;
+  background: none;
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+
+  &[aria-current='page'] {
+    font-weight: 600;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $focus-ring;
+    outline-offset: -2px;
+  }
+}
+
+.app-root-label {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.app-root-unlocked {
+  flex: none;
+  padding: 0 $spacing-xs;
+  border: 1px solid $warning-border;
+  border-radius: $border-radius-sm;
+  color: $warning-color;
+  font-size: 0.6875rem;
+}
+
+.app-root-dot {
+  flex: none;
+  width: 0.4rem;
+  height: 0.4rem;
+  margin-left: auto;
+  border-radius: 50%;
+  background: $warning-color;
+}
+
+.app-root-menu {
+  flex: none;
+  padding: 0 $spacing-xs;
+  border: 0;
+  border-radius: $border-radius-sm;
+  color: $text-muted;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    color: $text-primary;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $focus-ring;
+    outline-offset: 1px;
+  }
+}
+
 host-file-tree {
   flex: 1 1 auto;
   min-height: 0;
@@ -140,6 +272,75 @@ host-file-tree {
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+}
+
+// The file pane and the app pane: one shows at a time, filling `<main>`.
+.file-pane,
+.app-pane {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+// The app's shell scrolls in the pane; its top margin is the host's.
+.app-pane {
+  overflow: auto;
+}
+
+.app-pane-body {
+  flex: 1 1 auto;
+  padding: $spacing-lg $spacing-xl;
+
+  > [hidden] {
+    display: none;
+  }
+}
+
+.app-pane-message[hidden] {
+  display: none;
+}
+
+.app-invalid {
+  margin: $spacing-xl;
+  max-width: 48rem;
+
+  .button {
+    margin-top: $spacing-sm;
+  }
+}
+
+.app-invalid-title {
+  margin: 0 0 $spacing-sm;
+  font-size: 1.125rem;
+}
+
+.app-invalid-errors {
+  margin: 0;
+  padding-left: 1.25em;
+  color: $error-color;
+  font-family: ui-monospace, monospace;
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+
+// Over a locked file's preview: why it does not open in its editor.
+.pane-locked {
+  flex: none;
+  margin: 0;
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid $border-light;
+  color: $text-muted;
+  background: $background-muted;
+  font-size: 0.8125rem;
+
+  &[hidden] {
+    display: none;
+  }
 }
 
 .pane-header {
@@ -246,6 +447,90 @@ host-file-tree {
     background: $button-bg;
     filter: brightness(1.1);
   }
+}
+
+// The classes an app's elements take from their host (the app-shells spec):
+// `.button`, `.button-primary` above, and these, on the shared tokens.
+.button-secondary {
+  border-color: $border-dark;
+  color: $text-primary;
+  background: $background-secondary;
+
+  &:hover:not(:disabled) {
+    background: $background-hover;
+  }
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-md;
+
+  &[hidden] {
+    display: none;
+  }
+
+  // A field's own button ("Add another column") keeps its width.
+  > .button {
+    align-self: flex-start;
+  }
+}
+
+.form-label {
+  color: $text-primary;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.form-input {
+  box-sizing: border-box;
+  max-width: 100%;
+  padding: $spacing-xs $spacing-sm;
+  border: 1px solid $border-dark;
+  border-radius: $border-radius-md;
+  color: $text-primary;
+  background: $background-primary;
+  font: inherit;
+  font-size: 0.875rem;
+
+  &:focus-visible {
+    outline: 2px solid $focus-ring;
+    outline-offset: 1px;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+  }
+
+  &[aria-invalid='true'] {
+    border-color: $error-border;
+  }
+}
+
+.form-help {
+  margin: 0;
+  color: $text-muted;
+  font-size: 0.8125rem;
+}
+
+.form-message {
+  margin: 0;
+  color: $error-color;
+  font-size: 0.8125rem;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .pane-banner {
@@ -421,6 +706,20 @@ host-file-tree {
   }
 }
 
+// The question a delete asks when the host cannot keep it to undo.
+.file-op-question {
+  margin: 0;
+  padding: $spacing-xs $spacing-sm;
+  border: 1px solid $warning-border;
+  border-radius: $border-radius-md;
+  color: $warning-color;
+  background: $warning-bg;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
 .file-op-error {
   margin: 0;
   color: $error-color;
@@ -431,184 +730,100 @@ host-file-tree {
   }
 }
 
-// The commit dialog (commit/dialog.ts): the files, the message, the branch, and a
-// refusal under them.
-.commit-body {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-xs;
-}
-
-.commit-message {
-  margin: 0;
-}
-
-.commit-files,
-.commit-branch {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-xs;
-  min-width: 0;
-  margin: 0 0 $spacing-sm;
-  padding: 0;
-  border: 0;
-}
-
-.commit-legend {
-  padding: 0;
-  margin-bottom: $spacing-xs;
-  color: $text-muted;
-  font-size: 0.8125rem;
-}
-
-.commit-files-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $spacing-sm;
-  font-size: 0.875rem;
-}
-
-.commit-count {
-  color: $text-muted;
-  font-size: 0.8125rem;
-}
-
-.commit-list {
-  max-height: min(40vh, 18rem);
-  margin: 0;
-  padding: $spacing-xs 0;
-  overflow-y: auto;
-  border: 1px solid $border-light;
-  border-radius: $border-radius-md;
-  background: $background-primary;
-  list-style: none;
-}
-
-.commit-row-label {
-  display: flex;
-  align-items: baseline;
-  gap: $spacing-sm;
-  padding: 2px $spacing-sm;
-  font-size: 0.875rem;
-  cursor: pointer;
-
-  &:hover {
-    background: $background-hover;
-  }
-
-  input {
-    flex: none;
-    align-self: center;
-    margin: 0;
-  }
-}
-
-.commit-status {
-  flex: none;
-  width: 4.5em;
-  font-size: 0.75rem;
-  font-weight: 600;
-
-  &[data-status='changed'] {
-    color: $warning-color;
-  }
-  &[data-status='new'] {
-    color: $success-color;
-  }
-  &[data-status='moved'] {
-    color: $info-color;
-  }
-  &[data-status='deleted'] {
-    color: $error-color;
-  }
-}
-
-.commit-path {
-  min-width: 0;
-  font-family: ui-monospace, monospace;
-  font-size: 0.8125rem;
-  overflow-wrap: anywhere;
-}
-
-.commit-label {
-  color: $text-muted;
-  font-size: 0.8125rem;
-}
-
-.commit-field {
-  box-sizing: border-box;
-  width: 100%;
+// The check-in review (`<checkin-review>`), the explorer's commit and every app's:
+// the review places its rows and fields, and borrows `.button` and the form
+// classes above. A refusal is git's own words, which may be many lines: kept as
+// they are, framed and scrolled. The explorer's rows are statuses, coloured as
+// the tree colours them; its note about unsaved edits is a warning.
+checkin-review .checkin-review-error {
   padding: $spacing-xs $spacing-sm;
-  border: 1px solid $border-dark;
+  border: 1px solid $error-border;
   border-radius: $border-radius-md;
-  color: $text-primary;
-  background: $background-primary;
-  font: inherit;
-  font-size: 0.875rem;
+  background: $error-bg;
+  font-family: ui-monospace, monospace;
 
   &:focus-visible {
     outline: 2px solid $focus-ring;
     outline-offset: 1px;
   }
+}
 
-  &:read-only,
-  &:disabled {
-    opacity: 0.7;
+.commit-review {
+  .checkin-review-label {
+    font-weight: 600;
+
+    &[data-label='changed'] {
+      color: $warning-color;
+    }
+    &[data-label='new'] {
+      color: $success-color;
+    }
+    &[data-label='moved'] {
+      color: $info-color;
+    }
+    &[data-label='deleted'] {
+      color: $error-color;
+    }
+  }
+
+  .checkin-review-note {
+    padding: $spacing-xs $spacing-sm;
+    border: 1px solid $warning-border;
+    border-radius: $border-radius-md;
+    color: $warning-color;
+    background: $warning-bg;
   }
 }
 
-.commit-details {
-  margin-bottom: $spacing-sm;
-  resize: vertical;
+// The dialog that creates an app's instance (apps/create-dialog.ts): the host's
+// folder and root consent above the app's own create form.
+.app-create-body {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  min-width: min(32rem, calc(100vw - 4rem));
 }
 
-#commit-branch-name {
+.app-create-folder {
   font-family: ui-monospace, monospace;
 }
 
-.commit-choice {
+.app-create-root {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: $spacing-xs;
-  font-size: 0.875rem;
-}
-
-.commit-note {
-  margin: 0;
-  color: $text-muted;
-  font-size: 0.8125rem;
-}
-
-.commit-unsaved {
-  padding: $spacing-xs $spacing-sm;
+  margin-bottom: $spacing-md;
+  padding: $spacing-sm $spacing-md;
   border: 1px solid $warning-border;
   border-radius: $border-radius-md;
   color: $warning-color;
   background: $warning-bg;
-}
-
-// git's own words, which may be many lines: kept as they are, and scrolled.
-.commit-error {
-  max-height: 12rem;
-  margin: 0;
-  padding: $spacing-xs $spacing-sm;
-  overflow: auto;
-  border: 1px solid $error-border;
-  border-radius: $border-radius-md;
-  color: $error-color;
-  background: $error-bg;
-  font-family: ui-monospace, monospace;
-  font-size: 0.8125rem;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  font-size: 0.875rem;
 
   &[hidden] {
     display: none;
   }
+}
 
-  &:focus-visible {
-    outline: 2px solid $focus-ring;
-    outline-offset: 1px;
+.app-create-warning {
+  margin: 0;
+}
+
+.app-create-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-xs;
+  font-weight: 600;
+
+  input {
+    margin-top: 0.2em;
   }
+}
+
+.app-create-error {
+  margin-bottom: $spacing-sm;
+}
+
+.app-create-form:empty {
+  display: none;
 }

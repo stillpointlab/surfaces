@@ -1,0 +1,101 @@
+/* Stand-ins for what a host page brings around the tasks shell: its buttons and
+   form inputs (the board's and the strip's dialogs render Context Manager's
+   classes and bring no rules of their own), and its options menu. Plain, on
+   the shared tokens, so the harness reads in both themes. */
+.tasks-shell-harness .button {
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--spl-border-dark);
+  border-radius: 4px;
+  background: var(--spl-background-secondary);
+  color: var(--spl-text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.tasks-shell-harness .button-primary {
+  border-color: var(--spl-button-bg);
+  background: var(--spl-button-bg);
+  color: var(--spl-button-text);
+}
+
+.tasks-shell-harness .button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.tasks-shell-harness .form-input {
+  box-sizing: border-box;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--spl-border-dark);
+  border-radius: 4px;
+  background: var(--spl-background-primary);
+  color: var(--spl-text-primary);
+  font: inherit;
+}
+
+.tasks-shell-harness .button-secondary {
+  background: var(--spl-background-secondary);
+}
+
+.tasks-shell-harness .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.tasks-shell-harness .form-label {
+  color: var(--spl-text-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.tasks-shell-harness .form-input[aria-invalid='true'] {
+  border-color: var(--spl-error-color);
+}
+
+.tasks-shell-harness .form-help {
+  margin: 0;
+  color: var(--spl-text-muted);
+  font-size: 0.8125rem;
+}
+
+.tasks-shell-harness .form-message {
+  margin: 0;
+  color: var(--spl-error-color);
+  font-size: 0.8125rem;
+}
+
+.tasks-harness-menu {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  min-width: 12rem;
+  padding: 4px 0;
+  border: 1px solid var(--spl-border-dark);
+  border-radius: 4px;
+  background: var(--spl-surface-overlay);
+  box-shadow: var(--spl-popover-shadow, 0 4px 12px rgba(0, 0, 0, 0.2));
+}
+
+.tasks-harness-menu button {
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  color: var(--spl-text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tasks-harness-menu button:hover,
+.tasks-harness-menu button:focus-visible {
+  background: var(--spl-background-hover);
+  outline: none;
+}
+
+.tasks-harness-menu button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

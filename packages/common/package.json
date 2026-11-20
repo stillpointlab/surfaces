@@ -64,6 +64,11 @@
       "import": "./dist/testing/app.js",
       "require": "./dist/testing/app.cjs"
     },
+    "./testing/host": {
+      "types": "./dist/testing/host.d.ts",
+      "import": "./dist/testing/host.js",
+      "require": "./dist/testing/host.cjs"
+    },
     "./styles/tokens": "./src/styles/_tokens.scss",
     "./styles/status": "./src/styles/_status.scss",
     "./styles/switch": "./src/styles/_switch.scss",

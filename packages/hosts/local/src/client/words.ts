@@ -5,8 +5,12 @@
 // sentence after it: together they are the draft's words. The explorer's menu and
 // dialogs are the file-operations spec's, where it has words for them. The git
 // notice is the git-in-the-host spec's; the Changes view's messages are drafts.
-// The commit dialog's choice ("On <branch>", "On a new branch") is the spec's; the
-// rest of its words, and the notice after a commit, are drafts.
+// The commit's words in the check-in review, and the notice after a commit, are
+// drafts; the review's choice ("On <branch>", "On a new branch") is its own. The apps' words
+// (`apps`) are the apps-in-the-local-host spec's where it gives them (the "Show
+// files…" question, the folder's reason, the menu's entries), and drafts beside
+// them. Undo and redo (`journal`): the buttons' titles and the delete dialog's two
+// questions are the undo-journal spec's; the rest are drafts.
 
 export interface Confirmation {
   question: string;
@@ -99,6 +103,8 @@ export const words = {
     separate: 'A separate repository (a submodule or a nested one): change it there.',
     holdsSeparate: 'This folder holds a separate repository, which cannot be moved from here.',
     truncated: 'The folder is too large to list in full, so its files are not all known here.',
+    /** The spec's draft: a folder above an app's locked files. */
+    holdsLocked: 'This folder holds an app’s locked files. Show the files first.',
   },
 
   /**
@@ -117,6 +123,16 @@ export const words = {
     deleteUnsaved: (name: string) => `${name} has unsaved edits. Delete it anyway?`,
     /** A folder's delete when the open file, with unsaved edits, is inside it. */
     deleteUnsavedInside: (name: string) => `${name} has unsaved edits, which will be lost.`,
+    /**
+     * The undo-journal spec's: asked when the host cannot keep a delete to undo,
+     * by its reason (the second is the spec's draft). Delete sends it again,
+     * written with no step.
+     */
+    cannotUndo: {
+      'too-large': 'This is too large to undo. Delete anyway?',
+      'not-text':
+        'An image or a large file is among these, and deleting it cannot be undone. Delete anyway?',
+    },
     check: {
       empty: 'Enter a path.',
       noName: 'Enter a name after the last slash.',
@@ -129,39 +145,121 @@ export const words = {
     },
   },
 
-  /** The Commit button, its dialog, and the notice after a commit. */
+  /** An app's row, its menu, its pane, and the lock. */
+  apps: {
+    /** The menu on an app's row (the spec's entries). */
+    open: 'Open',
+    showFiles: 'Show files…',
+    lockFiles: 'Lock files',
+    menuLabel: (label: string) => `Options for ${label}`,
+    /** The spec's draft, word for word: asked before an app's files are shown. */
+    showFilesConfirm: {
+      question: 'Show this app’s files?',
+      detail:
+        'Changes made to them skip the app’s rules, and the app may report problems until they are fixed.',
+      confirm: 'Show files',
+      cancel: 'Cancel',
+    } satisfies Confirmation,
+    /** The row above the tree for an app at the served folder's root. */
+    rootRows: 'Apps in the served folder',
+    unlocked: 'unlocked',
+    unlockedTitle: 'Unlocked: this app’s files are listed, and changes to them skip its rules',
+    holdsChanges: 'Holds changes',
+    /** The notice after "Lock files": the problems the lifecycle reports follow it. */
+    locked: (label: string) => `The files of ${label} are locked again.`,
+    lockedProblems: (label: string) =>
+      `The files of ${label} are locked again. The app reports problems with them:`,
+    lockFailed: (message: string) => `The files could not be locked. ${message}`,
+    unlockFailed: (message: string) => `The files could not be shown. ${message}`,
+    /** The pane's line over a locked file, which opens in its preview. */
+    lockedLine: (label: string) =>
+      `This file belongs to ${label}, whose files are locked, so it opens in its preview. Show the app’s files to edit it here.`,
+    /** The app pane, when it has nothing to mount. */
+    loading: 'Opening the app…',
+    noApp: 'There is no app at this address.',
+    notFound: 'The app has no page at this address.',
+    unknownApp: (app: string) => `This page cannot show the ${app} app.`,
+    loadFailed: 'The app could not be loaded.',
+    readFailed: (message: string) => `The app could not be read. ${message}`,
+    /** An app's commit summary when its review gives none. */
+    checkinTitle: (label: string) => `${label} check-in`,
+    /** An instance discovery found but cannot open: its manifest, or an overlap. */
+    invalidTitle: (label: string) => `${label} cannot open`,
+    invalidIntro: 'These are the problems with its files:',
+    invalidHelp: 'Show its files to fix them, then lock them again.',
+    /** Creating an instance from a folder's menu: the app's own `meta.create` copy beside these. */
+    create: {
+      /** The menu's entry. `noun` carries its article: "an inventory". */
+      entry: (noun: string) => `Create ${noun} here…`,
+      title: (noun: string) => `Create ${noun}`,
+      folder: 'Folder',
+      folderExample: (example: string) => `For example ${example}.`,
+      rootHelp: 'Leave it empty to create at the root of the served folder.',
+      confirm: 'Create',
+      cancel: 'Cancel',
+      loadFailed: 'The form could not be loaded.',
+      check: {
+        leadingSlash: 'Start the folder inside the served folder, without a leading slash.',
+        dotDot: 'A folder cannot have a “..” segment.',
+        empty: 'A folder’s name cannot be empty between two slashes.',
+        consent: 'Tick the box above to create at the root of the served folder.',
+      },
+    },
+  },
+
+  /** Undo and Redo: the explorer header's buttons, the keys, and what they say after. */
+  journal: {
+    /** The buttons' faces: a glyph each, so the folder's name keeps its room. Their names are their titles. */
+    undo: '↶',
+    redo: '↷',
+    /** The buttons' titles: the spec's "Undo: Delete notes.md". */
+    undoTitle: (label: string) => `Undo: ${label}`,
+    redoTitle: (label: string) => `Redo: ${label}`,
+    nothingToUndo: 'Nothing to undo',
+    nothingToRedo: 'Nothing to redo',
+    /** The notice after one lands. */
+    done: (which: 'undo' | 'redo', label: string) =>
+      `${which === 'undo' ? 'Undone' : 'Redone'}: ${label}`,
+    /** The notice after a refusal: a file changed since says which, in the host's words. */
+    failed: (which: 'undo' | 'redo', code: string, message: string) =>
+      code === 'HOST_UNDO_CONFLICT'
+        ? message
+        : `Could not ${which === 'undo' ? 'undo' : 'redo'}. ${message}`,
+    /** An app's op the host wrote with no step. */
+    opCannotUndo: (reason: 'too-large' | 'not-text') =>
+      reason === 'too-large'
+        ? 'This change was too large to keep, so it cannot be undone.'
+        : 'This change touched a file that is not text, so it cannot be undone.',
+  },
+
+  /**
+   * The Commit button, the commit's words in the check-in review (the explorer's
+   * and every app's), and the notice after a commit. The review's own words
+   * ("Files", "All", "On <branch>", "New branch name", …) are the component's.
+   */
   commit: {
     button: 'Commit',
     /** The button's name for a screen reader, with the count it shows. */
-    buttonLabel: (count: number) => `Commit: ${count} changed ${count === 1 ? 'file' : 'files'}`,
+    buttonLabel: (count: number) =>
+      count === 0
+        ? 'Commit: nothing has changed'
+        : `Commit: ${count} changed ${count === 1 ? 'file' : 'files'}`,
     title: 'Commit',
-    loading: 'Reading the changes…',
     readFailed: (message: string) => `The changes could not be read. ${message}`,
     nothing: 'Nothing has changed since the last commit.',
-    files: 'Files',
-    all: 'All',
-    chosen: (count: number, total: number) =>
-      `${count} of ${total} ${total === 1 ? 'file' : 'files'} chosen`,
     status: { changed: 'changed', new: 'new', moved: 'moved', deleted: 'deleted' },
-    moved: (from: string, to: string) => `${from} → ${to}`,
     summary: 'Summary',
     details: 'Details (optional)',
-    branch: 'Branch',
-    onCurrent: (branch: string) => `On ${branch}`,
-    onNew: 'On a new branch',
-    newName: 'New branch name',
     detached: 'HEAD is detached (not on a branch), so the commit goes on a new branch.',
     unsaved: (name: string) =>
       `Your unsaved edits to ${name} are not in this commit. Save them first to include them.`,
     check: {
       noFiles: 'Choose at least one file to commit.',
       noSummary: 'Write a summary for the commit.',
-      noBranch: 'Name the new branch.',
     },
     confirm: 'Commit',
     committing: 'Committing…',
     cancel: 'Cancel',
-    close: 'Close',
     notice: (short: string, branch: string) => `Committed ${short} on ${branch}.`,
     dismiss: 'Dismiss',
   },

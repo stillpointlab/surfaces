@@ -1,15 +1,19 @@
 {
   "name": "@stillpointlab/inventory-app",
   "version": "0.1.0",
-  "description": "The inventory app's DOM-free core: the inventory.yaml manifest and Zone files, parsed, validated, totalled, rewritten byte-preservingly and exported as CSV, plus the overview and zone elements.",
+  "description": "The inventory app's DOM-free core: the inventory.yaml manifest and Zone files, parsed, validated, totalled, rewritten byte-preservingly and exported as CSV, plus the overview and zone elements and the page around them.",
   "license": "MIT",
   "type": "module",
   "sideEffects": [
     "./src/element/index.ts",
     "./src/element/inventory-overview.ts",
     "./src/element/inventory-zone.ts",
+    "./src/shell/index.ts",
+    "./src/shell/inventory-app.ts",
     "./dist/element.js",
-    "./dist/element.cjs"
+    "./dist/element.cjs",
+    "./dist/shell.js",
+    "./dist/shell.cjs"
   ],
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -30,6 +34,11 @@
       "import": "./dist/paths.js",
       "require": "./dist/paths.cjs"
     },
+    "./meta": {
+      "types": "./dist/meta.d.ts",
+      "import": "./dist/meta.js",
+      "require": "./dist/meta.cjs"
+    },
     "./create": {
       "types": "./dist/create.d.ts",
       "import": "./dist/create.js",
@@ -44,6 +53,11 @@
       "types": "./dist/create-element.d.ts",
       "import": "./dist/create-element.js",
       "require": "./dist/create-element.cjs"
+    },
+    "./shell": {
+      "types": "./dist/shell.d.ts",
+      "import": "./dist/shell.js",
+      "require": "./dist/shell.cjs"
     }
   },
   "files": [
@@ -57,9 +71,11 @@
     "test": "npm run gen:styles && vitest run"
   },
   "dependencies": {
+    "@stillpointlab/checkin-review-component": "*",
     "@stillpointlab/common-format": "*",
     "@stillpointlab/modal-dialog-component": "*",
     "@stillpointlab/sheet-format": "*",
+    "@stillpointlab/spl-icon-component": "*",
     "yaml": "^2.9.0",
     "zod": "^4.6.7"
   }

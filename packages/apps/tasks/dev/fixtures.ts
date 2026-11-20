@@ -10,14 +10,18 @@
 // workshop. The strip's links are `#` anchors: where a phase lives is a host's.
 // The "Create" fixture answers the create form with the core's `seed`, in the
 // folder the "Create in" control chose, and shows the new manifest's first board.
+// "Shell over the memory host" is the app as a page: `<spl-tasks-app>` over the
+// workshop, driven as a host's client half drives it (shell.ts).
 import '../src/element/index.js';
 import '../src/element/create.js';
+import '../src/shell/index.js';
 
 import { answerCreate, CREATE_TARGETS } from '../../../../tooling/harness/create-host';
 import { tasksCore } from '../src/core.js';
 
 import { attachHost } from './host.js';
 import { repoWorkspace } from './repo.js';
+import { openShell, SHELL_TAG, showShell } from './shell.js';
 import { emptyWorkshop, WORKSHOP_BOARD, workshop } from './workshop.js';
 import { navOf, workspace } from './workspace.js';
 
@@ -56,6 +60,7 @@ function showCreate(elements: HarnessElements, on: boolean): void {
     const block = elements.extras[tag]?.closest<HTMLElement>('.extra');
     if (block) block.hidden = (tag === CREATE_TAG) !== on;
   }
+  showShell(elements, false);
 }
 
 /** The create form, answered by the core's seed like a host's create endpoint. */
@@ -147,7 +152,7 @@ function menuItem(el: TaskBoard, itemId: string): void {
 }
 
 export default {
-  elements: { extra: [NAV_TAG, TAG, CREATE_TAG] },
+  elements: { extra: [NAV_TAG, TAG, CREATE_TAG, SHELL_TAG] },
   controls: [
     {
       kind: 'toggle',
@@ -182,6 +187,10 @@ export default {
         showCreate(elements, true);
         createOf(elements).setState({});
       },
+    },
+    'Shell over the memory host': {
+      content: '',
+      apply: (elements) => openShell(elements, () => WORKSPACES.workshop),
     },
     'Every card state': fixture(() => WORKSPACES.workshop, { board: WORKSHOP_BOARD }),
     'This repository': fixture(() => WORKSPACES.repo),

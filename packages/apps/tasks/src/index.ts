@@ -21,4 +21,8 @@ export * from './create.js';
 export * from './createRules.js';
 export * from './core.js';
 export * from './elementOps.js';
+export * from './bounds.js';
+export * from './pages.js';
+export * from './meta.js';
+export * from './changes.js';
 export * from './module.js';

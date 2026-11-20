@@ -1,5 +1,5 @@
 ---
-column: todo
+column: in-progress
 created: 2026-11-13T18:44:00-07:00
 tags: [apps, common, host-contract, code]
 ---
@@ -204,12 +204,95 @@ The types, `matchAppPage`, the suite's checks, and inventory's three files and i
 Tasks' three files and its `fromChanges`. Its landing page (`''`) keeps its rules: a legacy `?path=` redirect, the
 default board, and an empty view with extras when there is none.
 
+## As built: step 1
+
+_2026-11-14, by an Opus 5.5 sub-agent; reviewed and checked by the orchestrating agent. Where the
+work departed from the text above, this is what step 2 and the later specs read._
+
+- **The five members are optional on `AppModule` in this step,** since tasks supplies them in
+  step 2. A module without them gets a to-do in the suite, which tasks shows today. Step 2 makes
+  them required.
+- **`AppModule` has a seventh type parameter, `CreateInput`,** which defaults to `Seed`. The
+  create bound answers the form's fields; the host adds the folder before `seed`. Inventory
+  passes `InventoryCreateFields`.
+- **`matchAppPage`,** where the text above is silent:
+  - the sub-path carries no query;
+  - `''` and `/` are the empty path, and one trailing slash is ignored;
+  - any other sub-path starts with `/`;
+  - a parameter is one non-empty segment, decoded, and a segment that does not decode matches
+    nothing;
+  - the first page that matches wins.
+- **A page's `params` and `query` are strings,** decoded and not yet checked. A zone slug the
+  rule refuses is not found, where Context Manager answered 400. The check is plain code, so
+  `pages.ts` loads no zod.
+- **`bounds.op` covers the core's ops.** A host op (`link-editor`) is refused, as Context
+  Manager's schema refused it; a host bounds its own.
+- **A refusal reads "The op is not valid: title: …",** with the schema's issues in `details`.
+  Context Manager's message was "Validation failed".
+- **`FileStatus` in `common-format/host` is `AppFileChange['status']`,** beside the `HostChange`
+  alias, so the status has one shape too.
+- **`meta` has its own entry, `@stillpointlab/inventory-app/meta`,** which a test and the built
+  file show loads no zod and none of the core.
+- **`meta.create.folderHelp` is plain text.** Inventory's has no markup. Tasks' has, in Context
+  Manager (`tasks.yaml` as code), and step 2 writes it plain.
+- **Inventory's `fromChanges` counts changed and new files.** A moved zone is not dirty. It is
+  in the follow-up log.
+- **Inventory has no page that redirects,** so the redirect check, over a path base and a
+  fragment base, runs on the suite's own sample module until tasks' landing page does.
+- **The suite checks more than the list above:** a page's title is not empty, `bounds.view`
+  refuses an unknown view, and a broken module fails (eleven tests of that).
+- **The bounds' cases carried from Context Manager** (at `8fa439ba`) are the six in its app host
+  and route tests. It has no test beside the schema file. The rest are one test a limit, at its
+  edge and past it.
+- **Not checked in this step:** Context Manager's build against the branch. It is checked once,
+  after step 2.
+
+## As built: step 2
+
+_2026-11-14, by an Opus 5.5 sub-agent; reviewed and checked by the orchestrating agent. Read at
+Context Manager's `8fa439ba`._
+
+- **The five members are required on `AppModule`,** and the suite's to-do path is gone.
+- **`bounded(key, schema, input, code, what)` is in `common-format/app`:** a schema's
+  `safeParse` answered as a `Result`, typed against the shape of `safeParse` with no import of
+  zod. Both apps' bounds use it.
+- **Tasks' `bounds.op` covers the core's twelve ops.** Its host ops are refused, as are
+  `create-card` with `now` (the host adds the time through `toCoreOp`) and `move-file`'s
+  `coMoving`, all as Context Manager's schema refused them. The four constants the schemas
+  need were in the package already.
+- **A page's stage and phase are read with `parseInt`,** as Context Manager read them, so
+  `/stage/3x` is stage 3. Kept so that nothing changes; it is in the follow-up log.
+- **Not found where Context Manager answered 400 or threw:** a `?path=` over 1,024 characters,
+  a parameter that is not a positive number, and any page whose nav cannot be projected.
+- **A stage the nav does not have still answers its view;** the host gives not found, since
+  `emptyWhenMissing` is false. The suite cannot say that yet.
+- **`meta.create.noun` is "a task project",** and `folderHelp` is plain text.
+- **Tasks' `fromChanges`, exactly:**
+  - a card is a path in a board's or the pool's kind folders; a broken manifest has none;
+  - a changed, new or moved card is `changed`; `created` lists the new ones;
+  - a moved card has `movedFrom` and `moves[path] = [from]`: the anchor alone, since one change
+    cannot carry the paths a card passed through;
+  - the `order` fact is there when the order file is among the snapshot's paths, and `changed`
+    when the file is changed, new or moved;
+  - housekeeping is the manifest when it is changed, new or moved, and every new `.gitkeep`
+    among the changes;
+  - a deleted file adds nothing;
+  - the answer always carries `snapshot: { moves, created }`, empty or not.
+- **Facts the statuses cannot give are left out:** `dirty` and `versionColumn` (whether a card's
+  column moved needs the last check-in's content), `diverged`, `title`, `tracked`, and anything
+  about pull requests. The harness's own facts still have `dirty`; the follow-up log has it for
+  [host-runner](host-runner.md).
+- **The bounds' cases carried from Context Manager** are all 31 of its test file for the op
+  schema. It has none for the view or create schemas, which have one test a limit.
+- **The suite has a fourth tasks fixture, `flat`:** a board outside the stage and phase folders,
+  for the landing page's `?path=` link.
+
 ## Clarifications
 
 - **Entries.** A client that needs only `meta` must not pull in zod. `meta` is exported from a
   light entry of each package as well as on the module (the packages' `./paths` precedent).
 - **Check-in bodies stay in Context Manager.** They name files by its public ids.
-  [checkin-review](../../phase1/specs/checkin-review.md) names files by path instead.
+  [checkin-review](../../phase4/specs/checkin-review.md) names files by path instead.
 - **Lifecycle policy stays a host's** (`notFoundCode`, `maxAdoptionsPerRun`, `skipPendingMoves`):
   it is about Context Manager's adoption, not the app.
 

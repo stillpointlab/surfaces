@@ -1,0 +1,145 @@
+@use 'common/src/styles/tokens' as *;
+
+// The review's layout, in its light DOM. Its buttons and fields are the host's
+// (`.button`, `.form-field`, `.form-label`, `.form-input`, `.form-help`,
+// `.form-message`); what is here only places them, and reads the shared tokens
+// for the list's frame and the quieter text.
+
+checkin-review {
+  display: contents;
+
+  .checkin-review-body {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    min-width: min(32rem, calc(100vw - 4rem));
+  }
+
+  .checkin-review-help {
+    margin-bottom: $spacing-sm;
+  }
+
+  .checkin-review-files,
+  .checkin-review-branch {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    min-width: 0;
+    margin: 0 0 $spacing-md;
+    padding: 0;
+    border: 0;
+
+    legend {
+      padding: 0;
+      margin-bottom: $spacing-xs;
+    }
+  }
+
+  .checkin-review-files-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
+  }
+
+  .checkin-review-all,
+  .checkin-review-choice {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  .checkin-review-list,
+  .checkin-review-group-rows {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .checkin-review-list {
+    max-height: min(40vh, 18rem);
+    padding: $spacing-xs 0;
+    overflow-y: auto;
+    border: 1px solid $border-light;
+    border-radius: $border-radius-md;
+  }
+
+  .checkin-review-group + .checkin-review-group,
+  .checkin-review-row + .checkin-review-group,
+  .checkin-review-group + .checkin-review-row {
+    margin-top: $spacing-xs;
+  }
+
+  .checkin-review-group-name {
+    display: block;
+    padding: $spacing-xs $spacing-sm 2px;
+    color: $text-muted;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .checkin-review-row-label {
+    display: flex;
+    align-items: baseline;
+    gap: $spacing-sm;
+    padding: 2px $spacing-sm;
+    cursor: pointer;
+
+    &:hover {
+      background: $background-hover;
+    }
+
+    input {
+      flex: none;
+      align-self: center;
+      margin: 0;
+    }
+  }
+
+  .checkin-review-path {
+    min-width: 0;
+    font-family: ui-monospace, monospace;
+    font-size: 0.8125rem;
+    overflow-wrap: anywhere;
+  }
+
+  .checkin-review-label {
+    flex: none;
+    max-width: 45%;
+    margin-left: auto;
+    color: $text-muted;
+    font-size: 0.75rem;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  .checkin-review-nothing {
+    padding: $spacing-xs $spacing-sm;
+  }
+
+  .checkin-review-text {
+    resize: vertical;
+  }
+
+  .checkin-review-branch-name {
+    font-family: ui-monospace, monospace;
+  }
+
+  // A host's own words, which may be many lines: kept as they are, and scrolled.
+  .checkin-review-error {
+    max-height: 12rem;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+
+    &[hidden] {
+      display: none;
+    }
+  }
+
+  .checkin-review-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: $spacing-sm;
+  }
+}

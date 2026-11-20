@@ -19,26 +19,51 @@
 // `{ type: 'status' }` when either changes: a commit, a stage or a switch made in
 // a terminal, and the host's own staging. The host's reads never write the index
 // (`GIT_OPTIONAL_LOCKS=0`), so reading the status after the event raises no other.
+//
+// The apps (`apps/`): the host finds instances of the modules it is given
+// (`apps`), serves their pages and ops under `/api/apps`, and holds their lock.
+// A `PUT /api/files` that would write into a locked app's files is refused
+// before the port sees it; the runner's own writes go to the port directly.
+//
+// The journal (`journal/`): every write the host makes, except an editor's save,
+// is one step that `POST /api/undo` takes back and `POST /api/redo` does again.
+// `PUT /api/files` journals a call whose changes are all `create`, `move` or
+// `delete` (the explorer's), labelled from them; a call with a `write` is an
+// editor's save and goes to the port as it is. In the route the lock's check
+// comes first, then the journal, then the port. A step the journal cannot keep
+// is refused with `HOST_CANNOT_UNDO`, and the same call sent with
+// `"unjournaled": true` is written with no step, which empties the journal. An
+// app's op and a create are a step each (`apps/app-host.ts`). The stream sends
+// `{ type: 'journal' }` when the steps change.
 
 import { createHash } from 'node:crypto';
 import { constants, open } from 'node:fs/promises';
 import { basename, extname } from 'node:path';
 import { Readable } from 'node:stream';
 
-import { LIST_LIMIT, MAX_BODY_BYTES } from './limits';
+import { createAppHost } from './apps/app-host';
+import { DEFAULT_APPS, DEFAULT_HOST_OPS } from './apps/registry';
+import { createJournal } from './journal/journal';
+import { labelFor } from './journal/labels';
+import { LIST_LIMIT } from './limits';
 import { isInside, locate, outsideRoot, pathProblem } from './paths';
 import { createNodePort } from './port';
+import { json, readBody, refusal, refuse, SECURITY_HEADERS } from './respond';
 import { createFolderWatcher } from './watcher';
 
+import type { LocalHostEvent } from '../shared/apps';
+import type { Handler } from './apps/app-host';
+import type { ServerHostOps } from './apps/host-ops';
+import type { Journal } from './journal/journal';
 import type { PageHandler } from './page';
 import type { NodePort, PortStart } from './port';
 import type { FolderWatcher } from './watcher';
-import type { Failure } from '@stillpointlab/common-format/app';
+import type { AnyAppModule } from '@stillpointlab/common-format/app';
 import type {
   HostCommitRequest,
-  HostEvent,
   HostListing,
   HostRoot,
+  PortChange,
 } from '@stillpointlab/common-format/host';
 import type { FileHandle } from 'node:fs/promises';
 
@@ -63,62 +88,27 @@ export interface HostOptions {
    * (`createStaticPage`); without one, those paths answer `HOST_NO_ROUTE`.
    */
   page?: PageHandler;
+  /**
+   * The apps the host finds and runs, by their modules (`DEFAULT_APPS` when
+   * absent): the server's one registration of them.
+   */
+  apps?: readonly AnyAppModule[];
+  /**
+   * The host ops the server answers itself, by app id, then op type
+   * (`DEFAULT_HOST_OPS` when absent).
+   */
+  hostOps?: Readonly<Record<string, ServerHostOps>>;
 }
+
+export { statusFor } from './respond';
 
 export interface LocalHost extends Host {
   /** The port the host reads and writes through. */
   readonly port: NodePort;
+  /** The steps undo and redo take: every write the host makes but an editor's save. */
+  readonly journal: Journal;
   /** Resolves once the host has decided how it lists and is watching the folder. */
   ready(): Promise<PortStart>;
-}
-
-/** The HTTP status for a refusal's code: not found, a conflict, or anything else. */
-export function statusFor(code: string): number {
-  switch (code) {
-    case 'HOST_FILE_NOT_FOUND':
-      return 404;
-    case 'HOST_PATH_EXISTS':
-    case 'HOST_FILE_CHANGED':
-    case 'HOST_NOT_A_REPOSITORY':
-    case 'HOST_GIT_NOT_FOUND':
-    case 'HOST_NOT_CHANGED':
-    case 'HOST_PATH_CONFLICTED':
-    case 'HOST_GIT_IN_PROGRESS':
-    case 'HOST_DETACHED_HEAD':
-    case 'HOST_BRANCH_EXISTS':
-      return 409;
-    case 'HOST_WRITE_FAILED':
-    case 'HOST_GIT_FAILED':
-      return 500;
-    default:
-      return 400;
-  }
-}
-
-const SECURITY_HEADERS = {
-  'x-content-type-options': 'nosniff',
-  'cache-control': 'no-store',
-  'referrer-policy': 'no-referrer',
-};
-
-function json(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': 'application/json; charset=utf-8', ...SECURITY_HEADERS, ...headers },
-  });
-}
-
-function refusal(failure: Failure, status = statusFor(failure.code)): Response {
-  return json({ ok: false, code: failure.code, message: failure.message }, status);
-}
-
-function refuse(
-  code: string,
-  message: string,
-  status: number,
-  headers?: Record<string, string>
-): Response {
-  return json({ ok: false, code, message }, status, headers);
 }
 
 /** The type `/api/raw` sends for an extension; anything else is bytes. */
@@ -225,7 +215,7 @@ export function createHost(options: HostOptions): LocalHost {
   // Server-sent events: one controller per listener.
   const listeners = new Set<ReadableStreamDefaultController<Uint8Array>>();
   const encoder = new TextEncoder();
-  function broadcast(event: HostEvent): void {
+  function broadcast(event: LocalHostEvent): void {
     const chunk = encoder.encode(`data: ${JSON.stringify(event)}\n\n`);
     for (const listener of listeners) {
       try {
@@ -247,10 +237,27 @@ export function createHost(options: HostOptions): LocalHost {
   }, 25_000);
   keepAlive.unref();
 
+  const journal = createJournal({
+    port,
+    index: port.index,
+    onChange: () => broadcast({ type: 'journal' }),
+  });
+
+  const apps = createAppHost({
+    port,
+    journal,
+    modules: options.apps ?? DEFAULT_APPS,
+    hostOps: options.hostOps ?? DEFAULT_HOST_OPS,
+    send: broadcast,
+    warn,
+  });
   const watcher: FolderWatcher = createFolderWatcher({
     root,
     list: () => port.list(),
-    send: broadcast,
+    send: (event) => {
+      broadcast(event);
+      apps.watched(event);
+    },
     warn,
   });
   let closed = false;
@@ -259,14 +266,16 @@ export function createHost(options: HostOptions): LocalHost {
     await watcher.ready;
     const git = await port.git.start();
     if (git.state === 'repository' && !closed) {
-      watcher.watchNames(git.gitDir, ['HEAD', 'index'], () => broadcast({ type: 'status' }));
+      watcher.watchNames(git.gitDir, ['HEAD', 'index'], () => {
+        apps.statusMoved();
+        broadcast({ type: 'status' });
+      });
     }
+    await apps.start();
     return start;
   })();
   // A failure surfaces through `ready()`; it must not go unhandled if nobody asks.
   ready.catch(() => undefined);
-
-  type Handler = (request: Request, url: URL) => Promise<Response>;
 
   function pathParam(url: URL): string {
     return url.searchParams.get('path') ?? '';
@@ -302,11 +311,36 @@ export function createHost(options: HostOptions): LocalHost {
         } catch {
           return refuse('HOST_BAD_REQUEST', 'The body is not JSON.', 400);
         }
-        const changes = (parsed as { changes?: unknown } | null)?.changes;
-        if (!Array.isArray(changes)) {
-          return refuse('HOST_BAD_REQUEST', 'The body must be { "changes": [...] }.', 400);
+        const { changes, unjournaled } = (parsed ?? {}) as {
+          changes?: unknown;
+          unjournaled?: unknown;
+        };
+        if (!Array.isArray(changes) || (unjournaled !== undefined && unjournaled !== true)) {
+          return refuse(
+            'HOST_BAD_REQUEST',
+            'The body must be { "changes": [...], "unjournaled"?: true }.',
+            400
+          );
         }
-        const answer = await port.put(changes);
+        // An app's locked files take no write from here; the runner's go through the port.
+        const locked = await apps.checkWrite(changes);
+        if (locked) return refusal(locked);
+        const answer = await writeFiles(changes as PortChange[], unjournaled === true);
+        return answer.ok ? json(answer) : refusal(answer);
+      },
+    },
+    '/api/journal': {
+      GET: async () => json({ ok: true, ...journal.labels() }),
+    },
+    '/api/undo': {
+      POST: async () => {
+        const answer = await journal.undo();
+        return answer.ok ? json(answer) : refusal(answer);
+      },
+    },
+    '/api/redo': {
+      POST: async () => {
+        const answer = await journal.redo();
         return answer.ok ? json(answer) : refusal(answer);
       },
     },
@@ -349,7 +383,27 @@ export function createHost(options: HostOptions): LocalHost {
     '/api/events': {
       GET: async (request) => events(request),
     },
+    ...apps.routes,
   };
+
+  /**
+   * `PUT /api/files` once the lock has passed it: the explorer's creates, moves
+   * and deletes as one step (or with none, when the person agreed), and an
+   * editor's save straight to the port.
+   */
+  function writeFiles(changes: readonly PortChange[], unjournaled: boolean) {
+    const explorers =
+      changes.length > 0 &&
+      changes.every(
+        (change) =>
+          typeof change === 'object' &&
+          change !== null &&
+          (change.kind === 'create' || change.kind === 'move' || change.kind === 'delete')
+      );
+    if (!explorers) return port.put(changes);
+    if (unjournaled) return journal.write(changes);
+    return journal.port(labelFor(changes), { unkept: 'refuse' }).put(changes);
+  }
 
   async function raw(path: string): Promise<Response> {
     const problem = pathProblem(path);
@@ -450,6 +504,7 @@ export function createHost(options: HostOptions): LocalHost {
   async function close(): Promise<void> {
     if (closed) return;
     closed = true;
+    apps.close();
     clearInterval(keepAlive);
     watcher.close();
     for (const listener of listeners) {
@@ -462,28 +517,5 @@ export function createHost(options: HostOptions): LocalHost {
     listeners.clear();
   }
 
-  return { fetch, close, port, ready: () => ready };
-}
-
-/** A request's body as text, refused past `MAX_BODY_BYTES`. */
-async function readBody(request: Request): Promise<string | Response> {
-  if (!request.body) return '';
-  const declared = Number(request.headers.get('content-length') ?? '0');
-  const tooLarge = () =>
-    refuse('HOST_BODY_TOO_LARGE', `The body is over ${MAX_BODY_BYTES / 1024 / 1024} MiB.`, 413);
-  if (declared > MAX_BODY_BYTES) return tooLarge();
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  const reader = request.body.getReader();
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    size += value.byteLength;
-    if (size > MAX_BODY_BYTES) {
-      await reader.cancel();
-      return tooLarge();
-    }
-    chunks.push(value);
-  }
-  return Buffer.concat(chunks).toString('utf8');
+  return { fetch, close, port, journal, ready: () => ready };
 }

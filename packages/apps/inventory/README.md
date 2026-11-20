@@ -17,14 +17,20 @@ root entry (`.`) exports:
 - byte-preserving rewrites: `appendItem`, `patchItem`, `deleteItem` (`zoneWriter.ts`);
 - seeds: `manifestSeedContent`, `zoneSeedContent`;
 - CSV: `serializeZone` and `serializeSpace` (each a `Result<{ content }>`), `exportWarnings`;
-- the lifecycle: `inventoryLifecycle`, the `AppLifecycle` a host mounts an inventory folder with.
+- the lifecycle: `inventoryLifecycle`, the `AppLifecycle` a host mounts an inventory folder with;
+- the module: `inventoryModule`, the `AppModule` a host runs the app with, and what it carries
+  beside the core: `inventoryMeta` (name, icon, create copy), `inventoryBounds` (the op, view and
+  create schemas a host checks input with), `inventoryPages` (the overview at `''` and a zone at
+  `/room/:roomSlug`) and `inventoryFromChanges` (the facts from a host's file changes).
 
 Two more entries import nothing: `./paths` exports the path rules alone (`slugifyInventoryName`,
 the folder and currency defaults, the field-id and currency patterns), and `./types` the shared
 types. A client that needs only those imports them there: `.` builds the manifest's zod schemas at
 module scope, which a bundler cannot drop. `./create` is the create form's checks
 (`checkInventoryCreate`, with the limits and defaults the form shows); it imports only `./paths`.
-`./element` is the app's two elements, and `./create-element` its create form (below).
+`./meta` is `inventoryMeta` alone; it imports only `./paths`, so a host page that lists the apps
+loads no zod. `./element` is the app's two elements, `./create-element` its create form, and
+`./shell` the page around the two elements (below).
 
 The core was moved as-is from Context Manager (source commit `373a20ae`), and the elements followed
 (source commit `b73e3c59`). The rules that assemble a space and answer its ops followed in stage 2
@@ -101,7 +107,9 @@ wherever it lands.
 
 - **Links in.** `links: InventoryLinks` builds the URLs the elements render as anchors:
   `zone(path)`, `exportAll()`, `exportZone(path)`, and `editor(path)`, which returns `undefined` for
-  a file not yet linked. Without links, zone names render as text and exports as disabled.
+  a file not yet linked. The two exports are optional: a page without one leaves it out, and that
+  download control is not shown. Without links at all, zone names render as text and exports as
+  disabled.
 - **Ops out**, each asked through `requestOp` and naming a zone by its file's path:
 
   | Op            | Fields                  | Reply                         |
@@ -131,6 +139,44 @@ file and a parse error). The harness's memory host keeps their files, answers ev
 page reloads. Hand-built fixtures cover the cases files alone do not show (local changes, a disabled
 space, no inventory, hostile strings) and the element tests' states; the host refuses their ops.
 The controls switch the host off or make it refuse the next op.
+
+### The shell
+
+`@stillpointlab/inventory-app/shell` registers `<spl-inventory-app>`, the inventory's page: the app
+contract's `AppShellElement`, from `common-format/app`. It registers the overview and the zone too,
+and lays one of them out under its bar, in light DOM.
+
+- **Input.** `setState({ base, back?, location?, view, state, extras? })`. The `space` view (or no
+  view) shows `<spl-inventory-overview>`, the `zone` view `<spl-inventory-zone>`; a zone view with
+  no state says the zone is gone and links to the overview.
+- **The bar** (`.inventory-bar`): a back link (`.back-button`), the title (`#inventory-title`) and
+  the location (`.inventory-repo`). On the overview, back is the host's `back`, and absent without
+  it; on a zone it leads to the overview. The title is the inventory's label, with the zone's after
+  it on a zone page, and follows each reply passed to `learn(op, reply)`.
+- **Links** are built from `base` and `inventoryPages`, joined as text (a base can be a fragment):
+  the overview is `base`, a zone `base/room/<slug>`, with the slug its state carries or its file's
+  name. A followed link raises `navigate { href }` (bubbling, cancelable); a host that claims it
+  navigates itself, and otherwise the browser follows the link. The shell never sets `location`.
+- **Exports are the host's:** `extras.exports` is `{ all?: string; zone?(path): string }`, and the
+  download controls are hidden for an export it leaves out.
+- **Ops.** The elements' ops bubble through unchanged, `link-editor` included; the shell's own
+  are `project`, `refresh` and `checkin` (`AppShellOps`), and `opView` answers no view: no
+  inventory reply depends on one. Its `notification` and `reload-request` bubble through
+  unchanged too.
+- **Check-in is the shell's.** It holds one `<checkin-review>`
+  (`@stillpointlab/checkin-review-component`) and takes its elements' `checkin-request`: the
+  request stops at the shell, and a host never hears it. The review opens on the dirty files of
+  the latest state or learned reply, each labelled `manifest`, `new` or `changed`, every one
+  checked, with no default title and the placeholder "Inventory check-in". It asks the host
+  `checkin` by path; a reply closes it with the reply's message as a `notification`. The words
+  are the host's (`input.checkin.words`) or the shell's own, which say "check in"; a branch is
+  offered only when the host gives one (`input.checkin.branch`). When the input is set again
+  while the review is open, its rows follow, each keeping its check.
+
+In the harness, the fixture "Shell over the memory host" shows the shell over the example workshop,
+with its links under a fragment base, `navigate` resolved through `inventoryPages`, `project` and
+`refresh` answered from the memory host's files, and `checkin` answered by committing the chosen
+files in memory, after which the page is read again and their marks clear.
 
 ### The create form
 

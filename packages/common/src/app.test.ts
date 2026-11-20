@@ -4,15 +4,18 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   answerOps,
   APP_OP_EVENT,
+  bounded,
   createReadyGate,
   fail,
+  matchAppPage,
   ok,
+  pageHref,
   placeNewFiles,
   requestOp,
 } from './app';
 import { describeAppElementContract } from './testing/app-element';
 
-import type { AppElement, AppOpDetail, Result } from './app';
+import type { AppElement, AppOpDetail, AppPage, BoundSchema, Result } from './app';
 
 type SampleOps = {
   rename: { op: { path: string; title: string }; reply: { title: string } };
@@ -63,6 +66,118 @@ describe('placeNewFiles', () => {
   });
 });
 
+describe('matchAppPage', () => {
+  const page = (path: string): AppPage => ({
+    path,
+    resolve: async () => ({ notFound: true }),
+    title: () => path,
+    emptyWhenMissing: false,
+  });
+  const landing = page('');
+  const room = page('/room/:roomSlug');
+  const phase = page('/stage/:stage/phase/:phase');
+  const stage = page('/stage/:stage');
+  const pages = [landing, room, phase, stage];
+
+  it('matches the empty path with no parameters, a trailing slash ignored', () => {
+    expect(matchAppPage(pages, '')).toEqual({ page: landing, params: {} });
+    expect(matchAppPage(pages, '/')).toEqual({ page: landing, params: {} });
+  });
+
+  it('reads a parameter, decoded', () => {
+    expect(matchAppPage(pages, '/room/kitchen')).toEqual({
+      page: room,
+      params: { roomSlug: 'kitchen' },
+    });
+    expect(matchAppPage(pages, '/room/a%2Fb/')).toEqual({
+      page: room,
+      params: { roomSlug: 'a/b' },
+    });
+  });
+
+  it('reads two parameters, and tells a page from a shorter one', () => {
+    expect(matchAppPage(pages, '/stage/2/phase/3')).toEqual({
+      page: phase,
+      params: { stage: '2', phase: '3' },
+    });
+    expect(matchAppPage(pages, '/stage/2')).toEqual({ page: stage, params: { stage: '2' } });
+  });
+
+  it('answers null when no page matches', () => {
+    for (const subPath of [
+      '/room',
+      '/room/',
+      '/room//',
+      '/room/kitchen/extra',
+      '/zone/kitchen',
+      'room/kitchen',
+      '/room/%E0%A4%A',
+      '/stage/2/phase',
+    ]) {
+      expect(matchAppPage(pages, subPath), subPath).toBeNull();
+    }
+    expect(matchAppPage([], '')).toBeNull();
+  });
+});
+
+describe('pageHref', () => {
+  const PATH_BASE = '/project/p/repos/r/tasks/view_1';
+  const FRAGMENT_BASE = '#/app/docs/tasks/tasks.yaml';
+
+  it('answers the base itself for the empty path, trailing slash and all', () => {
+    expect(pageHref(PATH_BASE, '')).toBe(PATH_BASE);
+    expect(pageHref(`${PATH_BASE}/`, '')).toBe(`${PATH_BASE}/`);
+    expect(pageHref(FRAGMENT_BASE, '')).toBe(FRAGMENT_BASE);
+  });
+
+  it('joins a path to a path base and to a fragment base as text', () => {
+    expect(pageHref(PATH_BASE, '/room/:roomSlug', { roomSlug: 'kitchen' })).toBe(
+      `${PATH_BASE}/room/kitchen`
+    );
+    expect(pageHref(FRAGMENT_BASE, '/stage/:stage/phase/:phase', { stage: '2', phase: '3' })).toBe(
+      `${FRAGMENT_BASE}/stage/2/phase/3`
+    );
+  });
+
+  it('drops one trailing slash from the base before a path', () => {
+    expect(pageHref(`${PATH_BASE}/`, '/stage/:stage', { stage: '1' })).toBe(`${PATH_BASE}/stage/1`);
+  });
+
+  it('encodes each parameter, and fills a missing one with nothing', () => {
+    expect(pageHref(PATH_BASE, '/room/:roomSlug', { roomSlug: 'pantry & a/b' })).toBe(
+      `${PATH_BASE}/room/${encodeURIComponent('pantry & a/b')}`
+    );
+    expect(pageHref(PATH_BASE, '/room/:roomSlug')).toBe(`${PATH_BASE}/room/`);
+  });
+
+  it('adds a query, encoded, after a path base or inside a fragment base', () => {
+    const path = 'docs/tasks/research notes';
+    expect(pageHref(PATH_BASE, '', {}, { path })).toBe(
+      `${PATH_BASE}?path=${encodeURIComponent(path)}`
+    );
+    expect(pageHref(FRAGMENT_BASE, '', {}, { path })).toBe(
+      `${FRAGMENT_BASE}?path=${encodeURIComponent(path)}`
+    );
+    expect(pageHref(`${PATH_BASE}?x=1`, '', {}, { 'a&b': 'c=d' })).toBe(
+      `${PATH_BASE}?x=1&a%26b=c%3Dd`
+    );
+    expect(pageHref(PATH_BASE, '', {}, {})).toBe(PATH_BASE);
+  });
+
+  it('builds what matchAppPage reads back', () => {
+    const pages: AppPage[] = ['/stage/:stage/phase/:phase', '/room/:roomSlug'].map((path) => ({
+      path,
+      resolve: async () => ({ notFound: true }),
+      title: () => path,
+      emptyWhenMissing: false,
+    }));
+    const href = pageHref(FRAGMENT_BASE, '/room/:roomSlug', { roomSlug: 'a/b c' });
+    expect(matchAppPage(pages, href.slice(FRAGMENT_BASE.length))?.params).toEqual({
+      roomSlug: 'a/b c',
+    });
+  });
+});
+
 describe('ok and fail', () => {
   it('builds a success with its fields beside ok', () => {
     expect(ok()).toEqual({ ok: true });
@@ -76,6 +191,46 @@ describe('ok and fail', () => {
       code: 'CODE',
       message: 'message',
       details: [{ path: ['a'] }],
+    });
+  });
+});
+
+describe('bounded', () => {
+  // A schema as zod shapes `safeParse`, written by hand: `common` has no schema library.
+  const title: BoundSchema = {
+    safeParse: (input) => {
+      const value = (input as { title?: unknown } | null)?.title;
+      if (typeof value === 'string' && value.trim() !== '') {
+        return { success: true, data: { title: value.trim() } };
+      }
+      return {
+        success: false,
+        error: {
+          issues: [
+            { path: ['title'], message: 'Too small' },
+            { path: [], message: 'Nothing to take' },
+          ],
+        },
+      };
+    },
+  };
+
+  it('answers what the schema parses under the key', () => {
+    expect(bounded('op', title, { title: ' Lamp ' }, 'APP_OP_INVALID', 'The op')).toEqual({
+      ok: true,
+      op: { title: 'Lamp' },
+    });
+  });
+
+  it('refuses with the code, the issues joined in the message, and the issues as details', () => {
+    expect(bounded('op', title, { title: ' ' }, 'APP_OP_INVALID', 'The op')).toEqual({
+      ok: false,
+      code: 'APP_OP_INVALID',
+      message: 'The op is not valid: title: Too small; Nothing to take',
+      details: [
+        { path: ['title'], message: 'Too small' },
+        { path: [], message: 'Nothing to take' },
+      ],
     });
   });
 });

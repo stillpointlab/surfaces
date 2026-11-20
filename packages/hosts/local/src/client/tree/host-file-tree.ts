@@ -33,6 +33,8 @@ export interface FileTreeElement extends HTMLElement {
   openPaths: readonly string[];
   /** Open every folder above the path, select it and scroll it into view. */
   reveal(path: string): void;
+  /** Give the row for `path` focus, if it is shown; false when it is not. */
+  focusRow(path: string): boolean;
 }
 
 /** `tree-select` and `tree-activate`. */
@@ -126,6 +128,13 @@ export class HostFileTree extends HTMLElement implements FileTreeElement {
     this.selected = path;
     const row = this.rows.get(path);
     if (row) scrollToRow(row);
+  }
+
+  focusRow(path: string): boolean {
+    const row = this.rows.get(path);
+    if (!row) return false;
+    row.focus();
+    return true;
   }
 
   // ---- rendering ----

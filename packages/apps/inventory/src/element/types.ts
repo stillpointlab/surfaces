@@ -16,15 +16,16 @@ export type { InventoryOps } from '../elementOps.js';
 
 /**
  * The URLs the elements render as links. They belong to the page: the elements
- * know no routes.
+ * know no routes. Exports are the host's: a page without one leaves it out, and
+ * its download control is not shown.
  */
 export interface InventoryLinks {
   /** The zone's own page. */
   zone(path: string): string;
-  /** The whole inventory as a ZIP. */
-  exportAll(): string;
-  /** One zone as CSV. */
-  exportZone(path: string): string;
+  /** The whole inventory as a ZIP. Absent: no download control on the overview. */
+  exportAll?(): string;
+  /** One zone as CSV. Absent: no download control on the zone. */
+  exportZone?(path: string): string;
   /** The file's editor, when the file is already linked; else the element asks `link-editor`. */
   editor(path: string): string | undefined;
 }

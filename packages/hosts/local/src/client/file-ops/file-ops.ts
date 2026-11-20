@@ -1,6 +1,8 @@
 // Create, rename and delete, from the explorer's menu: the entries a row gets,
 // the three dialogs, and the writes. Each write is one `put`, so a folder's
-// rename or delete is all or nothing. After one lands the tree lists again and
+// rename or delete is all or nothing, and one step undo takes back. A delete the
+// host cannot keep to undo (an image, or too much text) is refused, and the
+// dialog asks once more before it is sent again with `unjournaled`. After one lands the tree lists again and
 // reveals the new path, and the open file follows a rename or closes on a delete
 // (`FilePane.followWrite`).
 //
@@ -44,6 +46,8 @@ export interface FileOpsContext {
   navigate(address: Address, how: 'push', focus: boolean): Promise<boolean>;
   /** Make the address name what the pane shows now, in place of the current entry. */
   showAddress(state: { path: string; view: View } | null): void;
+  /** Whether a folder holds an app's locked files, so its files cannot all be moved from here. */
+  holdsLocked?(folder: string): boolean;
 }
 
 export interface FileOps {
@@ -51,6 +55,8 @@ export interface FileOps {
   entriesFor(detail: Pick<TreeMenuDetail, 'path' | 'kind'>): MenuEntry[];
   /** Focus a row by path, if it is shown. */
   focusRow(path: string): boolean;
+  /** Ask for a new file's path in `folder`, write it and open it: the menu's New file…. */
+  newFile(folder: string): Promise<void>;
   readonly dialog: FileOpDialog;
   destroy(): void;
 }
@@ -60,15 +66,7 @@ export function createFileOps(host: HTMLElement, context: FileOpsContext): FileO
   const dialog = new FileOpDialog(host);
   const baseOf = (path: string) => pane.versionOf(path);
 
-  function focusRow(path: string): boolean {
-    for (const row of tree.shadowRoot?.querySelectorAll<HTMLElement>('[role="treeitem"]') ?? []) {
-      if (row.dataset.path === path) {
-        row.focus();
-        return true;
-      }
-    }
-    return false;
-  }
+  const focusRow = (path: string): boolean => tree.focusRow(path);
 
   /** The tree's own tab stop: the selected row, or the first. */
   function focusTree(): void {
@@ -162,13 +160,28 @@ export function createFileOps(host: HTMLElement, context: FileOpsContext): FileO
       danger: true,
       run: async () => {
         const changes = deleteChanges(index, path, kind, baseOf);
-        const result = await pane.followWrite(client.put(changes), (at) =>
-          isWithin(at, path) ? null : undefined
-        );
-        if (!result.ok) return result.message;
-        if (openInside && pane.current === null) context.showAddress(null);
-        await context.refresh();
-        return null;
+        const write = (unjournaled: boolean) =>
+          pane.followWrite(
+            client.put(changes, unjournaled ? { unjournaled: true } : undefined),
+            (at) => (isWithin(at, path) ? null : undefined)
+          );
+        const landed = async (result: Awaited<ReturnType<typeof write>>) => {
+          if (!result.ok) return result.message;
+          if (openInside && pane.current === null) context.showAddress(null);
+          await context.refresh();
+          return null;
+        };
+        const result = await write(false);
+        if (!result.ok && result.code === 'HOST_CANNOT_UNDO') {
+          // The host cannot keep it to undo: ask, and send it again saying so.
+          const { reason } = result as { reason?: unknown };
+          return {
+            question: words.fileOps.cannotUndo[reason === 'too-large' ? 'too-large' : 'not-text'],
+            confirm: words.fileOps.deleteConfirm,
+            run: async () => landed(await write(true)),
+          };
+        }
+        return landed(result);
       },
     });
     if (!landed) return restore(path);
@@ -203,7 +216,8 @@ export function createFileOps(host: HTMLElement, context: FileOpsContext): FileO
     }
     if (path === '') return [entry(menu.newFile, () => void newFile(''))];
     const index = context.listing();
-    const problem = folderProblem(index, path);
+    const problem =
+      folderProblem(index, path) ?? (context.holdsLocked?.(path) ? words.menu.holdsLocked : null);
     return [
       // A separate repository takes no new file from here; a cut listing still can.
       entry(menu.newFile, () => void newFile(path), index.separate.has(path) ? problem : null),
@@ -215,6 +229,7 @@ export function createFileOps(host: HTMLElement, context: FileOpsContext): FileO
   return {
     entriesFor,
     focusRow,
+    newFile,
     dialog,
     destroy: () => dialog.destroy(),
   };

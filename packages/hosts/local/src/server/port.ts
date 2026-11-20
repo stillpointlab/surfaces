@@ -4,6 +4,8 @@
 // In a git repository, `put` stages its own moves and deletes once they are
 // written (`git/stage.ts`), and `status()` is git's (`git/repository.ts`). A
 // staging that fails leaves the write standing: `put` still succeeds, and warns.
+// `index` is what the journal needs of git's index, to put back the entries an
+// undone delete removed.
 // `commit` is git's commit of chosen paths, run under the same write lock as
 // `put`, so a `put` arriving during a commit waits for it, and the reverse.
 //
@@ -48,6 +50,7 @@ import { isInside, locate, outsideRoot, pathProblem } from './paths';
 import { decodeText } from './text';
 
 import type { HostGitAccess } from './git/repository';
+import type { JournalIndex } from './journal/journal';
 import type { Location } from './paths';
 import type { Failure, FolderNode, Result } from '@stillpointlab/common-format/app';
 import type {
@@ -78,6 +81,13 @@ export interface NodePort extends StoragePort {
   readonly root: string;
   /** The folder's git: its state, changes, `HEAD` text and staging. */
   readonly git: HostGitAccess;
+  /**
+   * git's index, for the journal: the entries a delete will remove, read before
+   * it, and putting them back after an undo, under the write lock. Outside a
+   * repository it reads none and puts back nothing; a failure to put them back
+   * is a warning.
+   */
+  readonly index: JournalIndex;
   /** How the port lists. The first call asks `git`; later calls answer the same. */
   start(): Promise<PortStart>;
   /**
@@ -565,7 +575,24 @@ export function createNodePort(options: NodePortOptions): NodePort {
     return git.status();
   }
 
-  return { root, git, start, list, get, put, status, commit };
+  const index: JournalIndex = {
+    entries: (paths) => git.indexEntries(paths),
+    restore: (entries) =>
+      exclusive(async () => {
+        try {
+          const restored = await git.restoreIndex(entries);
+          if (!restored.ok) {
+            warn(
+              `the files were put back, but git could not stage them as they were (${restored.message}); git will show them unstaged.`
+            );
+          }
+        } catch (error) {
+          warn(`the files were put back, but staging them as they were failed: ${String(error)}`);
+        }
+      }),
+  };
+
+  return { root, git, index, start, list, get, put, status, commit };
 }
 
 /** Remove `folder` and the folders above it while they are empty, up to the root. */

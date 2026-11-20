@@ -1,0 +1,63 @@
+/* Stand-ins for the classes a host page styles, which the review borrows for its
+   buttons and fields and brings no rules of its own for: the local host's and
+   Context Manager's `.button` and form classes. Plain, on the shared tokens, so
+   the harness reads in both themes. */
+.checkin-review-harness .button {
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--spl-border-dark);
+  border-radius: 4px;
+  background: var(--spl-background-secondary);
+  color: var(--spl-text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.checkin-review-harness .button-primary {
+  border-color: var(--spl-button-bg);
+  background: var(--spl-button-bg);
+  color: var(--spl-button-text);
+}
+
+.checkin-review-harness .button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.checkin-review-harness .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.checkin-review-harness .form-label {
+  color: var(--spl-text-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.checkin-review-harness .form-input {
+  box-sizing: border-box;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--spl-border-dark);
+  border-radius: 4px;
+  background: var(--spl-background-primary);
+  color: var(--spl-text-primary);
+  font: inherit;
+}
+
+.checkin-review-harness .form-input[aria-invalid='true'] {
+  border-color: var(--spl-error-color);
+}
+
+.checkin-review-harness .form-help {
+  margin: 0;
+  color: var(--spl-text-muted);
+  font-size: 0.8125rem;
+}
+
+.checkin-review-harness .form-message {
+  margin: 0;
+  color: var(--spl-error-color);
+  font-size: 0.8125rem;
+}

@@ -48,10 +48,29 @@ function packageDirs(): string[] {
 }
 
 /**
+ * The entries a package's `tsup.config.ts` names, by built name: `'create-element':
+ * 'src/element/create.ts'` is `create-element` → that source. Read as text, one
+ * `name: 'src/….ts'` pair per line, which is how every package writes them.
+ */
+function tsupEntries(dir: string): Map<string, string> {
+  const entries = new Map<string, string>();
+  const config = join(dir, 'tsup.config.ts');
+  if (!existsSync(config)) return entries;
+  const pair = /^\s*['"]?([\w./-]+)['"]?\s*:\s*['"](src\/[^'"]+\.ts)['"]\s*,?\s*$/;
+  for (const line of readFileSync(config, 'utf8').split('\n')) {
+    const match = pair.exec(line);
+    if (match) entries.set(match[1], join(dir, match[2]));
+  }
+  return entries;
+}
+
+/**
  * An exact alias from each workspace entry to its source. An entry's built file
- * `dist/<name>.js` comes from `src/<name>.ts` or `src/<name>/index.ts` (the
- * convention every package's tsup config follows); an export with no such source
- * (the SCSS tokens, the local host's own server) keeps its ordinary resolution.
+ * `dist/<name>.js` comes from the source its package's tsup config names for it
+ * (an app's `./create-element` is `src/element/create.ts`), or else from
+ * `src/<name>.ts` or `src/<name>/index.ts`, the convention most entries follow;
+ * an export with no such source (the SCSS tokens, the local host's own server)
+ * keeps its ordinary resolution.
  */
 export function workspaceAliases(): SourceAlias[] {
   const aliases: SourceAlias[] = [];
@@ -61,14 +80,18 @@ export function workspaceAliases(): SourceAlias[] {
       exports?: Record<string, unknown>;
     };
     if (!manifest.name?.startsWith('@stillpointlab/') || !manifest.exports) continue;
+    const entries = tsupEntries(dir);
     for (const [key, target] of Object.entries(manifest.exports)) {
       const built = (target as { import?: unknown } | null)?.import;
       if (typeof built !== 'string') continue;
       const name = /^\.\/dist\/(.+)\.js$/.exec(built)?.[1];
       if (!name) continue;
-      const source = [join(dir, 'src', `${name}.ts`), join(dir, 'src', name, 'index.ts')].find(
-        existsSync
-      );
+      const named = entries.get(name);
+      const source = [
+        ...(named ? [named] : []),
+        join(dir, 'src', `${name}.ts`),
+        join(dir, 'src', name, 'index.ts'),
+      ].find(existsSync);
       if (!source) continue;
       const specifier = key === '.' ? manifest.name : `${manifest.name}/${key.slice(2)}`;
       aliases.push({ find: new RegExp(`^${escape(specifier)}$`), replacement: source });
@@ -95,12 +118,14 @@ export function clientConfig(): UserConfig {
       assetsInlineLimit: 0,
     },
     optimizeDeps: {
-      // Crawl every format's elements at start, so opening the first file of a
-      // kind does not find a new dependency and reload the page.
+      // Crawl every format's elements and every app's shell at start, so opening
+      // the first file of a kind, or the first app, does not find a new
+      // dependency and reload the page.
       entries: [
         'index.html',
         '../../../../formats/*/src/preview/index.ts',
         '../../../../formats/*/src/editor/index.ts',
+        '../../../../apps/*/src/shell/index.ts',
       ],
     },
   };

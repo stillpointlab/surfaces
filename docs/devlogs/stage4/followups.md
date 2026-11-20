@@ -50,7 +50,7 @@ says where it went. Nothing was dropped.
   check the open file, so a change made during the outage shows only at the next event or save.
   - Carried 2026-11-14 to the [stage 5 log](../stage5/followups.md). The app pane resolves again
     on the `listed` a reconnection sends
-    ([apps-in-the-local-host](../../tasks/stage5/phase1/specs/apps-in-the-local-host.md)); the
+    ([apps-in-the-local-host](../../tasks/stage5/phase3/specs/apps-in-the-local-host.md)); the
     open file is still not checked.
 - 2026-11-14 (host-page): the sheet editor's save adds `format: csv` to a `.sheet` document and
   drops its final newline.
@@ -73,7 +73,7 @@ says where it went. Nothing was dropped.
 - 2026-11-14 (file-operations): the page finds a row to focus by the tree's markup
   (`[role="treeitem"][data-path]` in its shadow root). The tree could offer `focusRow(path)`.
   - Moved 2026-11-14 to
-    [apps-in-the-local-host](../../tasks/stage5/phase1/specs/apps-in-the-local-host.md), whose
+    [apps-in-the-local-host](../../tasks/stage5/phase3/specs/apps-in-the-local-host.md), whose
     rows and menus need it.
 - 2026-11-14 (file-operations): going back to an address from before a rename says there is no
   file at that path.
@@ -97,7 +97,7 @@ says where it went. Nothing was dropped.
   - Carried 2026-11-14 to the [stage 5 log](../stage5/followups.md).
 - 2026-11-14 (git-in-the-host): the commit dialog lists paths in git's order and the tree in
   natural order (`many-2` before `many-10`).
-  - Moved 2026-11-14 to [checkin-review](../../tasks/stage5/phase1/specs/checkin-review.md): the
+  - Moved 2026-11-14 to [checkin-review](../../tasks/stage5/phase4/specs/checkin-review.md): the
     review lists in the tree's order.
 - 2026-11-14 (git-in-the-host): `HOST_GIT_FAILED` answers 500, as the mapping it joined does. A
   hook that refuses is not the server's fault; 422 would say so.
@@ -108,16 +108,16 @@ says where it went. Nothing was dropped.
 - 2026-11-14 (git-in-the-host): a watch on `logs/HEAD` would catch `reset --soft` and
   `update-ref`, which touch neither `HEAD` nor `index`. Undo, in stage 5, may want it.
   - Closed 2026-11-14 by the read of
-    [undo-journal](../../tasks/stage5/phase1/specs/undo-journal.md): undo changes the index, which
+    [undo-journal](../../tasks/stage5/phase5/specs/undo-journal.md): undo changes the index, which
     the watcher already reports.
 - 2026-11-14 (git-in-the-host): a commit can switch branches (a new branch), and the undo
   journal's draft spec does not know about branches.
   - Closed 2026-11-14 by the read of
-    [undo-journal](../../tasks/stage5/phase1/specs/undo-journal.md): the `base` check covers a
+    [undo-journal](../../tasks/stage5/phase5/specs/undo-journal.md): the `base` check covers a
     switch, and a commit on a new branch changes no file.
 - 2026-11-14 (git-in-the-host): the Commit button reads "Commit 0" when nothing has changed. It
   could be disabled, or hidden, until there is a change.
-  - Moved 2026-11-14 to [checkin-review](../../tasks/stage5/phase1/specs/checkin-review.md): the
+  - Moved 2026-11-14 to [checkin-review](../../tasks/stage5/phase4/specs/checkin-review.md): the
     button is disabled with nothing changed.
 - 2026-11-14 (phase 3's close): `packages/formats/md/README.md` still calls the package
   `@stillpointlab/md-editor`, its name before the monorepo, in its title, install line and

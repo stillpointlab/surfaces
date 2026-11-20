@@ -62,3 +62,130 @@ are carried here as they were written.
   `related-tasks.md` (a seed) to `../tasks/public_page_viewer_bootstrap.md`, and stage 2's
   `cm-app-prep.md` and changelog to the seed `result-types-for-app-cores.md`. Nothing checks
   links in CI.
+- 2026-11-14 (app-module-grows): inventory's bounds, pages and create copy are now in
+  `packages/apps/inventory` (`bounds.ts`, `pages.ts`, `meta.ts`) and still in Context Manager
+  (`services/inventory/opSchema.ts`, `services/inventory/pages.ts`, `client/apps/registry.ts`, the
+  create noun in `services/apps/registry.ts`). Two copies until context-manager-adopts-apps.
+- 2026-11-14 (app-module-grows, step 1): `AppMeta` has no noun for the "… created" notice a host
+  shows after a create (Context Manager's client says "Inventory", "Task project"). The local
+  host will want one.
+- 2026-11-14 (app-module-grows, step 1): inventory's `fromChanges` counts changed and new files,
+  as its spec says, so a zone or a manifest renamed by hand is not dirty and an app's check-in
+  would not list it. The explorer's commit would.
+- 2026-11-14 (app-module-grows, step 1): the suite's page cases cannot say "the page answers a
+  view whose subject is missing, so the host gives not found" (`/room/garage` with no garage).
+  `answers: 'not-found'` covers no match and a page that refuses.
+- 2026-11-14 (app-module-grows, step 1): the module has no bound for its host ops
+  (`link-editor`); each host bounds them itself.
+- 2026-11-14 (app-module-grows, step 2): tasks' bounds, pages and create copy are now in
+  `packages/apps/tasks` (`bounds.ts`, `pages.ts`, `meta.ts`) and still in Context Manager. Two
+  copies until context-manager-adopts-apps, as for inventory.
+- 2026-11-14 (app-module-grows, step 2): tasks' `fromChanges` cannot say whether a card's column
+  moved (`dirty`, `versionColumn`): that needs the last check-in's content, not a status. The
+  harness's workspace works it out from its base files today. host-runner has to choose: the
+  module reads a base the host supplies, or the mark is given up outside Context Manager.
+- 2026-11-14 (app-module-grows, step 2): tasks' pages read a stage or phase with `parseInt`, as
+  Context Manager's did, so `/stage/3x` opens stage 3. Tighten it once Context Manager has
+  adopted the pages.
+- 2026-11-14 (app-module-grows, step 2): the `add-kind` bound carries a reserved-folder check
+  from Context Manager that can never be true.
+- 2026-11-14 (app-module-grows, step 2): tasks' `fromChanges` takes every new `.gitkeep` among
+  the changes as housekeeping, wherever it is. A host hands it the instance's changes only.
+- 2026-11-14 (app-shells, step 1): inventory's build has no splitting, so `./element` and
+  `./shell` each carry the two elements, and a page that loads both defines them twice. The
+  format packages' splitting (with `dist/chunks` in `sideEffects`) would give one copy.
+- 2026-11-14 (app-shells, step 1): seen in the inventory elements in a dark scheme: the
+  download link is the browser's default purple (it has no colour of its own), and the NEW
+  badge is faint.
+- 2026-11-14 (app-shells, step 1): in the zone's quick add, the Title field runs under the
+  Owner field, in both schemes. At phone width the overview's rows do not wrap, and the page
+  scrolls sideways.
+- 2026-11-14 (app-shells, step 1): the harness's Dark toggle sets a class and does not follow
+  the system's colour scheme, so a check in dark has to tick it.
+- 2026-11-14 (host-runner): `common-format/host`'s entry test reads the word `from` before a
+  quote in any string as an import, so two of the memory port's messages are worded around it.
+  A tighter pattern would let a message read naturally.
+- 2026-11-14 (host-runner): `createInstance` does not know of a create that was cut off half
+  way (the `reusable` files Context Manager passes), and does not check the new instance against
+  the others.
+- 2026-11-14 (host-runner): a `revision` covers the scope's files. A state that reads the
+  listing beyond the scope (a board in a folder the manifest does not name yet) would not show
+  as stale.
+- 2026-11-14 (host-runner): the harness has two ways to read: an op loads the scope through
+  `runOp`, and a fixture's view projects every file directly.
+- 2026-11-14 (host-runner): a pending move keeps the path a card started at and not the paths
+  it passed through, in the harness now as in `fromChanges`, so fixing references cannot find a
+  link to a path a card only passed through.
+- 2026-11-14 (host-runner): tasks' dirty mark reads a pool card's column as a board card's, as
+  the harness did. The board does not draw `movedFrom`; it is in the state.
+- 2026-11-14 (app-shells, step 2): the harness's "Host answers ops" and "Refuse the next op"
+  controls do not reach a shell fixture's host.
+- 2026-11-14 (app-shells, step 2): in the harness the bare board, hidden, and the shell's board
+  both make their dialogs, so an id such as `#new-brief-title` is on the page twice.
+- 2026-11-14 (app-shells, step 2): a stage made with "+ stage" has no folder until it has a
+  card: the strip shows it because the pointer names it. "Close stage" then moves the pointer
+  on, and the empty stage is gone from the strip. The core writes nothing for an empty stage
+  by design; whether an empty stage should outlive its pointer is not decided.
+- 2026-11-14 (app-shells, step 2): `tasksModule.hostOps` still names `refresh-stage` and
+  `close-candidates`, which a shell answers itself. Drop them once every host mounts the shell.
+- 2026-11-14 (app-shells, step 2): tasks' build has no splitting either, so `./shell` carries
+  its own copy of the board and the strip (as inventory's, above).
+- 2026-11-14 (phase 2's read for phase 3): the app elements take their buttons' and form
+  fields' looks from classes their host must style (`.button`, `.form-input` and six more).
+  Each host styles them again; the harness has stand-ins. A shared partial in `common`'s styles
+  would give every host the same.
+- 2026-11-14 (apps-in-the-local-host, step 1): discovery lists the folder on every write and
+  every app route. Keeping the answer until the watcher reports a change would save it once
+  folders are large.
+- 2026-11-14 (apps-in-the-local-host, step 1): the kept base texts are dropped when the watch
+  on git's `HEAD` fires, about 100 ms after a commit. A file changed again inside that window
+  could be compared with the old base.
+- 2026-11-14 (apps-in-the-local-host, step 1): an instance nested inside another is reported
+  invalid with it, and its row is hidden by the outer one's lock until that is unlocked.
+- 2026-11-14 (apps-in-the-local-host, step 1): a root instance's row shows a dot for changes
+  and no status letter. An instance whose app the page has no shell for still gets a row.
+- 2026-11-14 (apps-in-the-local-host, step 2): a card moved to another phase has `movedFrom` in
+  its state and no mark on the board, in the local host as in Context Manager. The board marks
+  a column that moved, not a file that did.
+- 2026-11-14 (apps-in-the-local-host, step 2): each app's create copy says "repository" (the
+  folder help, tasks' root warning), which is Context Manager's word. The local host serves a
+  folder.
+- 2026-11-14 (apps-in-the-local-host, step 2): tasks' `read-file` answers any file the port
+  reads, not only the instance's.
+- 2026-11-14 (apps-in-the-local-host, step 2): in the md editor, a click in the document and
+  Control+End put the cursor in the frontmatter block, and typing added a line there.
+- 2026-11-14 (apps-in-the-local-host, step 2): creating an app at the served root, with its
+  consent, is covered by tests and was not done by hand.
+- 2026-11-14 (checkin-review, step 1): tasks' shell works out the board's check-in request from
+  the state with a copy of the board's own rule, since the board has no method for it.
+- 2026-11-14 (checkin-review, step 1): the board's in-flight chip reads "PR…" and speaks of a
+  pull request. The word should be the host's.
+- 2026-11-14 (checkin-review, step 1): while a review is busy, focus falls to the page, since
+  the button that had it is disabled. The commit dialog does the same.
+- 2026-11-14 (checkin-review, step 1): a review's groups keep the order they first appear in,
+  so a phase's new folder can come after "Pool & config".
+- 2026-11-14 (checkin-review, step 1): inventory's `./shell` entry still exports the name of
+  `checkin-request`, which no host hears now.
+- 2026-11-14 (checkin-review, step 2): a shell cannot say where focus goes after a refusal, so
+  in an app's review it goes to the refusal's line. Rules a host can pass as data would let it
+  reach the branch or the title.
+- 2026-11-14 (checkin-review, step 2): nothing shows between pressing Commit and the review
+  opening while the page reads the changes.
+- 2026-11-14 (checkin-review, step 2): the review's error line is framed and monospace for
+  git's words, so the review's own short messages ("Choose at least one file…") are monospace
+  too in the local host.
+- 2026-11-14 (checkin-review, step 2): an app's check-in with no title is "`<app>` check-in";
+  the instance's own name ("Workshop assets check-in") may read better.
+- 2026-11-14 (checkin-review, step 2): the app pane asks for git's state at every resolve. The
+  branch could come with the `status` event.
+- 2026-11-15 (undo-journal): the Undo and Redo buttons are the glyphs ↶ and ↷, which depend on
+  the system's font. Two icons in `<spl-icon>` would be steadier.
+- 2026-11-15 (undo-journal): after a create is undone while that app is open, the pane says
+  there is no app at the address. It could go to the folder.
+- 2026-11-15 (undo-journal): an undo's write and the putting back of the index take the port's
+  write lock one after the other, so a commit could land between them.
+- 2026-11-15 (undo-journal): the create dialog does not show a create's "cannot be undone"
+  notice. Ctrl+Y is not a redo. A conflict's message quotes its label and its path two ways.
+- 2026-11-15 (undo-journal): the page knows an editor's keys from the file pane alone. An
+  editor anywhere else would need the same care.
+- 2026-11-15 (undo-journal): on the board's stage view a phase with no card takes no drop.

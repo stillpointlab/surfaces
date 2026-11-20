@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import './inventory-overview.js';
 import { JUST_CREATED, SEEDED, SPACE } from './inventory.fixtures.js';
-import { INVENTORY_BASE, linkedEditors, mountInventory } from './inventory.testing.js';
+import { INVENTORY_BASE, LINKS, linkedEditors, mountInventory } from './inventory.testing.js';
 
 import type { InventoryOverview } from './inventory-overview.js';
 import type { Answer } from './inventory.testing.js';
@@ -68,6 +68,21 @@ describe('<spl-inventory-overview>', () => {
     expect(el.querySelector('a.inventory-zone-link')).toBeNull();
     expect(el.querySelector('.inventory-zone-name')?.textContent).toBe('Kitchen');
     expect(el.querySelector('a.inventory-download')).toBeNull();
+  });
+
+  it('shows no export control when the page has no ZIP export', () => {
+    const { exportAll: _exportAll, ...links } = LINKS;
+    const { el } = mountInventory<InventoryOverview, SharedInventorySpace | null>(
+      'spl-inventory-overview',
+      SPACE,
+      undefined,
+      { links }
+    );
+
+    expect(el.querySelector('.inventory-download')).toBeNull();
+    expect(el.querySelector('.inventory-zone-link')?.getAttribute('href')).toBe(
+      `${INVENTORY_BASE}/zone/${encodeURIComponent('rooms/kitchen.yaml')}`
+    );
   });
 
   it('badges a seeded zone as new', () => {

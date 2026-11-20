@@ -6,7 +6,18 @@
 
 import { createFormatRegistry } from '@stillpointlab/common-format/format';
 
-import type { HostClient, HostEvent } from './host-client';
+import { inRegion } from '../shared/apps';
+
+import type {
+  AppLockAnswer,
+  AppOpAnswer,
+  AppPageAnswer,
+  FoundInstance,
+  HostClient,
+  JournalMove,
+  LocalHostEvent,
+  PutOptions,
+} from './host-client';
 import type { FolderNode, Result } from '@stillpointlab/common-format/app';
 import type { FormatDescriptor } from '@stillpointlab/common-format/format';
 import type {
@@ -27,6 +38,21 @@ export interface FakeHost extends HostClient {
   readonly versions: Map<string, string>;
   readonly gets: string[];
   readonly puts: PortChange[][];
+  /** Each put's options, beside `puts`. */
+  readonly putOptions: (PutOptions | undefined)[];
+  /**
+   * The steps undo would take, newest last, and those it took, next to redo
+   * last: as the server keeps them, for the creates, moves and deletes `put` is
+   * sent. A delete of a `BINARY` file is refused with `HOST_CANNOT_UNDO` unless
+   * it is sent `unjournaled`, which empties both.
+   */
+  readonly steps: FakeStep[];
+  readonly undone: FakeStep[];
+  /** Answer the next undo or redo with this refusal instead. */
+  refuseNextStep?: { code: string; message: string; path?: string };
+  /** Hold every undo and redo until `releaseStep()`. */
+  holdStep: boolean;
+  releaseStep(): void;
   /** Answer the next `put` with this refusal instead of writing. */
   refuseNextPut?: { code: string; message: string };
   /** Hold every `put` until `releasePut()`. */
@@ -39,7 +65,7 @@ export interface FakeHost extends HostClient {
   /** Hold every `get` until `release()`. */
   hold: boolean;
   release(): void;
-  emit(event: HostEvent): void;
+  emit(event: LocalHostEvent): void;
   /** Write a file as something outside the page would, and say so. */
   writeOutside(path: string, text: string | null): void;
   /** What `git()` answers: not a repository unless a test says so. */
@@ -59,6 +85,32 @@ export interface FakeHost extends HostClient {
   /** Hold every `commit` until `releaseCommit()`. */
   holdCommit: boolean;
   releaseCommit(): void;
+  /** The instances `apps()` answers; `setAppLock` changes their `unlocked` and says so. */
+  instances: FoundInstance[];
+  /** How `appPage` answers; by default a page whose state names the call. */
+  pageAnswer: (manifestPath: string, path: string, query: string) => Result<AppPageAnswer>;
+  /** How `appOp` answers; by default a reply with the next revision. */
+  opAnswer: (manifestPath: string, op: unknown, view: unknown) => Result<AppOpAnswer>;
+  /** The app calls, in order: `page:<manifest><path>?<query>`, `op:<type>`, `project`, `lock:<manifest>:<locked>`. */
+  readonly appCalls: string[];
+  /** The ops sent, with their views. */
+  readonly ops: { manifestPath: string; op: unknown; view: unknown }[];
+  /** Hold every `appOp` until `releaseOp()`. */
+  holdOp: boolean;
+  releaseOp(): void;
+  /** What `setAppLock` answers on a lock. */
+  lockAnswer: AppLockAnswer;
+  /** The creates asked for, in order. */
+  readonly creates: { app: string; folder: string; confirmRoot?: boolean; input: unknown }[];
+  /** How `appCreate` answers; by default the instance is added, locked, and said so. */
+  createAnswer?: (request: { app: string; folder: string }) => Result<{ manifestPath: string }>;
+}
+
+/** A step the fake keeps: what undo and redo write. */
+export interface FakeStep {
+  label: string;
+  inverse: PortChange[];
+  forward: PortChange[];
 }
 
 export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHost {
@@ -67,17 +119,29 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
   let next = 0;
   const stamp = (path: string) => versions.set(path, `v${++next}`);
   for (const path of disk.keys()) stamp(path);
-  const listeners = new Set<(event: HostEvent) => void>();
+  const listeners = new Set<(event: LocalHostEvent) => void>();
   let held: (() => void)[] = [];
   let heldPuts: (() => void)[] = [];
   let heldCommits: (() => void)[] = [];
+  let heldOps: (() => void)[] = [];
+  let heldSteps: (() => void)[] = [];
   let commitCount = 0;
+  let opCount = 0;
 
   const host: FakeHost = {
     disk,
     versions,
     gets: [],
     puts: [],
+    putOptions: [],
+    steps: [],
+    undone: [],
+    holdStep: false,
+    releaseStep() {
+      const waiting = heldSteps;
+      heldSteps = [];
+      for (const go of waiting) go();
+    },
     hold: false,
     holdPut: false,
     separate: new Set(),
@@ -89,6 +153,28 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
     gitCalls: [],
     commits: [],
     holdCommit: false,
+    instances: [],
+    appCalls: [],
+    ops: [],
+    holdOp: false,
+    lockAnswer: { errors: [], warnings: [] },
+    creates: [],
+    pageAnswer: (manifestPath, path, query) => ({
+      ok: true,
+      view: { type: 'page', path },
+      state: { manifestPath, path, query },
+      title: `Page ${path || '/'}`,
+      revision: 'r0',
+    }),
+    opAnswer: () => {
+      opCount += 1;
+      return { ok: true, reply: { done: opCount }, revision: `op${opCount}` };
+    },
+    releaseOp() {
+      const waiting = heldOps;
+      heldOps = [];
+      for (const go of waiting) go();
+    },
     releaseCommit() {
       const waiting = heldCommits;
       heldCommits = [];
@@ -143,60 +229,70 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
       return { ok: true, text, version: versions.get(path)! };
     },
     urlFor: (path) => `/api/raw?path=${encodeURIComponent(path)}`,
-    async put(changes) {
+    async put(changes, options) {
       host.puts.push([...changes]);
+      host.putOptions.push(options);
       if (host.holdPut) await new Promise<void>((go) => heldPuts.push(go));
+      // As the server does: no write into a locked app's files.
+      for (const change of changes) {
+        for (const path of change.kind === 'move' ? [change.from, change.path] : [change.path]) {
+          if (host.instances.some((i) => !i.unlocked && inRegion(i, path))) {
+            return { ok: false, code: 'HOST_SCOPE_LOCKED', message: `${path} is locked.` };
+          }
+        }
+      }
       if (host.refuseNextPut) {
         const refusal = host.refuseNextPut;
         host.refuseNextPut = undefined;
         return { ok: false, ...refusal };
       }
-      const named = new Set<string>();
-      for (const change of changes) {
-        for (const path of change.kind === 'move' ? [change.from, change.path] : [change.path]) {
-          if (named.has(path)) return { ok: false, code: 'HOST_BAD_REQUEST', message: 'twice' };
-          named.add(path);
+      const journaled = changes.length > 0 && changes.every((c) => c.kind !== 'write');
+      if (journaled && !options?.unjournaled) {
+        if (changes.some((c) => c.kind === 'delete' && disk.get(c.path) === BINARY)) {
+          return {
+            ok: false,
+            code: 'HOST_CANNOT_UNDO',
+            message: 'cannot undo',
+            reason: 'not-text',
+          } as Result<{ versions: Record<string, string> }>;
         }
       }
-      for (const change of changes) {
-        const exists = disk.has(change.path);
-        const source = change.kind === 'move' ? change.from : change.path;
-        if ((change.kind === 'write' || change.kind === 'delete') && !exists) {
-          return { ok: false, code: 'HOST_FILE_NOT_FOUND', message: 'none' };
-        }
-        if (change.kind === 'move' && !disk.has(source)) {
-          return { ok: false, code: 'HOST_FILE_NOT_FOUND', message: 'none' };
-        }
-        if ((change.kind === 'create' || change.kind === 'move') && exists) {
-          return { ok: false, code: 'HOST_PATH_EXISTS', message: 'exists' };
-        }
-        if (change.base !== undefined && change.base !== versions.get(source)) {
-          return { ok: false, code: 'HOST_FILE_CHANGED', message: 'changed' };
-        }
-      }
-      const answer: Record<string, string> = {};
-      for (const change of changes) {
-        if (change.kind === 'delete') {
-          disk.delete(change.path);
-          versions.delete(change.path);
-        } else if (change.kind === 'move') {
-          // Without content, the bytes and so the version move as they are.
-          disk.set(change.path, disk.get(change.from)!);
-          versions.set(change.path, versions.get(change.from)!);
-          disk.delete(change.from);
-          versions.delete(change.from);
-          answer[change.path] = versions.get(change.path)!;
+      const inverse: PortChange[] = changes
+        .map((c): PortChange => {
+          if (c.kind === 'create') return { kind: 'delete', path: c.path };
+          if (c.kind === 'move') return { kind: 'move', from: c.path, path: c.from };
+          if (c.kind === 'delete') {
+            return { kind: 'create', path: c.path, content: String(disk.get(c.path) ?? '') };
+          }
+          return c;
+        })
+        .reverse();
+      const written = write(changes);
+      if (written.ok && journaled) {
+        if (options?.unjournaled) {
+          host.steps.length = 0;
+          host.undone.length = 0;
         } else {
-          disk.set(change.path, change.content);
-          stamp(change.path);
-          answer[change.path] = versions.get(change.path)!;
+          host.steps.push({
+            label: `Step ${host.steps.length + 1}`,
+            inverse,
+            forward: [...changes],
+          });
+          host.undone.length = 0;
         }
+        queueMicrotask(() => host.emit({ type: 'journal' }));
       }
-      // The server reports its own writes too, and here before the write's answer.
-      const paths = changes.flatMap((c) => (c.kind === 'move' ? [c.from, c.path] : [c.path]));
-      queueMicrotask(() => host.emit({ type: 'changed', paths }));
-      return { ok: true, versions: answer };
+      return written;
     },
+    async journal() {
+      return {
+        ok: true,
+        undo: host.steps.at(-1)?.label ?? null,
+        redo: host.undone.at(-1)?.label ?? null,
+      };
+    },
+    undo: () => takeStep('undo'),
+    redo: () => takeStep('redo'),
     async status(): Promise<Record<string, FileStatus>> {
       return { ...host.statuses };
     },
@@ -246,11 +342,137 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
       queueMicrotask(() => host.emit({ type: 'status' }));
       return { ok: true, commit, short: commit.slice(-7), branch: host.gitInfo.branch ?? '' };
     },
+    async apps() {
+      return host.instances.map((instance) => ({ ...instance }));
+    },
+    async appPage(manifestPath, path, query) {
+      host.appCalls.push(`page:${manifestPath}${path}${query ? `?${query}` : ''}`);
+      return host.pageAnswer(manifestPath, path, query);
+    },
+    async appProject(manifestPath, view) {
+      host.appCalls.push('project');
+      return { ok: true, state: { manifestPath, view }, revision: 'project' };
+    },
+    async appOp(manifestPath, op, view) {
+      host.appCalls.push(`op:${(op as { type: string }).type}`);
+      host.ops.push({ manifestPath, op, view });
+      if (host.holdOp) await new Promise<void>((go) => heldOps.push(go));
+      return host.opAnswer(manifestPath, op, view);
+    },
+    async appCreate(request) {
+      host.creates.push({ ...request });
+      if (host.createAnswer) return host.createAnswer(request);
+      const manifestPath = `${request.folder === '' ? '' : `${request.folder}/`}${request.app}.yaml`;
+      host.disk.set(manifestPath, '');
+      stamp(manifestPath);
+      host.instances.push({
+        app: request.app,
+        manifestPath,
+        folder: request.folder,
+        label: request.app,
+        icon: 'task',
+        valid: true,
+        errors: [],
+        unlocked: false,
+        ...(request.folder === '' ? { scope: [manifestPath] } : {}),
+      });
+      queueMicrotask(() => host.emit({ type: 'apps' }));
+      return { ok: true, manifestPath };
+    },
+    async setAppLock(manifestPath, locked) {
+      host.appCalls.push(`lock:${manifestPath}:${locked}`);
+      const instance = host.instances.find((i) => i.manifestPath === manifestPath);
+      if (!instance) return { ok: false, code: 'HOST_APP_NOT_FOUND', message: 'no app' };
+      instance.unlocked = !locked;
+      queueMicrotask(() => host.emit({ type: 'apps' }));
+      return { ok: true, ...(locked ? host.lockAnswer : { errors: [], warnings: [] }) };
+    },
     watch(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
   };
+  /** Write changes as the server would, and say so on the stream. */
+  function write(changes: readonly PortChange[]): Result<{ versions: Record<string, string> }> {
+    const named = new Set<string>();
+    for (const change of changes) {
+      for (const path of change.kind === 'move' ? [change.from, change.path] : [change.path]) {
+        if (named.has(path)) return { ok: false, code: 'HOST_BAD_REQUEST', message: 'twice' };
+        named.add(path);
+      }
+    }
+    for (const change of changes) {
+      const exists = disk.has(change.path);
+      const source = change.kind === 'move' ? change.from : change.path;
+      if ((change.kind === 'write' || change.kind === 'delete') && !exists) {
+        return { ok: false, code: 'HOST_FILE_NOT_FOUND', message: 'none' };
+      }
+      if (change.kind === 'move' && !disk.has(source)) {
+        return { ok: false, code: 'HOST_FILE_NOT_FOUND', message: 'none' };
+      }
+      if ((change.kind === 'create' || change.kind === 'move') && exists) {
+        return { ok: false, code: 'HOST_PATH_EXISTS', message: 'exists' };
+      }
+      if (change.base !== undefined && change.base !== versions.get(source)) {
+        return { ok: false, code: 'HOST_FILE_CHANGED', message: 'changed' };
+      }
+    }
+    const answer: Record<string, string> = {};
+    for (const change of changes) {
+      if (change.kind === 'delete') {
+        disk.delete(change.path);
+        versions.delete(change.path);
+      } else if (change.kind === 'move') {
+        // Without content, the bytes and so the version move as they are.
+        disk.set(change.path, disk.get(change.from)!);
+        versions.set(change.path, versions.get(change.from)!);
+        disk.delete(change.from);
+        versions.delete(change.from);
+        answer[change.path] = versions.get(change.path)!;
+      } else {
+        disk.set(change.path, change.content);
+        stamp(change.path);
+        answer[change.path] = versions.get(change.path)!;
+      }
+    }
+    // The server reports its own writes too, and here before the write's answer.
+    const paths = changes.flatMap((c) => (c.kind === 'move' ? [c.from, c.path] : [c.path]));
+    queueMicrotask(() => host.emit({ type: 'changed', paths }));
+    return { ok: true, versions: answer };
+  }
+
+  /** Undo or redo the newest step on its side, as the server would. */
+  async function takeStep(which: 'undo' | 'redo'): Promise<Result<JournalMove>> {
+    if (host.holdStep) await new Promise<void>((go) => heldSteps.push(go));
+    if (host.refuseNextStep) {
+      const refusal = host.refuseNextStep;
+      host.refuseNextStep = undefined;
+      return { ok: false, ...refusal } as Result<JournalMove>;
+    }
+    const from = which === 'undo' ? host.steps : host.undone;
+    const to = which === 'undo' ? host.undone : host.steps;
+    const step = from.at(-1);
+    if (!step) {
+      return {
+        ok: false,
+        code: which === 'undo' ? 'HOST_NOTHING_TO_UNDO' : 'HOST_NOTHING_TO_REDO',
+        message: 'nothing',
+      };
+    }
+    const changes = which === 'undo' ? step.inverse : step.forward;
+    const written = write(changes);
+    if (!written.ok) return written;
+    from.pop();
+    to.push(step);
+    queueMicrotask(() => host.emit({ type: 'journal' }));
+    return {
+      ok: true,
+      label: step.label,
+      moved: changes.flatMap((c) => (c.kind === 'move' ? [{ from: c.from, path: c.path }] : [])),
+      deleted: changes.flatMap((c) => (c.kind === 'delete' ? [c.path] : [])),
+    };
+  }
+
   return host;
 }
 

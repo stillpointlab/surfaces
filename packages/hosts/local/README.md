@@ -7,14 +7,16 @@ nothing here needs Context Manager. See the
 [host-server spec](../../../docs/tasks/stage4/phase2/specs/host-server.md) and the
 [host-page spec](../../../docs/tasks/stage4/phase2/specs/host-page.md), the
 [file-operations spec](../../../docs/tasks/stage4/phase2/specs/file-operations.md) and
-[git in the host](../../../docs/tasks/stage4/phase3/specs/git-in-the-host.md).
+[git in the host](../../../docs/tasks/stage4/phase3/specs/git-in-the-host.md), and
+[apps in the local host](../../../docs/tasks/stage5/phase3/specs/apps-in-the-local-host.md).
 
 ## Running it
 
 - In this repository: `npm run serve -- <path> [--port <n>]` serves `<path>` (relative to where
   you typed it; the current folder by default) in development mode: the page from its sources
   through Vite, as middleware in the server's own process, so a change to the page or a format
-  reloads it. It builds only what the server needs (`common` and `dist/server`).
+  reloads it. It builds only what the server needs (`build:deps`, which includes the apps'
+  modules the server runs, and `dist/server`).
 - `surfaces [path] [--port <n>]`: the built page, with no Vite. In this repository `npx surfaces`
   once the package is built (`npm run build:common`, then
   `npm run build --workspace @stillpointlab/local-host`, which writes `dist/server` and
@@ -32,18 +34,19 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
 | ---------------- | ---------------------------------------------------------------------------------------- |
 | `main.ts`        | The entry: the HTTP client, the five formats, md's sanitizing renderer                   |
 | `host-client.ts` | `HostClient` and `createHttpClient`: the only module that calls `fetch` or `EventSource` |
-| `page.ts`        | `startPage`: the layout, the tree's events, the address, the host's events               |
+| `page.ts`        | `startPage`: the layout, the tree's events, the address, the host's events, undo, redo   |
 | `pane.ts`        | `FilePane`: what is open, opening, saving, a change on disk, and the Changes view        |
 | `registry.ts`    | md, xmdl, sheet, image and code, in that order, with code as the fallback                |
 | `markdown.ts`    | The renderer `<md-preview>` is given: markdown-it, then DOMPurify                        |
 | `confirm.ts`     | One confirmation helper over `<modal-dialog>`                                            |
-| `address.ts`     | `#/file/<path>`, `#/edit/<path>` and `#/diff/<path>`                                     |
+| `address.ts`     | `#/file/<path>`, `#/edit/<path>`, `#/diff/<path>` and `#/app/<manifestPath>…`            |
 | `stored.ts`      | The open folders in `localStorage`, by the root's id                                     |
 | `words.ts`       | Everything the page says                                                                 |
 | `tree/`          | `<host-file-tree>`                                                                       |
 | `menu/`          | `HostMenu`: the page's one options menu, entries opened at a point                       |
 | `file-ops/`      | Create, rename and delete: a row's menu entries, the dialogs, the checks and the writes  |
-| `commit/`        | The commit dialog (`dialog.ts`) and its pure parts: rows, checks, the request            |
+| `commit/`        | The commit over `<checkin-review>` (`review.ts`) and its pure parts (`rows.ts`)          |
+| `apps/`          | The apps' registration, the app pane, the tree's view of the apps, the page's host ops   |
 
 - **The address** names what is open: `#/file/<path>` for the preview, `#/edit/<path>` for the
   editor and `#/diff/<path>` for the Changes view, each segment percent-encoded. Back and
@@ -58,19 +61,26 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
   looks like a repository, the explorer says "git was not found, so changes and commit are
   off."; outside a repository the page shows nothing of git and calls none of its routes.
 - **Commit.** In a repository the explorer's header holds a **Commit** button with the number of
-  changed files (one per moved file, deleted files included). It opens a dialog that reads the
-  branch and the changes: every changed file checked, with its status and a moved file as
-  old → new, and an All box; a summary (required) and details, sent as one message; the
-  current branch or a new one by name (only a new one when `HEAD` is detached). Commit says
-  what is missing (no file, no summary, no branch name) under the form and puts focus there,
-  so the button is never disabled without a reason. While the commit runs the form is held,
-  and Escape and the close button wait. A refusal, git's own words included, shows under the
-  form as text and the dialog keeps everything. When the changes move while it is open, it
-  reads them again: checks are kept, a new row starts unchecked. Unsaved edits in the open file
-  are not in a commit, and the dialog says so. After a commit the marks are read at once, and a
-  notice under the header (a live region) says "Committed `<short id>` on `<branch>`." until it
-  is dismissed or the next commit replaces it. The request is `requestOf` in
-  `commit/request.ts`, `{ paths, message, branch? }`, sent by `HostClient.commit`.
+  changed files (one per moved file, deleted files included), disabled when nothing has changed.
+  It reads the branch and the changes, then opens the check-in review
+  (`@stillpointlab/checkin-review-component`), the same element an app's shell holds: every
+  changed file checked, in the tree's order (folders first, numbered names in order), its status
+  as its label (coloured by `[data-label]` in `page.scss`) and a moved file as old → new, with an
+  All box; a summary (required) and details, sent as one message; the current branch or a new one
+  by name (only a new one when `HEAD` is detached). A read that fails, or finds nothing changed,
+  says so in the notice and opens nothing. Commit says what is missing (no file, no summary, no
+  branch name) under the form and puts focus there, so the button is never disabled without a
+  reason. While the commit runs the form is held, and Escape and the close button wait. A
+  refusal, git's own words included, shows under the form as text, the review keeps everything,
+  and focus goes to the field it is about (`HOST_BRANCH_*` the branch, `HOST_COMMIT_NO_MESSAGE`
+  the summary, `HOST_COMMIT_NO_PATHS` the files) or to the refusal. When the changes move while
+  it is open, or after `HOST_NOT_CHANGED`, it reads them again: checks are kept, a new row starts
+  unchecked; a read that fails then is said under the form. Unsaved edits in the open file are
+  not in a commit, and the review says so. After a commit the marks are read at once, the branch
+  is the commit's, and a notice under the header (a live region) says "Committed `<short id>` on
+  `<branch>`." until it is dismissed or the next commit replaces it. The request is
+  `{ paths, message, branch? }` (`commitRequestOf` in `commit/rows.ts`), sent by
+  `HostClient.commit`.
 - **Saving** (Save, Ctrl+S, Cmd+S) sends one `write` whose `base` is the version the file was
   opened or last saved at. A change on disk to the open file is read again and compared by
   version: with no unsaved edits it shows in place; with edits a banner offers Reload, and Save
@@ -92,6 +102,28 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
   resize close it; Escape, Tab and a choice give focus back (`returnFocus`, or what had focus).
   A row's entries are `page.fileOps.entriesFor({ path, kind })`; another kind of row, or an
   app's request, adds its own in the page's `tree-menu` listener.
+- **Apps** (`apps/`, the server's `src/server/apps/`). Each side has one registration: the
+  server's list of modules (`createHost`'s `apps`, inventory and tasks by default) with the
+  host ops it answers (`hostOps`), and the page's `createAppRegistry()` (per app id: its
+  `./meta`, how to load its `./shell` and its `./create-element`, and the host ops the page
+  answers). A folder with a manifest is one row in the tree, named for the app; an
+  instance at the served root has a row above the tree. Every run starts locked: the instance's
+  files are left out of the tree (the listing stays whole) and the server refuses a
+  `PUT /api/files` into them. The row's menu offers Open and "Show files…" (asked first), or
+  Open, "Lock files" and "New file…". A folder above locked files cannot be renamed or deleted
+  here, and a locked file opens in its preview. The app opens at `#/app/<manifestPath>`, then
+  its own sub-path and query, in the app pane beside the file pane; the pane resolves the page
+  on the server, answers the shell's ops, opens the page's menu for `open-options-menu`, and
+  reads the page again on the host's events. The shell's input carries `checkin`: the commit's
+  words and, in a repository, the branch, read again each time it is set, with a new one
+  offered. A shell's check-in review asks `checkin`, and the pane answers it with the page's
+  commit: the title as the summary ("`<app>` check-in" when there is none), the body as the
+  details, `branch` a new branch; `done` with the commit notice's words, or the refusal as it
+  is. The commit's `status` event resolves the page again, so the app's marks clear. A folder's menu, and the space under the rows,
+  offer "Create <noun> here…" for each app with a create form: a dialog with the folder, the
+  app's root consent where it asks one, and the app's own form.
+- **The notice** under the explorer's header is the page's one: a commit, an app's
+  notification, or what a lock reports.
 - **Markdown is untrusted:** the page installs a renderer that sanitizes with DOMPurify before any
   md element mounts.
 - **The content security policy** (`PAGE_POLICY` in `src/server/page.ts`, and the same `<meta>` in
@@ -107,24 +139,35 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
 event streams and its watcher. The `bin` is `nodeListener` around it on `node:http`, and a desktop
 shell can serve the same handler under its own scheme. `createNodePort({ root })` is the
 `StoragePort` (from `@stillpointlab/common-format/host`) over the folder, with `commit(request)`
-beside it: `HostCommitRequest` in, `HostCommit` out, under the port's write lock.
+beside it: `HostCommitRequest` in, `HostCommit` out, under the port's write lock. The port runs
+`common`'s storage port suite over a repository in a temporary folder
+(`src/server/port-suite.test.ts`), the same suite the memory port runs.
 
 ## Routes
 
-| Route                  | Answers                                                                                     |
-| ---------------------- | ------------------------------------------------------------------------------------------- |
-| `GET /api/list`        | `{ nodes, truncated }`: every file and folder; past 20,000 nodes cut, and saying so         |
-| `GET /api/file?path=`  | `{ ok: true, text, version }`, or a refusal                                                 |
-| `GET /api/raw?path=`   | the bytes, typed by extension, with `nosniff` and `Content-Security-Policy: sandbox`        |
-| `PUT /api/files`       | body `{ changes: PortChange[] }`; `{ ok: true, versions }`, or a refusal                    |
-| `GET /api/status`      | `{ [path]: status }`: what differs from `HEAD`, deleted files included (`{}` outside git)   |
-| `GET /api/git`         | `{ state, branch }`: `repository`, `no-repository` or `no-git`; `branch` `null` if detached |
-| `GET /api/changes`     | `{ ok: true, changes }`, each `{ path, status, from? }` (`from` for a moved file)           |
-| `GET /api/base?path=`  | `{ ok: true, text }`: the file's text at `HEAD`, under its old path when it moved           |
-| `POST /api/commit`     | body `{ paths, message, branch? }`; `{ ok: true, commit, short, branch }`, or a refusal     |
-| `GET /api/root`        | `{ name, id }`: the folder's name, and a SHA-256 of its real path                           |
-| `GET /api/events`      | server-sent events (below)                                                                  |
-| `GET /`, `GET /<file>` | the page: `dist/client`, or Vite in development mode (any path outside `/api/`)             |
+| Route                   | Answers                                                                                              |
+| ----------------------- | ---------------------------------------------------------------------------------------------------- |
+| `GET /api/list`         | `{ nodes, truncated }`: every file and folder; past 20,000 nodes cut, and saying so                  |
+| `GET /api/file?path=`   | `{ ok: true, text, version }`, or a refusal                                                          |
+| `GET /api/raw?path=`    | the bytes, typed by extension, with `nosniff` and `Content-Security-Policy: sandbox`                 |
+| `PUT /api/files`        | body `{ changes: PortChange[], unjournaled?: true }`; `{ ok: true, versions }`, or a refusal         |
+| `GET /api/journal`      | `{ ok: true, undo, redo }`: the label of the step each would take next, or `null`                    |
+| `POST /api/undo`        | `{ ok: true, label, moved: [{ from, path }], deleted }`: what undoing the newest step did            |
+| `POST /api/redo`        | the same, for the step last undone                                                                   |
+| `GET /api/status`       | `{ [path]: status }`: what differs from `HEAD`, deleted files included (`{}` outside git)            |
+| `GET /api/git`          | `{ state, branch }`: `repository`, `no-repository` or `no-git`; `branch` `null` if detached          |
+| `GET /api/changes`      | `{ ok: true, changes }`, each `{ path, status, from? }` (`from` for a moved file)                    |
+| `GET /api/base?path=`   | `{ ok: true, text }`: the file's text at `HEAD`, under its old path when it moved                    |
+| `POST /api/commit`      | body `{ paths, message, branch? }`; `{ ok: true, commit, short, branch }`, or a refusal              |
+| `GET /api/root`         | `{ name, id }`: the folder's name, and a SHA-256 of its real path                                    |
+| `GET /api/apps`         | `{ apps }`: every instance found (`FoundInstance`), valid or not, locked or not                      |
+| `POST /api/apps/lock`   | body `{ manifestPath, locked }`; `{ ok: true, errors, warnings }` (on lock, the lifecycle's)         |
+| `GET /api/apps/page`    | `?manifestPath=&path=&query=`; `{ ok, view, state, extras?, title, revision }` or `{ ok, redirect }` |
+| `GET /api/apps/project` | `?manifestPath=&view=<JSON>`; `{ ok: true, state, revision }`                                        |
+| `POST /api/apps/op`     | body `{ manifestPath, op, view? }`; `{ ok: true, reply, revision, notice? }`                         |
+| `POST /api/apps/create` | body `{ app, folder, confirmRoot?, input }`; `{ ok: true, manifestPath, notice? }`                   |
+| `GET /api/events`       | server-sent events (below)                                                                           |
+| `GET /`, `GET /<file>`  | the page: `dist/client`, or Vite in development mode (any path outside `/api/`)                      |
 
 A path is relative to the root with `/` separators, in the `path` query (percent-encoded as any
 query value). A version is a SHA-256 of the file's bytes, as hex; only equality matters.
@@ -134,6 +177,13 @@ query value). A version is a SHA-256 of the file's bytes, as hex; only equality 
 | Status | Codes                                                                                                                     |
 | ------ | ------------------------------------------------------------------------------------------------------------------------- |
 | 404    | `HOST_FILE_NOT_FOUND`, and `HOST_NO_ROUTE` for a route that does not exist                                                |
+| 404    | `HOST_APP_NOT_FOUND` (no instance at the manifest path), `HOST_APP_PAGE_NOT_FOUND` (the app has no page there)            |
+| 409    | `HOST_SCOPE_LOCKED`: a `PUT /api/files` change's path, or a move's `from`, is in a locked app's files                     |
+| 409    | `HOST_APP_INVALID`: an app route for an instance discovery marks invalid (its manifest, or an overlap)                    |
+| 409    | `HOST_APP_OVERLAP`: a create whose region would share a path with a found instance's                                      |
+| 409    | `HOST_NOTHING_TO_RESOLVE`: tasks' `resolve`, since a folder has no upstream to differ from                                |
+| 409    | `HOST_NOTHING_TO_UNDO`, `HOST_NOTHING_TO_REDO`; `HOST_UNDO_CONFLICT` with the `path` that changed since the step          |
+| 409    | `HOST_CANNOT_UNDO` with its `reason` (`too-large`, `not-text`): send the same changes again with `unjournaled: true`      |
 | 409    | `HOST_PATH_EXISTS`, `HOST_FILE_CHANGED`; `HOST_NOT_A_REPOSITORY`, `HOST_GIT_NOT_FOUND` (a git route outside `repository`) |
 | 409    | A commit: `HOST_NOT_CHANGED`, `HOST_PATH_CONFLICTED`, `HOST_GIT_IN_PROGRESS`, `HOST_DETACHED_HEAD`, `HOST_BRANCH_EXISTS`  |
 | 400    | `HOST_PATH_OUTSIDE_ROOT`, `HOST_NOT_TEXT`, `HOST_FILE_TOO_LARGE`, `HOST_BAD_REQUEST`                                      |
@@ -146,7 +196,9 @@ query value). A version is a SHA-256 of the file's bytes, as hex; only equality 
 
 **Events** are unnamed server-sent events, one JSON object per `data:` line:
 `{"type":"changed","paths":[...]}` (these files' contents changed, appeared or went),
-`{"type":"listed"}` (the set of paths changed, so the list is stale) and `{"type":"status"}`
+`{"type":"listed"}` (the set of paths changed, so the list is stale), `{"type":"apps"}` (the
+instances found, or a lock, changed), `{"type":"journal"}` (the steps undo and redo would take
+changed) and `{"type":"status"}`
 (git's `HEAD` or index changed: a commit, a stage or a switch, the host's own staging
 included, so the statuses are stale). The stream opens with `retry: 1000` and sends a comment
 every 25 seconds. The server's own writes are reported too.
@@ -170,6 +222,34 @@ every 25 seconds. The server's own writes are reported too.
   moved into an ignored folder stays tracked. An untracked file, a file in conflict, a `write`
   and a `create` stage nothing. If staging fails (another git holds `index.lock`), the write
   stands, `put` succeeds, and the host warns on its terminal.
+
+## Undo and redo
+
+`src/server/journal/`: the journal, in the server's memory for the run. It wraps the port and
+git's index (`port.index`), and nothing else, so its tests run over the memory port.
+
+- **What is a step:** the explorer's create, rename and delete (a `PUT /api/files` whose
+  changes are all `create`, `move` or `delete`, labelled from them: "Delete notes.md",
+  "Rename docs to notes", "Delete 3 files in drafts"), an app's op ("Inventory: add-item") and
+  a create ("Tasks: create"). A `PUT /api/files` with a `write` is an editor's save and is not
+  one. A commit, a lock and an unlock are not either, and a commit does not clear the journal.
+- **Before a step** the journal reads the old text of each `write`, `delete` and `move` with
+  content, and the index entries its deletes will remove, and sends each change at the version
+  it read (a writer's own `base` is kept): a file changed between the read and the write
+  refuses the step.
+- **Undo** writes the newest step's inverse in one `put`, each change at the version the step
+  left (a `create` at none), then puts back the index entries the step's deletes removed, with
+  `git update-index --index-info`. A file changed since (by anyone) refuses it with
+  `HOST_UNDO_CONFLICT`, naming the file; the step stays and nothing is written. **Redo** is the
+  same with the step's forward changes. Neither is refused by the lock, and neither adds a step.
+- **A step that cannot be kept:** a delete of a file the port cannot read as text (an image,
+  or over 2 MiB), or a step whose text is over 256 MiB. From the explorer it is refused with
+  `HOST_CANNOT_UNDO`; the page asks, and sends it again with `unjournaled: true`. From an app it
+  is written, and the answer carries `notice: { kind: 'cannot-undo', reason }`. Either way the
+  journal empties. A rename of an image carries no text, and is kept.
+- **Limits:** 1,000 steps and 256 MiB of kept text (`limits.ts`); past either, the oldest go.
+- **The page:** Undo and Redo in the explorer's header, with the step's label as the title;
+  Ctrl+Z and Ctrl+Shift+Z (Cmd on a Mac) when focus is in no editor, text field, dialog or menu.
 
 ## Safety
 
@@ -270,3 +350,34 @@ port's write lock: a `put` that arrives during a commit waits for it, and the re
   (`git rev-parse --absolute-git-dir`: a worktree's own, and above a served subfolder), which
   sends `status`. The host's own reads never write the index, so reading after the event raises
   no other.
+
+## Apps
+
+`src/server/apps/`: `registry.ts` (the modules), `discovery.ts`, `facts.ts` (the runner's
+`know`) and `app-host.ts` (the lock and the routes). The wire types and the region rule are in
+`src/shared/apps.ts`, which both halves import.
+
+- **Discovery** reads every file the port lists that is named a module's
+  `lifecycle.manifestName`, and asks `validateAndScope` and `describeInstance`. **An instance's
+  region** is its manifest's folder and everything under it; at the served root, its scope's
+  paths and nothing else. Two instances whose regions share a path are both invalid, each with
+  an error naming the other. Discovery runs whenever a route needs it, and again on a `listed`
+  event, a `changed` manifest and a lock; `apps` is sent when its answer differs.
+- **The lock** is a set of unlocked manifest paths in memory; every run starts with none.
+  `PUT /api/files` checks every change's `path` and a move's `from` against the locked
+  regions before the port sees it. The runner writes through the port, not the route, so its
+  writes are not refused. Locking runs `validateAndScope` again and answers its errors and
+  warnings; it locks either way.
+- **The runner's `know`** is the module's `fromChanges` over git's changes in the region (a
+  change whose path or `from` is in it), each changed or moved file with its `base`, read once
+  through `git.base` and kept until git's `HEAD` or index moves. Outside a repository nothing is
+  changed.
+- **The revision** the page and op routes answer is the runner's joined with a digest of the
+  changes `know` was handed, so a commit, which changes no file, moves it.
+- **Host ops** an app's registration names (`host-ops.ts`) are answered before the runner:
+  tasks' `read-file` (the port's text), `scan-references` (the core's `referencesTo` over the
+  instance as known) and `resolve` (refused). Their answers carry no revision.
+- **Create** checks the folder against the found instances' regions first (at the root, the
+  scope the app's lifecycle would give the seeded manifest), then runs `createInstance`.
+- **A refusal's status** on an app route: the runner's class (`hostRefusalClass`), else the
+  host's own (`statusFor`), else the module's `refusalClass`: 404, 409 or 400.

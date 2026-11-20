@@ -25,8 +25,8 @@ the harness's memory host. Not reviewed: the specs' designs where stage 4 does n
 
 Overall / Verdict: the plan holds, and no spec needs to be thrown away. Seven findings would have
 sent an implementing agent the wrong way or stopped it, and they concentrate in the two specs that
-sit on stage 4's code: [undo-journal](../specs/undo-journal.md) and
-[apps-in-the-local-host](../specs/apps-in-the-local-host.md). The worst is in the undo journal:
+sit on stage 4's code: [undo-journal](../../phase5/specs/undo-journal.md) and
+[apps-in-the-local-host](../../phase3/specs/apps-in-the-local-host.md). The worst is in the undo journal:
 the port reads and writes text of at most 2 MiB, so the journal as drafted cannot keep a deleted
 image, and its index step would unstage a person's own work. Every finding is written into its
 spec in this PR. Three of them rested on a choice that is Jamie's, and two more questions came
@@ -78,7 +78,7 @@ hold at its `main`.
 
 ### H1. The undo journal cannot keep a file that is not text
 
-- **Where:** [undo-journal](../specs/undo-journal.md), "The journal"; `StoragePort` in
+- **Where:** [undo-journal](../../phase5/specs/undo-journal.md), "The journal"; `StoragePort` in
   `packages/common/src/host/index.ts`; `MAX_TEXT_BYTES` in the local host's `limits.ts`.
 - **What:** the draft's inverse of a `delete` is a `create` "with the old content", read through
   the port. The port cannot read an image or a file over 2 MiB, and cannot write bytes.
@@ -121,7 +121,7 @@ hold at its `main`.
 
 ### H4. A lock that hides files from the listing breaks the explorer's writes
 
-- **Where:** [apps-in-the-local-host](../specs/apps-in-the-local-host.md), "The row and the
+- **Where:** [apps-in-the-local-host](../../phase3/specs/apps-in-the-local-host.md), "The row and the
   lock"; the explorer's `renameChanges` and `deleteChanges`.
 - **What:** the draft has the server leave a locked instance's files out of the listing. The
   explorer renames a folder by moving every file the listing has under it, so a folder above a
@@ -148,7 +148,7 @@ hold at its `main`.
 
 ### H6. The check-in element as drafted would lose what the commit dialog does
 
-- **Where:** [checkin-review](../specs/checkin-review.md), "The element" and "In the local
+- **Where:** [checkin-review](../../phase4/specs/checkin-review.md), "The element" and "In the local
   host"; the local host's `client/commit/`.
 - **What:** step 2 replaces the explorer's commit dialog with `<checkin-review>`. The draft
   element has no way to change its rows while open, no box for all rows, a confirm button that
@@ -189,7 +189,7 @@ seems to. The spec adds one port suite in `common-format/testing`, run over both
 ### M3. An instance at the served root has no row to sit on
 
 The tree has no row for `''`, and the overlap rule read by folder would make a root instance
-overlap every other. [apps-in-the-local-host](../specs/apps-in-the-local-host.md) now defines an
+overlap every other. [apps-in-the-local-host](../../phase3/specs/apps-in-the-local-host.md) now defines an
 instance's region once, for the lock, the overlap rule and the tree, and draws a root instance
 above the tree.
 
@@ -208,7 +208,7 @@ notice in step 1 of apps-in-the-local-host.
 ### M6. The branch the app offers goes stale
 
 The page asks for git's state once and learns a new branch only from its own commit. A check-in
-from an app reads it when the review opens ([checkin-review](../specs/checkin-review.md)).
+from an app reads it when the review opens ([checkin-review](../../phase4/specs/checkin-review.md)).
 
 ### M7. Packaging the apps into the local host
 
@@ -252,7 +252,7 @@ ends with one walk of its own.
 Jamie answered all five on 2026-11-14, and each spec now says what he decided.
 
 1. **Undo of a deleted image or large file** (H1). **Agreed:** it cannot be undone, and the host
-   asks first. In [undo-journal](../specs/undo-journal.md).
+   asks first. In [undo-journal](../../phase5/specs/undo-journal.md).
 2. **Context Manager's adoption as two PRs, not four** (H7). **"Two is fine if less disruptive
    overall."** Steps 1 to 3 together, the lock apart. In
    [context-manager-adopts-apps](../specs/context-manager-adopts-apps.md).
@@ -278,11 +278,11 @@ Jamie answered all five on 2026-11-14, and each spec now says what he decided.
 
 ## Task list
 
-- [x] **H1, H2:** [undo-journal](../specs/undo-journal.md) amended.
+- [x] **H1, H2:** [undo-journal](../../phase5/specs/undo-journal.md) amended.
 - [x] **H3, M1, M2:** [host-runner](../../phase2/specs/host-runner.md) amended.
 - [x] **H4, H5, M3, M4, M5, M7, M8, L1, L3, L4:**
-      [apps-in-the-local-host](../specs/apps-in-the-local-host.md) amended.
-- [x] **H6, M6:** [checkin-review](../specs/checkin-review.md) amended.
+      [apps-in-the-local-host](../../phase3/specs/apps-in-the-local-host.md) amended.
+- [x] **H6, M6:** [checkin-review](../../phase4/specs/checkin-review.md) amended.
 - [x] **H7, M9:** [context-manager-adopts-apps](../specs/context-manager-adopts-apps.md) amended.
 - [x] **M4, L2:** [app-module-grows](../../phase2/specs/app-module-grows.md) amended.
 - [x] **M8, and the walks' selectors (H7):** [app-shells](../../phase2/specs/app-shells.md) amended.

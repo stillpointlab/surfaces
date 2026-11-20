@@ -31,3 +31,12 @@ export const GIT_TIMEOUT_MS = 10_000;
  * host's writes for long.
  */
 export const COMMIT_TIMEOUT_MS = 60_000;
+
+/** The journal keeps at most this many steps; past it, the oldest are dropped. */
+export const JOURNAL_MAX_STEPS = 1000;
+
+/**
+ * The journal keeps at most this much content, as UTF-8, across its steps; past
+ * it, the oldest are dropped. One step over it is not kept at all.
+ */
+export const JOURNAL_MAX_BYTES = 256 * 1024 * 1024;

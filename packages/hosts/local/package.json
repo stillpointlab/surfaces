@@ -23,13 +23,16 @@
     "test": "npm run gen:styles && vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@stillpointlab/checkin-review-component": "*",
     "@stillpointlab/code-format": "*",
     "@stillpointlab/common-format": "*",
     "@stillpointlab/image-format": "*",
+    "@stillpointlab/inventory-app": "*",
     "@stillpointlab/md-format": "*",
     "@stillpointlab/modal-dialog-component": "*",
     "@stillpointlab/sheet-format": "*",
     "@stillpointlab/spl-icon-component": "*",
+    "@stillpointlab/tasks-app": "*",
     "@stillpointlab/xmdl-format": "*",
     "dompurify": "^3.4.17"
   },

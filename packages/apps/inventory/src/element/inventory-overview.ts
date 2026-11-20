@@ -88,12 +88,6 @@ export class InventoryOverview
               </li>`;
           })}</ul>`;
 
-    const canDownload =
-      links !== null && space.schema.mode !== 'invalid' && space.totals.itemCount > 0;
-    const download = canDownload
-      ? html`<a class="inventory-download" href="${links.exportAll()}" download>Download inventory (.zip)</a>`
-      : html`<span class="inventory-download is-disabled" title="${space.schema.mode === 'invalid' ? 'Repair inventory.yaml before exporting' : 'Nothing to export yet'}">Download inventory (.zip)</span>`;
-
     return html`
       ${checkinBarHtml(space.dirty)}
       ${schemaNoticeHtml(links, space.schema, space.manifestPath, space.manifestErrors)}
@@ -103,8 +97,19 @@ export class InventoryOverview
       <div class="inventory-totals">
         <span>${plural(space.totals.itemCount, 'item')}</span>
         ${aggregateTotalHtml(space.totals, space.schema)}
-        ${download}
+        ${this.downloadHtml(space)}
       </div>`;
+  }
+
+  /** The ZIP export, when the page has one: a link, or disabled while there is nothing to export. */
+  private downloadHtml(space: SharedInventorySpace): SafeHtml {
+    const links = this.links;
+    // A page without an export shows no download control.
+    if (links !== null && !links.exportAll) return html``;
+    if (links?.exportAll && space.schema.mode !== 'invalid' && space.totals.itemCount > 0) {
+      return html`<a class="inventory-download" href="${links.exportAll()}" download>Download inventory (.zip)</a>`;
+    }
+    return html`<span class="inventory-download is-disabled" title="${space.schema.mode === 'invalid' ? 'Repair inventory.yaml before exporting' : 'Nothing to export yet'}">Download inventory (.zip)</span>`;
   }
 
   protected override onClick(target: HTMLElement): void {

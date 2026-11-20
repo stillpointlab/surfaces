@@ -186,6 +186,139 @@ export interface AppHostInput {
   now: string;
 }
 
+/** What a host shows for the app before any instance is open: its name, its icon, its create copy. */
+export interface AppMeta {
+  /** The app's name in a host's tree and menus: `Inventory`. */
+  label: string;
+  /** Its icon there: an `<spl-icon>` name. */
+  icon: string;
+  /** How a host offers to create one. Absent: the app is not created from nothing. */
+  create?: {
+    /** The app as a sentence names one: "This repository already has an inventory at …". */
+    noun: string;
+    /** The folder a create form fills in. */
+    defaultFolder: string;
+    /** The folder rule's example: `“inventory” or “home/inventory”`. */
+    folderExample?: string;
+    /** Under the folder field: where the app's files live. Plain text. */
+    folderHelp?: string;
+    /** Asked before creating at the root of a folder: the warning, and the checkbox that consents. */
+    rootConsent?: { warning: string; confirm: string };
+  };
+}
+
+/**
+ * The app's bounds on what reaches its core from outside: untyped input in, the
+ * typed thing (trimmed, defaults applied) or a refusal out. A refusal's `code` is
+ * `APP_OP_INVALID`, `APP_VIEW_INVALID` or `APP_CREATE_INVALID`, with the schema's
+ * causes in `details`. Each app builds them from its own schemas, so `common`
+ * carries no schema library.
+ */
+export interface AppBounds<V extends AppViewMap, E extends AppOpMap, CreateInput> {
+  /** One of the module's core ops, as an element raised it. */
+  op(input: unknown): Result<{ op: AppOp<E> }>;
+  /** One view, as a page or a read asks for it. */
+  view(input: unknown): Result<{ view: AppView<V> }>;
+  /** A create form's input: the seed, less what the host adds (the folder). */
+  create(input: unknown): Result<{ input: CreateInput }>;
+}
+
+/**
+ * What a bound reads of a schema: its `safeParse`, shaped as zod's, so an app
+ * passes its own schema and `common` imports no schema library.
+ */
+export interface BoundSchema {
+  safeParse(input: unknown):
+    | { success: true; data: unknown }
+    | {
+        success: false;
+        error: { issues: readonly { path: readonly PropertyKey[]; message: string }[] };
+      };
+}
+
+/**
+ * One bound: `input` as `schema` parses it, answered under `key`, or a refusal
+ * with `code` that reads "<what> is not valid: <field>: <message>; …", the
+ * schema's issues in `details`. `T` is what the parsed input is to the app.
+ */
+export function bounded<K extends string, T>(
+  key: K,
+  schema: BoundSchema,
+  input: unknown,
+  code: string,
+  what: string
+): Result<{ [P in K]: T }> {
+  const parsed = schema.safeParse(input);
+  if (parsed.success) return ok({ [key]: parsed.data } as { [P in K]: T });
+  const { issues } = parsed.error;
+  const causes = issues
+    .map(
+      (issue) =>
+        (issue.path.length > 0 ? `${issue.path.map(String).join('.')}: ` : '') + issue.message
+    )
+    .join('; ');
+  return fail(code, `${what} is not valid: ${causes}`, [...issues]);
+}
+
+/** What a page resolves from. */
+export interface AppPageInput {
+  /** The sub-path's parameters, by name, as `matchAppPage` read them (decoded, not yet checked). */
+  params: Record<string, string>;
+  /** The query's parameters, decoded. */
+  query: Record<string, string>;
+  /**
+   * Where the app's pages hang, for a redirect: a path (`/apps/x`) or a fragment
+   * (`#/app/docs/tasks/tasks.yaml`). A page joins it as text, never as a `URL`.
+   */
+  base: string;
+  /** The instance's manifest. */
+  manifestPath: string;
+  /** Project any view of the instance (null: nothing to project), for a page that chooses its view from another. */
+  project(view: { type: string } & Record<string, unknown>): Promise<object | null>;
+}
+
+/**
+ * What a page shows: a view (null: none, and the app renders its empty state)
+ * with what it embeds beside the state, a redirect to the page that shows it,
+ * or nothing (a parameter the page refuses, or a subject it cannot find).
+ */
+export type AppPageResolution =
+  | { view: ({ type: string } & Record<string, unknown>) | null; extras?: Record<string, unknown> }
+  | { redirect: string; permanent?: boolean }
+  | { notFound: true };
+
+/** One of an app's pages: a sub-path under the app's base, and what it shows. */
+export interface AppPage {
+  /** The path under the app's base: `''`, `/room/:roomSlug`. A `:name` segment is a parameter. */
+  path: string;
+  /** What the page shows. It checks its own parameters, and answers `{ notFound: true }` for a bad one. */
+  resolve(input: AppPageInput): Promise<AppPageResolution>;
+  /** The document title, from the projected state (null: the app's empty state). */
+  title(state: object | null): string;
+  /** Whether a missing subject renders an empty page instead of not found. */
+  emptyWhenMissing: boolean;
+}
+
+/** One file that differs from the last check-in, as a host that knows only files reports it. */
+export interface AppFileChange {
+  path: string;
+  status: 'changed' | 'new' | 'moved' | 'deleted';
+  /** For a moved file, the path it had. */
+  from?: string;
+  /**
+   * The file's text at the last check-in, when the host can read it: for a
+   * moved file, the text it had under `from`. Absent for a new file.
+   */
+  base?: string;
+}
+
+/** What a module tells its core from file changes alone. */
+export interface AppKnown<Facts, S extends AppSnapshot> {
+  facts: Facts;
+  /** The snapshot's host parts: plain data the core reads beyond the files (tasks' pending moves). */
+  snapshot?: Partial<S>;
+}
+
 /**
  * What a module's reply reads: the instance after the op's changes are
  * written, the host's facts about it, and the view the page shows (an op whose
@@ -201,8 +334,11 @@ export interface AppReplyContext<S extends AppSnapshot, Facts, V extends AppView
  * Everything a host needs to run one app without knowing which app it is: the
  * lifecycle and the core, which element ops are the core's and which the host
  * answers itself, how an element op becomes a core op and how the core's
- * answer becomes the element's reply, and how to treat each refusal. DOM-free:
- * a host finds the element through its own registration.
+ * answer becomes the element's reply, and how to treat each refusal; and what
+ * is the app's own beyond its core: its copy, its bounds, its pages, where a
+ * create's files fit, and what file changes mean to it. DOM-free: a host finds
+ * the element through its own registration. `CreateInput` is what the create
+ * bound answers: the seed, less what a host adds to it.
  */
 export interface AppModule<
   V extends AppViewMap,
@@ -211,6 +347,7 @@ export interface AppModule<
   Seed,
   S extends AppSnapshot,
   E extends AppOpMap,
+  CreateInput = Seed,
 > {
   /** The app's name: `inventory`, `tasks`. */
   id: string;
@@ -233,6 +370,96 @@ export interface AppModule<
   ): Result<object>;
   /** How a host treats the core's refusal of one op. */
   refusalClass(code: string, op: string): RefusalClass;
+  // The five below keep a host from holding a file per app.
+  /** The app's name, icon and create copy. */
+  meta: AppMeta;
+  /** The app's bounds on an op, a view and a create input. */
+  bounds: AppBounds<V, E, CreateInput>;
+  /** The app's pages under its base. */
+  pages: readonly AppPage[];
+  /**
+   * Whether a seeded plan's files fit among a host's paths: the files still to
+   * create, or the app's refusal for the first path in the way. `reusable` are
+   * files an earlier, unfinished attempt at the same create left.
+   */
+  placeCreate(
+    plan: { manifestPath: string; files: FileChange[] },
+    paths: { taken: readonly string[]; reusable?: readonly string[] }
+  ): Result<{ files: FileChange[] }>;
+  /**
+   * The facts, and the snapshot's host parts, for a host that knows nothing but
+   * which files changed since the last check-in: the app's counterpart of a
+   * format descriptor's `apply`. A host that knows more builds its facts itself.
+   */
+  fromChanges(changes: readonly AppFileChange[], snapshot: S): AppKnown<Facts, S>;
+}
+
+/**
+ * The page a sub-path names, with its parameters, or `null`. The sub-path is
+ * what follows the app's base, without its query: `''` or `/room/kitchen`; one
+ * trailing slash is ignored. A parameter is one non-empty segment, decoded; a
+ * segment that does not decode matches nothing. The first page that matches wins.
+ */
+export function matchAppPage(
+  pages: readonly AppPage[],
+  subPath: string
+): { page: AppPage; params: Record<string, string> } | null {
+  const segments = segmentsOf(subPath);
+  if (segments === null) return null;
+  for (const page of pages) {
+    const pattern = segmentsOf(page.path);
+    if (pattern === null || pattern.length !== segments.length) continue;
+    const params: Record<string, string> = {};
+    const matched = pattern.every((part, i) => {
+      const segment = segments[i];
+      if (!part.startsWith(':')) return part === segment;
+      if (segment === '') return false;
+      try {
+        params[part.slice(1)] = decodeURIComponent(segment);
+        return true;
+      } catch {
+        return false;
+      }
+    });
+    if (matched) return { page, params };
+  }
+  return null;
+}
+
+/**
+ * One page's href under `base`, the counterpart of `matchAppPage`: the page's
+ * path joined to `base` as text, each `:name` segment filled with its
+ * parameter, encoded, then the query, each key and value encoded. The empty
+ * path is `base` itself; one trailing slash on `base` is dropped before a path
+ * is joined. A base is never parsed as a `URL`: it is a path (`/apps/x`) or a
+ * fragment (`#/app/docs/tasks/tasks.yaml`), and the query follows either.
+ */
+export function pageHref(
+  base: string,
+  path: string,
+  params: Record<string, string> = {},
+  query: Record<string, string> = {}
+): string {
+  const filled = path
+    .split('/')
+    .map((segment) =>
+      segment.startsWith(':') ? encodeURIComponent(params[segment.slice(1)] ?? '') : segment
+    )
+    .join('/');
+  const joined = path === '' ? base : `${base.endsWith('/') ? base.slice(0, -1) : base}${filled}`;
+  const pairs = Object.entries(query).map(
+    ([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`
+  );
+  if (pairs.length === 0) return joined;
+  return `${joined}${joined.includes('?') ? '&' : '?'}${pairs.join('&')}`;
+}
+
+/** A sub-path's segments: `''` and `/` have none; anything else starts with `/`. */
+function segmentsOf(path: string): string[] | null {
+  const trimmed = path.endsWith('/') ? path.slice(0, -1) : path;
+  if (trimmed === '') return [];
+  if (!trimmed.startsWith('/')) return null;
+  return trimmed.slice(1).split('/');
 }
 
 /** Any app's module, for a host that runs whichever it is given. */
@@ -369,3 +596,104 @@ export function answerOps<M extends AppOpMap>(
   element.addEventListener(APP_OP_EVENT, listener);
   return () => element.removeEventListener(APP_OP_EVENT, listener);
 }
+
+// ---- The shell --------------------------------------------------------------
+
+/** What a host gives a shell: the page around an app's elements. */
+export interface AppShellInput {
+  /** Where the app's pages hang; the shell builds its links from it and its module's pages. */
+  base: string;
+  /** Where "back" leads. Absent: no back link. */
+  back?: { href: string; label: string };
+  /** A name for where the instance lives: a repository, a folder. */
+  location?: string;
+  view: ({ type: string } & Record<string, unknown>) | null;
+  state: object | null;
+  extras?: Record<string, unknown>;
+  /**
+   * What a check-in is to the host: the review's words, and the branch it may go
+   * on. Absent: the shell's own words, which say "check in", and no branch.
+   */
+  checkin?: { words?: CheckinWords; branch?: CheckinBranch };
+}
+
+/**
+ * Every word a check-in review shows that depends on what a check-in is to its
+ * host: "Check in" to a shell, "Commit" to a host over git, a pull request to
+ * another. The optional ones have neutral defaults in the review.
+ */
+export interface CheckinWords {
+  /** The dialog's heading: "Check in", "Commit". */
+  heading: string;
+  /** A line above the files. */
+  help?: string;
+  /** The title field's label: "Title", "Summary". */
+  title: string;
+  /** The body field's label: "Description (optional)", "Details (optional)". */
+  body: string;
+  /** The confirm button: "Check in", "Commit". */
+  confirm: string;
+  cancel: string;
+  /** The confirm button while the host answers: "Checking in…", "Committing…". */
+  busy?: string;
+  /** Under the form when no file is checked. */
+  noFiles?: string;
+  /** Under the form when a required title is empty. */
+  noTitle?: string;
+  /** Why only a new branch is offered when `HEAD` is detached. */
+  detached?: string;
+  /** In place of the rows when there are none. */
+  nothing?: string;
+}
+
+/** The branch a check-in may go on: the current one (`null` when detached), and whether a new one may be named. */
+export interface CheckinBranch {
+  current: string | null;
+  offerNew: boolean;
+}
+
+/**
+ * An app's shell: one element per app that lays out its bar, its elements and
+ * the links between its pages. A host loads it, sets its input, answers its ops
+ * (a core op with `opView`'s view, its reply passed to `learn`) and listens for
+ * its requests.
+ */
+export interface AppShellElement extends AppElement<AppShellInput> {
+  /** What a core op answered, so the title, the links and the counts follow. */
+  learn(op: { type: string }, reply: object): void;
+  /** The view an op's reply depends on, for the host to send with it. */
+  opView(op: { type: string }): ({ type: string } & Record<string, unknown>) | undefined;
+  /**
+   * A check-in the host answered `started` has settled, whatever its outcome:
+   * the shell drops what it marked in flight. A shell that marks nothing has none.
+   */
+  checkinSettled?(): void;
+}
+
+/** The ops a shell itself asks its host, beside its module's. */
+export type AppShellOps = {
+  /** Read one view. */
+  project: {
+    op: { view: { type: string } & Record<string, unknown> };
+    reply: { state: object | null };
+  };
+  /** Bring the instance up to date with its source, whatever that means to the host. */
+  refresh: { op: Record<never, never>; reply: Record<never, never> };
+  /**
+   * Check in chosen files, by path (a moved file's old path too). `title` and
+   * `body` are what was typed, trimmed, and absent when empty; `branch` names a
+   * new branch; `context` is the app's own, passed back untouched. `done`: it is
+   * checked in. `started`: the host's check-in runs on, and the host calls the
+   * shell's `checkinSettled()` when it ends. `message` is for the page's notice.
+   */
+  checkin: {
+    op: {
+      paths: string[];
+      title?: string;
+      body?: string;
+      branch?: string;
+      context?: Record<string, unknown>;
+    };
+    reply: { status: 'done' | 'started'; message?: string };
+  };
+};

@@ -1,14 +1,20 @@
 // The host contract: what a host's storage answers, and what its server sends a
-// page. Types only, so the entry is DOM-free and Node-free: the local host
-// implements the port over a folder (`packages/hosts/local`), and a runner or a
-// page reads it without either.
+// page; and the one runner that runs an app over that storage, with a port in
+// memory to run it on. DOM-free and Node-free: the local host implements the
+// port over a folder (`packages/hosts/local`), the harness runs the runner over
+// the memory port, and a page reads the types without either.
 //
 // A light entry (`@stillpointlab/common-format/host`).
 
-import type { FileChange, FolderNode, Result } from '../app';
+import type { AppFileChange, FileChange, FolderNode, Result } from '../app';
+
+export { createMemoryPort, MEMORY_MAX_TEXT_BYTES } from './memory-port';
+export type { MemoryPort, MemoryPortOptions } from './memory-port';
+export { createInstance, hostRefusalClass, loadInstance, projectView, runOp } from './runner';
+export type { LoadedInstance, RunnerHost, RunnerRefusalCode } from './runner';
 
 /** How a file differs from the last commit. */
-export type FileStatus = 'changed' | 'new' | 'moved' | 'deleted';
+export type FileStatus = AppFileChange['status'];
 
 /**
  * A change a host writes. `base` is the version the writer read; absent means
@@ -67,13 +73,10 @@ export interface HostGit {
 
 /**
  * One file that differs from the last commit, deleted files included. A moved
- * file carries the path it had (`from`), so a commit can name both.
+ * file carries the path it had (`from`), so a commit can name both. The app
+ * contract's `AppFileChange`: what a host reports is what a module reads.
  */
-export interface HostChange {
-  path: string;
-  status: FileStatus;
-  from?: string;
-}
+export type HostChange = AppFileChange;
 
 /**
  * A commit of chosen files. `paths` are relative to the host's root; naming

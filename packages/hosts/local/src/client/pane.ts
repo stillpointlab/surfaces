@@ -10,10 +10,11 @@
 // one per row. Every step of an open checks it is still the newest after each
 // await, so a late answer for a file no longer wanted never lands.
 //
-// The explorer's own renames and deletes go through `followWrite`: the open file
-// follows a rename (keeping its element and its edits) or closes on a delete, and
-// a change event for the write, which may arrive before the write's answer, waits
-// until it has, so the page's own write raises no banner.
+// The explorer's own renames and deletes go through `followWrite`, and so do an
+// undo and a redo: the open file follows a rename (keeping its element and its
+// edits) or closes on a delete, and a change event for the write, which may
+// arrive before the write's answer, waits until it has, so the page's own write
+// raises no banner.
 //
 // The Changes view (`diff`) shows a file against the last commit in `<code-diff>`:
 // the text at `HEAD` on the left (a moved file's, under its old path), the file
@@ -22,6 +23,11 @@
 // text to compare. The switch comes and goes with the status, and never touches
 // the element or its edits; a Changes view whose file is no longer changed asks
 // for the preview.
+//
+// A file in an app's locked region (`lockedBy`, which the page answers) opens in
+// its preview where its editor was asked for, with a line that says why, and
+// offers no Edit. The Changes view is unaffected. When the lock changes the
+// switch follows, and an editor whose file was locked asks for the preview.
 
 import { languageFromPath } from '@stillpointlab/code-format/format';
 import { fileNameOf } from '@stillpointlab/common-format/format';
@@ -33,6 +39,7 @@ import type { View } from './address';
 import type { Confirm } from './confirm';
 import type { HostClient } from './host-client';
 import type { DiffElement, EditorElement } from '@stillpointlab/common-format';
+import type { Result } from '@stillpointlab/common-format/app';
 import type { FormatDescriptor, FormatRegistry } from '@stillpointlab/common-format/format';
 import type { FileStatus, PortChange } from '@stillpointlab/common-format/host';
 
@@ -62,6 +69,8 @@ export interface PaneOptions {
   diff?: { tag: string; load(): Promise<unknown> };
   /** What is shown changed: another file or view, the unsaved mark, or nothing. */
   onState?: (state: PaneState | null) => void;
+  /** The label of the app whose locked files hold `path`, or `null` when no app holds it locked. */
+  lockedBy?: (path: string) => string | null;
 }
 
 type Banner = { kind: 'changed'; version: string | null } | { kind: 'deleted' };
@@ -117,6 +126,7 @@ export class FilePane {
   private readonly bannerText: HTMLElement;
   private readonly reloadButton: HTMLButtonElement;
   private readonly error: HTMLElement;
+  private readonly locked: HTMLElement;
   private readonly body: HTMLElement;
 
   private session: Session | null = null;
@@ -136,7 +146,7 @@ export class FilePane {
     this.options = options;
     render(
       container,
-      html`<header class="pane-header" hidden><span class="pane-path" dir="auto"></span><span class="pane-unsaved" role="img" aria-label="${words.unsaved}" title="${words.unsaved}" hidden>●</span><span class="pane-views" role="group" aria-label="View" hidden></span><button type="button" class="button button-primary pane-save" hidden disabled>${words.save}</button></header><div class="pane-banner" role="alert" hidden><span class="pane-banner-text"></span><button type="button" class="button pane-reload">${words.banner.reload}</button></div><p class="pane-error" role="alert" hidden></p><div class="pane-body"></div>`
+      html`<header class="pane-header" hidden><span class="pane-path" dir="auto"></span><span class="pane-unsaved" role="img" aria-label="${words.unsaved}" title="${words.unsaved}" hidden>●</span><span class="pane-views" role="group" aria-label="View" hidden></span><button type="button" class="button button-primary pane-save" hidden disabled>${words.save}</button></header><div class="pane-banner" role="alert" hidden><span class="pane-banner-text"></span><button type="button" class="button pane-reload">${words.banner.reload}</button></div><p class="pane-error" role="alert" hidden></p><p class="pane-locked" hidden></p><div class="pane-body"></div>`
     );
     const find = <T extends HTMLElement>(selector: string) => container.querySelector<T>(selector)!;
     this.header = find('.pane-header');
@@ -148,6 +158,7 @@ export class FilePane {
     this.bannerText = find('.pane-banner-text');
     this.reloadButton = find('.pane-reload');
     this.error = find('.pane-error');
+    this.locked = find('.pane-locked');
     this.body = find('.pane-body');
 
     this.views.addEventListener('click', (event) => {
@@ -178,7 +189,29 @@ export class FilePane {
   viewFor(path: string, view: View): View {
     if (view === 'diff') return this.canDiff(path) ? 'diff' : 'preview';
     const format = this.formatOf(path);
-    return view === 'edit' && format?.editor ? 'edit' : 'preview';
+    return view === 'edit' && format?.editor && !this.lockedBy(path) ? 'edit' : 'preview';
+  }
+
+  private lockedBy(path: string): string | null {
+    return this.options.lockedBy?.(path) ?? null;
+  }
+
+  /**
+   * The apps' locks changed. The switch and the locked line follow; an editor
+   * whose file is locked now asks for the preview, its unsaved edits dropped
+   * when `discard` says the person agreed to lose them.
+   */
+  lockChanged(options: { discard?: boolean } = {}): void {
+    const s = this.session;
+    if (!s) return;
+    if (s.view === 'edit' && this.lockedBy(s.path)) {
+      if (options.discard) s.dirty = false;
+      if (!s.dirty && !this.busy) {
+        this.options.onViewRequest?.('preview', 'replace');
+        return;
+      }
+    }
+    this.renderChrome();
   }
 
   /** Whether the Changes view is offered for `path`: changed or moved, in a format that takes text. */
@@ -328,17 +361,17 @@ export class FilePane {
   }
 
   /**
-   * The page's own write that moves or deletes files. Once it lands, the open
-   * file follows it: `where` answers where the open path went, `null` when it was
-   * deleted, or `undefined` when the write left it alone. Answers the write's
-   * result.
+   * The page's own write that moves or deletes files: the explorer's, or an undo
+   * or a redo. Once it lands, the open file follows it: `where` answers, from the
+   * write's answer, where the open path went, `null` when it was deleted, or
+   * `undefined` when the write left it alone. Answers the write's result.
    */
-  followWrite(
-    write: Promise<PutResult>,
-    where: (path: string) => string | null | undefined
-  ): Promise<PutResult> {
+  followWrite<T extends Result<object> = PutResult>(
+    write: Promise<T>,
+    where: (path: string, answer: Extract<T, { ok: true }>) => string | null | undefined
+  ): Promise<T> {
     const landed = write.then((result) => {
-      if (result.ok) this.follow(where);
+      if (result.ok) this.follow((path) => where(path, result as Extract<T, { ok: true }>));
       return result;
     });
     const tracked: Promise<void> = landed.then(
@@ -435,7 +468,8 @@ export class FilePane {
     }
     if (!format) return this.showMessage(path, request.view, words.cannotOpen.notText);
 
-    const view: View = request.view === 'edit' && format.editor ? 'edit' : 'preview';
+    const view: View =
+      request.view === 'edit' && format.editor && !this.lockedBy(path) ? 'edit' : 'preview';
     const entry = view === 'edit' ? format.editor! : format.preview;
     try {
       await this.options.prepare?.(format);
@@ -712,7 +746,7 @@ export class FilePane {
       view === 'preview'
         ? shown
         : view === 'edit'
-          ? shown && Boolean(s?.format?.editor)
+          ? shown && Boolean(s?.format?.editor) && (s?.view === 'edit' || !this.lockedBy(s!.path))
           : shown && (s?.view === 'diff' || (s !== null && this.canDiff(s.path)))
     );
     this.views.hidden = offered.length < 2;
@@ -739,6 +773,9 @@ export class FilePane {
     this.reloadButton.hidden = banner?.kind !== 'changed';
     this.error.hidden = !s?.saveError;
     this.error.textContent = s?.saveError ?? '';
+    const holder = s && s.view === 'preview' ? this.lockedBy(s.path) : null;
+    this.locked.hidden = holder === null;
+    this.locked.textContent = holder === null ? '' : words.apps.lockedLine(holder);
 
     this.options.onState?.(this.current);
   }

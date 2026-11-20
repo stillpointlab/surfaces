@@ -67,7 +67,8 @@ reusable })` whether they fit among a host's paths.
     op (`toCoreOp`, adding what only the host knows, such as the time), the element's `reply` to
     a core op from the instance after its changes, and `refusalClass(code, op)`: `not-found`,
     `conflict` or `invalid`, which a host maps onto its own answers. The harness answers both
-    apps through their modules with one in-memory host (`tooling/harness/memory-host.ts`).
+    apps through their modules with one in-memory host (`tooling/harness/memory-host.ts`): the
+    runner below over the memory port.
   - The element half, `AppElement<State>`: the host calls `setState`, and the element asks for ops
     with `requestOp(element, op)`, a cancelable `app-op` event the host claims and answers through
     `respond`. Nothing claiming it resolves to `OP_UNHANDLED`, and a host that throws to
@@ -121,8 +122,8 @@ reusable })` whether they fit among a host's paths.
   the end of the file) sets the `addsFinalNewline` gap, recorded in the follow-ups. A separate entry, so it never loads the element suites.
 - **YAML helpers** (`@stillpointlab/common-format/yaml`). `formatYamlScalar`: a scalar written plain
   when YAML reads it back as the same value, otherwise JSON-quoted. DOM-free, for the app cores.
-- **The host contract** (`@stillpointlab/common-format/host`), types only, so it is DOM-free and
-  Node-free:
+- **The host contract** (`@stillpointlab/common-format/host`), DOM-free and Node-free (its test
+  fails the built entry if it names anything from either):
   - `StoragePort`: what a host's storage answers. `list()` the folder's `FolderNode`s, `get(path)` a
     text file with an opaque `version` (the local host's is a SHA-256 of the bytes), `put(changes)`
     all or none, and `status()` per path (`FileStatus`: `changed`, `new`, `moved`, `deleted`).
@@ -132,6 +133,26 @@ reusable })` whether they fit among a host's paths.
   - What a host's server sends a page: `HostEvent` (`changed` with paths, or `listed`),
     `HostListing` and `HostRoot`. The local host's routes are in
     [`packages/hosts/local`](../hosts/local/README.md).
+  - `HostChange`: one file that differs from the last commit, with its old path (`from`) when it
+    moved and its text then (`base`) when the host can read it.
+  - **The runner**, one for every host, over a `StoragePort` and a `RunnerHost` (`port`, `now()`,
+    and `know(module, loaded)`: the module's facts and the snapshot's host parts, which the runner
+    lays over the files and never looks inside). `loadInstance` lists the port, reads the
+    manifest, asks the lifecycle for the scope and reads it, answering a `LoadedInstance` with the
+    version of each file and one `revision` for them all. `runOp` runs an op in seven steps: a
+    core op (`APP_OP_UNKNOWN`), inside the module's bounds, loaded with what the host knows,
+    applied, every change the instance's (`APP_PATH_OUT_OF_SCOPE`), written in one `put` at the
+    versions read (a path named twice is `APP_CHANGES_INVALID`), and replied from the instance
+    loaded again, with its revision. `projectView` reads a view, `createInstance` seeds, places
+    and creates an instance. `hostRefusalClass(code)` classes the runner's and the port's codes
+    (a file that moved on under an op is a `conflict`); any other code is the module's.
+  - **The memory port**, `createMemoryPort(files, { committed? })`: a `StoragePort` over a map of
+    paths to text with the local host's rules for `put` and its refusal codes, and `changes()`,
+    `commit(paths?)` and `files()` beside them. The harness runs its apps on it.
+- **Storage port suite** (`@stillpointlab/common-format/testing/host`).
+  `describeStoragePort(name, make, { status? })`: the port's rules as vitest tests, which the
+  memory port runs here and the local host's port runs over a temporary repository, so the two
+  cannot drift apart. A separate entry, so it never loads the element suites.
 - **Tokens.** `src/styles/_tokens.scss`: the `--spl-*` color custom properties with defaults, plus
   spacing and radius scales. Formats pull them in with `@use 'common/src/styles/tokens' as *;`
   (the style generator adds `packages/` to the Sass load path).

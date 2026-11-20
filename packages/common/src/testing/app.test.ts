@@ -1,15 +1,22 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 
-import { fail, ok } from '../app';
+import { fail, ok, placeNewFiles } from '../app';
 import { lineBreakOf } from '../line-endings';
 
 import { describeAppCore } from './app';
 import {
+  assertBoundsAcceptOp,
+  assertBoundsRefuseOp,
   assertCommentsKept,
   assertCrlfKept,
   assertFinalNewlineKept,
+  assertFromChanges,
+  assertMeta,
+  assertModuleCases,
   assertMounts,
+  assertPagePathMatches,
+  assertPageResolves,
   assertReparses,
   assertRoundTripCommentsKept,
   assertRoundTripCrlfKept,
@@ -19,14 +26,24 @@ import {
 } from './app-checks';
 
 import type {
+  AppChangesCase,
   AppCoreOptions,
   AppCoreRewrite,
   AppCoreRoundTrip,
   AppCoreRoundTripOptions,
   AppFixture,
+  AppModuleOptions,
   AppMountResult,
 } from './app';
-import type { AppCore, AppSnapshot } from '../app';
+import type {
+  AnyAppModule,
+  AppBounds,
+  AppCore,
+  AppModule,
+  AppPage,
+  AppSnapshot,
+  Result,
+} from '../app';
 
 // A sample app core: line-based `key: value` files under a `kv.app` manifest that
 // says `kind: kv`. `#` lines are comments; blank lines are allowed.
@@ -313,5 +330,254 @@ describe('the round trip fails on a broken core', () => {
     expect(() => assertRoundTripFinalNewlineKept(coreOptions, roundTrip, broken('trim'))).toThrow(
       /lost the final newline/
     );
+  });
+});
+
+// The sample as an `AppModule`: the core above behind a projection that needs
+// the facts `fromChanges` makes (the files changed since the check-in), bounds
+// written by hand (`common` has no schema library), and two pages: the landing,
+// which shows the manifest or redirects a `?path=` to its file's page, and a
+// file's page.
+
+type KvFacts = { dirty: string[] };
+type KvElementOps = {
+  set: { op: { path: string; key: string; value: string }; reply: object };
+  move: { op: { path: string; to: string }; reply: object };
+  add: { op: { path: string }; reply: object };
+};
+
+const KV_MAX = 100;
+const isText = (value: unknown, max = KV_MAX): value is string =>
+  typeof value === 'string' && value.length > 0 && value.length <= max;
+
+const kvBounds: AppBounds<KvViews, KvElementOps, { folder: string }> = {
+  op: (input) => {
+    const op = input as Record<string, unknown>;
+    const fields =
+      op.type === 'set' ? ['path', 'key', 'value'] : op.type === 'move' ? ['path', 'to'] : ['path'];
+    const causes = ['set', 'move', 'add'].includes(op.type as string)
+      ? fields.filter((field) => !isText(op[field])).map((field) => ({ path: [field] }))
+      : [{ path: ['type'] }];
+    return causes.length > 0
+      ? fail('APP_OP_INVALID', 'The op is not valid', causes)
+      : ok({ op: op as never });
+  },
+  view: (input) => {
+    const view = input as Record<string, unknown>;
+    return view.type === 'file' && isText(view.path)
+      ? ok({ view: { type: 'file', path: view.path } })
+      : fail('APP_VIEW_INVALID', 'The view is not valid', [{ path: ['type'] }]);
+  },
+  create: (input) => {
+    const folder = (input as { folder?: unknown }).folder;
+    return isText(folder)
+      ? ok({ input: { folder } })
+      : fail('APP_CREATE_INVALID', 'The input is not valid', [{ path: ['folder'] }]);
+  },
+};
+
+const kvPages: AppPage[] = [
+  {
+    path: '',
+    resolve: async ({ query, base }) =>
+      query.path !== undefined
+        ? { redirect: `${base}/file/${encodeURIComponent(query.path)}` }
+        : { view: { type: 'file', path: 'kv.app' } },
+    title: () => 'KV',
+    emptyWhenMissing: true,
+  },
+  {
+    path: '/file/:path',
+    resolve: async ({ params }) =>
+      isText(params.path) && params.path.endsWith('.kv')
+        ? { view: { type: 'file', path: params.path } }
+        : { notFound: true },
+    title: (state) => `${(state as { entries: string[] }).entries.length} entries — KV`,
+    emptyWhenMissing: false,
+  },
+];
+
+const kvModule: AppModule<KvViews, KvOps, KvFacts, { folder: string }, AppSnapshot, KvElementOps> =
+  {
+    id: 'kv',
+    lifecycle: {
+      manifestName: 'kv.app',
+      validateAndScope: (_content, _nodes, manifestPath) => ({
+        ok: true,
+        scope: new Set([manifestPath]),
+        warnings: [],
+      }),
+      describeInstance: () => ({ label: 'KV' }),
+    },
+    core: {
+      ...kvCore,
+      // Without the facts `fromChanges` makes, nothing projects.
+      project: (snapshot, view, facts) => {
+        if (!Array.isArray(facts?.dirty)) return null;
+        const state = kvCore.project(snapshot, view, null);
+        return state && { ...state, dirty: facts.dirty };
+      },
+    },
+    coreOps: ['set', 'move', 'add'],
+    hostOps: [],
+    toCoreOp: (op) => op,
+    reply: () => ok(),
+    refusalClass: () => 'invalid',
+    meta: { label: 'KV', icon: 'file', create: { noun: 'a kv folder', defaultFolder: 'kv' } },
+    bounds: kvBounds,
+    pages: kvPages,
+    placeCreate: (plan, paths) => {
+      const placed = placeNewFiles(plan.files, paths);
+      return placed.ok ? ok({ files: placed.files }) : fail('KV_PATH_EXISTS', placed.path);
+    },
+    fromChanges: (changes) => ({
+      facts: {
+        dirty: changes
+          .filter((change) => change.status === 'changed' || change.status === 'new')
+          .map((change) => change.path),
+      },
+    }),
+  };
+
+const showsDirty =
+  (path: string) =>
+  (state: object): void => {
+    expect((state as KvFacts).dirty).toContain(path);
+  };
+
+const moduleChecks: AppModuleOptions = {
+  module: kvModule,
+  ops: [
+    {
+      name: 'set b',
+      fixture: 'commented',
+      op: { type: 'set', path: 'notes/two.kv', key: 'b', value: 'twenty' },
+    },
+    { name: 'add a file', fixture: 'minimal', op: { type: 'add', path: 'one.kv' } },
+  ],
+  overLong: { type: 'set', path: 'notes/two.kv', key: 'b', value: 'x'.repeat(KV_MAX + 1) },
+  pages: [
+    { name: 'the manifest', fixture: 'minimal', path: '' },
+    {
+      name: 'a legacy link',
+      fixture: 'commented',
+      path: '',
+      query: { path: 'notes/two.kv' },
+      answers: { redirect: '/file/notes%2Ftwo.kv' },
+    },
+    { name: 'a file', fixture: 'commented', path: '/file/notes%2Ftwo.kv' },
+    { name: 'not a kv file', fixture: 'commented', path: '/file/README.md', answers: 'not-found' },
+    { name: 'no such page', fixture: 'commented', path: '/nowhere', answers: 'not-found' },
+  ],
+  changes: [
+    {
+      name: 'an edited file',
+      fixture: 'commented',
+      changes: [
+        { path: 'notes/two.kv', status: 'changed' },
+        { path: 'README.md', status: 'moved', from: 'OLD.md' },
+      ],
+      view: { type: 'file', path: 'notes/two.kv' },
+      shows: showsDirty('notes/two.kv'),
+    },
+  ],
+};
+
+describeAppCore('sample module', {
+  manifest: 'kv.app',
+  fixtures,
+  mount,
+  core: roundTrip,
+  module: moduleChecks,
+});
+
+describe('the module checks fail on a broken module', () => {
+  const options: AppCoreOptions = { manifest: 'kv.app', fixtures, mount, module: moduleChecks };
+  const withModule = (changes: Partial<AnyAppModule>): AnyAppModule =>
+    ({ ...kvModule, ...changes }) as AnyAppModule;
+  const withPage = (page: Partial<AppPage>, at = 0): AnyAppModule =>
+    withModule({ pages: kvPages.map((each, i) => (i === at ? { ...each, ...page } : each)) });
+
+  it('a page no case resolves', () => {
+    expect(() => assertModuleCases(kvModule, { ...moduleChecks, pages: [] })).toThrow(
+      /no page case resolves the page ""/
+    );
+  });
+
+  it('an empty icon', () => {
+    expect(() => assertMeta(withModule({ meta: { label: 'KV', icon: ' ' } }))).toThrow(/meta.icon/);
+  });
+
+  it('bounds that accept an over-long field', () => {
+    const lax = withModule({
+      bounds: { ...kvBounds, op: (input: unknown) => ok({ op: input as never }) },
+    });
+    expect(() => assertBoundsRefuseOp(lax, moduleChecks.overLong)).toThrow(/accepted/);
+  });
+
+  it('bounds whose answer the core refuses', () => {
+    const elsewhere = withModule({
+      bounds: { ...kvBounds, op: () => ok({ op: { type: 'set', path: 'nowhere.kv' } as never }) },
+    });
+    expect(() => assertBoundsAcceptOp(options, elsewhere, moduleChecks.ops![0])).toThrow(
+      /KV_NO_FILE/
+    );
+  });
+
+  it('a refusal without its causes', () => {
+    const bare = withModule({
+      bounds: { ...kvBounds, op: (): Result<never> => fail('APP_OP_INVALID', 'no') },
+    });
+    expect(() => assertBoundsRefuseOp(bare, moduleChecks.overLong)).toThrow(/causes/);
+  });
+
+  it('a page shadowed by an earlier one', () => {
+    const shadowing = withModule({
+      pages: [kvPages[1], { ...kvPages[1], path: '/file/new' }],
+    });
+    expect(() => assertPagePathMatches(shadowing, '/file/new')).toThrow(/does not match/);
+  });
+
+  it('a redirect that drops a fragment base', async () => {
+    // Resolving the sub-path against the base as a URL keeps a path base and
+    // loses a fragment one.
+    const throughUrl = withPage({
+      resolve: async ({ query, base }) => ({
+        redirect: new URL(`file/${encodeURIComponent(query.path)}`, `http://host${base}/`).pathname,
+      }),
+    });
+    await expect(assertPageResolves(options, throughUrl, moduleChecks.pages![1])).rejects.toThrow(
+      /base #\/app\/kv\.app\) redirected elsewhere/
+    );
+  });
+
+  it('a page whose view the core does not project', async () => {
+    const missing = withPage(
+      { resolve: async () => ({ view: { type: 'file', path: 'gone.kv' } }) },
+      1
+    );
+    await expect(assertPageResolves(options, missing, moduleChecks.pages![2])).rejects.toThrow(
+      /does not project its view/
+    );
+  });
+
+  it('a page that answers a view for a parameter it should refuse', async () => {
+    const lax = withPage({ resolve: async () => ({ view: { type: 'file', path: 'one.kv' } }) }, 1);
+    await expect(assertPageResolves(options, lax, moduleChecks.pages![3])).rejects.toThrow(
+      /must answer not found/
+    );
+  });
+
+  it('fromChanges answering facts the core cannot project with', () => {
+    const blind = withModule({ fromChanges: () => ({ facts: null }) });
+    expect(() => assertFromChanges(options, blind, moduleChecks.changes![0])).toThrow(
+      /over no changes/
+    );
+  });
+
+  it('fromChanges missing what the case says the state shows', () => {
+    const forgetful = withModule({ fromChanges: () => ({ facts: { dirty: [] } }) });
+    const changesCase: AppChangesCase = moduleChecks.changes![0];
+    expect(() => assertFromChanges(options, forgetful, changesCase)).toThrow(/notes\/two\.kv/);
   });
 });

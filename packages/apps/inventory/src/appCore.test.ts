@@ -1,15 +1,21 @@
 import { describeAppCore } from '@stillpointlab/common-format/testing/app';
+import { expect } from 'vitest';
 
 import { inventoryCore } from './core.js';
 import { detectInventoryAt, INVENTORY_MANIFEST_FILENAME } from './detection.js';
 import { inventoryLifecycle } from './lifecycle.js';
 import { parseInventoryManifest } from './manifest.js';
+import { inventoryModule } from './module.js';
 import { parseZoneFile } from './zone.js';
 import { zoneSeedContent } from './zoneSeed.js';
 
 import type { AddInventoryItemInput } from './ops.js';
-import type { TreeNode } from './types.js';
-import type { AppFixture, AppMountResult } from '@stillpointlab/common-format/testing/app';
+import type { SharedInventorySpace, SharedInventoryZoneState, TreeNode } from './types.js';
+import type {
+  AppCoreRoundTrip,
+  AppFixture,
+  AppMountResult,
+} from '@stillpointlab/common-format/testing/app';
 
 // The inventory core held to the app core suite (ADR-0028 decision 1: a rewrite
 // keeps what a hand-edited file holds), through the contract's round trip: each
@@ -131,6 +137,82 @@ const lamp: AddInventoryItemInput = {
   fieldValues: { owner: 'Alex', 'replacement-value': 120 },
 };
 
+/** The ops the round trip applies: the elements' ops, which the core takes as they are. */
+const ROUND_TRIPS: AppCoreRoundTrip[] = [
+  {
+    name: 'add an item',
+    fixture: 'v2 configured',
+    op: { type: 'add-item', path: 'rooms/workshop.yaml', item: lamp },
+    view: { type: 'zone', slug: 'workshop' },
+  },
+  {
+    name: 'edit an item',
+    fixture: 'v2 configured',
+    op: {
+      type: 'update-item',
+      path: 'rooms/workshop.yaml',
+      id: 'cordless-drill',
+      changes: { fieldValues: { owner: 'Alex', 'replacement-value': 140 } },
+    },
+    view: { type: 'zone', slug: 'workshop' },
+  },
+  {
+    name: 'delete an item',
+    fixture: 'v2 configured',
+    op: { type: 'delete-item', path: 'rooms/workshop.yaml', id: 'bench-vise' },
+    view: { type: 'zone', slug: 'workshop' },
+  },
+  {
+    name: 'add the first item to an added zone',
+    fixture: 'v2 configured',
+    op: { type: 'add-item', path: 'rooms/attic.yaml', item: lamp },
+    view: { type: 'zone', slug: 'attic' },
+    addsFinalNewline: true,
+  },
+  {
+    name: 'add a zone',
+    fixture: 'v2 configured',
+    op: { type: 'add-zone', title: 'Loft: east end' },
+    view: { type: 'space' },
+  },
+  {
+    name: 'add an item to a minimal inventory',
+    fixture: 'v2 minimal',
+    op: { type: 'add-item', path: 'rooms/garage.yaml', item: { title: 'Rake' } },
+    view: { type: 'zone', slug: 'garage' },
+    addsFinalNewline: true,
+  },
+  {
+    name: 'edit a v1 item',
+    fixture: 'v1',
+    op: {
+      type: 'update-item',
+      path: 'rooms/kitchen.yaml',
+      id: 'espresso-machine',
+      changes: { value: 600 },
+    },
+    view: { type: 'zone', slug: 'kitchen' },
+  },
+  {
+    name: 'add a v1 item',
+    fixture: 'v1',
+    op: { type: 'add-item', path: 'rooms/kitchen.yaml', item: { title: 'Toaster', value: 35 } },
+    view: { type: 'zone', slug: 'kitchen' },
+    addsFinalNewline: true,
+  },
+];
+
+/** The zone and overview a dirty file shows in. */
+const showsDirty =
+  (path: string, kind: 'manifest' | 'zone', newFile?: true) =>
+  (state: object): void => {
+    expect((state as SharedInventorySpace | SharedInventoryZoneState).dirty).toContainEqual({
+      path,
+      kind,
+      ...(newFile ? { newFile } : {}),
+    });
+  };
+
 // appendItem at the end of a file always ends it with a line break (CM's "adds
 // a newline first" test): a recorded gap, stage 2 follow-ups. `addsFinalNewline`
 // marks the ops that append there.
@@ -143,67 +225,41 @@ describeAppCore('inventory', {
     core: inventoryCore,
     facts: { enabled: true, dirty: [] },
     reparses,
-    ops: [
+    ops: ROUND_TRIPS,
+  },
+  module: {
+    module: inventoryModule,
+    ops: ROUND_TRIPS.map(({ name, fixture, op }) => ({ name, fixture, op })),
+    overLong: { type: 'add-item', path: 'rooms/workshop.yaml', item: { title: 'x'.repeat(501) } },
+    pages: [
+      { name: 'the overview', fixture: 'v2 configured', path: '' },
+      { name: 'the overview, no label', fixture: 'v2 minimal', path: '' },
+      { name: 'a zone', fixture: 'v2 configured', path: '/room/workshop' },
+      { name: 'a v1 zone', fixture: 'v1', path: '/room/kitchen' },
+      { name: 'a slug of two segments', fixture: 'v1', path: '/room/a%2Fb', answers: 'not-found' },
+    ],
+    changes: [
       {
-        name: 'add an item',
+        name: 'an edited zone',
         fixture: 'v2 configured',
-        op: { type: 'add-item', path: 'rooms/workshop.yaml', item: lamp },
+        changes: [{ path: 'rooms/workshop.yaml', status: 'changed' }],
         view: { type: 'zone', slug: 'workshop' },
+        shows: showsDirty('rooms/workshop.yaml', 'zone'),
       },
       {
-        name: 'edit an item',
+        name: 'a new zone and an edited manifest',
         fixture: 'v2 configured',
-        op: {
-          type: 'update-item',
-          path: 'rooms/workshop.yaml',
-          id: 'cordless-drill',
-          changes: { fieldValues: { owner: 'Alex', 'replacement-value': 140 } },
-        },
-        view: { type: 'zone', slug: 'workshop' },
-      },
-      {
-        name: 'delete an item',
-        fixture: 'v2 configured',
-        op: { type: 'delete-item', path: 'rooms/workshop.yaml', id: 'bench-vise' },
-        view: { type: 'zone', slug: 'workshop' },
-      },
-      {
-        name: 'add the first item to an added zone',
-        fixture: 'v2 configured',
-        op: { type: 'add-item', path: 'rooms/attic.yaml', item: lamp },
-        view: { type: 'zone', slug: 'attic' },
-        addsFinalNewline: true,
-      },
-      {
-        name: 'add a zone',
-        fixture: 'v2 configured',
-        op: { type: 'add-zone', title: 'Loft: east end' },
+        changes: [
+          { path: 'rooms/attic.yaml', status: 'new' },
+          { path: 'inventory.yaml', status: 'changed' },
+          { path: 'notes.md', status: 'changed' },
+        ],
         view: { type: 'space' },
-      },
-      {
-        name: 'add an item to a minimal inventory',
-        fixture: 'v2 minimal',
-        op: { type: 'add-item', path: 'rooms/garage.yaml', item: { title: 'Rake' } },
-        view: { type: 'zone', slug: 'garage' },
-        addsFinalNewline: true,
-      },
-      {
-        name: 'edit a v1 item',
-        fixture: 'v1',
-        op: {
-          type: 'update-item',
-          path: 'rooms/kitchen.yaml',
-          id: 'espresso-machine',
-          changes: { value: 600 },
+        shows: (state) => {
+          showsDirty('inventory.yaml', 'manifest')(state);
+          showsDirty('rooms/attic.yaml', 'zone', true)(state);
+          expect((state as SharedInventorySpace).dirty).toHaveLength(2);
         },
-        view: { type: 'zone', slug: 'kitchen' },
-      },
-      {
-        name: 'add a v1 item',
-        fixture: 'v1',
-        op: { type: 'add-item', path: 'rooms/kitchen.yaml', item: { title: 'Toaster', value: 35 } },
-        view: { type: 'zone', slug: 'kitchen' },
-        addsFinalNewline: true,
       },
     ],
   },

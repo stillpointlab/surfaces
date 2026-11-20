@@ -1,0 +1,8 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  // The fixtures import a stylesheet, as Vite serves it.
+  "compilerOptions": {
+    "types": ["vite/client"]
+  },
+  "include": ["src", "dev"]
+}

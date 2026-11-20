@@ -163,7 +163,7 @@ needs. Until host-page lands, `/` answers a one-line page naming the root.
 - **Git is used for the listing only** in this spec. Status, diff and commit are
   [git-in-the-host](../../phase3/specs/git-in-the-host.md).
 - **`delete` is on the port from the start,** for [file-operations](file-operations.md) and
-  [undo-journal](../../../stage5/phase1/specs/undo-journal.md). The app contract's `FileChange` is
+  [undo-journal](../../../stage5/phase5/specs/undo-journal.md). The app contract's `FileChange` is
   unchanged.
 - **No framework.** `node:http` and a route table. The package's only runtime dependency is
   `@stillpointlab/common-format`.

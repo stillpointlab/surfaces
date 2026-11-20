@@ -1,5 +1,5 @@
 ---
-column: todo
+column: in-progress
 created: 2026-11-13T18:46:00-07:00
 tags: [apps, common, host-contract, code]
 ---
@@ -184,6 +184,88 @@ writing changes into the snapshot, and, for tasks, recording a move as it is wri
 ([app-module-grows](app-module-grows.md); Jamie's decision 3 of the review, 2026-11-14), so the
 facts code in each `dev/host.ts` goes too.
 
+## As built
+
+_2026-11-14, by an Opus 5.5 sub-agent; reviewed and checked by the orchestrating agent. Where the
+work departed from the text above, this is what the later specs read._
+
+**Two amendments by the orchestrating agent, before the work started:**
+
+- **A change may carry the text it was based on.** `AppFileChange` has an optional `base`: the
+  file's text at the last check-in, where the host can read it (a moved file's, under its old
+  path). Tasks' `fromChanges` marks a card `dirty`, with its `versionColumn`, when `base` is
+  given, which is what the harness worked out from its base files before. The memory port
+  fills it. The node port's git does not yet; the local host supplies it in
+  [apps-in-the-local-host](../../phase3/specs/apps-in-the-local-host.md).
+- **The harness keeps what only a fixture knows.** Its `know` is `module.fromChanges` over the
+  memory port's `changes()`, with the fixture's pinned facts (a tracked card, a divergence, a
+  pull request's state) laid under.
+
+**Loading:**
+
+- **A manifest the lifecycle refuses still loads,** alone, with the lifecycle's message in
+  `warnings`; so does one the port cannot read. This follows Context Manager's loader and not
+  the text above: both cores project a broken manifest's state, and a core's own refusal for a
+  bad schema has to reach the caller. Only a manifest that is not there answers
+  `APP_MANIFEST_NOT_FOUND`.
+- **The snapshot:** `paths` is every file the port lists; `files` holds the scope's files, an
+  unreadable one as `null`; there is no `taken`, since a port's list shows everything.
+- **`revision`** is a digest of the manifest's path and each scope file's version. A change
+  outside the scope does not move it.
+
+**`runOp`:**
+
+- An op that is not an object, has no `type`, or is a host op is `APP_OP_UNKNOWN`.
+- An op that changes nothing writes nothing and loads once.
+- A write or move goes with the version it was loaded at; a file with no version, and a
+  create, go without.
+- A port's refusal goes back with its code.
+- The answer is `{ reply, revision }`, the reply without its `ok`.
+
+**`hostRefusalClass(code)`** answers a class, or nothing for a code that is the module's:
+
+| Class       | Codes                                                                                                                                                                                                              |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `invalid`   | `APP_OP_UNKNOWN`, `APP_OP_INVALID`, `APP_VIEW_INVALID`, `APP_CREATE_INVALID`, `APP_PATH_OUT_OF_SCOPE`, `APP_CHANGES_INVALID`, `HOST_NOT_TEXT`, `HOST_FILE_TOO_LARGE`, `HOST_PATH_OUTSIDE_ROOT`, `HOST_BAD_REQUEST` |
+| `not-found` | `APP_MANIFEST_NOT_FOUND`                                                                                                                                                                                           |
+| `conflict`  | `HOST_FILE_CHANGED`, `HOST_PATH_EXISTS`, `HOST_FILE_NOT_FOUND` (a loaded file gone under the op)                                                                                                                   |
+
+`HOST_WRITE_FAILED` has no class: it is the host's own failure.
+
+**`createInstance`:**
+
+- `placeCreate` gets the seed's whole plan, and the port's files as `taken`.
+- A placed file that is not a `create`, or a path named twice, is `APP_CHANGES_INVALID`.
+- It does not check that the new instance overlaps no other. That is discovery's, in the local
+  host.
+
+**The memory port:**
+
+- `createMemoryPort(files, { committed? })`, with `changes()`, `commit(paths?)` and `files()`,
+  a copy the harness projects from without waiting.
+- `put` checks everything against the state before the call, then writes it all at once. Its
+  path rules and refusal codes are the node port's; two messages are worded differently.
+- `changes()`: a file remembers where it was at the last commit through every move, so a moved
+  file has its first path as `from`, and that path's committed text as `base`.
+- `commit(paths)` takes a move whole when either of its paths is named.
+- Its versions are a fast digest, good for a harness and for tests, and not for anything kept.
+
+**The port suite** is `describeStoragePort(name, make)` in a new entry,
+`@stillpointlab/common-format/testing/host`. Both ports pass its 44 tests; the node port runs it
+over a committed repository in a temporary folder.
+
+**The harness:**
+
+- `MemoryWorkspace` is `{ port, manifestPath, know? }`, and an answer is a promise.
+- The page's view now goes through `bounds.view` with the op.
+- The fixtures' own views are still projected directly from the port's files, with the same
+  `know`, since they set state without waiting. An op goes through `runOp`.
+- By hand, old harness against new, the recorded states compared: a card moved between columns
+  (the mark shows), a card moved to another phase and to the pool (`movedFrom` is in the
+  state), a card created, a stage added, both create forms, a zone and an item added, in the
+  bare elements and in inventory's shell. One difference: inventory's dirty list is in the
+  space's order now, not the order the files were written.
+
 ## Clarifications
 
 - **No linking, no drafts, no bases by good.** Those are Context Manager's steps between 5 and
@@ -202,7 +284,7 @@ facts code in each `dev/host.ts` goes too.
 
 - Context Manager adopting the runner (the brief's out of scope).
 - Host ops. Each host answers its own.
-- Discovering instances in a folder: [apps-in-the-local-host](../../phase1/specs/apps-in-the-local-host.md).
+- Discovering instances in a folder: [apps-in-the-local-host](../../phase3/specs/apps-in-the-local-host.md).
 
 ## Acceptance / completion checklist
 

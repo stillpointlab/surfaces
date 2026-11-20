@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { planInventoryCreate } from './create.js';
 import { inventoryModule } from './module.js';
 import { applyChanges, HOUSE, NO_FACTS, snapshotOf } from './snapshot.fixtures.js';
 
@@ -66,5 +67,19 @@ describe('inventoryModule', () => {
     ['SOMETHING_NEW', 'invalid'],
   ])('treats %s as %s', (code, refusal) => {
     expect(inventoryModule.refusalClass(code, 'add-item')).toBe(refusal);
+  });
+
+  it('places a create’s files as placeInventoryCreate does', () => {
+    const plan = planInventoryCreate({ label: 'Home', zones: ['Kitchen'], folder: 'home' });
+    if (!plan.ok) throw new Error(plan.message);
+    const { placeCreate } = inventoryModule;
+    expect(placeCreate(plan, { taken: [] })).toEqual({ ok: true, files: plan.files });
+    expect(
+      placeCreate(plan, { taken: ['home/inventory.yaml'], reusable: ['home/inventory.yaml'] })
+    ).toEqual({ ok: true, files: plan.files.slice(1) });
+    expect(placeCreate(plan, { taken: ['home/rooms'] })).toMatchObject({
+      ok: false,
+      code: 'INVENTORY_PATH_EXISTS',
+    });
   });
 });
