@@ -65,8 +65,8 @@ seed leaves the pool when its fix lands:
    the md serializer leaves `[ ]` and `[x]` alone at the start of a list item, and escapes a
    bracket only where it would otherwise start a link or an image. Task items as nodes of their
    own, with a checkbox to click, are a feature and stay in the seed.
-6. **A dialog keeps Tab inside it**
-   ([seed](../../../unassigned/seeds/a-dialog-keeps-tab-inside.md)). The defect was read from the
+6. **A dialog keeps Tab inside it** (the seed `a-dialog-keeps-tab-inside`, which the fix removes:
+   [#144](https://github.com/stillpointlab/surfaces/pull/144)). The defect was read from the
    code and not seen in a browser, so the first step is a test that fails. Then: read the
    focused element down through the shadow roots, and trap with a sentinel at each end of the
    dialog in place of a list of focusable elements, which covers a slotted component with a
