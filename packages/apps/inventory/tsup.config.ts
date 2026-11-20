@@ -1,4 +1,4 @@
-import { formatPackage } from '../../../tooling/tsup';
+import { splitPackage } from '../../../tooling/tsup';
 
 // Eight entries. `.` is the DOM-free core. `./types` (the shared types) and
 // `./paths` (the naming rules and creation defaults) import nothing, for a
@@ -12,7 +12,11 @@ import { formatPackage } from '../../../tooling/tsup';
 // `./paths` and `./create`, never the core. `./shell` is `<spl-inventory-app>`,
 // the page around the two elements, which it registers too; it adds the
 // module's page paths (`pages.ts`, no zod) to what they import.
-export default formatPackage({
+//
+// The build splits, so `./element` and `./shell` share one copy of the two
+// elements and a page that loads both defines them once. Split files go to
+// dist/chunks/, which package.json lists in `sideEffects`.
+export default splitPackage({
   entry: {
     index: 'src/index.ts',
     types: 'src/types.ts',

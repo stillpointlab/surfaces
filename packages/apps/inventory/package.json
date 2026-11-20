@@ -13,7 +13,8 @@
     "./dist/element.js",
     "./dist/element.cjs",
     "./dist/shell.js",
-    "./dist/shell.cjs"
+    "./dist/shell.cjs",
+    "./dist/chunks/*"
   ],
   "main": "./dist/index.js",
   "module": "./dist/index.js",

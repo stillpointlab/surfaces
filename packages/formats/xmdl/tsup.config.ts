@@ -1,4 +1,4 @@
-import { formatPackage } from '../../../tooling/tsup';
+import { splitPackage } from '../../../tooling/tsup';
 
 // `format` is the format descriptor: it defines nothing and loads `preview` or
 // `editor`.
@@ -9,11 +9,7 @@ import { formatPackage } from '../../../tooling/tsup';
 // common. Split files go to dist/chunks/, which package.json lists in
 // `sideEffects`: an element's `defineElement` can land in a chunk, and a bundler
 // drops a chunk it believes has none.
-export default formatPackage({
-  splitting: true,
-  esbuildOptions(options) {
-    options.chunkNames = 'chunks/[name]-[hash]';
-  },
+export default splitPackage({
   entry: {
     index: 'src/index.ts',
     editor: 'src/editor/index.ts',
