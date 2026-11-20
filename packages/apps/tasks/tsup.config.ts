@@ -1,4 +1,4 @@
-import { formatPackage } from '../../../tooling/tsup';
+import { splitPackage } from '../../../tooling/tsup';
 
 // Eight entries. `.` is the DOM-free core. `./types` (the tasks types and their
 // constants) and `./paths` (the naming rules) import nothing, for a client that
@@ -13,7 +13,11 @@ import { formatPackage } from '../../../tooling/tsup';
 // `<spl-tasks-app>`, the page around the board and the strip, which it
 // registers too; it adds the module's page paths (`pages.ts`, no zod) to what
 // they import.
-export default formatPackage({
+//
+// The build splits, so `./element` and `./shell` share one copy of the board
+// and the strip and a page that loads both defines them once. Split files go
+// to dist/chunks/, which package.json lists in `sideEffects`.
+export default splitPackage({
   entry: {
     index: 'src/index.ts',
     types: 'src/types.ts',

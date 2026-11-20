@@ -118,10 +118,12 @@ adopted it still brings:
 - **app-shells' two "As built" sections list what Context Manager passes and does,** and the
   ids and classes each shell kept and did not. That is the list the walks' selectors change
   from.
-- **Import the shell alone.** Each `./shell` entry exports the event names a host needs
-  (`NAVIGATE_EVENT`, `RELOAD_REQUEST_EVENT`, inventory's `NOTIFICATION_EVENT`) and carries its
-  own copy of the app's elements. A page that also loads `./element` defines them twice and is
-  warned; the follow-up log has the build's splitting.
+- **The shell is enough.** Each `./shell` entry registers the app's elements and exports the
+  event names a host needs (`NAVIGATE_EVENT`, `RELOAD_REQUEST_EVENT`, inventory's
+  `NOTIFICATION_EVENT`). Since 2026-11-20 both apps' builds split, as the formats' do, so
+  `./element` and `./shell` share one copy of the elements and a page may load both. Every
+  built entry of the two packages changed shape with it, which is one more reason the pin is
+  walked alone.
 - **A host claims every `navigate`** with `preventDefault()`. Only a clicked link has the
   browser behind it.
 - **`learn(op, reply)`**, the op first. `opView(op)` gives the view to send with an op.
