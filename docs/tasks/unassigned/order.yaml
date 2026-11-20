@@ -22,6 +22,11 @@
 # From stage 5's follow-ups (2026-11-20).
 - docs/tasks/unassigned/seeds/the-hosts-words-in-an-app.md
 
+# From Context Manager's stage 7 (2026-11-20, Jamie): two defects in elements
+# that live here, found in that repository.
+- docs/tasks/unassigned/seeds/brackets-escaped-in-a-changed-block.md
+- docs/tasks/unassigned/seeds/a-dialog-keeps-tab-inside.md
+
 # From stage 4's follow-ups (2026-11-14).
 - docs/tasks/unassigned/seeds/a-save-keeps-the-file.md
 - docs/tasks/unassigned/seeds/markdown-relative-links.md
