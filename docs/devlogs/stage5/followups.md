@@ -165,6 +165,8 @@ are carried here as they were written.
 - 2026-11-14 (apps-in-the-local-host, step 2): each app's create copy says "repository" (the
   folder help, tasks' root warning), which is Context Manager's word. The local host serves a
   folder.
+  - Moved 2026-11-20 (Jamie: leave the copy for the adoption, and seed it) to the seed
+    [the host's words in an app](../../tasks/unassigned/seeds/the-hosts-words-in-an-app.md).
 - 2026-11-14 (apps-in-the-local-host, step 2): tasks' `read-file` answers any file the port
   reads, not only the instance's.
 - 2026-11-14 (apps-in-the-local-host, step 2): in the md editor, a click in the document and
@@ -175,6 +177,9 @@ are carried here as they were written.
   the state with a copy of the board's own rule, since the board has no method for it.
 - 2026-11-14 (checkin-review, step 1): the board's in-flight chip reads "PR…" and speaks of a
   pull request. The word should be the host's.
+  - Moved 2026-11-20 to the seed [the host's words in an
+    app](../../tasks/unassigned/seeds/the-hosts-words-in-an-app.md), as the
+    same question.
 - 2026-11-14 (checkin-review, step 1): while a review is busy, focus falls to the page, since
   the button that had it is disabled. The commit dialog does the same.
 - 2026-11-14 (checkin-review, step 1): a review's groups keep the order they first appear in,
