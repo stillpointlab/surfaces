@@ -161,7 +161,7 @@ hold at its `main`.
 
 ### H7. Four Context Manager PRs, each walked, against stage 4's lesson
 
-- **Where:** [context-manager-adopts-apps](../specs/context-manager-adopts-apps.md), the plan.
+- **Where:** [context-manager-adopts-apps](../../phase6/specs/context-manager-adopts-apps.md), the plan.
 - **What:** four PRs with both walk suites on each is at least eight rounds of walks, each over
   20 minutes and heavy on the machine. Jamie's reflections name that cost and say one
   integration at the stage's end was good process. The shells and the check-in element also move
@@ -255,7 +255,7 @@ Jamie answered all five on 2026-11-14, and each spec now says what he decided.
    asks first. In [undo-journal](../../phase5/specs/undo-journal.md).
 2. **Context Manager's adoption as two PRs, not four** (H7). **"Two is fine if less disruptive
    overall."** Steps 1 to 3 together, the lock apart. In
-   [context-manager-adopts-apps](../specs/context-manager-adopts-apps.md).
+   [context-manager-adopts-apps](../../phase6/specs/context-manager-adopts-apps.md).
 3. **Where an app's facts are derived from file changes** (H3). **"Sounds fine, something like
    the format object?"** Yes: the module is the object a host registers, as a format's
    descriptor is, and it gains one member, `fromChanges`, which is to an app what `apply` is to
@@ -283,7 +283,7 @@ Jamie answered all five on 2026-11-14, and each spec now says what he decided.
 - [x] **H4, H5, M3, M4, M5, M7, M8, L1, L3, L4:**
       [apps-in-the-local-host](../../phase3/specs/apps-in-the-local-host.md) amended.
 - [x] **H6, M6:** [checkin-review](../../phase4/specs/checkin-review.md) amended.
-- [x] **H7, M9:** [context-manager-adopts-apps](../specs/context-manager-adopts-apps.md) amended.
+- [x] **H7, M9:** [context-manager-adopts-apps](../../phase6/specs/context-manager-adopts-apps.md) amended.
 - [x] **M4, L2:** [app-module-grows](../../phase2/specs/app-module-grows.md) amended.
 - [x] **M8, and the walks' selectors (H7):** [app-shells](../../phase2/specs/app-shells.md) amended.
 - [x] **Decisions 1 to 4:** Jamie, 2026-11-14.

@@ -86,3 +86,284 @@ From the review, written into the specs:
 - Context Manager gets #111 when its pin next moves, at stage 5's adoption unless it moves
   sooner.
 - The nineteen entries carried from stage 4 are in [stage 5's log](followups.md).
+
+---
+
+## Phase 2: What an app carries, the runner, and each app's page (`stage5-phase2-complete`)
+
+Range: `stage5-phase1-complete..stage5-phase2-complete` (`05f6ff7..95fe8fa`), 2026-11-14: six
+pull requests and phase 1's close, 100 files, +9,897/−579. The six were a stack, each on the one
+before, and reached main on 2026-11-20 in one merge with phases 3 to 5 (`94ddb0e`), so the
+phase's tag is on its last commit and not on a merge.
+
+### Shipped
+
+- Phase 1 closed and phase 2 opened ([#112](https://github.com/stillpointlab/surfaces/pull/112)).
+- The module carries its bounds, pages and copy
+  ([#113](https://github.com/stillpointlab/surfaces/pull/113),
+  [#114](https://github.com/stillpointlab/surfaces/pull/114);
+  [spec](../../tasks/stage5/phase2/specs/app-module-grows.md)): `AppModule` gains `meta`,
+  `bounds`, `pages`, `placeCreate` and `fromChanges`, and inventory and tasks supply them;
+  `matchAppPage` and `bounded` in `common-format/app`; a `./meta` entry in each app that loads
+  no zod; the app suite checks all five.
+- One runner over the storage port
+  ([#116](https://github.com/stillpointlab/surfaces/pull/116);
+  [spec](../../tasks/stage5/phase2/specs/host-runner.md)): `loadInstance`, `runOp`,
+  `projectView`, `createInstance` and `hostRefusalClass` in `common-format/host`; a port in
+  memory with `changes()` and `commit()`; `describeStoragePort`, a suite both ports pass; the
+  harness's apps on the runner.
+- Each app's page as an element ([#115](https://github.com/stillpointlab/surfaces/pull/115),
+  [#117](https://github.com/stillpointlab/surfaces/pull/117);
+  [spec](../../tasks/stage5/phase2/specs/app-shells.md)): the shell contract (`AppShellInput`,
+  `AppShellElement`, `AppShellOps`); `<spl-inventory-app>` and `<spl-tasks-app>` behind a
+  `./shell` entry in each package; `pageHref`; a fixture for each in the harness.
+- The apps-in-the-local-host spec read against the phase
+  ([#119](https://github.com/stillpointlab/surfaces/pull/119)).
+
+### Decisions
+
+Jamie has not ruled on these. They are the agents' calls, each in its spec's "As built" section,
+and Jamie merged the stack on 2026-11-20.
+
+- A change may carry the text it was based on (`AppFileChange.base`), so tasks' `fromChanges`
+  can mark a card whose column moved. The orchestrating agent's amendment, before host-runner
+  started.
+- A page's parameters are strings the page checks itself, so a bad one is not found where
+  Context Manager answered 400.
+- The runner loads a manifest its lifecycle refuses, with the refusal in `warnings`, as Context
+  Manager's loader does. Only a manifest that is not there is a refusal.
+- A host that mounts a shell answers `navigate`. Every `navigate` can be cancelled, and only a
+  clicked link has the browser behind it.
+- Tasks' shell answers `refresh-stage` and `close-candidates` itself, through `project`.
+- A shell holds no editor links and asks `link-editor` for a file that is already linked too.
+
+### Testing & review
+
+- `npm run check` passed from a clean tree at each level of the stack: 2,761, 2,901, 2,938,
+  3,112 and 3,172 tests.
+- Each schema's limits were compared with Context Manager's at `8fa439ba`, and its tests'
+  cases carried over. Context Manager's build, type check and tests passed against #114's tip
+  with a pin made by hand and not committed.
+- Each shell was driven in Chromium over the harness's memory host with a script, in light and
+  dark. The orchestrating agent looked at a sample of the screenshots.
+- CI runs on pull requests to main only. The stack through phase 2 ran through CI once on a
+  draft pull request (#118, closed unmerged).
+
+### Deferred
+
+- Twenty-six entries in the [follow-up log](followups.md), among them: neither app's build
+  splits, so `./element` and `./shell` each carry the elements; `AppMeta` has no noun for a
+  host's "… created" notice; inventory's `fromChanges` does not count a moved zone; tasks' pages
+  read `/stage/3x` as stage 3; `tasksModule.hostOps` still names the two ops the shell answers.
+
+### At the phase's opening and close
+
+- Opening: the five new members were optional in step 1 and required in step 2, so the two
+  steps could land apart.
+- Close: the [apps-in-the-local-host](../../tasks/stage5/phase3/specs/apps-in-the-local-host.md)
+  spec moved to `stage5/phase3/specs/` with a section on what phase 2 built: base texts from
+  git's `HEAD`, kept until it moves; a revision of the host's own over the runner's; the pane
+  claiming every `navigate`; the overlap check on a create.
+
+---
+
+## Phase 3: The apps in the local host (`stage5-phase3-complete`)
+
+Range: `stage5-phase2-complete..stage5-phase3-complete` (`95fe8fa..f94cf1a`), 2026-11-14: three
+pull requests, 49 files, +5,074/−250. On main with the one merge (`94ddb0e`); the tag is on the
+phase's last commit.
+
+### Shipped
+
+- The row, the lock and inventory ([#120](https://github.com/stillpointlab/surfaces/pull/120);
+  [spec](../../tasks/stage5/phase3/specs/apps-in-the-local-host.md), step 1): discovery of the
+  instances in the served folder, with overlapping ones marked invalid; `GET /api/apps`, the
+  lock route, and the page, project and op routes over the runner; an instance as one locked
+  row with its files hidden; a write to a locked file refused; the app pane mounting a shell at
+  an address of its own; `focusRow(path)` on the tree.
+- Tasks, the board's menu and create
+  ([#121](https://github.com/stillpointlab/surfaces/pull/121); step 2): tasks registered; its
+  host ops answered by the server; the board's options menu as the page's menu; "Create … here…"
+  on a folder, with a dialog around the app's own form and `POST /api/apps/create`.
+- The checkin-review spec read against phases 2 and 3
+  ([#123](https://github.com/stillpointlab/surfaces/pull/123)).
+
+### Decisions
+
+The agents' calls, in the spec's "As built" sections.
+
+- Discovery runs afresh for each route that needs it, a write's lock check included, so a lock
+  is never checked against stale regions.
+- Two instances that overlap are both invalid, each with a line naming the other. A create
+  that would overlap is refused before anything is written.
+- The server holds each instance's lock, and a new instance starts locked.
+- A host op is answered before the runner and carries no revision.
+- Tasks' `resolve` is refused in the local host: nothing there diverges from an upstream.
+
+### Testing & review
+
+- `npm run check` passed from a clean tree at both steps: 3,229 and 3,253 tests.
+- By hand in Chromium against the built server, light and dark: two inventories in a scratch
+  repository, one in a folder and one at the root; this repository's own board on a copy of
+  it, with a card moved, the file read back from disk and a commit from the explorer clearing
+  the marks; an inventory and a task project created in a scratch folder, and one inside the
+  other refused.
+- The stack through phase 3 ran through CI on a draft pull request (#122, closed unmerged).
+
+### Deferred
+
+- Nine entries in the [follow-up log](followups.md), among them: discovery lists the folder on
+  every write; the apps' create copy says "repository" where the local host serves a folder;
+  tasks' `read-file` answers any file the port reads; in the md editor a click could put the
+  cursor in the frontmatter.
+
+### At the phase's close
+
+The [checkin-review](../../tasks/stage5/phase4/specs/checkin-review.md) spec moved to
+`stage5/phase4/specs/` with a section on what phases 2 and 3 built: the review in the light DOM
+with the classes the apps borrow, the request stopping at the shell, and the harness answering a
+check-in with the memory port's commit.
+
+---
+
+## Phase 4: One check-in review (`stage5-phase4-complete`)
+
+Range: `stage5-phase3-complete..stage5-phase4-complete` (`f94cf1a..4ea6575`), 2026-11-14: three
+pull requests, 55 files, +3,751/−882. On main with the one merge (`94ddb0e`); the tag is on the
+phase's last commit.
+
+### Shipped
+
+- The review, the op and both shells
+  ([#124](https://github.com/stillpointlab/surfaces/pull/124);
+  [spec](../../tasks/stage5/phase4/specs/checkin-review.md), step 1): a new package,
+  `@stillpointlab/checkin-review-component`, with `<checkin-review>`; `checkin` in
+  `AppShellOps`, with `CheckinWords`, `CheckinBranch` and `checkinSettled()` in the shell
+  contract; each shell taking its app's `checkin-request` and asking its host.
+- The local host answers it ([#125](https://github.com/stillpointlab/surfaces/pull/125);
+  step 2): an app's check-in is a commit; the explorer's commit dialog is the same element,
+  with its rows in the tree's order; the Commit button is disabled when nothing has changed.
+- The undo-journal spec read against phases 2 to 4
+  ([#127](https://github.com/stillpointlab/surfaces/pull/127)).
+
+### Decisions
+
+The agents' calls, in the spec's "As built" sections.
+
+- The words and the branch type are in `common`'s shell contract, since `common` cannot depend
+  on a component. Five more words have plain defaults.
+- Each shell stops `checkin-request`, so no host hears it.
+- Tasks' rows keep Context Manager's labels. On a stage view the order file and the
+  housekeeping sit under "Pool & config".
+- An app's check-in with no title is "`<app>` check-in" in the local host.
+- A shell's input is data, so it cannot say where focus goes after a refusal. In an app's
+  review focus goes to the refusal's line.
+
+### Testing & review
+
+- `npm run check` passed from a clean tree at both steps: 3,296 and 3,310 tests. The commit
+  dialog's tests were rewritten against the element, with nine more.
+- By hand in Chromium, light and dark: in the harness, each shell's review with a row
+  unchecked; against the built server in a scratch repository, a check-in from the inventory
+  and from the board on a new branch with the commits read back, the explorer's review with a
+  branch that exists refused in git's words, and a `pre-commit` hook that refuses.
+- The stack through phase 4 ran through CI on a draft pull request (#126, closed unmerged).
+
+### Deferred
+
+- Ten entries in the [follow-up log](followups.md), among them: the board's in-flight chip
+  says "PR…" in every host; a review's groups keep the order they first appear in; tasks' shell
+  has a copy of the board's rule for a check-in request; inventory's `./shell` still exports
+  the name of `checkin-request`.
+
+### At the phase's close
+
+The [undo-journal](../../tasks/stage5/phase5/specs/undo-journal.md) spec moved to
+`stage5/phase5/specs/` with a section on what phases 2 to 4 built: the journal's port passes the
+port suite, an op's answer carries a notice, and the page's client reads the journal.
+
+---
+
+## Phase 5: Undo, and the stage's code review (`stage5-phase5-complete`)
+
+Range: `stage5-phase4-complete..stage5-phase5-complete` (`4ea6575..f91c77d`), 2026-11-14 –
+2026-11-20: four pull requests, 43 files, +3,624/−142. The undo journal reached main in the one
+merge (`94ddb0e`); the review's three pull requests, stacked on it, in a second (`f91c77d`),
+which the tag is on.
+
+### Shipped
+
+- Undo and redo in the local host ([#128](https://github.com/stillpointlab/surfaces/pull/128);
+  [spec](../../tasks/stage5/phase5/specs/undo-journal.md)): a journal around the storage port
+  with one step for each of the host's own writes, an app's op and a create included; the
+  journal, undo and redo routes and a `journal` event; git's index put back as it was; a step
+  that cannot be kept asked about first; two buttons in the explorer's header, and the keys.
+- The [stage 5 code review](../../tasks/stage5/phase5/reviews/stage-5-code-review.md) and its
+  fixes ([#131](https://github.com/stillpointlab/surfaces/pull/131)): the app pane gives a shell
+  its page again when it asks (H1); a file the server cannot read asks before its delete (H3);
+  stale undo labels after a reconnection, a second commit review, the keys on a layout with no
+  Latin letters, and a malformed change answered 400 (L1 to L4).
+- An undone delete brings back the file's mode, and a link's delete asks first
+  ([#132](https://github.com/stillpointlab/surfaces/pull/132);
+  [spec](../../tasks/stage5/phase5/specs/undo-keeps-modes-and-links.md)): the review's H2.
+- The inventory overview says briefly that a zone could not be parsed
+  ([#133](https://github.com/stillpointlab/surfaces/pull/133)), from Jamie's pass over the
+  stage in the local host.
+- Four seeds: [a tasks page whose phase is
+  gone](../../tasks/unassigned/seeds/a-tasks-page-whose-phase-is-gone.md) (the review's M1),
+  [app errors in the explorer](../../tasks/unassigned/seeds/app-errors-in-the-explorer.md),
+  [errors at line and column](../../tasks/unassigned/seeds/errors-at-line-and-column.md), and
+  [inventory says zone in URLs and
+  folders](../../tasks/unassigned/seeds/inventory-says-zone-in-urls-and-folders.md), which takes
+  in the older seed for the zones folder.
+
+### Decisions
+
+Jamie's:
+
+- 2026-11-18: a code review of the stage before it merges, with bugs fixed in a new pull
+  request and anything larger written up.
+- 2026-11-18, on H2: the mode is kept, and only a link's delete asks. The alternative was to
+  keep no mode and ask before an executable's delete as well.
+- 2026-11-18, from his pass by hand: the overview's row for a broken zone is brief, and the
+  three seeds above.
+
+The agents', in the spec's "As built" section:
+
+- Undo and Redo are two glyphs. With the words, the header cut the folder's name to a letter.
+- An editor's save is not a step. A `put` that carries a `write` goes straight to the port.
+- Redo puts the index back too.
+- A commit does not clear the journal. Undoing a committed step makes a new change.
+
+### Testing & review
+
+- `npm run check` passed from a clean tree at each level: 3,458, 3,468, 3,478 and 3,479 tests.
+- The review: a read of the whole diff (#113 to #128) by a second agent with none of the
+  build's context, which returned seven findings, each reproduced before anything changed; and
+  a pass by hand in Chromium against the built server. Each fix has a test that fails without
+  it.
+- The orchestrating agent's own run at the stack's tip: a card moved, undone, redone and
+  checked in from the board on a new branch, then undone after the commit as a new change.
+- Jamie tried the stage by hand on a local server before merging.
+- The stack through phase 5 ran through CI on a draft pull request (#129, closed unmerged). CI
+  passed on main at `94ddb0e` and at `f91c77d`.
+
+### Deferred
+
+- Six entries in the [follow-up log](followups.md), among them: the glyphs depend on the
+  system's font; an undo's write and the putting back of the index take the write lock one
+  after the other; the create dialog does not show a create's "cannot be undone" notice.
+- The review's observations for Jamie, which changed nothing: two boards both named "Tasks"
+  in the explorer, undo labels that are an op's id, "content edited" for a new card, and a
+  notice that stays until replaced.
+
+### At the phase's close
+
+- Phases 2 to 5 closed together on 2026-11-20, once Jamie had merged both stacks: the seven
+  specs and the review are done, and the pointer is at phase 6.
+- The [adoption spec](../../tasks/stage5/phase6/specs/context-manager-adopts-apps.md) moved to
+  `stage5/phase6/specs/` with a section on what phases 2 to 5 built: what the pin brings with
+  nothing adopted, the module's bounds, pages and copy as they are, what a host of a shell
+  does, the review's op and words, and where the local host's lock differs.
+- The follow-up log holds 71 entries, 19 of them carried from stage 4. It is drained with
+  Jamie, a few entries at a time, starting with those that touch the adoption.

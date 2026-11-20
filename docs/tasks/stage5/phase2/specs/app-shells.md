@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 115
+completed: 2026-11-20
 created: 2026-11-13T18:48:00-07:00
 tags: [apps, host-contract, code, major-feature]
 ---
@@ -145,7 +147,7 @@ zone?(path): string }`). Without it the export controls are hidden, which is the
 - **Markup the walks know.** Read Context Manager's walks before choosing a shell's markup, and
   keep an id or a class where keeping it costs nothing. Each PR lists the ids and classes of
   Context Manager's page chrome that the shell does not keep, so
-  [context-manager-adopts-apps](../../phase1/specs/context-manager-adopts-apps.md) can change the walks in the
+  [context-manager-adopts-apps](../../phase6/specs/context-manager-adopts-apps.md) can change the walks in the
   commit that mounts the shell.
 
 ## As built: step 1
@@ -287,21 +289,21 @@ orchestrating agent, who looked at the screenshots._
   through unchanged for now.
 - Inventory's export in the local host (a follow-up; the controls are hidden there).
 - Context Manager mounting the shells
-  ([context-manager-adopts-apps](../../phase1/specs/context-manager-adopts-apps.md)).
+  ([context-manager-adopts-apps](../../phase6/specs/context-manager-adopts-apps.md)).
 
 ## Acceptance / completion checklist
 
-- [ ] `common-format/app` exports the shell contract.
-- [ ] Each package's `./shell` entry defines its element; its entries test proves the root entry
+- [x] `common-format/app` exports the shell contract.
+- [x] Each package's `./shell` entry defines its element; its entries test proves the root entry
       still loads no DOM code.
-- [ ] Shell tests in jsdom: each view; the links for a given `base`; `learn` after each op that
+- [x] Shell tests in jsdom: each view; the links for a given `base`; `learn` after each op that
       changes the title or needs a re-read; `opView`; tasks' two claimed ops answered through
       `project`; the empty state; a hostile state.
-- [ ] The harness shows each shell over the memory host, and ops work end to end there, in a
+- [x] The harness shows each shell over the memory host, and ops work end to end there, in a
       light and in a dark colour scheme.
-- [ ] Each PR lists the ids and classes of Context Manager's page chrome the shell does not
+- [x] Each PR lists the ids and classes of Context Manager's page chrome the shell does not
       keep.
-- [ ] `npm run check` is green.
+- [x] `npm run check` is green.
 
 ## Implementation plan
 

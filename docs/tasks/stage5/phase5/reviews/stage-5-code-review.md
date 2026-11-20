@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 131
+completed: 2026-11-20
 created: 2026-11-18T19:30:00-07:00
 tags: [apps, host-contract, dev-tooling, code]
 ---

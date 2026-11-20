@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 124
+completed: 2026-11-20
 created: 2026-11-13T18:52:00-07:00
 tags: [apps, host-contract, code]
 ---
@@ -353,22 +355,22 @@ who looked at the screenshots._
 
 - The check-in shared core (the brief's out of scope), and anything about a pull request.
 - Showing a diff inside the review.
-- Context Manager using the element ([context-manager-adopts-apps](../../phase1/specs/context-manager-adopts-apps.md)).
+- Context Manager using the element ([context-manager-adopts-apps](../../phase6/specs/context-manager-adopts-apps.md)).
 
 ## Acceptance / completion checklist
 
-- [ ] Component tests: rows, groups, a moved file, the box for all rows, `setFiles` keeping and
+- [x] Component tests: rows, groups, a moved file, the box for all rows, `setFiles` keeping and
       dropping checks, each missing thing named with focus on it, a detached `HEAD`, busy, a
       refusal, success, and hostile paths, labels and words.
-- [ ] The commit dialog's tests pass against the element, moved with what they test.
-- [ ] Shell tests: each app's rows from its own request, its rows after the state is set again,
+- [x] The commit dialog's tests pass against the element, moved with what they test.
+- [x] Shell tests: each app's rows from its own request, its rows after the state is set again,
       and tasks' in-flight marks.
-- [ ] The harness shows the review in both shells, answered by the memory host.
-- [ ] By hand in the local host, light and dark: change an inventory and a board, check in
+- [x] The harness shows the review in both shells, answered by the memory host.
+- [x] By hand in the local host, light and dark: change an inventory and a board, check in
       each on a new branch, and read the commits; the app's marks clear with no reload.
-- [ ] The explorer's commit and the apps' check-in use the same element, and the explorer does
+- [x] The explorer's commit and the apps' check-in use the same element, and the explorer does
       everything the list under "What stage 4 built" names.
-- [ ] `npm run check` is green.
+- [x] `npm run check` is green.
 
 ## Implementation plan
 

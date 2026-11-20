@@ -132,5 +132,5 @@ says where it went. Nothing was dropped.
   pages and claim review do not mount through the descriptors yet. It is in Context Manager's
   own follow-up log; the stage 5 adoption spec is the place to decide whether it joins.
   - Moved 2026-11-14 to
-    [context-manager-adopts-apps](../../tasks/stage5/phase1/specs/context-manager-adopts-apps.md),
+    [context-manager-adopts-apps](../../tasks/stage5/phase6/specs/context-manager-adopts-apps.md),
     which leans to leaving it in Context Manager's log (decision 5 of the stage 5 review).

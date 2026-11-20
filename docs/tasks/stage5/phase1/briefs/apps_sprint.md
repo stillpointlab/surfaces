@@ -36,15 +36,15 @@ moved. It lands the way stage 4 did, as one stack and one integration.
 
 The local host brief's outcomes 3 to 6. In order:
 
-| Phase | Wave | Spec                                                                   | PRs | Where           |
-| ----- | ---- | ---------------------------------------------------------------------- | --- | --------------- |
-| 2     | 1    | [app-module-grows](../../phase2/specs/app-module-grows.md)             | 2   | here            |
-| 2     | 2    | [host-runner](../../phase2/specs/host-runner.md)                       | 1   | here            |
-| 2     | 2    | [app-shells](../../phase2/specs/app-shells.md)                         | 2   | here            |
-| 3     | 1    | [apps-in-the-local-host](../../phase3/specs/apps-in-the-local-host.md) | 2   | here            |
-| 4     | 1    | [checkin-review](../../phase4/specs/checkin-review.md)                 | 2   | here            |
-| 5     | 1    | [undo-journal](../../phase5/specs/undo-journal.md)                     | 1   | here            |
-| 6     | 1    | [context-manager-adopts-apps](../specs/context-manager-adopts-apps.md) | 2   | Context Manager |
+| Phase | Wave | Spec                                                                             | PRs | Where           |
+| ----- | ---- | -------------------------------------------------------------------------------- | --- | --------------- |
+| 2     | 1    | [app-module-grows](../../phase2/specs/app-module-grows.md)                       | 2   | here            |
+| 2     | 2    | [host-runner](../../phase2/specs/host-runner.md)                                 | 1   | here            |
+| 2     | 2    | [app-shells](../../phase2/specs/app-shells.md)                                   | 2   | here            |
+| 3     | 1    | [apps-in-the-local-host](../../phase3/specs/apps-in-the-local-host.md)           | 2   | here            |
+| 4     | 1    | [checkin-review](../../phase4/specs/checkin-review.md)                           | 2   | here            |
+| 5     | 1    | [undo-journal](../../phase5/specs/undo-journal.md)                               | 1   | here            |
+| 6     | 1    | [context-manager-adopts-apps](../../phase6/specs/context-manager-adopts-apps.md) | 2   | Context Manager |
 
 Ten PRs here, and two in Context Manager where the first draft had four. A spec
 moves to its phase's folder when its phase opens.

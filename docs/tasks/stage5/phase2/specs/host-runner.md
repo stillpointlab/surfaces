@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 116
+completed: 2026-11-20
 created: 2026-11-13T18:46:00-07:00
 tags: [apps, common, host-contract, code]
 ---
@@ -288,17 +290,17 @@ over a committed repository in a temporary folder.
 
 ## Acceptance / completion checklist
 
-- [ ] Runner tests over the memory port, with both apps' fixture folders: each step's refusal,
+- [x] Runner tests over the memory port, with both apps' fixture folders: each step's refusal,
       the scope check for `create`, `write` and `move`, a stale base, changes that name a path
       twice, and a reply with its revision.
-- [ ] The port suite passes over the memory port and over the node port.
-- [ ] A card moved in the harness shows where it moved from, read from the memory port's
+- [x] The port suite passes over the memory port and over the node port.
+- [x] A card moved in the harness shows where it moved from, read from the memory port's
       `changes()`.
-- [ ] `projectView` and `createInstance` have tests, including a create that does not fit.
-- [ ] The harness's apps behave as before, by its existing tests and by hand.
-- [ ] `common-format/host` imports nothing from Node or the DOM (the entry test, without its
+- [x] `projectView` and `createInstance` have tests, including a create that does not fit.
+- [x] The harness's apps behave as before, by its existing tests and by hand.
+- [x] `common-format/host` imports nothing from Node or the DOM (the entry test, without its
       types-only check).
-- [ ] `npm run check` is green.
+- [x] `npm run check` is green.
 
 ## Implementation plan
 

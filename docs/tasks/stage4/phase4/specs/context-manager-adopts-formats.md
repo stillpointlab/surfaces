@@ -96,7 +96,7 @@ What stays Context Manager's:
 ## Non-goals
 
 - The apps' pieces:
-  [context-manager-adopts-apps](../../../stage5/phase1/specs/context-manager-adopts-apps.md), in
+  [context-manager-adopts-apps](../../../stage5/phase6/specs/context-manager-adopts-apps.md), in
   stage 5.
 - Changing which content types exist, or how a good stores its type.
 
