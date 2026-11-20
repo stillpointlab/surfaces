@@ -13,6 +13,7 @@ export const inventoryMeta: AppMeta = {
   icon: 'inventory',
   create: {
     noun: 'an inventory',
+    subject: 'Inventory',
     defaultFolder: INVENTORY_DEFAULT_FOLDER,
     folderExample: '“inventory” or “home/inventory”',
     folderHelp:

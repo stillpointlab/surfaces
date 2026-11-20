@@ -93,10 +93,8 @@ const manifestEdit = z
         message: `column id '${UNASSIGNED_COLUMN_ID}' is reserved for the implicit unassigned column`,
       });
     }
-    if (
-      body.op === 'add-kind' &&
-      (body.id === UNASSIGNED_COLUMN_ID || `${body.id}s` === UNASSIGNED_DIR)
-    ) {
+    // A kind added here has no folder of its own to name, so only its id can be the pool's.
+    if (body.op === 'add-kind' && body.id === UNASSIGNED_COLUMN_ID) {
       ctx.addIssue({
         code: 'custom',
         message: `'${UNASSIGNED_DIR}' is reserved for the backlog pool`,

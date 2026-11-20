@@ -40,6 +40,7 @@ describe('the ./meta entry', () => {
 
     expect(tasksMeta.create).toMatchObject({
       noun: 'a task project',
+      subject: 'Task project',
       defaultFolder: 'tasks',
       folderExample: '“tasks” or “docs/tasks”',
       rootConsent: {

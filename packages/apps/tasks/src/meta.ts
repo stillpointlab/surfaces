@@ -14,6 +14,7 @@ export const tasksMeta: AppMeta = {
   icon: 'task',
   create: {
     noun: 'a task project',
+    subject: 'Task project',
     defaultFolder: TASKS_DEFAULT_FOLDER,
     folderExample: '“tasks” or “docs/tasks”',
     folderHelp:

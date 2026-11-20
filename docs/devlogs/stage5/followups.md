@@ -69,6 +69,9 @@ are carried here as they were written.
 - 2026-11-14 (app-module-grows, step 1): `AppMeta` has no noun for the "… created" notice a host
   shows after a create (Context Manager's client says "Inventory", "Task project"). The local
   host will want one.
+  - Closed 2026-11-20 (Jamie: add an optional member, before Context Manager's pin moves;
+    [#PRNUM](https://github.com/stillpointlab/surfaces/pull/PRNUM)): `meta.create.subject`,
+    "Inventory" and "Task project". The local host shows no notice after a create yet.
 - 2026-11-14 (app-module-grows, step 1): inventory's `fromChanges` counts changed and new files,
   as its spec says, so a zone or a manifest renamed by hand is not dirty and an app's check-in
   would not list it. The explorer's commit would.
@@ -89,6 +92,8 @@ are carried here as they were written.
   adopted the pages.
 - 2026-11-14 (app-module-grows, step 2): the `add-kind` bound carries a reserved-folder check
   from Context Manager that can never be true.
+  - Closed 2026-11-20 ([#PRNUM](https://github.com/stillpointlab/surfaces/pull/PRNUM)): the
+    check is gone. A kind's id is still refused when it is the pool's.
 - 2026-11-14 (app-module-grows, step 2): tasks' `fromChanges` takes every new `.gitkeep` among
   the changes as housekeeping, wherever it is. A host hands it the instance's changes only.
 - 2026-11-14 (app-shells, step 1): inventory's build has no splitting, so `./element` and
@@ -166,6 +171,8 @@ are carried here as they were written.
   so a phase's new folder can come after "Pool & config".
 - 2026-11-14 (checkin-review, step 1): inventory's `./shell` entry still exports the name of
   `checkin-request`, which no host hears now.
+  - Closed 2026-11-20 ([#PRNUM](https://github.com/stillpointlab/surfaces/pull/PRNUM)): the
+    export is gone from `./shell`. `./element` keeps it, for a host of the bare elements.
 - 2026-11-14 (checkin-review, step 2): a shell cannot say where focus goes after a refusal, so
   in an app's review it goes to the refusal's line. Rules a host can pass as data would let it
   reach the branch or the title.

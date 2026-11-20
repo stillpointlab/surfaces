@@ -23,6 +23,7 @@ describe('the ./meta entry', () => {
     const { inventoryMeta } = await import('./meta.js');
 
     expect(inventoryMeta.label).toBe('Inventory');
+    expect(inventoryMeta.create).toMatchObject({ noun: 'an inventory', subject: 'Inventory' });
     expect([...evaluated]).toEqual([]);
   });
 

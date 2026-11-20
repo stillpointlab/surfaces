@@ -359,6 +359,9 @@ export function assertMeta(module: AnyAppModule): void {
   expect(meta.icon.trim(), 'meta.icon must not be empty').not.toBe('');
   if (meta.create) {
     expect(meta.create.noun.trim(), 'meta.create.noun must not be empty').not.toBe('');
+    if (meta.create.subject !== undefined) {
+      expect(meta.create.subject.trim(), 'meta.create.subject must not be empty').not.toBe('');
+    }
   }
 }
 
