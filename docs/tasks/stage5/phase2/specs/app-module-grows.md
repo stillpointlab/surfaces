@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 113
+completed: 2026-11-20
 created: 2026-11-13T18:44:00-07:00
 tags: [apps, common, host-contract, code]
 ---
@@ -56,7 +58,7 @@ _Added 2026-11-14._
   `pages.ts`, `meta.ts` and `changes.ts` in each of `packages/apps/{inventory,tasks}/src/`; the
   alias in `packages/common/src/host/index.ts`.
 - **Does not change:** Context Manager. Its copies stay until
-  [context-manager-adopts-apps](../../phase1/specs/context-manager-adopts-apps.md); the PR adds one line to the stage's
+  [context-manager-adopts-apps](../../phase6/specs/context-manager-adopts-apps.md); the PR adds one line to the stage's
   follow-up log naming the duplication.
 - **Step 2 can run beside** step 1 of [app-shells](app-shells.md), once step 1 here has merged.
   [host-runner](host-runner.md) waits for both steps, since its tests run both apps.
@@ -304,14 +306,14 @@ Context Manager's `8fa439ba`._
 
 ## Acceptance / completion checklist
 
-- [ ] `AppModule` has `meta`, `bounds`, `pages`, `placeCreate` and `fromChanges`, and both
+- [x] `AppModule` has `meta`, `bounds`, `pages`, `placeCreate` and `fromChanges`, and both
       modules supply them.
-- [ ] Each schema's limits match Context Manager's at the commit the PR names, checked by tests
+- [x] Each schema's limits match Context Manager's at the commit the PR names, checked by tests
       that carry over that repository's cases for them.
-- [ ] `matchAppPage` has tests: an empty path, a parameter, two parameters, no match.
-- [ ] Both apps pass the grown suite, the redirect check with a fragment base included.
-- [ ] `common` still does not depend on zod; the apps' light entries still do not load it.
-- [ ] `npm run check` is green, and Context Manager's build against this branch is unchanged.
+- [x] `matchAppPage` has tests: an empty path, a parameter, two parameters, no match.
+- [x] Both apps pass the grown suite, the redirect check with a fragment base included.
+- [x] `common` still does not depend on zod; the apps' light entries still do not load it.
+- [x] `npm run check` is green, and Context Manager's build against this branch is unchanged.
 
 ## Implementation plan
 

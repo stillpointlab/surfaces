@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 120
+completed: 2026-11-20
 created: 2026-11-13T18:50:00-07:00
 tags: [apps, dev-tooling, code, major-feature]
 ---
@@ -482,23 +484,23 @@ moved. It counts among the uncommitted changes. In the follow-up log.
 
 ## Acceptance / completion checklist
 
-- [ ] Server tests over temporary folders: discovery (valid, invalid, overlapping, at the
+- [x] Server tests over temporary folders: discovery (valid, invalid, overlapping, at the
       root), the lock check on `PUT /api/files` for a `path` and for a move's `from`, lock and
       unlock, the `apps` event, each app route, and create.
-- [ ] Client tests with a fake `HostClient`: the row locked and unlocked, a root instance's row,
+- [x] Client tests with a fake `HostClient`: the row locked and unlocked, a root instance's row,
       the two confirmations, a folder above a locked instance, the app's address split and
       joined, the app pane's ops, the three events with and without an op in flight, a locked
       file opening in its preview, the notice, and the create dialog.
-- [ ] By hand, on this repository's own `docs/tasks`: open the board, move a card, see the file
+- [x] By hand, on this repository's own `docs/tasks`: open the board, move a card, see the file
       change on disk and the dot on the app's row; commit from the explorer and see the board's
       marks clear; unlock, edit a card as a file, lock again.
-- [ ] By hand, in a scratch folder: create an inventory, add a zone and an item, and commit.
-- [ ] By hand, in a dark colour scheme: both apps read well, their dialogs' buttons and fields
+- [x] By hand, in a scratch folder: create an inventory, add a zone and an item, and commit.
+- [x] By hand, in a dark colour scheme: both apps read well, their dialogs' buttons and fields
       included.
-- [ ] After a commit from the explorer the open app's marks clear, by a test: the page's
+- [x] After a commit from the explorer the open app's marks clear, by a test: the page's
       `revision` moves when only the changes do.
-- [ ] Adding an app touches the two registrations and nothing else.
-- [ ] `npm run check` is green.
+- [x] Adding an app touches the two registrations and nothing else.
+- [x] `npm run check` is green.
 
 ## Implementation plan
 

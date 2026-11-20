@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 128
+completed: 2026-11-20
 created: 2026-11-13T18:54:00-07:00
 tags: [dev-tooling, code]
 ---
@@ -335,23 +337,23 @@ package's README has the routes in full._
 
 ## Acceptance / completion checklist
 
-- [ ] The journal's port passes the port suite, over the memory port and over the node port.
-- [ ] Journal tests over the memory port: each inverse; redo after undo; a new step clearing
+- [x] The journal's port passes the port suite, over the memory port and over the node port.
+- [x] Journal tests over the memory port: each inverse; redo after undo; a new step clearing
       redo; both limits; a step too large; a file changed between the wrapper's read and its
       write.
-- [ ] Conflict tests: a file changed after the step refuses the undo, and nothing is written.
-- [ ] Tests over a temporary folder: a delete of an image is refused with `HOST_CANNOT_UNDO`
+- [x] Conflict tests: a file changed after the step refuses the undo, and nothing is written.
+- [x] Tests over a temporary folder: a delete of an image is refused with `HOST_CANNOT_UNDO`
       and written when asked again; a rename of an image is undone and redone.
-- [ ] Git tests over a temporary repository: undo of a staged move, of a deleted file with a
+- [x] Git tests over a temporary repository: undo of a staged move, of a deleted file with a
       staged edit and of a deleted staged new file leaves `git status` as it was before the
       step.
-- [ ] Runner test: an op with several changes is one step, undone and redone whole.
-- [ ] Page tests: the open file follows an undone rename and closes on an undone create, with
+- [x] Runner test: an op with several changes is one step, undone and redone whole.
+- [x] Page tests: the open file follows an undone rename and closes on an undone create, with
       no banner.
-- [ ] By hand, light and dark: delete a folder of text files and undo it; delete a folder with
+- [x] By hand, light and dark: delete a folder of text files and undo it; delete a folder with
       an image and see the question; move a card on a board and undo it from the header and
       with the key, and see the board follow; create an app and undo it.
-- [ ] `npm run check` is green.
+- [x] `npm run check` is green.
 
 ## Implementation plan
 

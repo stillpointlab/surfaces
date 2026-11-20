@@ -12,8 +12,9 @@ lock._
 
 > Written with stage 4's specs, before any of stage 4 was built, and read again on 2026-11-14
 > against what stage 4 made and how its own adoption went. The
-> [review](../reviews/specs-against-stage-4.md) lists what changed and why (H7, M9). "What
-> stage 4 taught" is what an implementer reads first.
+> [review](../../phase1/reviews/specs-against-stage-4.md) lists what changed and why (H7, M9).
+> Read a third time on 2026-11-20, when its phase opened, against what phases 2 to 5 built. "What
+> stage 4 taught" and "What phases 2 to 5 built" are what an implementer reads first.
 
 ## High-level goal
 
@@ -62,6 +63,108 @@ _Added 2026-11-14, from stage 4's adoption (context-manager#1186) and Jamie's
 - **The implementing agent works in the `context-manager-surfaces` clone, commits there, and
   neither pushes nor runs walks.** The orchestrating agent rebuilds on current `main`, runs the
   checks and the walks, and opens the PR.
+
+## What phases 2 to 5 built
+
+_Added 2026-11-20, when phase 6 opened, from the "As built" sections of
+[app-module-grows](../../phase2/specs/app-module-grows.md),
+[app-shells](../../phase2/specs/app-shells.md),
+[checkin-review](../../phase4/specs/checkin-review.md) and
+[apps-in-the-local-host](../../phase3/specs/apps-in-the-local-host.md), and the
+[stage 5 code review](../../phase5/reviews/stage-5-code-review.md). Those sections are the
+record; this is what the steps below did not know. Context Manager was read at `458509da`, with
+its pin at `45df18d`._
+
+**The pin** moves from `45df18d` to this repository's `main`, past all of stage 5. With nothing
+adopted it still brings:
+
+- **The md editor's save** keeps the text it did not change
+  ([#111](https://github.com/stillpointlab/surfaces/pull/111)). A draft saved from the rich view
+  differs from today's, and the PR lists it.
+- **A new workspace,** `@stillpointlab/checkin-review-component`, which Context Manager's
+  `components/*` workspace takes in. Both apps' `./shell` entries import it.
+- **Changes to the bare elements,** which Context Manager still mounts at the pin:
+  `<spl-tasks-nav>`'s `navigate` can be cancelled, inventory's two export links are optional,
+  and the overview's row for a zone that does not parse says so briefly
+  ([#133](https://github.com/stillpointlab/surfaces/pull/133)).
+- **`AppModule` has five more members,** all required. Context Manager's build, type check and
+  tests passed against that shape on 2026-11-14 (a comment on
+  [#114](https://github.com/stillpointlab/surfaces/pull/114)), with a pin made by hand and not
+  committed.
+
+**Step 1, as the module has it:**
+
+- **`module.bounds`** has `op`, `view` and `create`, each answering a `Result`. A refusal reads
+  "The op is not valid: title: …", with the schema's causes in `details`, where Context
+  Manager's said "Validation failed".
+- **`bounds.op` covers the core's ops and refuses the rest,** as Context Manager's schemas did:
+  a host op, `create-card` with `now` (the host adds the time through `toCoreOp`), and
+  `move-file`'s `coMoving`. A host bounds its own host ops.
+- **`bounds.create` answers the form's fields.** The host adds the folder before `seed`.
+- **`module.pages` with `matchAppPage`.** A page's `params` and `query` are strings, and the
+  page checks them. Not found where Context Manager answered 400 or threw: a zone slug its rule
+  refuses, a `?path=` over 1,024 characters, a stage or phase that is not a positive number,
+  and a page whose nav cannot be projected.
+- **`meta` has a light entry in each package** (`./meta`, no zod), for `CLIENT_APPS`.
+  `meta.create.noun` is the noun with its article ("an inventory", "a task project"), which is
+  the server registry's. The client registry's other noun, for its "… created" notice
+  ("Inventory", "Task project"), has no member in `AppMeta`; the follow-up log has it.
+  `folderHelp` is plain text, so tasks' loses its `<code>` around `tasks.yaml`.
+- **Not Context Manager's to call:** `fromChanges`, the runner, the storage port and
+  `hostRefusalClass`. Its facts come from its own services.
+
+**Step 2, as the shells are:**
+
+- **app-shells' two "As built" sections list what Context Manager passes and does,** and the
+  ids and classes each shell kept and did not. That is the list the walks' selectors change
+  from.
+- **Import the shell alone.** Each `./shell` entry exports the event names a host needs
+  (`NAVIGATE_EVENT`, `RELOAD_REQUEST_EVENT`, inventory's `NOTIFICATION_EVENT`) and carries its
+  own copy of the app's elements. A page that also loads `./element` defines them twice and is
+  warned; the follow-up log has the build's splitting.
+- **A host claims every `navigate`** with `preventDefault()`. Only a clicked link has the
+  browser behind it.
+- **`learn(op, reply)`**, the op first. `opView(op)` gives the view to send with an op.
+- **The shell answers `refresh-stage` and `close-candidates` itself** through `project`, so
+  the two handlers go. `tasksModule.hostOps` still names both.
+- **A shell holds no editor links.** It asks `link-editor` for a file that is already linked
+  too, where Context Manager rendered a link from its map of paths.
+- **A host that keeps "the reply already showed this revision" must drop it** when the shell
+  raises `reload-request`, or raises `navigate` to the page on screen: the review's H1, found
+  in the local host's pane (`packages/hosts/local/src/client/apps/app-pane.ts`), which is the
+  one other host that mounts a shell.
+- **Seen once in Context Manager:** the pool's collapsed state resets (the board's
+  `storage-key` is `base`), the empty state says "upstream" for GitHub, and the sticky pool
+  reads `--spl-tasks-app-sticky-top`.
+
+**Step 3, as the review is:**
+
+- **Each shell stops `checkin-request` and asks its host `checkin`:** paths, a title and a
+  body when typed, and the app's own `context`, passed back untouched.
+- **Context Manager replies `started`,** with a message for the notice, and calls
+  `checkinSettled()` when its job ends. Tasks' shell has it; inventory's marks nothing in
+  flight, and Context Manager sets its state again.
+- **`checkin.words` on the shell's input:** `heading`, `title`, `body`, `confirm` and `cancel`,
+  with `help` and five more that have plain defaults (`busy`, `noFiles`, `noTitle`, `detached`,
+  `nothing`). No `branch` is passed.
+- **Tasks' rows keep Context Manager's labels.** On a stage view the order file and the
+  housekeeping are now under "Pool & config", where Context Manager left them under whichever
+  group came last.
+- **The review's ids are its own for each instance,** so a walk cannot select it by a fixed
+  id. A row has its label in `data-label`.
+- **In an app's review focus goes to the refusal's line** after a refusal: a shell's input is
+  data and cannot carry `refusalField`.
+- **The board's in-flight chip reads "PR…",** which is right for Context Manager.
+
+**Step 4, beside the local host's lock:**
+
+- The local host's server holds each instance's lock (`POST /api/apps/lock`), and a new
+  instance starts locked. Context Manager's is the tab's, as below, and its server holds none.
+- A write is checked for its `path` and for a move's `from`. The refusal is one code,
+  `HOST_SCOPE_LOCKED`, answered 409.
+- "Lock files" with unsaved edits in the open file asks about discarding them first, and the
+  file goes to its preview.
+- A root instance's row says "unlocked" in a chip while it is.
 
 ## Work package
 

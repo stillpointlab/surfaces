@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 132
+completed: 2026-11-20
 created: 2026-11-18T19:25:00-07:00
 tags: [dev-tooling, code]
 ---
