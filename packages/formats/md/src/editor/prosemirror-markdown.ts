@@ -465,7 +465,20 @@ function buildSerializerNodes(): Record<
     },
 
     text(state: MarkdownSerializerState, node: Node) {
-      state.text(node.text || '');
+      if (!bracketsAsTyped) {
+        state.text(node.text || '');
+        return;
+      }
+      // The second writing (see `writeBrackets`): this node's brackets lose the
+      // backslash the first gave them, but for a pair a link could start at.
+      const esc = state.esc;
+      state.esc = (text: string, startOfLine?: boolean) =>
+        unescapeBrackets(esc.call(state, text, startOfLine));
+      try {
+        state.text(node.text || '');
+      } finally {
+        state.esc = esc;
+      }
     },
 
     ...pluginSerializers,
@@ -482,6 +495,73 @@ const serializerMarks = {
     expelEnclosingWhitespace: true,
   },
 };
+
+/**
+ * Set while a document is written a second time with its brackets as typed. The
+ * serializer's state is made inside `serialize`, so the text node's writer reads
+ * this to know which writing it is in.
+ */
+let bracketsAsTyped = false;
+
+const ESCAPED_BRACKET = /\\[[\]]/;
+
+/**
+ * `escaped` (text the serializer has escaped) with the backslash taken off its
+ * square brackets, except a pair that `(`, `[` or `:` follows: written bare,
+ * that one would read back as a link, a reference or a definition. A bracket
+ * with no partner in this text loses its backslash too; `writeBrackets` reads
+ * the result again and so catches what one text node cannot see.
+ */
+export function unescapeBrackets(escaped: string): string {
+  if (!ESCAPED_BRACKET.test(escaped)) return escaped;
+  // One token a character, an escape (`\[`) being one token.
+  const tokens = escaped.match(/\\[\s\S]|[\s\S]/g) ?? [];
+  const keep = new Set<number>();
+  const open: number[] = [];
+  tokens.forEach((token, at) => {
+    if (token === '\\[') open.push(at);
+    if (token !== '\\]') return;
+    const start = open.pop();
+    const next = tokens[at + 1];
+    if (start === undefined || (next !== '(' && next !== '\\[' && next !== ':')) return;
+    keep.add(start);
+    keep.add(at);
+  });
+  return tokens
+    .map((token, at) => ((token === '\\[' || token === '\\]') && !keep.has(at) ? token[1] : token))
+    .join('');
+}
+
+/**
+ * A writer that escapes a square bracket only where it has to. The serializer
+ * puts a backslash before every one, so a task list's `[x]` and a `[word]` in
+ * prose came back as `\[x\]` and `\[word\]`: the same once rendered, but not
+ * the text that was there, and not a checkbox to a renderer that draws them.
+ *
+ * It writes the document the serializer's way, and, when that escaped a
+ * bracket, again with the brackets as typed. The second is used only when it
+ * reads back as the first does, with the document's link definitions present:
+ * a `[name]` that a definition would turn into a link keeps its backslashes.
+ */
+export function writeBrackets(
+  write: (doc: Node) => string,
+  read: (text: string) => Node
+): (doc: Node, definitions?: string) => string {
+  return (doc, definitions = '') => {
+    const escaped = write(doc);
+    if (!ESCAPED_BRACKET.test(escaped)) return escaped;
+    let typed: string;
+    bracketsAsTyped = true;
+    try {
+      typed = write(doc);
+    } finally {
+      bracketsAsTyped = false;
+    }
+    if (typed === escaped) return escaped;
+    const tail = definitions ? `\n\n${definitions}` : '';
+    return read(typed + tail).eq(read(escaped + tail)) ? typed : escaped;
+  };
+}
 
 export interface MarkdownDocSerializer {
   /**
@@ -517,7 +597,10 @@ export function getMarkdownSerializer(): MarkdownDocSerializer {
   if (cachedSerializer) return cachedSerializer;
 
   const serializer = new MarkdownSerializer(buildSerializerNodes(), serializerMarks);
-  const whole = (doc: Node): string => serializer.serialize(doc, { tightLists: true });
+  const whole = writeBrackets(
+    (doc) => serializer.serialize(doc, { tightLists: true }),
+    (text) => getMarkdownParser().parse(text, { frontmatter: false })
+  );
   cachedSerializer = {
     serialize: (content: Node, source?: MarkdownSource | null) => {
       // Serialize the frontmatter block ourselves (byte control the base
@@ -529,7 +612,7 @@ export function getMarkdownSerializer(): MarkdownDocSerializer {
       if (!source) return head + whole(body);
 
       const kept = writeKeepingSource(bodyNodes(body), source, {
-        write: (nodes) => whole(body.copy(Fragment.from(nodes))),
+        write: (nodes) => whole(body.copy(Fragment.from(nodes)), source.definitions),
         read: (text) => bodyNodes(getMarkdownParser().parse(text, { frontmatter: false })),
       });
       return head + (kept ?? writeWhole(whole(body), source));
