@@ -150,8 +150,8 @@ are carried here as they were written.
 - 2026-11-14 (apps-in-the-local-host, step 2): each app's create copy says "repository" (the
   folder help, tasks' root warning), which is Context Manager's word. The local host serves a
   folder.
-  - Moved 2026-11-20 (Jamie: leave the copy for the adoption, and seed it) to the seed [the host's words in an
-    app](../../tasks/unassigned/seeds/the-hosts-words-in-an-app.md).
+  - Moved 2026-11-20 (Jamie: leave the copy for the adoption, and seed it) to the seed
+    [the host's words in an app](../../tasks/unassigned/seeds/the-hosts-words-in-an-app.md).
 - 2026-11-14 (apps-in-the-local-host, step 2): tasks' `read-file` answers any file the port
   reads, not only the instance's.
 - 2026-11-14 (apps-in-the-local-host, step 2): in the md editor, a click in the document and
