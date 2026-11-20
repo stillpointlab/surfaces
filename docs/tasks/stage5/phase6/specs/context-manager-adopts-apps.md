@@ -108,8 +108,8 @@ adopted it still brings:
 - **`meta` has a light entry in each package** (`./meta`, no zod), for `CLIENT_APPS`.
   `meta.create.noun` is the noun with its article ("an inventory", "a task project"), which is
   the server registry's. The client registry's other noun, for its "… created" notice
-  ("Inventory", "Task project"), has no member in `AppMeta`; the follow-up log has it.
-  `folderHelp` is plain text, so tasks' loses its `<code>` around `tasks.yaml`.
+  ("Inventory", "Task project"), is `meta.create.subject` since 2026-11-20. `folderHelp` is
+  plain text, so tasks' loses its `<code>` around `tasks.yaml`.
 - **Not Context Manager's to call:** `fromChanges`, the runner, the storage port and
   `hostRefusalClass`. Its facts come from its own services.
 

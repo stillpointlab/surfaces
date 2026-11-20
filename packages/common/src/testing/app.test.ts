@@ -508,6 +508,13 @@ describe('the module checks fail on a broken module', () => {
     expect(() => assertMeta(withModule({ meta: { label: 'KV', icon: ' ' } }))).toThrow(/meta.icon/);
   });
 
+  it('an empty subject for a create', () => {
+    const create = { noun: 'a kv folder', subject: ' ', defaultFolder: 'kv' };
+    expect(() => assertMeta(withModule({ meta: { label: 'KV', icon: 'file', create } }))).toThrow(
+      /meta.create.subject/
+    );
+  });
+
   it('bounds that accept an over-long field', () => {
     const lax = withModule({
       bounds: { ...kvBounds, op: (input: unknown) => ok({ op: input as never }) },

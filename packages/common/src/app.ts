@@ -196,6 +196,11 @@ export interface AppMeta {
   create?: {
     /** The app as a sentence names one: "This repository already has an inventory at …". */
     noun: string;
+    /**
+     * One of them at the head of a sentence, for a host's notice after a create:
+     * "Inventory created", "Task project created". Absent: a host uses `label`.
+     */
+    subject?: string;
     /** The folder a create form fills in. */
     defaultFolder: string;
     /** The folder rule's example: `“inventory” or “home/inventory”`. */

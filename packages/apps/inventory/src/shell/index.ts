@@ -6,11 +6,7 @@
 export { InventoryApp, NAVIGATE_EVENT } from './inventory-app.js';
 export type { InventoryNavigate } from './inventory-app.js';
 export type { InventoryExports } from './links.js';
-export {
-  CHECKIN_REQUEST_EVENT,
-  NOTIFICATION_EVENT,
-  RELOAD_REQUEST_EVENT,
-} from '../element/types.js';
+export { NOTIFICATION_EVENT, RELOAD_REQUEST_EVENT } from '../element/types.js';
 export type {
   InventoryNotification,
   InventoryNotificationType,
