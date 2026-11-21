@@ -75,6 +75,10 @@ describe('the buttons', () => {
     expect(undoButton().disabled).toBe(true);
     expect(redoButton().disabled).toBe(true);
     expect(undoButton().title).toBe(words.journal.nothingToUndo);
+    // Their faces are the icon element's, not a glyph of the system's font.
+    expect(undoButton().querySelector('spl-icon')!.getAttribute('icon-name')).toBe('undo');
+    expect(redoButton().querySelector('spl-icon')!.getAttribute('icon-name')).toBe('redo');
+    expect(undoButton().textContent).toBe('');
 
     await explorerWrite([{ kind: 'create', path: 'new.md', content: '' }]);
     expect(undoButton().disabled).toBe(false);
@@ -101,11 +105,11 @@ describe('the buttons', () => {
     await explorerWrite([{ kind: 'delete', path: 'a.md' }]);
     host.refuseNextStep = {
       code: 'HOST_UNDO_CONFLICT',
-      message: '“Step 1” cannot be undone: "a.md" changed since. Nothing was written.',
+      message: '"Step 1" cannot be undone: "a.md" changed since. Nothing was written.',
       path: 'a.md',
     };
     expect(await page.undo()).toBe(false);
-    expect(notice()).toBe('“Step 1” cannot be undone: "a.md" changed since. Nothing was written.');
+    expect(notice()).toBe('"Step 1" cannot be undone: "a.md" changed since. Nothing was written.');
     expect($('.page-notice').dataset.tone).toBe('error');
     expect(undoButton().disabled).toBe(false);
   });
@@ -221,6 +225,22 @@ describe('the keys', () => {
     await settle();
     expect(host.disk.has('new.md')).toBe(false);
     key(document.body, { ctrlKey: true, shiftKey: true, key: 'Я', code: 'KeyZ' });
+    await settle();
+    expect(host.disk.has('new.md')).toBe(true);
+  });
+
+  it('Ctrl+Y redoes, and Ctrl+Shift+Y is not the page’s', async () => {
+    await start();
+    await explorerWrite([{ kind: 'create', path: 'new.md', content: '' }]);
+    key(document.body, { ctrlKey: true });
+    await settle();
+    expect(host.disk.has('new.md')).toBe(false);
+    const shifted = key(document.body, { ctrlKey: true, shiftKey: true, key: 'Y', code: 'KeyY' });
+    await settle();
+    expect(shifted.defaultPrevented).toBe(false);
+    expect(host.disk.has('new.md')).toBe(false);
+    const redo = key(document.body, { ctrlKey: true, key: 'y', code: 'KeyY' });
+    expect(redo.defaultPrevented).toBe(true);
     await settle();
     expect(host.disk.has('new.md')).toBe(true);
   });

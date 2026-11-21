@@ -12,6 +12,7 @@ import type {
   AppLockAnswer,
   AppOpAnswer,
   AppPageAnswer,
+  CannotUndoNotice,
   FoundInstance,
   HostClient,
   JournalMove,
@@ -108,7 +109,10 @@ export interface FakeHost extends HostClient {
   /** The creates asked for, in order. */
   readonly creates: { app: string; folder: string; confirmRoot?: boolean; input: unknown }[];
   /** How `appCreate` answers; by default the instance is added, locked, and said so. */
-  createAnswer?: (request: { app: string; folder: string }) => Result<{ manifestPath: string }>;
+  createAnswer?: (request: {
+    app: string;
+    folder: string;
+  }) => Result<{ manifestPath: string; notice?: CannotUndoNotice }>;
 }
 
 /** A step the fake keeps: what undo and redo write. */

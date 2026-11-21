@@ -340,6 +340,16 @@ describe('a file changed since the step', () => {
     expect(port.files()).toEqual({ 'a.md': 'new' });
   });
 
+  it('words a conflict with the step and the path quoted alike', async () => {
+    const { port, journal } = setUp({ 'a.md': 'a' });
+    await journal.port('Delete a.md').put([{ kind: 'delete', path: 'a.md' }]);
+    await port.put([{ kind: 'create', path: 'a.md', content: 'new' }]);
+    const answer = await journal.undo();
+    expect(answer.ok || answer.message).toBe(
+      '"Delete a.md" cannot be undone: there is a file at "a.md" now. Nothing was written.'
+    );
+  });
+
   it('refuses the redo when the undone file changed, and keeps it', async () => {
     const { port, journal } = setUp({ 'a.md': 'a' });
     await journal.port('W').put([{ kind: 'write', path: 'a.md', content: 'A' }]);
@@ -397,6 +407,44 @@ describe('the index', () => {
     ]);
     await journal.undo();
     expect(restored).toEqual([[{ mode: '100644', oid: 'aaa', stage: '0', path: 'a.md' }]]);
+  });
+
+  it('runs a task between steps: one asked during an undo waits for the index to be put back', async () => {
+    const { index, restored } = fakeIndex({ 'a.md': 'aaa' });
+    // The index takes a moment to put back, as git does.
+    let release: () => void = () => {};
+    const held = new Promise<void>((go) => (release = go));
+    const restore = index.restore;
+    index.restore = async (back) => {
+      await held;
+      await restore(back);
+    };
+    const { journal } = setUp({ 'a.md': 'a' }, { index });
+    await journal.port('D').put([{ kind: 'delete', path: 'a.md' }]);
+
+    const undone = journal.undo();
+    // A commit, asked while the undo has written the file and not yet staged it.
+    let ran: string | null = null;
+    const committed = journal.exclusive(async () => {
+      ran = `the commit ran with ${restored.length} put back`;
+    });
+    await new Promise((done) => setTimeout(done, 20));
+    expect(ran).toBeNull();
+    release();
+    await Promise.all([undone, committed]);
+    expect(ran).toBe('the commit ran with 1 put back');
+  });
+
+  it('a task that throws does not hold the next step', async () => {
+    const { journal } = setUp({ 'a.md': 'a' });
+    await expect(
+      journal.exclusive(async () => {
+        throw new Error('no');
+      })
+    ).rejects.toThrow('no');
+    expect((await journal.port('W').put([{ kind: 'write', path: 'a.md', content: 'A' }])).ok).toBe(
+      true
+    );
   });
 
   it('a move keeps no entries: the port moves them', async () => {

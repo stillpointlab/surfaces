@@ -57,11 +57,12 @@ modal-dialog:not(:defined) {
 // the title and the name. Square, so the folder's name keeps its room.
 .explorer-undo,
 .explorer-redo {
+  display: inline-flex;
   flex: none;
+  align-items: center;
+  justify-content: center;
   min-width: 2rem;
   padding-inline: $spacing-xs;
-  font-size: 1.125rem;
-  line-height: 1;
 }
 
 // The Commit button and the number of changed files on it.

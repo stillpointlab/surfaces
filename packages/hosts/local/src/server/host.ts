@@ -374,7 +374,9 @@ export function createHost(options: HostOptions): LocalHost {
           return refuse('HOST_BAD_REQUEST', 'The body is not JSON.', 400);
         }
         // The port checks the body's shape: a request may come from anywhere.
-        const answer = await port.commit(parsed as HostCommitRequest);
+        // Between the journal's steps: an undo writes and then puts git's index
+        // back, and a commit must not land between the two.
+        const answer = await journal.exclusive(() => port.commit(parsed as HostCommitRequest));
         // `HEAD` moved: what the apps kept of the last commit's texts is stale
         // now, not when the watch on `HEAD` says so a moment later.
         if (answer.ok) apps.statusMoved();

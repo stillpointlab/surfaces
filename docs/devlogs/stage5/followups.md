@@ -329,14 +329,29 @@ are carried here as they were written.
     open, and when the shell asks for its page again. Never outside a repository.
 - 2026-11-15 (undo-journal): the Undo and Redo buttons are the glyphs ↶ and ↷, which depend on
   the system's font. Two icons in `<spl-icon>` would be steadier.
+  - Closed 2026-11-21 (Jamie: fix, and a seed to review how icons are made; [#157](https://github.com/stillpointlab/surfaces/pull/157)): `<spl-icon>`
+    has `undo` and `redo`, and the two buttons show them. The seed is
+    [how the icons are made](../../tasks/unassigned/seeds/how-the-icons-are-made.md).
 - 2026-11-15 (undo-journal): after a create is undone while that app is open, the pane says
   there is no app at the address. It could go to the folder.
+  - Closed 2026-11-21 (Jamie: fix; [#157](https://github.com/stillpointlab/surfaces/pull/157)): an undo that takes the open app away shows nothing
+    open, with the notice saying what was undone. The folder usually goes with the app. A create
+    already opened the new app's page with its row selected, as Jamie asked; a test says so now.
 - 2026-11-15 (undo-journal): an undo's write and the putting back of the index take the port's
   write lock one after the other, so a commit could land between them.
+  - Closed 2026-11-21 (Jamie: fix; [#157](https://github.com/stillpointlab/surfaces/pull/157)): a commit runs between the journal's steps
+    (`journal.exclusive`), so it waits for an undo's write and its index together.
 - 2026-11-15 (undo-journal): the create dialog does not show a create's "cannot be undone"
   notice. Ctrl+Y is not a redo. A conflict's message quotes its label and its path two ways.
+  - Closed 2026-11-21 (Jamie: fix all three, best effort on the first; [#157](https://github.com/stillpointlab/surfaces/pull/157)): the page shows the
+    host's notice for a create written with no step, as it does for an op (a create only makes
+    new text files, so today's two apps cannot cause it); Ctrl+Y redoes where Ctrl is the key;
+    a conflict quotes the step and the path alike, `"Delete a.md" cannot be undone: …`.
 - 2026-11-15 (undo-journal): the page knows an editor's keys from the file pane alone. An
   editor anywhere else would need the same care.
+  - Closed 2026-11-21 (Jamie: by design; apps have their own pages and controls, and anything
+    more is dealt with when it comes up). Ctrl+Z in a text field, a text area or an editable
+    region anywhere on the page is already that field's.
 - 2026-11-15 (undo-journal): on the board's stage view a phase with no card takes no drop.
 - 2026-11-20 (phase 7, the dialog's Tab fix): two of the local host's tests (`port.test.ts`,
   `git/repository.test.ts`) take a fresh folder under the system's temporary directory for "not a

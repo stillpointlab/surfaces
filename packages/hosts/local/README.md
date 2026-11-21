@@ -267,8 +267,13 @@ memory port.
   is written, and the answer carries `notice: { kind: 'cannot-undo', reason }`. Either way the
   journal empties. A rename of an image carries no text, and is kept, as a rename of a link is.
 - **Limits:** 1,000 steps and 256 MiB of kept text (`limits.ts`); past either, the oldest go.
-- **The page:** Undo and Redo in the explorer's header, with the step's label as the title;
-  Ctrl+Z and Ctrl+Shift+Z (Cmd on a Mac) when focus is in no editor, text field, dialog or menu.
+- **A commit runs between steps** (`journal.exclusive`): an undo writes its files and then puts
+  git's index back, and a commit asked meanwhile waits for both.
+- **The page:** Undo and Redo in the explorer's header (`<spl-icon>`'s `undo` and `redo`), with
+  the step's label as the title; Ctrl+Z and Ctrl+Shift+Z (Cmd on a Mac), and Ctrl+Y for redo
+  where Ctrl is the key, when focus is in no editor, text field, dialog or menu. An undo that
+  takes the open app away (its create) shows nothing open. A create the host wrote with no
+  step says so in the notice, as an app's op does.
   On a layout with no Latin letters (Russian, Greek) the keys are the physical Z, and S for
   Save, as the browser's own shortcuts are. The labels are read again when the event stream
   reconnects, since a server that restarted has no steps.

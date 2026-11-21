@@ -223,10 +223,10 @@ export const words = {
 
   /** Undo and Redo: the explorer header's buttons, the keys, and what they say after. */
   journal: {
-    /** The buttons' faces: a glyph each, so the folder's name keeps its room. Their names are their titles. */
-    undo: '↶',
-    redo: '↷',
-    /** The buttons' titles: the spec's "Undo: Delete notes.md". */
+    /**
+     * The buttons' titles and names: the spec's "Undo: Delete notes.md". Their
+     * faces are `<spl-icon>`'s `undo` and `redo`, so the folder's name keeps its room.
+     */
     undoTitle: (label: string) => `Undo: ${label}`,
     redoTitle: (label: string) => `Redo: ${label}`,
     nothingToUndo: 'Nothing to undo',

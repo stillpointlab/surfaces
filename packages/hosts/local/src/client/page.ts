@@ -204,7 +204,7 @@ export function startPage(options: PageOptions): HostPage {
 
   render(
     host,
-    html`<div class="host-page"><nav class="explorer" aria-label="${words.explorer}"><header class="explorer-header"><span class="explorer-name"></span><button type="button" class="button explorer-undo" data-step="undo" disabled>${words.journal.undo}</button><button type="button" class="button explorer-redo" data-step="redo" disabled>${words.journal.redo}</button><button type="button" class="button explorer-commit" hidden>${words.commit.button}<span class="explorer-commit-count"></span><spl-icon class="explorer-commit-spinner" icon-name="spinner" data-size="small" data-padding="none" aria-hidden="true"></spl-icon></button></header><div class="page-notice" role="status"></div><p class="explorer-note" hidden></p><div class="app-roots" role="group" aria-label="${words.apps.rootRows}" hidden></div><host-file-tree></host-file-tree></nav><main class="pane"><div class="file-pane"></div><div class="app-pane" hidden></div></main></div>`
+    html`<div class="host-page"><nav class="explorer" aria-label="${words.explorer}"><header class="explorer-header"><span class="explorer-name"></span><button type="button" class="button explorer-undo" data-step="undo" disabled><spl-icon icon-name="undo" data-size="small" data-padding="none" aria-hidden="true"></spl-icon></button><button type="button" class="button explorer-redo" data-step="redo" disabled><spl-icon icon-name="redo" data-size="small" data-padding="none" aria-hidden="true"></spl-icon></button><button type="button" class="button explorer-commit" hidden>${words.commit.button}<span class="explorer-commit-count"></span><spl-icon class="explorer-commit-spinner" icon-name="spinner" data-size="small" data-padding="none" aria-hidden="true"></spl-icon></button></header><div class="page-notice" role="status"></div><p class="explorer-note" hidden></p><div class="app-roots" role="group" aria-label="${words.apps.rootRows}" hidden></div><host-file-tree></host-file-tree></nav><main class="pane"><div class="file-pane"></div><div class="app-pane" hidden></div></main></div>`
   );
   const tree = host.querySelector('host-file-tree') as HostFileTree;
   const rootName = host.querySelector<HTMLElement>('.explorer-name')!;
@@ -340,6 +340,7 @@ export function startPage(options: PageOptions): HostPage {
     if (stepping) return stepping.then(() => step(which));
     stepping = (async () => {
       const before = pane.current;
+      const openApp = showing === 'app' ? (appPane.current?.manifestPath ?? null) : null;
       const answer = await pane.followWrite(
         which === 'undo' ? client.undo() : client.redo(),
         (path, done) => {
@@ -361,6 +362,12 @@ export function startPage(options: PageOptions): HostPage {
       if (showing === 'file' && before && now?.path !== before.path) writeAddress(now, 'replace');
       showNotice({ text: words.journal.done(which, answer.label), tone: 'info' });
       await Promise.all([refresh(), readJournal()]);
+      // The step took the open app away (its create, undone): nothing is open
+      // now, and the notice says what was undone. An app that went some other
+      // way keeps its address, and its pane says there is no app there.
+      if (openApp !== null && showing === 'app' && !instanceAt(openApp)) {
+        await navigate(null, 'replace');
+      }
       return true;
     })().finally(() => {
       stepping = null;
@@ -872,8 +879,13 @@ export function startPage(options: PageOptions): HostPage {
     const create = app?.meta.create;
     if (!app || !create) return null;
     const start = folder === '' ? create.defaultFolder : `${folder}/${create.defaultFolder}`;
-    const manifestPath = await createDialog.open(appId, app, start);
-    if (manifestPath === null) return null;
+    const created = await createDialog.open(appId, app, start);
+    if (created === null) return null;
+    const { manifestPath } = created;
+    // Written, but with no step: say it cannot be undone, as for an app's op.
+    if (created.notice?.kind === 'cannot-undo') {
+      showNotice({ text: words.journal.opCannotUndo(created.notice.reason), tone: 'warning' });
+    }
     await refresh();
     await navigate(appAddress(manifestPath));
     const instance = instanceAt(manifestPath);
@@ -987,10 +999,14 @@ export function startPage(options: PageOptions): HostPage {
       'keydown',
       (event) => {
         const mod = IS_MAC ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
-        if (!mod || event.altKey || shortcutLetter(event) !== 'z') return;
+        if (!mod || event.altKey) return;
+        const letter = shortcutLetter(event);
+        // Ctrl+Y is redo too, where Ctrl is the key: on a Mac, Cmd+Y is the browser's.
+        const redoKey = letter === 'y' && !IS_MAC && !event.shiftKey;
+        if (letter !== 'z' && !redoKey) return;
         if (!keyIsThePage(event)) return;
         event.preventDefault();
-        void step(event.shiftKey ? 'redo' : 'undo');
+        void step(redoKey || event.shiftKey ? 'redo' : 'undo');
       },
       { signal }
     );

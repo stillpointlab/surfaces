@@ -18,7 +18,7 @@ import { html, render } from '@stillpointlab/common-format/html';
 
 import { words } from '../words';
 
-import type { HostClient } from '../host-client';
+import type { CannotUndoNotice, HostClient } from '../host-client';
 import type { ClientApp } from './registry';
 import type { Result } from '@stillpointlab/common-format/app';
 import type { ModalDialog } from '@stillpointlab/modal-dialog-component';
@@ -32,6 +32,12 @@ interface CreateForm extends HTMLElement {
 const FOLDER_ID = 'app-create-folder';
 const ERROR_ID = 'app-create-error';
 const CONSENT_ID = 'app-create-consent';
+
+/** What a create made: the new manifest's path, and the host's word when it kept no undo step. */
+export interface CreatedApp {
+  manifestPath: string;
+  notice?: CannotUndoNotice;
+}
 
 /** Why a folder cannot be created in, or `null`. The server checks again. */
 export function createFolderProblem(folder: string): string | null {
@@ -67,9 +73,10 @@ export class CreateDialog {
 
   /**
    * Ask for a new instance of `appId` in a folder, starting at `folder`. Answers
-   * the new manifest's path once it is created, or `null` when cancelled.
+   * the new manifest's path once it is created, with the host's notice when the
+   * create was written with no undo step, or `null` when cancelled.
    */
-  async open(appId: string, app: ClientApp, folder: string): Promise<string | null> {
+  async open(appId: string, app: ClientApp, folder: string): Promise<CreatedApp | null> {
     const create = app.meta.create;
     if (!create || !app.create || this.asking) return null;
     this.asking = true;
@@ -122,7 +129,7 @@ export class CreateDialog {
     };
 
     return new Promise((resolve) => {
-      let made: string | null = null;
+      let made: CreatedApp | null = null;
       let form: CreateForm | null = null;
       let stopOps: (() => void) | null = null;
       const listening = new AbortController();
@@ -208,7 +215,10 @@ export class CreateDialog {
           }
           const answer = await this.client.appCreate({ app: appId, ...at, input: op.input });
           if (answer.ok) {
-            made = answer.manifestPath;
+            made = {
+              manifestPath: answer.manifestPath,
+              ...(answer.notice ? { notice: answer.notice } : {}),
+            };
             dialog.close();
           }
           return answer;

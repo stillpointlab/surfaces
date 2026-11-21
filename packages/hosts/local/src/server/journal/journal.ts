@@ -121,6 +121,13 @@ export interface Journal {
   steps(): { undo: readonly JournalStep[]; redo: readonly JournalStep[] };
   /** Drop every step. */
   clear(): void;
+  /**
+   * Run `task` between steps: after every step, undo and redo asked before it
+   * has finished, and before any asked after. A commit runs here, so it never
+   * lands between an undo's write and the putting back of git's index, which
+   * take the port's own lock one after the other.
+   */
+  exclusive<T>(task: () => Promise<T>): Promise<T>;
 }
 
 export interface JournalOptions {
@@ -539,8 +546,8 @@ export function createJournal(options: JournalOptions): Journal {
       ...fail(
         'HOST_UNDO_CONFLICT',
         path === undefined
-          ? `“${label}” cannot be ${verb}: a file it touches changed since. Nothing was written.`
-          : `“${label}” cannot be ${verb}: ${why}. Nothing was written.`
+          ? `${JSON.stringify(label)} cannot be ${verb}: a file it touches changed since. Nothing was written.`
+          : `${JSON.stringify(label)} cannot be ${verb}: ${why}. Nothing was written.`
       ),
       ...(path === undefined ? {} : { path }),
     };
@@ -616,5 +623,6 @@ export function createJournal(options: JournalOptions): Journal {
     }),
     steps: () => ({ undo: [...done], redo: undone.map((entry) => entry.step) }),
     clear,
+    exclusive,
   };
 }
