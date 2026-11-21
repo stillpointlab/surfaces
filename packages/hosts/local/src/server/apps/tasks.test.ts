@@ -154,8 +154,21 @@ describe('tasks’ host ops, answered before the runner', () => {
       ok: true,
       reply: { content: LOGIN },
     });
-    const missing = await op({ op: { type: 'read-file', path: 'nowhere.md' } });
+    const missing = await op({ op: { type: 'read-file', path: `${PHASE1}/specs/nowhere.md` } });
     expect(missing).toMatchObject({ status: 409, ok: false, code: 'HOST_FILE_NOT_FOUND' });
+  });
+
+  it('read-file refuses a file that is not the instance’s, though the folder holds it', async () => {
+    // The port reads it; the app does not.
+    expect((await request('/api/file?path=README.md')).status).toBe(200);
+    for (const path of ['README.md', 'docs/tasksx/a.md', '../outside.md']) {
+      expect(await op({ op: { type: 'read-file', path } })).toEqual({
+        status: 400,
+        ok: false,
+        code: 'APP_OP_INVALID',
+        message: `The op is not valid: path: ${JSON.stringify(path)} is not one of this app's files.`,
+      });
+    }
   });
 
   it('scan-references answers the files that link to a card at a path it left', async () => {
@@ -198,6 +211,22 @@ describe('tasks’ facts on a real repository', () => {
       versionColumn: 'todo',
     });
     expect(readFileSync(join(root, CARD), 'utf8')).toContain('column: in-progress');
+  });
+
+  it('compares with the new commit as soon as the host’s own commit lands', async () => {
+    const view = { type: 'board', path: PHASE1 };
+    const moved = await op({ op: { type: 'move', path: CARD, column: 'in-progress' }, view });
+    expect(cardOf(moved)).toMatchObject({ dirty: true, versionColumn: 'todo' });
+    const committed = await post('/api/commit', { paths: [CARD], message: 'Start the login card' });
+    expect(committed.status).toBe(200);
+    // Changed again at once, with no wait for the watch on `HEAD`: the column it
+    // came from is the new commit's, not the one kept from before it.
+    const again = await op({ op: { type: 'move', path: CARD, column: 'done' }, view });
+    expect(cardOf(again)).toMatchObject({
+      column: 'done',
+      dirty: true,
+      versionColumn: 'in-progress',
+    });
   });
 
   it('says where a card moved to another phase came from, and git sees a rename', async () => {

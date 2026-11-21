@@ -4,7 +4,8 @@
 // `know`, one function for every app.
 //
 // A base is read once (`port.git.base`) and kept until git's `HEAD` or index
-// moves (`forget`, on the watcher's `status`), so an op does not read it twice.
+// moves (`forget`: on the watcher's `status`, and at once when the host's own
+// commit lands), so an op does not read it twice.
 // A file whose base cannot be read as text goes without. Outside a repository
 // nothing is changed, new or moved.
 

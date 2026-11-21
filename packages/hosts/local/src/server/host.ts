@@ -375,6 +375,9 @@ export function createHost(options: HostOptions): LocalHost {
         }
         // The port checks the body's shape: a request may come from anywhere.
         const answer = await port.commit(parsed as HostCommitRequest);
+        // `HEAD` moved: what the apps kept of the last commit's texts is stale
+        // now, not when the watch on `HEAD` says so a moment later.
+        if (answer.ok) apps.statusMoved();
         return answer.ok ? json(answer) : refusal(answer);
       },
     },

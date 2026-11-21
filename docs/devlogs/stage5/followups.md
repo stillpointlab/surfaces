@@ -229,11 +229,19 @@ are carried here as they were written.
 - 2026-11-14 (apps-in-the-local-host, step 1): discovery lists the folder on every write and
   every app route. Keeping the answer until the watcher reports a change would save it once
   folders are large.
+  - Moved 2026-11-21 (Jamie: it is speed, so a seed; [#155](https://github.com/stillpointlab/surfaces/pull/155)) to the seed
+    [the local host keeps its listing](../../tasks/unassigned/seeds/the-local-host-keeps-its-listing.md).
 - 2026-11-14 (apps-in-the-local-host, step 1): the kept base texts are dropped when the watch
   on git's `HEAD` fires, about 100 ms after a commit. A file changed again inside that window
   could be compared with the old base.
+  - Closed 2026-11-21 (Jamie: fix; [#155](https://github.com/stillpointlab/surfaces/pull/155)): the host's own commit drops them as it lands. A commit
+    made outside the host keeps the window, until the watch fires.
 - 2026-11-14 (apps-in-the-local-host, step 1): an instance nested inside another is reported
   invalid with it, and its row is hidden by the outer one's lock until that is unlocked.
+  - Closed 2026-11-21 (Jamie: by design, as long as the error is reported and a person can unlock
+    and fix it). Checked in Chromium against the built host: the outer app's page names the inner
+    manifest in its error and offers "Show files…"; shown, the inner one has its row, its files
+    can be shown too, and deleting its manifest from the tree makes the outer app valid again.
 - 2026-11-14 (apps-in-the-local-host, step 1): a root instance's row shows a dot for changes
   and no status letter. An instance whose app the page has no shell for still gets a row.
 - 2026-11-14 (apps-in-the-local-host, step 2): a card moved to another phase has `movedFrom` in
@@ -246,6 +254,8 @@ are carried here as they were written.
     [the host's words in an app](../../tasks/unassigned/seeds/the-hosts-words-in-an-app.md).
 - 2026-11-14 (apps-in-the-local-host, step 2): tasks' `read-file` answers any file the port
   reads, not only the instance's.
+  - Closed 2026-11-21 (Jamie: fix, an app deals only with the files it holds; [#155](https://github.com/stillpointlab/surfaces/pull/155)): `read-file`
+    refuses a path outside the instance's region with `APP_OP_INVALID`.
 - 2026-11-14 (apps-in-the-local-host, step 2): in the md editor, a click in the document and
   Control+End put the cursor in the frontmatter block, and typing added a line there.
   - Closed 2026-11-20 (Jamie: could not reproduce is fine). Tried in Chromium against the built
