@@ -26,6 +26,7 @@
 # live here, found in that repository. The dialog's Tab trap was the second, and
 # is fixed.
 - docs/tasks/unassigned/seeds/brackets-escaped-in-a-changed-block.md
+- docs/tasks/unassigned/seeds/checkin-review-length-limits.md
 
 # From stage 4's follow-ups (2026-11-14).
 - docs/tasks/unassigned/seeds/a-save-keeps-the-file.md
