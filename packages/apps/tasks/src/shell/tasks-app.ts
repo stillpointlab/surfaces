@@ -11,8 +11,8 @@
  * What it does itself: Refresh asks the host `refresh`, then reads the nav and
  * the view again with `project`; after a dialog's change (`edit-manifest`,
  * `create-card`, `set-title`, `set-tags`) it reads the board again; a pool
- * reorder is sent with the view on screen (`opView`); and the two host ops
- * that only read a view, `refresh-stage` and `close-candidates`, are its own,
+ * reorder is sent with the view on screen (`opView`); and the two ops that
+ * only read a view, `refresh-stage` and `close-candidates`, are its own,
  * answered through `project`, so they never reach the host.
  *
  * Check-in is the shell's too: it holds one `<checkin-review>`, takes the
@@ -45,6 +45,8 @@ import {
 } from '@stillpointlab/common-format/app';
 import { defineElement } from '@stillpointlab/common-format/elements';
 import { html, render } from '@stillpointlab/common-format/html';
+
+import { TASKS_SHELL_OPS } from '../elementOps.js';
 
 import {
   checkinContextOf,
@@ -98,8 +100,8 @@ const READS_THE_BOARD_AGAIN: ReadonlySet<string> = new Set([
   'set-tags',
 ]);
 
-/** The elements' host ops the shell answers itself, through `project`. */
-const CLAIMED_OPS: ReadonlySet<string> = new Set(['refresh-stage', 'close-candidates']);
+/** The elements' ops the shell answers itself, through `project`. */
+const CLAIMED_OPS: ReadonlySet<string> = new Set(TASKS_SHELL_OPS);
 
 /** The board's request to check in what changed; it stops at the shell. */
 const CHECKIN_REQUEST_EVENT = 'checkin-request';

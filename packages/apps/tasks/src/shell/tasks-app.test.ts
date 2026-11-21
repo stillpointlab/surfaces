@@ -18,6 +18,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import './index.js';
 import { tasksCore } from '../core.js';
+import { TASKS_SHELL_OPS } from '../elementOps.js';
 import { tasksModule } from '../module.js';
 import { tasksPages } from '../pages.js';
 
@@ -467,7 +468,7 @@ describe('<spl-tasks-app> learn and opView', () => {
     const stage = mountShell(stageInput());
     expect(stage.opView({ type: 'reorder-pool' })).toEqual({ type: 'stage', stage: 1 });
     expect(mountShell(emptyInput()).opView({ type: 'reorder-pool' })).toBeUndefined();
-    for (const type of [...tasksModule.coreOps, ...tasksModule.hostOps]) {
+    for (const type of [...tasksModule.coreOps, ...tasksModule.hostOps, ...TASKS_SHELL_OPS]) {
       if (type !== 'reorder-pool') expect(board.opView({ type })).toBeUndefined();
     }
   });

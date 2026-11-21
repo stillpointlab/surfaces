@@ -101,6 +101,9 @@ are carried here as they were written.
   adopted the pages.
   - Carried 2026-11-20 (Jamie) to phase 7,
     [drain-followups](../../tasks/stage5/phase7/specs/drain-followups.md), after the adoption.
+  - Closed 2026-11-20 ([#148](https://github.com/stillpointlab/surfaces/pull/148)): a segment
+    that is not a positive whole number in digits alone is not found. Context Manager takes it
+    with its next pin.
 - 2026-11-14 (app-module-grows, step 2): the `add-kind` bound carries a reserved-folder check
   from Context Manager that can never be true.
   - Closed 2026-11-20 ([#137](https://github.com/stillpointlab/surfaces/pull/137)): the
@@ -150,6 +153,8 @@ are carried here as they were written.
   `close-candidates`, which a shell answers itself. Drop them once every host mounts the shell.
   - Carried 2026-11-20 (Jamie) to phase 7,
     [drain-followups](../../tasks/stage5/phase7/specs/drain-followups.md), after the adoption.
+  - Closed 2026-11-20 ([#148](https://github.com/stillpointlab/surfaces/pull/148)): the module
+    names three host ops, and `TASKS_SHELL_OPS` names the shell's two.
 - 2026-11-14 (app-shells, step 2): tasks' build has no splitting either, so `./shell` carries
   its own copy of the board and the strip (as inventory's, above).
   - Closed 2026-11-20 ([#136](https://github.com/stillpointlab/surfaces/pull/136)), with

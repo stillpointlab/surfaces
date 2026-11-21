@@ -140,10 +140,11 @@ move, laid on through the op's `snapshot`.
 `findTaskCard(tasks, path)` is a card's kind and where it sits, for a host that needs them.
 
 **The module.** `tasksModule` is the app as a host runs it (`AppModule`): the twelve ops above are
-the core's, and the host answers `resolve`, `scan-references`, `read-file`, `refresh-stage` and
-`close-candidates` itself. Its replies are what the board and the strip settle on: a card for a
-move or a new card, the pool of the view on screen for a reorder, the stage and phase for a new
-one. `create-card` is stamped with the host's time. Refusals keep the statuses Context Manager's
+the core's, and the host answers `resolve`, `scan-references` and `read-file` itself. Two more,
+`refresh-stage` and `close-candidates` (`TASKS_SHELL_OPS`), are the shell's. Its replies are what
+the board and the strip settle on: a card for a move or a new card, the pool of the view on screen
+for a reorder, the stage and phase for a new one. `create-card` is stamped with the host's time.
+Refusals keep the statuses Context Manager's
 endpoints send. The op maps both elements ask with (`TaskBoardOps`, `TasksNavOps`) live in
 `elementOps.ts`, DOM-free, and the element entry re-exports them.
 

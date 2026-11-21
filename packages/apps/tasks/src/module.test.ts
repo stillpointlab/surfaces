@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { planTasksCreate } from './create.js';
+import { TASKS_SHELL_OPS } from './elementOps.js';
 import { tasksModule } from './module.js';
 
 import type { TasksElementOps } from './module.js';
@@ -88,8 +89,8 @@ function run(op: AppOp<TasksElementOps>, view = { type: 'board' as const, path: 
 }
 
 describe('tasksModule', () => {
-  it('names every element op once, as the core’s or the host’s', () => {
-    const named = [...tasksModule.coreOps, ...tasksModule.hostOps];
+  it('names every element op once, as the core’s, the host’s or the shell’s', () => {
+    const named = [...tasksModule.coreOps, ...tasksModule.hostOps, ...TASKS_SHELL_OPS];
     expect([...named].sort()).toEqual(Object.keys(ELEMENT_OPS).sort());
     expect(new Set(named).size).toBe(named.length);
   });

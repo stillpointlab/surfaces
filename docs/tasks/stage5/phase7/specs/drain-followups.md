@@ -46,9 +46,13 @@ touch what Context Manager adopts were ruled on first, so that its pin moves onc
 1. **`tasksModule.hostOps` names two ops a shell answers itself,** `refresh-stage` and
    `close-candidates`. Drop them once Context Manager mounts the shell, which the adoption's
    first pull request does. The bare elements' fixtures in the harness answer them by hand
-   today and need another way.
+   today and need another way. _Done ([#148](https://github.com/stillpointlab/surfaces/pull/148)):
+   `TASKS_SHELL_OPS` names the two. The fixtures answer them by hand still, which never read
+   the module's list, so they needed no other way._
 2. **Tasks' pages read a stage or phase with `parseInt`,** so `/stage/3x` opens stage 3. Tighten
-   it once Context Manager serves the module's pages, so the two hosts change together.
+   it once Context Manager serves the module's pages, so the two hosts change together. _Done
+   ([#148](https://github.com/stillpointlab/surfaces/pull/148)): digits alone, with no leading
+   zero._
 3. **Two copies of each app's bounds, pages and copy,** here and in Context Manager. The
    adoption's step 1 deletes Context Manager's; the two entries close when it merges.
 4. **The other 58 entries,** in batches. None changes what Context Manager adopts. By where they

@@ -78,7 +78,7 @@ describe('tasksBounds.op: each limit at its edge', () => {
     expect(refused.ok ? '' : refused.message).toMatch(/^The op is not valid: title: /);
   });
 
-  it('refuses the host’s ops, an unknown type and a non-object', () => {
+  it('refuses the host’s ops, the shell’s, an unknown type and a non-object', () => {
     for (const type of ['resolve', 'scan-references', 'read-file', 'refresh-stage']) {
       expect(opOk({ type, path: CARD }), type).toBe(false);
     }
