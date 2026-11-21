@@ -19,6 +19,10 @@ are carried here as they were written.
 - 2026-11-14 (format-descriptors): `<image-preview>` reports a failed load twice when `alt` and
   `src` change together: a stale `load` from the previous image renders over the new source. The
   local host does not hit it, because it makes a new element for each file.
+  - Closed 2026-11-21 (Jamie: fix, taking care not to ignore too much; [#158](https://github.com/stillpointlab/surfaces/pull/158)): only the image the
+    element shows is heard. Nothing is lost by it, since every render draws a new image that
+    loads its source and says so itself. A late answer about an SVG's size is dropped too when
+    the source changed meanwhile.
 - 2026-11-14 (format-descriptors): the root `README.md`'s harness paragraph and format-convention
   table predate the `./format` entry.
   - Closed 2026-11-20 (Jamie: fix; [#149](https://github.com/stillpointlab/surfaces/pull/149)): both
@@ -36,6 +40,9 @@ are carried here as they were written.
     log lists the tree's four events with their path, and the fixture's own log is gone.
 - 2026-11-14 (host-page): xmdl's validator (zod 4) probes `Function('')`, which the page's
   policy blocks. It falls back, and two policy reports show in the console.
+  - Closed 2026-11-21 (Jamie: fix if possible, a clean console is preferred; [#158](https://github.com/stillpointlab/surfaces/pull/158)): in a page
+    the parser sets zod's `jitless`, zod's own switch for a strict policy, before its first
+    schema. It is zod's global setting. Outside a page nothing is set.
 - 2026-11-14 (host-page): after the event stream reconnects, the page lists again but does not
   check the open file, so a change made during the outage shows only at the next event or save.
   - Closed 2026-11-21 (Jamie: fix; [#151](https://github.com/stillpointlab/surfaces/pull/151)):
@@ -175,9 +182,16 @@ are carried here as they were written.
 - 2026-11-14 (app-shells, step 1): seen in the inventory elements in a dark scheme: the
   download link is the browser's default purple (it has no colour of its own), and the NEW
   badge is faint.
+  - Closed 2026-11-21 (Jamie: fix both; [#158](https://github.com/stillpointlab/surfaces/pull/158)): the link takes the theme's link colour, and the
+    badge the warning tokens, with a border. In a dark scheme the badge's background was the
+    row's own.
 - 2026-11-14 (app-shells, step 1): in the zone's quick add, the Title field runs under the
   Owner field, in both schemes. At phone width the overview's rows do not wrap, and the page
   scrolls sideways.
+  - Closed 2026-11-21 (Jamie: fix; [#158](https://github.com/stillpointlab/surfaces/pull/158)): the title's minimum width applies in the plain quick
+    add's row alone, not in the configured one's grid, where it made the field wider than its
+    column. The overview's rows, its totals and its check-in bar wrap, so the page no longer
+    scrolls sideways at 390 px.
 - 2026-11-14 (app-shells, step 1): the harness's Dark toggle sets a class and does not follow
   the system's colour scheme, so a check in dark has to tick it.
   - Closed 2026-11-20 (Jamie: fix; [#150](https://github.com/stillpointlab/surfaces/pull/150)): Dark
@@ -353,6 +367,9 @@ are carried here as they were written.
     more is dealt with when it comes up). Ctrl+Z in a text field, a text area or an editable
     region anywhere on the page is already that field's.
 - 2026-11-15 (undo-journal): on the board's stage view a phase with no card takes no drop.
+  - Closed 2026-11-21 (Jamie: fix; [#158](https://github.com/stillpointlab/surfaces/pull/158)): the empty phase's row is a drop target. The card's file
+    moves there in the column it is in, or the first column for a pool card, as the card menu's
+    move to another phase does.
 - 2026-11-20 (phase 7, the dialog's Tab fix): two of the local host's tests (`port.test.ts`,
   `git/repository.test.ts`) take a fresh folder under the system's temporary directory for "not a
   repository". With a `.git` entry anywhere above it (an empty `/tmp/.git` appeared on the

@@ -13,6 +13,16 @@ import {
   type XmdlWarning,
 } from './types';
 
+// In a page, zod validates without compiling. Before it compiles an object's
+// check, zod 4 tries `new Function('')` once to see whether it may; a page with
+// a content security policy blocks that, and though zod catches it and carries
+// on, the browser reports the attempt in the console each time. `jitless` is
+// zod's own switch for a strict policy, and it has to be set before the first
+// schema is made, so it is here, above them. It is zod's global setting: every
+// schema on the page is checked the plain way, with the same answers. Outside
+// a page (a server) nothing is set, and zod compiles as it likes.
+if (typeof document !== 'undefined') z.config({ jitless: true });
+
 const TOP_LEVEL_KEYS = new Set([
   'title',
   'version',
