@@ -78,12 +78,13 @@ npm run new-format -- video # a new format from the template; then npm install a
 
 ## The harness
 
-`tooling/harness/` is the one playground. It finds every `dev/fixtures.ts` under `packages/formats/*`
-and `packages/components/*`,
-mounts the chosen format's elements by role (editor beside preview, extras below), applies a
-fixture, mirrors edits into the preview, reads the source back, and shows each element's `ready`
-state and events. Read-only, narrow panes and light/dark (with the shared `--spl-*` tokens) are
-common controls; `?format=sheet&fixture=Ragged%20rows` deep-links a state.
+`tooling/harness/` is the one playground. It finds every `dev/fixtures.ts` under
+`packages/formats/*`, `packages/components/*`, `packages/apps/*` and `packages/hosts/*`, mounts
+the chosen one's elements by role (editor beside preview, extras below), applies a fixture,
+mirrors edits into the preview, reads the source back, and shows each element's `ready` state and
+events. Read-only, narrow panes and light/dark (with the shared `--spl-*` tokens) are common
+controls; Dark starts as the system's colour scheme has it. `?format=sheet&fixture=Ragged%20rows`
+deep-links a state.
 
 A package's `dev/fixtures.ts` default-exports a `HarnessFormat` (`tooling/harness/types.ts`):
 

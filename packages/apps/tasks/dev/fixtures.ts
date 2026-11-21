@@ -5,9 +5,10 @@
 // until the page reloads. The workshop is a hand-built folder with every card
 // state; "This repository" is this repository's own docs/tasks/. The controls
 // switch the host off (every op unhandled, so the optimistic render rolls back)
-// or make it refuse the next op. Requests the elements raise show in the event
-// log. The "Dialog:" fixtures open each of the board's dialogs on the
-// workshop. The strip's links are `#` anchors: where a phase lives is a host's.
+// or make it refuse the next op, for the bare elements' host and the shell's
+// alike. Requests the elements raise show in the event log. The "Dialog:"
+// fixtures open each of the board's dialogs on the workshop. The strip's links
+// are `#` anchors: where a phase lives is a host's.
 // The "Create" fixture answers the create form with the core's `seed`, in the
 // folder the "Create in" control chose, and shows the new manifest's first board.
 // "Shell over the memory host" is the app as a page: `<spl-tasks-app>` over the
@@ -21,7 +22,15 @@ import { tasksCore } from '../src/core.js';
 
 import { attachHost } from './host.js';
 import { repoWorkspace } from './repo.js';
-import { openShell, SHELL_TAG, showShell } from './shell.js';
+import {
+  blockOf,
+  openShell,
+  refuseNextShellOp,
+  setShellAnswering,
+  SHELL_TAG,
+  shellIsShown,
+  showShell,
+} from './shell.js';
 import { emptyWorkshop, WORKSHOP_BOARD, workshop } from './workshop.js';
 import { navOf, workspace } from './workspace.js';
 
@@ -56,11 +65,12 @@ let stopCreate: (() => void) | null = null;
 
 /** Show the create form, or the board and strip; the other blocks hide. */
 function showCreate(elements: HarnessElements, on: boolean): void {
+  // First, so the bare elements are back on the page.
+  showShell(elements, false);
   for (const tag of [TAG, NAV_TAG, CREATE_TAG]) {
-    const block = elements.extras[tag]?.closest<HTMLElement>('.extra');
+    const block = blockOf(elements.extras[tag]);
     if (block) block.hidden = (tag === CREATE_TAG) !== on;
   }
-  showShell(elements, false);
 }
 
 /** The create form, answered by the core's seed like a host's create endpoint. */
@@ -161,13 +171,17 @@ export default {
       apply: (_elements, on) => {
         answering = on;
         host?.setAnswering(on);
+        setShellAnswering(on);
       },
     },
     {
       kind: 'toggle',
       label: 'Refuse the next op',
       apply: (_elements, on) => {
-        if (on) host?.failNext();
+        if (!on) return;
+        // The next op comes from whichever is on the page.
+        if (shellIsShown()) refuseNextShellOp();
+        else host?.failNext();
       },
     },
     {
@@ -183,8 +197,8 @@ export default {
     Create: {
       content: '',
       apply: (elements) => {
-        elementsOf(elements);
         showCreate(elements, true);
+        elementsOf(elements);
         createOf(elements).setState({});
       },
     },

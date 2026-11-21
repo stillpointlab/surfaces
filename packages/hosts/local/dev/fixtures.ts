@@ -1,7 +1,6 @@
 // The local host's explorer tree in the surfaces harness (`npm run dev`, then pick
 // `local`). Each fixture hands the tree a list of paths and marks, as the host page
-// will. The harness's event log does not know the tree's events, so a log of its
-// own sits under the tree.
+// will. The tree's events show in the harness's event log.
 import '../src/client/tree/host-file-tree';
 
 import type { HarnessElements, HarnessFormat } from '../../../../tooling/harness/types';
@@ -9,7 +8,6 @@ import type { HostFileTree, TreeMark } from '../src/client/tree/host-file-tree';
 import type { FolderNode } from '@stillpointlab/common-format/app';
 
 const TAG = 'host-file-tree';
-const EVENTS = ['tree-select', 'tree-activate', 'tree-toggle', 'tree-menu'];
 
 /** Paths to nodes; a trailing slash makes a folder node, and some folders have none. */
 function nodes(paths: readonly string[]): FolderNode[] {
@@ -18,26 +16,10 @@ function nodes(paths: readonly string[]): FolderNode[] {
   );
 }
 
-const logs = new WeakMap<HostFileTree, HTMLOListElement>();
-
-/** The tree, sized to a column as the host page will, with its log beside it. */
+/** The tree, sized to a column as the host page will. */
 function tree(elements: HarnessElements): HostFileTree {
   const el = elements.extras[TAG] as HostFileTree;
-  if (!logs.has(el)) {
-    el.style.maxWidth = '320px'; // the harness's pane gives it a height
-    const log = document.createElement('ol');
-    log.style.cssText = 'font: 12px monospace; max-height: 8em; overflow: auto';
-    for (const type of EVENTS) {
-      el.addEventListener(type, (event) => {
-        const entry = document.createElement('li');
-        entry.textContent = `${type} ${JSON.stringify((event as CustomEvent).detail)}`;
-        log.prepend(entry);
-      });
-    }
-    el.after(log);
-    logs.set(el, log);
-  }
-  logs.get(el)!.replaceChildren();
+  el.style.maxWidth = '320px'; // the harness's pane gives it a height
   return el;
 }
 

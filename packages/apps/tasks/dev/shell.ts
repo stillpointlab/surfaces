@@ -8,7 +8,9 @@
 // base, reads the page again on `reload-request`, and opens a small options
 // menu for `open-options-menu`. The shell answers
 // `refresh-stage` and `close-candidates` itself, so this host does not: were
-// one to reach it, it would be refused as unknown.
+// one to reach it, it would be refused as unknown. The harness's two host
+// controls reach it: off, no op is claimed; "Refuse the next op" refuses the
+// next op that is not a read.
 import './shell.css';
 
 import { answerOps, fail, isCoreOp, matchAppPage, ok } from '@stillpointlab/common-format/app';
@@ -70,13 +72,61 @@ interface ShellHarness {
 
 let harness: ShellHarness | null = null;
 
-/** Show the shell's block and hide every other element's; or hide the shell's. */
+/** The harness's two host controls, as the bare elements' host has them. */
+let answering = true;
+let refuseNext = false;
+let shellShown = false;
+let stopAnswering: (() => void) | null = null;
+let startAnswering: (() => () => void) | null = null;
+
+/** Answer the shell's ops (true) or leave them unclaimed (false). */
+export function setShellAnswering(on: boolean): void {
+  answering = on;
+  stopAnswering?.();
+  stopAnswering = on && startAnswering ? startAnswering() : null;
+}
+
+/** Refuse the shell's next op, once. A read (`project`, `refresh`) is not refused. */
+export function refuseNextShellOp(): void {
+  refuseNext = true;
+}
+
+/** Whether the shell is the one on the page, and so the one the next op comes from. */
+export const shellIsShown = (): boolean => shellShown;
+
+/** The pane each element was mounted in, so one taken off the page can go back. */
+const homes = new WeakMap<HTMLElement, HTMLElement>();
+
+/** The harness block of an element, on the page or off it. */
+export function blockOf(el: HTMLElement | undefined): HTMLElement | null {
+  if (!el) return null;
+  if (el.parentElement) homes.set(el, el.parentElement);
+  return homes.get(el)?.closest<HTMLElement>('.extra') ?? null;
+}
+
+/** Put an element on the page, or take it off: its dialogs and their ids go with it. */
+function place(el: HTMLElement, on: boolean): void {
+  if (el.parentElement) homes.set(el, el.parentElement);
+  if (!on) el.remove();
+  else if (!el.isConnected) homes.get(el)?.append(el);
+}
+
+/**
+ * Show the shell's block and hide every other element's; or hide the shell's.
+ * The bare board and the shell's board each make the same dialogs, with the
+ * same ids, so only one of the two is on the page at a time.
+ */
 export function showShell(elements: HarnessElements, on: boolean): void {
+  shellShown = on;
   for (const [tag, el] of Object.entries(elements.extras)) {
-    const block = el.closest<HTMLElement>('.extra');
-    if (!block) continue;
-    if (tag === SHELL_TAG) block.hidden = !on;
-    else if (on) block.hidden = true;
+    const block = blockOf(el);
+    if (tag === SHELL_TAG) {
+      if (block) block.hidden = !on;
+      place(el, on);
+    } else {
+      if (block && on) block.hidden = true;
+      place(el, !on);
+    }
   }
 }
 
@@ -139,28 +189,31 @@ function attach(h: ShellHarness): void {
     },
   });
 
-  answerOps<TasksElementOps & AppShellOps>(
-    shell,
-    async (op: AppOp<TasksElementOps & AppShellOps>): Promise<Result<object>> => {
-      if (op.type === 'project') return projectView(ws(), op.view);
-      // The memory host's files are their own source: there is nothing to bring up to date.
-      if (op.type === 'refresh') return ok();
-      if (op.type === 'checkin') {
-        ws().port.commit(op.paths);
-        // The page is read again after the reply, as a host's status event would have it.
-        setTimeout(() => void open(h, h.href), 0);
-        const files = op.paths.length === 1 ? '1 file' : `${op.paths.length} files`;
-        return ok({ status: 'done', message: `Checked in ${files} in memory.` });
-      }
-      // The memory host reads the view before its first await, so it is this op's alone.
-      opView = shell.opView(op) as AppView<TasksViews> | undefined;
-      const pending = inMemory(op as Op);
-      opView = undefined;
-      const reply = await pending;
-      if (reply.ok && isCoreOp(tasksModule, op.type)) shell.learn(op, reply);
-      return reply;
+  const answer = async (op: AppOp<TasksElementOps & AppShellOps>): Promise<Result<object>> => {
+    if (op.type === 'project') return projectView(ws(), op.view);
+    // The memory host's files are their own source: there is nothing to bring up to date.
+    if (op.type === 'refresh') return ok();
+    if (refuseNext) {
+      refuseNext = false;
+      return fail('HARNESS_REFUSED', 'The harness refused this op');
     }
-  );
+    if (op.type === 'checkin') {
+      ws().port.commit(op.paths);
+      // The page is read again after the reply, as a host's status event would have it.
+      setTimeout(() => void open(h, h.href), 0);
+      const files = op.paths.length === 1 ? '1 file' : `${op.paths.length} files`;
+      return ok({ status: 'done', message: `Checked in ${files} in memory.` });
+    }
+    // The memory host reads the view before its first await, so it is this op's alone.
+    opView = shell.opView(op) as AppView<TasksViews> | undefined;
+    const pending = inMemory(op as Op);
+    opView = undefined;
+    const reply = await pending;
+    if (reply.ok && isCoreOp(tasksModule, op.type)) shell.learn(op, reply);
+    return reply;
+  };
+  startAnswering = () => answerOps<TasksElementOps & AppShellOps>(shell, answer);
+  setShellAnswering(answering);
 
   shell.addEventListener('navigate', (event) => {
     const { href } = (event as CustomEvent<{ href: string }>).detail;
