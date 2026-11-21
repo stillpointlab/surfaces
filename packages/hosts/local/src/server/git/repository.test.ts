@@ -12,7 +12,7 @@ import { MAX_TEXT_BYTES } from '../limits';
 import { createNodePort } from '../port';
 import { git, gitEnv, makeRepository, tempFolder, writeFiles } from '../test-support';
 
-import { createGit } from './repository';
+import { createGit, hasGitEntryAbove } from './repository';
 
 import type { NodePort } from '../port';
 import type { PortChange } from '@stillpointlab/common-format/host';
@@ -104,6 +104,23 @@ describe('start and info', () => {
     const tree = join(folder.path, 'tree');
     git(repo, env, 'worktree', 'add', '-q', '-b', 'side', tree);
     expect((await access(tree, noGit).start()).state).toBe('no-git');
+  });
+
+  it('with git off the PATH, a `.git` above a ceiling folder does not count', async () => {
+    // As on a machine with a stray `.git` above its temporary folder.
+    writeFiles(folder.path, { 'outer/.git/HEAD': '', 'outer/inner/plain/a.md': 'a' });
+    const plain = join(folder.path, 'outer/inner/plain');
+    const PATH = join(folder.path, 'no-bin');
+
+    expect(await hasGitEntryAbove(plain, {})).toBe(true);
+    expect((await access(plain, { PATH }).start()).state).toBe('no-git');
+    const below = { PATH, GIT_CEILING_DIRECTORIES: join(folder.path, 'outer/inner') };
+    expect(await hasGitEntryAbove(plain, below)).toBe(false);
+    expect(await access(plain, below).start()).toEqual({ state: 'no-repository', gitFound: false });
+    // Git's own rule: the climb stops below a ceiling, and the folder asked about is always read.
+    const at = { PATH, GIT_CEILING_DIRECTORIES: join(folder.path, 'outer') };
+    expect(await hasGitEntryAbove(join(folder.path, 'outer'), at)).toBe(true);
+    expect(await hasGitEntryAbove(plain, at)).toBe(false);
   });
 
   it('outside a repository the routes refuse, status is {}, and a base is refused', async () => {

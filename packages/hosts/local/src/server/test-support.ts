@@ -25,11 +25,14 @@ export function writeFiles(root: string, files: Record<string, string | Uint8Arr
 
 /**
  * An environment for `git` that reads no global or system configuration (so a
- * person's excludes or hooks cannot change a result) and names its own author.
+ * person's excludes or hooks cannot change a result), names its own author, and
+ * looks for a repository no higher than `home` (so a `.git` above the system's
+ * temporary folder cannot change one either).
  */
 export function gitEnv(home: string): NodeJS.ProcessEnv {
   return {
     ...process.env,
+    GIT_CEILING_DIRECTORIES: home,
     GIT_CONFIG_NOSYSTEM: '1',
     GIT_CONFIG_GLOBAL: join(home, 'no-global-gitconfig'),
     GIT_AUTHOR_NAME: 'Surfaces Test',

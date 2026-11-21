@@ -85,25 +85,41 @@ fixture, mirrors edits into the preview, reads the source back, and shows each e
 state and events. Read-only, narrow panes and light/dark (with the shared `--spl-*` tokens) are
 common controls; `?format=sheet&fixture=Ragged%20rows` deep-links a state.
 
-A format's `dev/fixtures.ts` imports its own entries (so the elements register) and default-exports
-a `HarnessFormat` (`tooling/harness/types.ts`): `elements` (`editor`, `preview`, `extra` tags),
-`fixtures` (name → content, or `{ content, apply }` when the fixture must drive a setter beyond the
-contract), an optional module-level `apply`, `controls` (toggles and selects beside the common
-ones) and `mirror: false` when a plain `setContent` mirror would lose something. The harness drives
-elements only through the contracts in `common`; whatever a format wants beyond them, it does in
-`apply` or a control. The template ships a minimal one, so a new format appears in the harness
-with no edits beyond its name.
+A package's `dev/fixtures.ts` default-exports a `HarnessFormat` (`tooling/harness/types.ts`):
+
+- `format`: the format's descriptor, from its `./format` entry. The harness takes the editor and
+  preview tags from it, loads them through it, and applies a fixture with its `apply`, as a host
+  does. The five formats mount this way.
+- `elements` (`editor`, `preview`, `extra` tags): what to mount without a descriptor, for which the
+  module imports its own entries so the elements register. Components, apps and the template name
+  theirs here. With `format`, only `extra` is read (`<code-diff>`).
+- `fixtures`: name → content, or `{ content, path, apply }`. `path` is the file the content stands
+  for, which a descriptor reads attributes from (the code language, a `.sheet` document); `apply`
+  drives a setter beyond the contract.
+- an optional module-level `apply`, `controls` (toggles and selects beside the common ones), and
+  `mirror: false` when a plain `setContent` mirror would lose something.
+
+The harness drives elements only through the contracts in `common` and a format's descriptor;
+whatever a package wants beyond them, it does in `apply` or a control. The template ships a
+minimal one, so a new format appears in the harness with no edits beyond its name.
 
 ## The format convention
 
-Every format exposes the same three entry points, so the host and the scaffold can rely on the
-shape instead of reading each package:
+Every format exposes the same entry points, so the host and the scaffold can rely on the shape
+instead of reading each package:
 
-| Entry       | Ships                                                                     |
-| ----------- | ------------------------------------------------------------------------- |
-| `.`         | the core: parser, document model, theme, anything isomorphic              |
-| `./preview` | the read-only element, implementing `PreviewElement`                      |
-| `./editor`  | the interactive element, implementing `EditorElement`; only if it has one |
+| Entry       | Ships                                                                           |
+| ----------- | ------------------------------------------------------------------------------- |
+| `.`         | the core: parser, document model, theme, anything isomorphic                    |
+| `./preview` | the read-only element, implementing `PreviewElement`                            |
+| `./editor`  | the interactive element, implementing `EditorElement`; only if it has one       |
+| `./format`  | the descriptor: which paths the format opens, and how a host loads and fills it |
+
+`./format` is light: importing it defines no element and loads no editor. Its `load()` functions
+import `./preview` and `./editor`, which the build keeps as files of their own. A host gives the
+descriptors to `createFormatRegistry` (`@stillpointlab/common-format/format`; see
+[`packages/common/README.md`](packages/common/README.md)). The five formats ship one; the
+template does not yet, so a new format adds its own.
 
 Formats may add subpaths of their own (`md` has `./markdown`, `code` has `./diff`, `sheet` has
 several). For the formats that predate the convention, `.` still registers the editor and exports
