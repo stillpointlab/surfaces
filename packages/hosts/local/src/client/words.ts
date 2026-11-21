@@ -41,6 +41,7 @@ export const words = {
     HOST_FILE_TOO_LARGE: 'This file is too large to open here.',
     HOST_FILE_NOT_FOUND: 'There is no file at this path.',
     HOST_PATH_OUTSIDE_ROOT: 'This path leads outside the served folder.',
+    HOST_PATH_INVALID: 'This is not a path the host opens.',
   },
   /** A file a text format opens that turned out not to be text. */
   formatNotText: 'This file is not text, so it cannot open here.',

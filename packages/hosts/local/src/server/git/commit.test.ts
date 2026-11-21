@@ -422,7 +422,7 @@ describe('refusals', () => {
       code: 'HOST_PATH_OUTSIDE_ROOT',
     });
     expect(await p.commit({ paths: ['.git/config'], message: 'm' })).toMatchObject({
-      code: 'HOST_PATH_OUTSIDE_ROOT',
+      code: 'HOST_PATH_INVALID',
     });
     expect(run('rev-list', '--count', 'HEAD')).toBe('1\n');
   });

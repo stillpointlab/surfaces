@@ -95,7 +95,8 @@ describe('the routes', () => {
     ['docs/none.md', 404, 'HOST_FILE_NOT_FOUND'],
     ['img/dot.png', 400, 'HOST_NOT_TEXT'],
     ['../x', 400, 'HOST_PATH_OUTSIDE_ROOT'],
-    ['', 400, 'HOST_PATH_OUTSIDE_ROOT'],
+    ['', 400, 'HOST_PATH_INVALID'],
+    ['docs/./a.md', 400, 'HOST_PATH_INVALID'],
   ])('GET /api/file?path=%s refuses with %i %s', async (path, status, code) => {
     const response = await request(`/api/file?path=${encodeURIComponent(path)}`);
     expect(response.status).toBe(status);

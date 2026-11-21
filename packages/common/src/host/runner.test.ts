@@ -713,6 +713,7 @@ describe('hostRefusalClass', () => {
     ['HOST_NOT_TEXT', 'invalid'],
     ['HOST_FILE_TOO_LARGE', 'invalid'],
     ['HOST_PATH_OUTSIDE_ROOT', 'invalid'],
+    ['HOST_PATH_INVALID', 'invalid'],
     ['HOST_BAD_REQUEST', 'invalid'],
   ])('classes %s as %s', (code, refusal) => {
     expect(hostRefusalClass(code)).toBe(refusal);

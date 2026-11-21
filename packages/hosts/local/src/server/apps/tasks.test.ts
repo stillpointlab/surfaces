@@ -284,6 +284,9 @@ describe('creating an instance', () => {
     expect((await create({ app: 'nope', folder: 'x', input: {} })).status).toBe(404);
     const outside = await create({ app: 'tasks', folder: '../x', input: CREATE_TASKS });
     expect(((await outside.json()) as { code: string }).code).toBe('HOST_PATH_OUTSIDE_ROOT');
+    const unusable = await create({ app: 'tasks', folder: 'a//b', input: CREATE_TASKS });
+    expect(unusable.status).toBe(400);
+    expect(((await unusable.json()) as { code: string }).code).toBe('HOST_PATH_INVALID');
     const bad = await create({ app: 'tasks', folder: 'x', input: { columns: [] } });
     expect(bad.status).toBe(400);
     expect((await create({ app: 'tasks' })).status).toBe(400);

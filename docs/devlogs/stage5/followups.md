@@ -38,18 +38,33 @@ are carried here as they were written.
   policy blocks. It falls back, and two policy reports show in the console.
 - 2026-11-14 (host-page): after the event stream reconnects, the page lists again but does not
   check the open file, so a change made during the outage shows only at the next event or save.
+  - Closed 2026-11-21 (Jamie: fix; [#151](https://github.com/stillpointlab/surfaces/pull/151)):
+    after `listed` and `journal` the page's client says `reconnected`, its own word, and the page
+    reads the open file again as it does for a change on disk. An image's address changes too, so it
+    is loaded again.
 - 2026-11-14 (host-page): after a fragment navigation the tree's focus ring stays on the row
   that had focus, while the selection moves.
+  - Closed 2026-11-21 (Jamie: fix; [#151](https://github.com/stillpointlab/surfaces/pull/151)): a
+    selection set from outside takes the ring with it when a row had focus. Focus outside the tree,
+    or on a row's menu button, stays where it is.
 - 2026-11-14 (file-operations): a path the server refuses for its text (a `.` segment, a
   backslash, git's folder) is answered `HOST_PATH_OUTSIDE_ROOT`, worded "is outside the served
   folder". It needs a code and words of its own.
+  - Closed 2026-11-21 (Jamie: fix; [#151](https://github.com/stillpointlab/surfaces/pull/151)):
+    `HOST_PATH_INVALID`, worded "is not a usable path", in the port's contract, the memory port and
+    the local host. `HOST_PATH_OUTSIDE_ROOT` is left for a path that would leave the folder: an
+    absolute one, a `..`, a link out.
 - 2026-11-14 (file-operations): the pane's change check reads an open image as text and is
   answered 400 (`HOST_NOT_TEXT`), which it takes for "still there". Harmless, and a console
   error on every change to an open image.
+  - Closed 2026-11-21 (Jamie: fix; [#151](https://github.com/stillpointlab/surfaces/pull/151)): the
+    client has `probe`, which asks the raw route whether the file is there and reads none of it. The
+    pane uses it for a format that takes a URL.
 - 2026-11-14 (file-operations): a nested repository's row has a chevron that opens to nothing,
   and a disabled menu entry's reason is only a `title`.
 - 2026-11-14 (file-operations): going back to an address from before a rename says there is no
   file at that path.
+  - Closed 2026-11-21 (Jamie: by design). The file is no longer at that path, and the page says so.
 - 2026-11-14 (file-operations): a dialog with no detail line shows an empty band between its
   title and its buttons (`<modal-dialog>`'s body padding).
 - 2026-11-14 (git-in-the-host): `HEAD` text is read with no filter, so a repository that

@@ -34,7 +34,7 @@ import {
 } from '@stillpointlab/common-format/host';
 
 import { appBase, inRegion } from '../../shared/apps';
-import { pathProblem } from '../paths';
+import { pathRefusal } from '../paths';
 import { json, readJson, refusal, refuse, statusFor } from '../respond';
 
 import { discover } from './discovery';
@@ -383,14 +383,8 @@ export function createAppHost(options: AppHostOptions): AppHost {
     if (!module)
       return refuse('HOST_APP_NOT_FOUND', `No app is called ${JSON.stringify(app)}.`, 404);
     if (folder !== '') {
-      const problem = pathProblem(folder);
-      if (problem !== null) {
-        return refuse(
-          'HOST_PATH_OUTSIDE_ROOT',
-          `${JSON.stringify(folder)} is not a folder here: ${problem}`,
-          400
-        );
-      }
+      const refused = pathRefusal(folder);
+      if (refused !== null) return refusal(refused);
     }
     const found = await instances();
     // The region the new instance would have: its folder, or at the root the
