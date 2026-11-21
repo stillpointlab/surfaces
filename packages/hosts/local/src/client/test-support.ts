@@ -15,8 +15,8 @@ import type {
   FoundInstance,
   HostClient,
   JournalMove,
-  LocalHostEvent,
   PutOptions,
+  WatchedEvent,
 } from './host-client';
 import type { FolderNode, Result } from '@stillpointlab/common-format/app';
 import type { FormatDescriptor } from '@stillpointlab/common-format/format';
@@ -37,6 +37,8 @@ export interface FakeHost extends HostClient {
   readonly disk: Map<string, string | typeof BINARY>;
   readonly versions: Map<string, string>;
   readonly gets: string[];
+  /** The paths asked for with no read (`probe`). */
+  readonly probes: string[];
   readonly puts: PortChange[][];
   /** Each put's options, beside `puts`. */
   readonly putOptions: (PutOptions | undefined)[];
@@ -65,7 +67,7 @@ export interface FakeHost extends HostClient {
   /** Hold every `get` until `release()`. */
   hold: boolean;
   release(): void;
-  emit(event: LocalHostEvent): void;
+  emit(event: WatchedEvent): void;
   /** Write a file as something outside the page would, and say so. */
   writeOutside(path: string, text: string | null): void;
   /** What `git()` answers: not a repository unless a test says so. */
@@ -119,7 +121,7 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
   let next = 0;
   const stamp = (path: string) => versions.set(path, `v${++next}`);
   for (const path of disk.keys()) stamp(path);
-  const listeners = new Set<(event: LocalHostEvent) => void>();
+  const listeners = new Set<(event: WatchedEvent) => void>();
   let held: (() => void)[] = [];
   let heldPuts: (() => void)[] = [];
   let heldCommits: (() => void)[] = [];
@@ -132,6 +134,7 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
     disk,
     versions,
     gets: [],
+    probes: [],
     puts: [],
     putOptions: [],
     steps: [],
@@ -227,6 +230,12 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
       if (text === undefined) return { ok: false, code: 'HOST_FILE_NOT_FOUND', message: 'none' };
       if (text === BINARY) return { ok: false, code: 'HOST_NOT_TEXT', message: 'not text' };
       return { ok: true, text, version: versions.get(path)! };
+    },
+    async probe(path): Promise<Result> {
+      host.probes.push(path);
+      return disk.has(path)
+        ? { ok: true }
+        : { ok: false, code: 'HOST_FILE_NOT_FOUND', message: 'none' };
     },
     urlFor: (path) => `/api/raw?path=${encodeURIComponent(path)}`,
     async put(changes, options) {

@@ -40,14 +40,22 @@ export interface StoragePort {
   status(): Promise<Record<string, FileStatus>>;
 }
 
-/** The codes a port refuses with. A host may add its own beside them. */
+/**
+ * The codes a port refuses with. A host may add its own beside them.
+ *
+ * Two are a path's own. `HOST_PATH_OUTSIDE_ROOT` is a path that would leave the
+ * served folder: an absolute one, one that climbs with `..`, one a link leads
+ * out. `HOST_PATH_INVALID` is a path that stays inside and is not one a port
+ * takes: an empty or `.` name, a backslash, a NUL, git's own folder.
+ */
 export type HostRefusalCode =
   | 'HOST_FILE_NOT_FOUND'
   | 'HOST_PATH_EXISTS'
   | 'HOST_FILE_CHANGED'
   | 'HOST_NOT_TEXT'
   | 'HOST_FILE_TOO_LARGE'
-  | 'HOST_PATH_OUTSIDE_ROOT';
+  | 'HOST_PATH_OUTSIDE_ROOT'
+  | 'HOST_PATH_INVALID';
 
 /**
  * What a host's event stream sends: file contents changed, the set of paths did,

@@ -186,7 +186,7 @@ query value). A version is a SHA-256 of the file's bytes, as hex; only equality 
 | 409    | `HOST_CANNOT_UNDO` with its `reason` (`too-large`, `not-text`, `link`): send the same changes again with `unjournaled: true` |
 | 409    | `HOST_PATH_EXISTS`, `HOST_FILE_CHANGED`; `HOST_NOT_A_REPOSITORY`, `HOST_GIT_NOT_FOUND` (a git route outside `repository`)    |
 | 409    | A commit: `HOST_NOT_CHANGED`, `HOST_PATH_CONFLICTED`, `HOST_GIT_IN_PROGRESS`, `HOST_DETACHED_HEAD`, `HOST_BRANCH_EXISTS`     |
-| 400    | `HOST_PATH_OUTSIDE_ROOT`, `HOST_NOT_TEXT`, `HOST_FILE_TOO_LARGE`, `HOST_BAD_REQUEST`                                         |
+| 400    | `HOST_PATH_OUTSIDE_ROOT`, `HOST_PATH_INVALID`, `HOST_NOT_TEXT`, `HOST_FILE_TOO_LARGE`, `HOST_BAD_REQUEST`                    |
 | 400    | A commit: `HOST_COMMIT_NO_PATHS`, `HOST_COMMIT_NO_MESSAGE`, `HOST_BRANCH_INVALID`                                            |
 | 403    | `HOST_FORBIDDEN`: the `Host`, `Origin` or `Sec-Fetch-Site` checks below                                                      |
 | 405    | `HOST_METHOD_NOT_ALLOWED`, with an `Allow` header                                                                            |
@@ -202,6 +202,10 @@ changed) and `{"type":"status"}`
 (git's `HEAD` or index changed: a commit, a stage or a switch, the host's own staging
 included, so the statuses are stale). The stream opens with `retry: 1000` and sends a comment
 every 25 seconds. The server's own writes are reported too.
+
+When the stream drops and comes back, the page's client says `listed`, `journal` and then
+`reconnected`, its own word and not the server's: the page lists again, and reads the open file
+again, since a change made meanwhile was sent to nobody.
 
 ## `put`
 
@@ -265,6 +269,9 @@ memory port.
   the trailing dots and spaces Windows drops, and `git~1`); or when the real path of the nearest
   thing that exists along it, or of the folder that holds it, is outside the real root. A
   symbolic link that leaves the root is listed and cannot be opened, written, moved or deleted.
+  The refusal says which: `HOST_PATH_OUTSIDE_ROOT` for a path that would leave the folder (an
+  absolute one, a `..`, a link out), and `HOST_PATH_INVALID` for one that stays inside and is not
+  a path the host takes (the rest).
 - **The page's files.** `createStaticPage(dir)` lists the folder's regular files (no links, no
   dot-files) and answers a request only when its path, exactly as sent, is one of them, so no
   request path can leave `dist/client`. In development mode the same request checks stand in front
@@ -308,7 +315,7 @@ port's write lock: a `put` that arrives during a commit waits for it, and the re
 
 - **Refused first, with nothing changed:** a body of the wrong shape (`HOST_BAD_REQUEST`); no path
   (`HOST_COMMIT_NO_PATHS`); a message that is empty or only spaces (`HOST_COMMIT_NO_MESSAGE`); a path
-  the port would refuse (`HOST_PATH_OUTSIDE_ROOT`); a merge, cherry-pick, revert, rebase, `git am`,
+  the port would refuse (`HOST_PATH_OUTSIDE_ROOT`, `HOST_PATH_INVALID`); a merge, cherry-pick, revert, rebase, `git am`,
   or a sequence of picks in progress (`HOST_GIT_IN_PROGRESS`, saying which and how to finish or
   abort it); `HEAD` detached and no branch given (`HOST_DETACHED_HEAD`); a path that is not a
   change or a moved file's old path (`HOST_NOT_CHANGED`); a chosen path in conflict

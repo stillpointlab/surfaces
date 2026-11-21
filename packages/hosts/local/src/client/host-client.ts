@@ -40,6 +40,12 @@ export type {
 } from '../shared/apps';
 export type { CannotUndoNotice, JournalLabels, JournalMove, UnkeptReason } from '../shared/journal';
 
+/**
+ * What a watcher hears: the host's events, and the client's own word that the
+ * stream came back after it dropped, when anything may have changed unheard.
+ */
+export type WatchedEvent = LocalHostEvent | { type: 'reconnected' };
+
 /** How a write goes: `unjournaled` when the person agreed it cannot be undone. */
 export interface PutOptions {
   unjournaled?: boolean;
@@ -50,6 +56,11 @@ export interface HostClient {
   root(): Promise<{ name: string; id: string }>;
   list(): Promise<{ nodes: FolderNode[]; truncated: boolean }>;
   get(path: string): Promise<Result<{ text: string; version: string }>>;
+  /**
+   * Whether a file is at `path`, whatever its bytes, with none of it read: `get`
+   * reads text, and refuses an image. A refusal is the server's, as `get`'s is.
+   */
+  probe(path: string): Promise<Result>;
   /** A URL an element can load the file from. */
   urlFor(path: string): string;
   /**
@@ -108,7 +119,7 @@ export interface HostClient {
   }): Promise<Result<{ manifestPath: string }>>;
   /** Lock an instance's files, or unlock them; locking answers the manifest's problems now. */
   setAppLock(manifestPath: string, locked: boolean): Promise<Result<AppLockAnswer>>;
-  watch(listener: (event: LocalHostEvent) => void): () => void;
+  watch(listener: (event: WatchedEvent) => void): () => void;
 }
 
 /** The code a client answers with when the server could not be reached or answered nonsense. */
@@ -125,7 +136,9 @@ export function createHttpClient(base = ''): HostClient {
   // How often each path has changed while this client watched: `urlFor` names the
   // revision, so an element given the URL again after a change loads the new
   // bytes rather than the browser's copy of the old (the server reads `path` alone).
+  // A reconnection counts for every path: a change may have gone unheard.
   const revisions = new Map<string, number>();
+  let reconnections = 0;
 
   async function read<T>(route: string): Promise<T> {
     const response = await fetch(url(route), { headers: { accept: 'application/json' } });
@@ -143,13 +156,19 @@ export function createHttpClient(base = ''): HostClient {
   });
 
   /** A route that answers a `Result`: success or the server's refusal, never a throw. */
-  async function result<T extends object>(route: string, init?: RequestInit): Promise<Result<T>> {
+  async function result<T extends object>(
+    route: string,
+    init?: RequestInit,
+    answered?: (response: Response) => Result<T> | null
+  ): Promise<Result<T>> {
     let response: Response;
     try {
       response = await fetch(url(route), init);
     } catch (error) {
       return { ok: false, code: UNREACHABLE, message: `The host could not be reached (${error}).` };
     }
+    const early = answered?.(response);
+    if (early) return early;
     const body = (await response.json().catch(() => null)) as Result<T> | null;
     if (body === null || typeof body !== 'object' || typeof body.ok !== 'boolean') {
       return {
@@ -169,8 +188,16 @@ export function createHttpClient(base = ''): HostClient {
     changes: () => result('/api/changes'),
     base: (path) => result(`/api/base?path=${encodeURIComponent(path)}`),
     get: (path) => result(`/api/file?path=${encodeURIComponent(path)}`),
+    // The raw route sends the file's bytes: a success is taken from the status,
+    // and the body let go unread. A refusal is JSON, as everywhere.
+    probe: (path) =>
+      result(`/api/raw?path=${encodeURIComponent(path)}`, undefined, (response) => {
+        if (!response.ok) return null;
+        void response.body?.cancel().catch(() => undefined);
+        return { ok: true };
+      }),
     urlFor(path) {
-      const revision = revisions.get(path);
+      const revision = (revisions.get(path) ?? 0) + reconnections;
       const query = `path=${encodeURIComponent(path)}${revision ? `&rev=${revision}` : ''}`;
       return url(`/api/raw?${query}`);
     },
@@ -215,15 +242,18 @@ export function createHttpClient(base = ''): HostClient {
       };
       // The browser reconnects by itself. Whatever changed while the stream was
       // down was not sent, so a reconnection says the list is stale, and the
-      // journal with it: a server that restarted has no steps.
+      // journal with it: a server that restarted has no steps. Then it says so
+      // itself, for what no event names: the file that is open.
       source.onerror = () => {
         dropped = true;
       };
       source.onopen = () => {
         if (!dropped) return;
         dropped = false;
+        reconnections += 1;
         listener({ type: 'listed' });
         listener({ type: 'journal' });
+        listener({ type: 'reconnected' });
       };
       return () => source.close();
     },

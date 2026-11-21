@@ -2,7 +2,10 @@
 //
 // Two checks, in order. The first reads the path alone: it must be relative, with
 // `/` separators, and name no `..`, `.`, empty or NUL segment, no backslash, and
-// nothing git would take for its own folder. The second asks the disk: the real
+// nothing git would take for its own folder. A path that would leave the root (an
+// absolute one, a `..`) is refused as outside it, `HOST_PATH_OUTSIDE_ROOT`; one
+// that is only written wrong, or names git's folder, as `HOST_PATH_INVALID`. The
+// second asks the disk: the real
 // path of the nearest thing that exists along the path (the file, or the folder
 // that would hold it) must be inside the real path of the root. A symbolic link
 // that leaves the root fails the second check wherever it stands on the path, so
@@ -33,19 +36,35 @@ export function isGitName(name: string): boolean {
   return folded === '.git' || folded === 'git~1';
 }
 
-/** The first check: what is wrong with the path as written, or `null` for nothing. */
-export function pathProblem(path: unknown): string | null {
-  if (typeof path !== 'string') return 'A path must be a string.';
-  if (path === '') return 'The path is empty.';
-  if (path.includes('\0')) return 'The path has a NUL character.';
-  if (path.includes('\\')) return 'The path has a backslash; separate folders with "/".';
-  if (path.startsWith('/') || isAbsolute(path)) return 'The path is absolute.';
+/** What the first check found: why, and whether the path would leave the root. */
+interface Problem {
+  why: string;
+  leaves: boolean;
+}
+
+const written = (why: string): Problem => ({ why, leaves: false });
+const leaving = (why: string): Problem => ({ why, leaves: true });
+
+function problemOf(path: unknown): Problem | null {
+  if (typeof path !== 'string') return written('A path must be a string.');
+  if (path === '') return written('The path is empty.');
+  if (path.includes('\0')) return written('The path has a NUL character.');
+  if (path.includes('\\')) {
+    return written('The path has a backslash; separate folders with "/".');
+  }
+  if (path.startsWith('/') || isAbsolute(path)) return leaving('The path is absolute.');
   for (const segment of path.split('/')) {
-    if (segment === '') return 'The path has an empty segment.';
-    if (segment === '..' || segment === '.') return `The path has a "${segment}" segment.`;
-    if (isGitName(segment)) return "The path names git's own folder.";
+    if (segment === '') return written('The path has an empty segment.');
+    if (segment === '..') return leaving('The path has a ".." segment.');
+    if (segment === '.') return written('The path has a "." segment.');
+    if (isGitName(segment)) return written("The path names git's own folder.");
   }
   return null;
+}
+
+/** The first check: what is wrong with the path as written, or `null` for nothing. */
+export function pathProblem(path: unknown): string | null {
+  return problemOf(path)?.why ?? null;
 }
 
 /** A refusal for a path outside the root. */
@@ -54,6 +73,19 @@ export function outsideRoot(path: string, why: string): Failure {
     'HOST_PATH_OUTSIDE_ROOT',
     `${JSON.stringify(path)} is outside the served folder: ${why}`
   );
+}
+
+/**
+ * The first check as a refusal, or `null` for a path that passes it:
+ * `HOST_PATH_OUTSIDE_ROOT` for a path that would leave the root, and
+ * `HOST_PATH_INVALID` for one that stays inside and is not a path the host takes.
+ */
+export function pathRefusal(path: unknown): Failure | null {
+  const problem = problemOf(path);
+  if (problem === null) return null;
+  const shown = typeof path === 'string' ? path : String(path);
+  if (problem.leaves) return outsideRoot(shown, problem.why);
+  return fail('HOST_PATH_INVALID', `${JSON.stringify(shown)} is not a usable path: ${problem.why}`);
 }
 
 /** Whether `path` (a real path) is the root or under it. */

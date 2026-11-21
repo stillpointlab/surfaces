@@ -22,7 +22,7 @@ import { delimiter, dirname, isAbsolute, join, resolve } from 'node:path';
 import { fail, ok } from '@stillpointlab/common-format/app';
 
 import { COMMIT_TIMEOUT_MS, MAX_TEXT_BYTES } from '../limits';
-import { pathProblem } from '../paths';
+import { pathProblem, pathRefusal } from '../paths';
 import { decodeText } from '../text';
 
 import {
@@ -229,10 +229,8 @@ export function createGit(options: GitOptions): HostGitAccess {
   async function base(path: string): Promise<Result<{ text: string }>> {
     const at = await start();
     if (at.state !== 'repository') return notARepository(at.state);
-    const problem = pathProblem(path);
-    if (problem !== null) {
-      return fail('HOST_PATH_OUTSIDE_ROOT', `${JSON.stringify(path)} is not usable: ${problem}`);
-    }
+    const refused = pathRefusal(path);
+    if (refused !== null) return refused;
     // A moved file was at its old path in the last commit.
     const listed = await changes();
     if (!listed.ok) return listed;
@@ -427,10 +425,8 @@ export function createGit(options: GitOptions): HostGitAccess {
     if ('ok' in asked) return asked;
     const { message, branch } = asked;
     for (const path of asked.paths) {
-      const problem = pathProblem(path);
-      if (problem !== null) {
-        return fail('HOST_PATH_OUTSIDE_ROOT', `${JSON.stringify(path)} is not usable: ${problem}`);
-      }
+      const refused = pathRefusal(path);
+      if (refused !== null) return refused;
     }
 
     const busy = await inProgress();

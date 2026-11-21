@@ -121,9 +121,10 @@ export function describeStoragePort(
         ['a file over 2 MiB', 'big.txt', 'HOST_FILE_TOO_LARGE'],
         ['a path with ..', '../a.md', 'HOST_PATH_OUTSIDE_ROOT'],
         ['an absolute path', '/a.md', 'HOST_PATH_OUTSIDE_ROOT'],
-        ["git's own folder", '.git/config', 'HOST_PATH_OUTSIDE_ROOT'],
-        ['an empty segment', 'docs//b.md', 'HOST_PATH_OUTSIDE_ROOT'],
-        ['a backslash', 'docs\\b.md', 'HOST_PATH_OUTSIDE_ROOT'],
+        ["git's own folder", '.git/config', 'HOST_PATH_INVALID'],
+        ['an empty segment', 'docs//b.md', 'HOST_PATH_INVALID'],
+        ['a . segment', 'docs/./b.md', 'HOST_PATH_INVALID'],
+        ['a backslash', 'docs\\b.md', 'HOST_PATH_INVALID'],
       ])('refuses %s', async (_what, path, code) => {
         const port = await make({
           ...FILES,
@@ -262,7 +263,7 @@ export function describeStoragePort(
         [
           "a create in git's folder",
           [{ kind: 'create', path: '.git/hooks/pre-commit', content: '' }],
-          'HOST_PATH_OUTSIDE_ROOT',
+          'HOST_PATH_INVALID',
         ],
         [
           'a move out of the root',

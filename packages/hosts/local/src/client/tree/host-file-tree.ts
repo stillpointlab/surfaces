@@ -108,8 +108,16 @@ export class HostFileTree extends HTMLElement implements FileTreeElement {
   }
 
   set selected(path: string | null) {
+    const moved = path !== this.cursor;
     this.cursor = path;
     this.syncCursor();
+    // The focus ring is the cursor's: a row that had focus hands it to the row now
+    // selected, so the arrow keys go on from where the ring is. Focus outside the
+    // tree, or on a row's menu button, stays where it is.
+    const focused = this.shadowRoot?.activeElement;
+    if (moved && this.selectedRow && focused?.matches(ITEM) && focused !== this.selectedRow) {
+      this.selectedRow.focus({ preventScroll: true });
+    }
   }
 
   get openPaths(): readonly string[] {

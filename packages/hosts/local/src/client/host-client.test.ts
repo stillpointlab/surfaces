@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createHttpClient, UNREACHABLE } from './host-client';
 
-import type { LocalHostEvent } from './host-client';
+import type { WatchedEvent } from './host-client';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -212,7 +212,7 @@ describe('createHttpClient', () => {
   it('watches the event stream, says the list and the journal are stale after a reconnection, and stops', () => {
     vi.stubGlobal('EventSource', FakeSource);
     const client = createHttpClient();
-    const events: LocalHostEvent[] = [];
+    const events: WatchedEvent[] = [];
     const stop = client.watch((event) => events.push(event));
     const source = FakeSource.last;
     expect(source.url).toBe('/api/events');
@@ -227,9 +227,11 @@ describe('createHttpClient', () => {
       { type: 'listed' },
       { type: 'changed', paths: ['a.md'] },
       { type: 'status' },
-      // The reconnection: the list, and the journal (a restarted server has no steps).
+      // The reconnection: the list, the journal (a restarted server has no steps),
+      // and the client's own word for what no event names.
       { type: 'listed' },
       { type: 'journal' },
+      { type: 'reconnected' },
     ]);
     stop();
     expect(source.closed).toBe(true);
@@ -243,5 +245,27 @@ describe('createHttpClient', () => {
     FakeSource.last.send('{"type":"changed","paths":["img/a b.png"]}');
     expect(client.urlFor('img/a b.png')).toBe('/api/raw?path=img%2Fa%20b.png&rev=1');
     expect(client.urlFor('other.png')).toBe('/api/raw?path=other.png');
+    // A reconnection counts as a change to every path: one may have gone unheard.
+    FakeSource.last.onerror?.();
+    FakeSource.last.onopen?.();
+    expect(client.urlFor('img/a b.png')).toBe('/api/raw?path=img%2Fa%20b.png&rev=2');
+    expect(client.urlFor('other.png')).toBe('/api/raw?path=other.png&rev=1');
+  });
+
+  it('probes a file on the raw route, lets its bytes go, and answers a refusal as sent', async () => {
+    let cancelled = false;
+    const bytes = new ReadableStream<Uint8Array>({ cancel: () => void (cancelled = true) });
+    const fetch = vi.fn(async (_url: string) => new Response(bytes, { status: 200 }));
+    vi.stubGlobal('fetch', fetch);
+    const client = createHttpClient();
+    expect(await client.probe('img/a b.png')).toEqual({ ok: true });
+    expect(fetch.mock.calls[0][0]).toBe('/api/raw?path=img%2Fa%20b.png');
+    expect(cancelled).toBe(true);
+    answering({ ok: false, code: 'HOST_FILE_NOT_FOUND', message: 'none' }, 404);
+    expect(await client.probe('gone.png')).toEqual({
+      ok: false,
+      code: 'HOST_FILE_NOT_FOUND',
+      message: 'none',
+    });
   });
 });

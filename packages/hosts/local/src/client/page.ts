@@ -83,7 +83,7 @@ import type {
   HostClient,
   HostGit,
   JournalLabels,
-  LocalHostEvent,
+  WatchedEvent,
 } from './host-client';
 import type { MenuEntry } from './menu/menu';
 import type { PaneState } from './pane';
@@ -666,9 +666,14 @@ export function startPage(options: PageOptions): HostPage {
     );
   }
 
-  function onHostEvent(event: LocalHostEvent): void {
+  function onHostEvent(event: WatchedEvent): void {
     if (event.type === 'journal') {
       void readJournal();
+      return;
+    }
+    if (event.type === 'reconnected') {
+      // The `listed` before it read the list again; no event names the open file.
+      void pane.recheckOpen();
       return;
     }
     if (event.type === 'apps' || event.type === 'listed') {

@@ -46,7 +46,7 @@ import { fail, ok } from '@stillpointlab/common-format/app';
 import { createGit } from './git/repository';
 import { MAX_TEXT_BYTES } from './limits';
 import { gitPaths, toNodes, walkPaths } from './listing';
-import { isInside, locate, outsideRoot, pathProblem } from './paths';
+import { isInside, locate, outsideRoot, pathRefusal } from './paths';
 import { decodeText } from './text';
 
 import type { HostGitAccess } from './git/repository';
@@ -244,8 +244,8 @@ export function createNodePort(options: NodePortOptions): NodePort {
 
   /** A path's location, or the refusal its text or its place earns. */
   async function place(path: unknown): Promise<Failure | { path: string; at: Location }> {
-    const problem = pathProblem(path);
-    if (problem !== null) return outsideRoot(String(path), problem);
+    const refused = pathRefusal(path);
+    if (refused !== null) return refused;
     const at = await locate(root, path as string);
     if (at.kind === 'outside') {
       return outsideRoot(path as string, 'a symbolic link on the path leads out of it.');

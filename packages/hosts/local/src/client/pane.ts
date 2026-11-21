@@ -103,7 +103,7 @@ interface OpenRequest {
 }
 
 /** Refusals that mean the path has no file to show, for a format that takes a URL. */
-const GONE = new Set(['HOST_FILE_NOT_FOUND', 'HOST_PATH_OUTSIDE_ROOT']);
+const GONE = new Set(['HOST_FILE_NOT_FOUND', 'HOST_PATH_OUTSIDE_ROOT', 'HOST_PATH_INVALID']);
 
 const CODE_DIFF = { tag: 'code-diff', load: () => import('@stillpointlab/code-format/diff') };
 
@@ -353,6 +353,14 @@ export class FilePane {
     } finally {
       this.checking = false;
     }
+  }
+
+  /**
+   * The open file may have changed with no event to say so (the stream dropped
+   * and came back): read it again, as for a change on disk.
+   */
+  async recheckOpen(): Promise<void> {
+    if (this.session) await this.fileChanged([this.session.path]);
   }
 
   /** The version the open file was read or saved at, when `path` is the open file. */
@@ -643,11 +651,11 @@ export class FilePane {
       await this.refreshDiff(s);
       return;
     }
-    const got = await this.options.client.get(s.path);
-    if (this.session !== s) return;
-
     if (s.format.needs === 'url') {
-      if (!got.ok && GONE.has(got.code)) {
+      // Asked without a read: the bytes are the element's to load, and not text.
+      const there = await this.options.client.probe(s.path);
+      if (this.session !== s) return;
+      if (!there.ok && GONE.has(there.code)) {
         this.showMessage(s.path, s.view, words.deletedOnDisk);
         return;
       }
@@ -658,6 +666,8 @@ export class FilePane {
       return;
     }
 
+    const got = await this.options.client.get(s.path);
+    if (this.session !== s) return;
     if (got.ok) {
       if (got.version === s.version) {
         if (s.banner) {

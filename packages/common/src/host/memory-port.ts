@@ -13,9 +13,10 @@
 // - the changes are a list, each one well formed (`HOST_BAD_REQUEST`);
 // - a path is named once per call, as a change's path or a move's source
 //   (`HOST_BAD_REQUEST`);
-// - a path is relative, with `/` between names, and no empty, `.` or `..`
+// - a path is relative and does not climb with `..`
+//   (`HOST_PATH_OUTSIDE_ROOT`), with `/` between names, and no empty or `.`
 //   name, no NUL, no backslash and nothing git takes for its own folder
-//   (`HOST_PATH_OUTSIDE_ROOT`);
+//   (`HOST_PATH_INVALID`);
 // - a write, a move or a delete acts on a file that is there
 //   (`HOST_FILE_NOT_FOUND`), at the `base` it gives, if it gives one
 //   (`HOST_FILE_CHANGED`);
@@ -75,17 +76,32 @@ function isGitName(name: string): boolean {
   return folded === '.git' || folded === 'git~1';
 }
 
-/** What is wrong with a path as written, or `null` for nothing. */
-function pathProblem(path: unknown): string | null {
-  if (typeof path !== 'string') return 'A path must be a string.';
-  if (path === '') return 'The path is empty.';
-  if (path.includes('\0')) return 'The path has a NUL character.';
-  if (path.includes('\\')) return 'The path has a backslash; separate folders with "/".';
-  if (path.startsWith('/') || /^[A-Za-z]:/.test(path)) return 'The path is absolute.';
+const outside = (path: unknown, why: string): Failure =>
+  fail('HOST_PATH_OUTSIDE_ROOT', `${JSON.stringify(path)} is outside the served folder: ${why}`);
+
+const invalid = (path: unknown, why: string): Failure =>
+  fail('HOST_PATH_INVALID', `${JSON.stringify(path)} is not a usable path: ${why}`);
+
+/**
+ * The refusal for a path as written, or `null` for a path a port takes. A path
+ * that would leave the root is outside it; one that is only written wrong, or
+ * names git's folder, is invalid.
+ */
+function pathRefusal(path: unknown): Failure | null {
+  if (typeof path !== 'string') return invalid(path, 'A path must be a string.');
+  if (path === '') return invalid(path, 'The path is empty.');
+  if (path.includes('\0')) return invalid(path, 'The path has a NUL character.');
+  if (path.includes('\\')) {
+    return invalid(path, 'The path has a backslash; separate folders with "/".');
+  }
+  if (path.startsWith('/') || /^[A-Za-z]:/.test(path)) {
+    return outside(path, 'The path is absolute.');
+  }
   for (const segment of path.split('/')) {
-    if (segment === '') return 'The path has an empty segment.';
-    if (segment === '..' || segment === '.') return `The path has a "${segment}" segment.`;
-    if (isGitName(segment)) return "The path names git's own folder.";
+    if (segment === '') return invalid(path, 'The path has an empty segment.');
+    if (segment === '..') return outside(path, 'The path has a ".." segment.');
+    if (segment === '.') return invalid(path, 'The path has a "." segment.');
+    if (isGitName(segment)) return invalid(path, "The path names git's own folder.");
   }
   return null;
 }
@@ -109,9 +125,6 @@ function byteLength(text: string): number {
   }
   return bytes;
 }
-
-const outsideRoot = (path: unknown, why: string): Failure =>
-  fail('HOST_PATH_OUTSIDE_ROOT', `${JSON.stringify(path)} is outside the served folder: ${why}`);
 
 const notFound = (path: string): Failure =>
   fail('HOST_FILE_NOT_FOUND', `There is no file at ${JSON.stringify(path)}.`);
@@ -174,8 +187,8 @@ function toNodes(paths: Iterable<string>): FolderNode[] {
 function checkedFiles(files: Readonly<Record<string, string>>, what: string): Map<string, string> {
   const map = new Map<string, string>();
   for (const [path, text] of Object.entries(files)) {
-    const problem = pathProblem(path);
-    if (problem !== null) throw new Error(`${what}: ${JSON.stringify(path)}: ${problem}`);
+    const refused = pathRefusal(path);
+    if (refused !== null) throw new Error(`${what}: ${refused.message}`);
     if (typeof text !== 'string') throw new Error(`${what}: ${JSON.stringify(path)} is not text`);
     map.set(path, text);
   }
@@ -209,8 +222,8 @@ export function createMemoryPort(
   }
 
   async function get(path: string): Promise<Result<{ text: string; version: string }>> {
-    const problem = pathProblem(path);
-    if (problem !== null) return outsideRoot(path, problem);
+    const refused = pathRefusal(path);
+    if (refused !== null) return refused;
     const text = current.get(path);
     if (text === undefined) return notFound(path);
     if (byteLength(text) > MEMORY_MAX_TEXT_BYTES) {
@@ -247,12 +260,12 @@ export function createMemoryPort(
     for (const change of changes) {
       // A move's source is checked before its target, so a missing source says so.
       if (change.kind === 'move') {
-        const problem = pathProblem(change.from);
-        if (problem !== null) return outsideRoot(change.from, problem);
+        const refused = pathRefusal(change.from);
+        if (refused !== null) return refused;
         if (!current.has(change.from)) return notFound(change.from);
       }
-      const problem = pathProblem(change.path);
-      if (problem !== null) return outsideRoot(change.path, problem);
+      const refused = pathRefusal(change.path);
+      if (refused !== null) return refused;
 
       if (change.kind === 'create' || change.kind === 'move') {
         const blocking = foldersOf(change.path).find((folder) => current.has(folder));
