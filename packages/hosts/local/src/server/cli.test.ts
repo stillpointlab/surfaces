@@ -173,7 +173,8 @@ describe('surfaces', () => {
   });
 
   it('says nothing about git for a folder that is not a repository, with git off the PATH', async () => {
-    await serve(['site', '--port', '0'], { ...process.env, PATH: join(folder.path, 'no-bin') });
+    const env = gitEnv(folder.path);
+    await serve(['site', '--port', '0'], { ...env, PATH: join(folder.path, 'no-bin') });
     expect(err).toEqual([]);
   });
 });

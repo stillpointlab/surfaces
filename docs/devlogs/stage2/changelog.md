@@ -79,7 +79,7 @@ Range: `stage2-phase1-complete..stage2-phase2-complete` (`2d01ec9..93cfde4`), 20
 
 - Result types (`{ ok: true, … } | { ok: false, code, message }`) are Jamie's preferred error
   pattern; the cores keep their thrown rule errors until the contract step
-  ([seed](../../tasks/unassigned/seeds/result-types-for-app-cores.md)).
+  ([seed](../../tasks/stage2/phase5/seeds/result-types-for-app-cores.md)).
 - No history import: Context Manager is private, so the apps arrive as new files and each PR names
   its source commit.
 - ADR-0028 decision 4 (warn on files an app cannot map) is likely to be relaxed, so the suite does

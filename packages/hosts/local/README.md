@@ -285,8 +285,9 @@ runs git.
 
 - **Three states, decided once at start** (`GET /api/git`): `repository` when git runs and the
   root is in a work tree; `no-git` when git cannot be run and a `.git` entry (a folder or a
-  file) is in the root or above it; `no-repository` otherwise. Outside `repository` the status
-  is `{}`, the git routes refuse, and a write stages nothing.
+  file) is in the root or above it; `no-repository` otherwise. The look above the root stops
+  below a folder `GIT_CEILING_DIRECTORIES` names, as git's own does. Outside `repository` the
+  status is `{}`, the git routes refuse, and a write stages nothing.
 - **A served root inside a repository** sees only its own paths, relative to itself. A rename
   across its edge is half of one: in from outside is `new`, out to elsewhere is `deleted`.
 - **The statuses:** untracked, added and intent-to-add files are `new`; a staged rename is

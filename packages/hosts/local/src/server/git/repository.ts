@@ -17,7 +17,7 @@
 
 import { lstat, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { delimiter, dirname, isAbsolute, join, resolve } from 'node:path';
 
 import { fail, ok } from '@stillpointlab/common-format/app';
 
@@ -145,7 +145,7 @@ export function createGit(options: GitOptions): HostGitAccess {
         return { state: 'no-repository', gitFound: true };
       }
       if (!inside.ok && inside.missing) {
-        return (await hasGitEntryAbove(root))
+        return (await hasGitEntryAbove(root, env))
           ? { state: 'no-git' }
           : { state: 'no-repository', gitFound: false };
       }
@@ -618,9 +618,19 @@ function gitFailed(command: string, run: GitRun): Failure {
 /**
  * Whether a `.git` entry, a folder or a file (a worktree's, a submodule's), is in
  * `folder` or any folder above it. Used only when `git` cannot be run; it reads
- * nothing in the entry and knows none of git's other rules.
+ * nothing in the entry and knows one of git's other rules: it does not climb
+ * into a folder `GIT_CEILING_DIRECTORIES` names, as git does not.
  */
-export async function hasGitEntryAbove(folder: string): Promise<boolean> {
+export async function hasGitEntryAbove(
+  folder: string,
+  env: NodeJS.ProcessEnv = process.env
+): Promise<boolean> {
+  const ceilings = new Set(
+    (env.GIT_CEILING_DIRECTORIES ?? '')
+      .split(delimiter)
+      .filter((path) => isAbsolute(path))
+      .map((path) => resolve(path))
+  );
   let at = folder;
   for (;;) {
     try {
@@ -630,7 +640,7 @@ export async function hasGitEntryAbove(folder: string): Promise<boolean> {
       // not here
     }
     const up = dirname(at);
-    if (up === at) return false;
+    if (up === at || ceilings.has(up)) return false;
     at = up;
   }
 }

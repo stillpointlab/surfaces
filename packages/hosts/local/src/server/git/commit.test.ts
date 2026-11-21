@@ -627,7 +627,10 @@ describe('the write lock', () => {
         order.push('put');
         return answer;
       });
-    // The put cannot land while the hook holds the commit.
+    // The put cannot land while the hook holds the commit. This is the one wait on
+    // a clock in the package, and it can only hide a failure, never cause one: a
+    // slow machine makes "still waiting" likelier. What the hook saw and the order
+    // of the answers, below, say the same with no clock.
     const first = await Promise.race([
       putting.then(() => 'put'),
       new Promise((done) => setTimeout(() => done('still waiting'), 300)),

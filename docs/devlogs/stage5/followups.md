@@ -21,6 +21,9 @@ are carried here as they were written.
   local host does not hit it, because it makes a new element for each file.
 - 2026-11-14 (format-descriptors): the root `README.md`'s harness paragraph and format-convention
   table predate the `./format` entry.
+  - Closed 2026-11-20 (Jamie: fix; [#149](https://github.com/stillpointlab/surfaces/pull/149)): both
+    name the descriptor, and the table has its row. The template still has no `./format` entry, and
+    the README says so.
 - 2026-11-14 (format-descriptors): in the harness, a deep link to a fixture whose content is `''`
   falls back to the first fixture (a truthiness test in `main.ts`), and `vite.config.ts`'s
   default-format pattern does not match `@stillpointlab/local-host`.
@@ -52,9 +55,15 @@ are carried here as they were written.
   hook that refuses is not the server's fault; 422 would say so.
 - 2026-11-14 (git-in-the-host): one commit test checks that a `put` has not finished after
   300 ms, the only assertion in the package that depends on time.
+  - Closed 2026-11-20 (Jamie: fix; [#149](https://github.com/stillpointlab/surfaces/pull/149)), with
+    a comment and no change to the test. "Nothing happened yet" needs a wait, and this one can only
+    hide a failure, never cause one. The same test already says it with no clock: what the hook
+    read, and the order of the two answers.
 - 2026-11-14 (phase 3's close): `packages/formats/md/README.md` still calls the package
   `@stillpointlab/md-editor`, its name before the monorepo, in its title, install line and
   examples.
+  - Closed 2026-11-20 (Jamie: fix; [#149](https://github.com/stillpointlab/surfaces/pull/149)): it
+    is `@stillpointlab/md-format` throughout.
 - 2026-11-14 (context-manager-adopts-formats): a descriptor's `apply` always sets the content,
   so a host that renames an open file cannot ask it for the path's attributes alone (the code
   language). Context Manager keeps one language branch for that. A way to re-derive a path's
@@ -66,6 +75,9 @@ are carried here as they were written.
   `related-tasks.md` (a seed) to `../tasks/public_page_viewer_bootstrap.md`, and stage 2's
   `cm-app-prep.md` and changelog to the seed `result-types-for-app-cores.md`. Nothing checks
   links in CI.
+  - Closed 2026-11-20 (Jamie: fix; [#149](https://github.com/stillpointlab/surfaces/pull/149)): the
+    two links to the seed point at where it went, `stage2/phase5/seeds/`. The third is not a link:
+    the seed quotes a line of markdown in a code span, as an example. No link check was added to CI.
 - 2026-11-14 (app-module-grows): inventory's bounds, pages and create copy are now in
   `packages/apps/inventory` (`bounds.ts`, `pages.ts`, `meta.ts`) and still in Context Manager
   (`services/inventory/opSchema.ts`, `services/inventory/pages.ts`, `client/apps/registry.ts`, the
@@ -236,3 +248,7 @@ are carried here as they were written.
   repository". With a `.git` entry anywhere above it (an empty `/tmp/.git` appeared on the
   development machine) the host says `no-git`, rightly, and both fail. They should make their
   own ceiling, or say why they were skipped.
+  - Closed 2026-11-20 (Jamie: fix; [#149](https://github.com/stillpointlab/surfaces/pull/149)): the
+    host's look for a `.git` entry stops below a folder `GIT_CEILING_DIRECTORIES` names, as git's
+    does, and the tests' environment names their temporary folder. A third test (`cli.test.ts`) had
+    the same fault.

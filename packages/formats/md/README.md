@@ -1,4 +1,4 @@
-# @stillpointlab/md-editor
+# @stillpointlab/md-format
 
 A [ProseMirror](https://prosemirror.net/)-based **markdown editor web component**
 (`<md-editor>`) plus an isomorphic **markdown renderer**. Written in TypeScript,
@@ -8,7 +8,7 @@ component's shadow root at runtime).
 
 - **`<md-editor>`** — a WYSIWYG markdown editor custom element (toolbar, lists,
   tables, code blocks, a raw-markdown toggle), with ProseMirror loaded lazily.
-- **`@stillpointlab/md-editor/markdown`** — a DOM-free `createMarkdownIt` /
+- **`@stillpointlab/md-format/markdown`** — a DOM-free `createMarkdownIt` /
   `renderMarkdown` (CommonMark + GFM strikethrough + tables) for Node SSR or the
   browser.
 - **Plugin interface** — host-specific syntax (e.g. citations) plugs in without
@@ -17,7 +17,7 @@ component's shadow root at runtime).
 ## Install
 
 ```sh
-npm install @stillpointlab/md-editor
+npm install @stillpointlab/md-format
 ```
 
 Peer runtime deps (`markdown-it`, `prosemirror-*`) are declared as regular
@@ -28,7 +28,7 @@ dependencies and installed automatically.
 ### The editor component
 
 ```ts
-import '@stillpointlab/md-editor'; // registers <md-editor>
+import '@stillpointlab/md-format'; // registers <md-editor>
 
 const editor = document.querySelector('md-editor');
 editor.setContent('# Hello\n\nSome **markdown**.');
@@ -43,7 +43,7 @@ Or in HTML:
 ```html
 <md-editor></md-editor>
 <script type="module">
-  import '@stillpointlab/md-editor';
+  import '@stillpointlab/md-format';
 </script>
 ```
 
@@ -75,7 +75,7 @@ it was before this rule.
 ### Rendering markdown (no DOM required)
 
 ```ts
-import { renderMarkdown } from '@stillpointlab/md-editor/markdown';
+import { renderMarkdown } from '@stillpointlab/md-format/markdown';
 
 const html = await renderMarkdown('# Title\n\n- a\n- b');
 // NOTE: output is NOT sanitized — sanitize before inserting into the DOM.
@@ -84,7 +84,7 @@ const html = await renderMarkdown('# Title\n\n- a\n- b');
 For a reusable, configured instance:
 
 ```ts
-import { createMarkdownIt } from '@stillpointlab/md-editor/markdown';
+import { createMarkdownIt } from '@stillpointlab/md-format/markdown';
 
 const md = createMarkdownIt({
   plugins: [/* markdown-it plugins */],
@@ -109,7 +109,7 @@ ProseMirror schema nodes, a markdown-it-token → node parse mapping, a
 node → markdown serializer, and an `onReady` hook.
 
 ```ts
-import { registerEditorPlugin, type MarkdownEditorPlugin } from '@stillpointlab/md-editor';
+import { registerEditorPlugin, type MarkdownEditorPlugin } from '@stillpointlab/md-format';
 
 const highlightPlugin: MarkdownEditorPlugin = {
   name: 'highlight',
@@ -125,7 +125,7 @@ const highlightPlugin: MarkdownEditorPlugin = {
 };
 
 registerEditorPlugin(highlightPlugin);
-import '@stillpointlab/md-editor'; // now initialize the element
+import '@stillpointlab/md-format'; // now initialize the element
 ```
 
 ### Error / log injection
@@ -133,7 +133,7 @@ import '@stillpointlab/md-editor'; // now initialize the element
 By default the editor logs via `console`. Override the handlers:
 
 ```ts
-import { setErrorHandler, setReporter } from '@stillpointlab/md-editor';
+import { setErrorHandler, setReporter } from '@stillpointlab/md-format';
 
 setErrorHandler((message, err) => myLogger.error(message, err));
 setReporter((message, context) => myLogger.info(message, context));
@@ -141,7 +141,7 @@ setReporter((message, context) => myLogger.info(message, context));
 
 ## Exports
 
-From `@stillpointlab/md-editor`:
+From `@stillpointlab/md-format`:
 
 - `ProseMirrorEditor` — the element class (also registered as `<md-editor>`)
 - `registerEditorPlugin`, `getEditorPlugins`
@@ -154,7 +154,7 @@ From `@stillpointlab/md-format/editor`: the same, without `createSchema`, `getSc
 `getMarkdownParser` and `getMarkdownSerializer`. Those are the engine, which the editor imports on
 its first connect; `src/editor/entry.test.ts` keeps this entry from loading it sooner.
 
-From `@stillpointlab/md-editor/markdown`:
+From `@stillpointlab/md-format/markdown`:
 
 - `createMarkdownIt`, `getMarkdownIt`, `renderMarkdown`, `selectedMarkdownSource`
 - types: `MarkdownIt`, `MarkdownItPlugin`, `CreateMarkdownItOptions`,
