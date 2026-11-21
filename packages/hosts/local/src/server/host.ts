@@ -46,7 +46,7 @@ import { DEFAULT_APPS, DEFAULT_HOST_OPS } from './apps/registry';
 import { createJournal } from './journal/journal';
 import { labelFor } from './journal/labels';
 import { LIST_LIMIT } from './limits';
-import { isInside, locate, outsideRoot, pathProblem } from './paths';
+import { isInside, locate, outsideRoot, pathRefusal } from './paths';
 import { createNodePort } from './port';
 import { json, readBody, refusal, refuse, SECURITY_HEADERS } from './respond';
 import { createFolderWatcher } from './watcher';
@@ -410,8 +410,8 @@ export function createHost(options: HostOptions): LocalHost {
   }
 
   async function raw(path: string): Promise<Response> {
-    const problem = pathProblem(path);
-    if (problem !== null) return refusal(outsideRoot(path, problem));
+    const refused = pathRefusal(path);
+    if (refused !== null) return refusal(refused);
     const at = await locate(root, path);
     if (at.kind === 'outside') {
       return refusal(outsideRoot(path, 'a symbolic link on the path leads out of it.'));

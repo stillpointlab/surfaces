@@ -415,6 +415,41 @@ describe('a change on disk', () => {
     await settle();
     expect(message()).toBe('This file was deleted on disk.');
   });
+
+  it('asks whether an open image is still there without reading it as text', async () => {
+    await page.navigate({ path: 'pic.png', view: 'preview' });
+    await settle();
+    const gets = host.gets.length;
+    host.writeOutside('pic.png', 'still binary');
+    host.disk.set('pic.png', BINARY);
+    await settle();
+    expect(host.probes).toEqual(['pic.png']);
+    expect(host.gets.length).toBe(gets);
+  });
+
+  it('reads the open file again when the event stream comes back', async () => {
+    await page.navigate({ path: 'a.md', view: 'preview' });
+    await settle();
+    // A change nobody told the page about: the stream was down.
+    host.disk.set('a.md', '# A\nwhile away');
+    host.versions.set('a.md', 'v-away');
+    await settle();
+    expect(shown().content).not.toBe('# A\nwhile away');
+    host.emit({ type: 'reconnected' });
+    await settle();
+    expect(shown().content).toBe('# A\nwhile away');
+  });
+
+  it('raises the banner over unsaved edits when the stream comes back to a changed file', async () => {
+    await openInEditor('a.md');
+    editor().type('mine');
+    host.disk.set('a.md', '# A\nwhile away');
+    host.versions.set('a.md', 'v-away');
+    host.emit({ type: 'reconnected' });
+    await settle();
+    expect(banner()).not.toBeNull();
+    expect(unsaved()).toBe(true);
+  });
 });
 
 describe('leaving unsaved edits', () => {

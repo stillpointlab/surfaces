@@ -503,6 +503,47 @@ describe('setNodes with the same paths', () => {
   });
 });
 
+describe('a selection set from outside', () => {
+  const paths = ['docs/a.md', 'docs/b.md', 'readme.md'];
+
+  it('takes the focus ring with it when a row had focus', () => {
+    const tree = mount(paths);
+    tree.selected = 'readme.md';
+    item(tree, 'readme.md').focus();
+    tree.reveal('docs/b.md');
+    expect(focused(tree)).toBe('docs/b.md');
+    tree.selected = 'readme.md';
+    expect(focused(tree)).toBe('readme.md');
+    // The arrow keys go on from the row the ring is on.
+    press(tree, 'ArrowUp');
+    expect(focused(tree)).toBe('docs/b.md');
+  });
+
+  it('leaves focus where it is outside the tree, on a menu button, or with nothing to select', () => {
+    const outside = document.createElement('button');
+    document.body.append(outside);
+    const tree = mount(paths);
+    tree.selected = 'readme.md';
+    outside.focus();
+    tree.reveal('docs/b.md');
+    expect(document.activeElement).toBe(outside);
+
+    const menu = item(tree, 'readme.md').querySelector<HTMLElement>('.menu')!;
+    menu.focus();
+    tree.selected = 'docs/a.md';
+    expect(tree.shadowRoot!.activeElement).toBe(menu);
+
+    item(tree, 'docs/a.md').focus();
+    tree.selected = null;
+    expect(focused(tree)).toBe('docs/a.md');
+    // The same selection again moves nothing: a row's menu was opened from the keyboard.
+    tree.selected = 'docs/b.md';
+    item(tree, 'readme.md').focus();
+    tree.selected = 'docs/b.md';
+    expect(focused(tree)).toBe('readme.md');
+  });
+});
+
 describe('ARIA', () => {
   it('has a tree of treeitems and groups, with levels, and follows the state', () => {
     const tree = mount(['a/b/c.md', 'd.md']);

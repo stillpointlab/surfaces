@@ -41,6 +41,9 @@ beforeEach(() => {
 });
 afterEach(() => folder.cleanup());
 
+const OUTSIDE = 'HOST_PATH_OUTSIDE_ROOT';
+const INVALID = 'HOST_PATH_INVALID';
+
 const secretUntouched = () => {
   expect(readFileSync(join(outside, 'secret.txt'), 'utf8')).toBe('secret');
   expect(readFileSync(join(outside, 'dir', 'inner.txt'), 'utf8')).toBe('inner');
@@ -48,15 +51,28 @@ const secretUntouched = () => {
 
 describe('reads', () => {
   it.each([
-    ['..', '../outside/secret.txt'],
-    ['an absolute path', '/etc/hostname'],
-    ['.git', '.git/config'],
-    ['.GIT', '.GIT/config'],
-    ['a link out, as the file', 'out-file'],
-    ['a link out, as a folder on the path', 'out-dir/inner.txt'],
-    ['a link out that leads nowhere', 'out-dangling'],
-  ])('refuses %s', async (_what, path) => {
-    expect(await p.get(path)).toMatchObject({ ok: false, code: 'HOST_PATH_OUTSIDE_ROOT' });
+    ['..', '../outside/secret.txt', OUTSIDE],
+    ['an absolute path', '/etc/hostname', OUTSIDE],
+    ['.git', '.git/config', INVALID],
+    ['.GIT', '.GIT/config', INVALID],
+    ['a . segment', './a.md', INVALID],
+    ['a link out, as the file', 'out-file', OUTSIDE],
+    ['a link out, as a folder on the path', 'out-dir/inner.txt', OUTSIDE],
+    ['a link out that leads nowhere', 'out-dangling', OUTSIDE],
+  ])('refuses %s', async (_what, path, code) => {
+    expect(await p.get(path)).toMatchObject({ ok: false, code });
+  });
+
+  it('says which: a path that would leave the folder, or one it does not take', async () => {
+    expect(await p.get('../a.md')).toMatchObject({
+      code: OUTSIDE,
+      message: '"../a.md" is outside the served folder: The path has a ".." segment.',
+    });
+    expect(await p.get('docs\\b.md')).toMatchObject({
+      code: INVALID,
+      message:
+        '"docs\\\\b.md" is not a usable path: The path has a backslash; separate folders with "/".',
+    });
   });
 
   it('refuses an absolute path to a file inside the root', async () => {
@@ -76,7 +92,8 @@ describe('reads', () => {
 });
 
 describe('writes', () => {
-  const refusedWrites: Array<[string, PortChange[]]> = [
+  // Each with its code: outside the root unless it says otherwise.
+  const refusedWrites: Array<[string, PortChange[], string?]> = [
     ['a write through a link out', [{ kind: 'write', path: 'out-file', content: 'x' }]],
     [
       'a write under a folder link out',
@@ -99,8 +116,16 @@ describe('writes', () => {
       'a create with an absolute path',
       [{ kind: 'create', path: '/tmp/surfaces-escape.txt', content: 'x' }],
     ],
-    ['a create in .git', [{ kind: 'create', path: '.git/hooks/pre-commit', content: 'x' }]],
-    ['a create in .Git', [{ kind: 'create', path: '.Git/hooks/pre-commit', content: 'x' }]],
+    [
+      'a create in .git',
+      [{ kind: 'create', path: '.git/hooks/pre-commit', content: 'x' }],
+      INVALID,
+    ],
+    [
+      'a create in .Git',
+      [{ kind: 'create', path: '.Git/hooks/pre-commit', content: 'x' }],
+      INVALID,
+    ],
     ['a delete of a link out', [{ kind: 'delete', path: 'out-file' }]],
     ['a delete under a folder link out', [{ kind: 'delete', path: 'out-dir/inner.txt' }]],
     ['a move of a link out', [{ kind: 'move', from: 'out-file', path: 'moved.txt' }]],
@@ -112,12 +137,12 @@ describe('writes', () => {
       'a move into a folder link out',
       [{ kind: 'move', from: 'a.md', path: 'out-dir/a.md', content: 'a' }],
     ],
-    ['a move into .git', [{ kind: 'move', from: 'a.md', path: '.git/a.md' }]],
+    ['a move into .git', [{ kind: 'move', from: 'a.md', path: '.git/a.md' }], INVALID],
   ];
 
-  it.each(refusedWrites)('refuses %s, and writes nothing', async (_what, changes) => {
+  it.each(refusedWrites)('refuses %s, and writes nothing', async (_what, changes, code) => {
     const before = readFileSync(join(root, 'a.md'), 'utf8');
-    expect(await p.put(changes)).toMatchObject({ ok: false, code: 'HOST_PATH_OUTSIDE_ROOT' });
+    expect(await p.put(changes)).toMatchObject({ ok: false, code: code ?? OUTSIDE });
     secretUntouched();
     expect(readFileSync(join(root, 'a.md'), 'utf8')).toBe(before);
     expect(lstatSync(join(root, 'out-file')).isSymbolicLink()).toBe(true);
@@ -173,24 +198,20 @@ describe('the routes', () => {
   };
 
   it.each([
-    ['percent-encoded ..', '..%2Foutside%2Fsecret.txt'],
-    ['percent-encoded dots', '%2e%2e/outside/secret.txt'],
-    ['an encoded separator inside ..', 'docs%2F..%2F..%2Foutside%2Fsecret.txt'],
-    ['a doubled separator', 'docs//b.md'],
-    ['a leading separator', '%2Fetc%2Fpasswd'],
-    ['an encoded backslash', '..%5Coutside%5Csecret.txt'],
-    ['an encoded NUL', 'a.md%00.png'],
-    ['.git, encoded', '%2Egit/config'],
-    ['a link out', 'out-file'],
-    ['a folder link out', 'out-dir/inner.txt'],
-  ])('/api/file and /api/raw refuse %s with 400', async (_what, rawPath) => {
+    ['percent-encoded ..', '..%2Foutside%2Fsecret.txt', OUTSIDE],
+    ['percent-encoded dots', '%2e%2e/outside/secret.txt', OUTSIDE],
+    ['an encoded separator inside ..', 'docs%2F..%2F..%2Foutside%2Fsecret.txt', OUTSIDE],
+    ['a doubled separator', 'docs//b.md', INVALID],
+    ['a leading separator', '%2Fetc%2Fpasswd', OUTSIDE],
+    ['an encoded backslash', '..%5Coutside%5Csecret.txt', INVALID],
+    ['an encoded NUL', 'a.md%00.png', INVALID],
+    ['.git, encoded', '%2Egit/config', INVALID],
+    ['a link out', 'out-file', OUTSIDE],
+    ['a folder link out', 'out-dir/inner.txt', OUTSIDE],
+  ])('/api/file and /api/raw refuse %s with 400', async (_what, rawPath, code) => {
     for (const route of ['file', 'raw']) {
       const { status, body } = await get(rawPath, route);
-      expect({ route, status, code: body.code }).toEqual({
-        route,
-        status: 400,
-        code: 'HOST_PATH_OUTSIDE_ROOT',
-      });
+      expect({ route, status, code: body.code }).toEqual({ route, status: 400, code });
     }
   });
 

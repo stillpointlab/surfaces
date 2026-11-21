@@ -72,6 +72,7 @@ const RUNNER_CLASS: Readonly<Record<string, RefusalClass>> = {
   HOST_NOT_TEXT: 'invalid',
   HOST_FILE_TOO_LARGE: 'invalid',
   HOST_PATH_OUTSIDE_ROOT: 'invalid',
+  HOST_PATH_INVALID: 'invalid',
   HOST_BAD_REQUEST: 'invalid',
 };
 
