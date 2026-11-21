@@ -32,6 +32,10 @@
 # handling for the Changes view, shared so Context Manager can move to it.
 - docs/tasks/unassigned/seeds/diff-whitespace-in-one-place.md
 
+# From stage 5's follow-ups, the drain's eighth batch (2026-11-21): speed, for
+# a large folder. Nothing is wrong today.
+- docs/tasks/unassigned/seeds/the-local-host-keeps-its-listing.md
+
 # From stage 4's follow-ups (2026-11-14).
 - docs/tasks/unassigned/seeds/a-save-keeps-the-file.md
 - docs/tasks/unassigned/seeds/markdown-relative-links.md

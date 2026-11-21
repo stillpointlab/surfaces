@@ -305,6 +305,7 @@ export function createAppHost(options: AppHostOptions): AppHost {
         port,
         module: at.module,
         manifestPath,
+        region: at.instance,
         snapshot: async () => {
           const loaded = await loadInstance(port, at.module, manifestPath);
           if (!loaded.ok) return loaded;

@@ -396,12 +396,13 @@ port's write lock: a `put` that arrives during a commit waits for it, and the re
   warnings; it locks either way.
 - **The runner's `know`** is the module's `fromChanges` over git's changes in the region (a
   change whose path or `from` is in it), each changed or moved file with its `base`, read once
-  through `git.base` and kept until git's `HEAD` or index moves. Outside a repository nothing is
-  changed.
+  through `git.base` and kept until git's `HEAD` or index moves (the watch on them, and at once
+  when the host's own commit lands). Outside a repository nothing is changed.
 - **The revision** the page and op routes answer is the runner's joined with a digest of the
   changes `know` was handed, so a commit, which changes no file, moves it.
 - **Host ops** an app's registration names (`host-ops.ts`) are answered before the runner:
-  tasks' `read-file` (the port's text), `scan-references` (the core's `referencesTo` over the
+  tasks' `read-file` (the port's text, for one of the instance's own files: a path outside its
+  region is refused `APP_OP_INVALID`), `scan-references` (the core's `referencesTo` over the
   instance as known) and `resolve` (refused). Their answers carry no revision.
 - **Create** checks the folder against the found instances' regions first (at the root, the
   scope the app's lifecycle would give the seeded manifest), then runs `createInstance`.

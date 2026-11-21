@@ -6,8 +6,14 @@
 //
 // A host op changes no file the runner tracks, so its answer carries no
 // `revision`, and the page does not hand its reply to the shell's `learn`.
+//
+// A host op reaches the instance's own files and no others: `read-file` refuses
+// a path outside the instance's region (its folder, or at the served root its
+// scope), though the port could read it. An app deals with the files it holds.
 
 import { fail, ok } from '@stillpointlab/common-format/app';
+
+import { inRegion, type Region } from '../../shared/apps';
 
 import type { AnyAppModule, AppSnapshot, Result } from '@stillpointlab/common-format/app';
 import type { StoragePort } from '@stillpointlab/common-format/host';
@@ -17,6 +23,8 @@ export interface HostOpContext {
   port: StoragePort;
   module: AnyAppModule;
   manifestPath: string;
+  /** The instance's own files: its folder, or at the served root its scope's paths. */
+  region: Region;
   /** The instance as the runner reads it, with the host's knowledge laid over. */
   snapshot(): Promise<Result<{ snapshot: AppSnapshot }>>;
 }
@@ -35,10 +43,16 @@ const pathOf = (op: Record<string, unknown>): string | null =>
 const noPath = (type: string) =>
   fail('APP_OP_INVALID', `The op is not valid: path: "${type}" names a file by its path.`);
 
-/** `read-file`: a file's text, from the port: `{ content }`. */
-export const readFile: ServerHostOp = async (op, { port }) => {
+/** `read-file`: the text of one of the instance's files, from the port: `{ content }`. */
+export const readFile: ServerHostOp = async (op, { port, region }) => {
   const path = pathOf(op);
   if (path === null) return noPath(op.type);
+  if (!inRegion(region, path)) {
+    return fail(
+      'APP_OP_INVALID',
+      `The op is not valid: path: ${JSON.stringify(path)} is not one of this app's files.`
+    );
+  }
   const read = await port.get(path);
   return read.ok ? ok({ content: read.text }) : read;
 };
