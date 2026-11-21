@@ -123,9 +123,9 @@ function menuOn(path: string, kind: string): void {
 
 function entries(): { label: string; disabled: boolean; title: string | null }[] {
   return [...page.menu.element.querySelectorAll<HTMLElement>('[role="menuitem"]')].map((item) => ({
-    label: item.textContent ?? '',
+    label: item.querySelector('.host-menu-label')?.textContent ?? '',
     disabled: item.getAttribute('aria-disabled') === 'true',
-    title: item.getAttribute('title'),
+    title: item.querySelector('.host-menu-reason')?.textContent ?? null,
   }));
 }
 

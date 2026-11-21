@@ -155,10 +155,20 @@ export class FileOpDialog {
     );
     const error = dialog.querySelector<HTMLElement>(`#${ERROR_ID}`)!;
     const question = dialog.querySelector<HTMLElement>('.file-op-question')!;
+    const bodyElement = dialog.querySelector<HTMLElement>('.file-op-body')!;
+    // A question with no detail has nothing in its body until a refusal or a
+    // second question shows: hidden meanwhile, so the dialog draws no empty band.
+    const syncBody = () => {
+      bodyElement.hidden = [...bodyElement.children].every(
+        (child) => (child as HTMLElement).hidden
+      );
+    };
+    syncBody();
 
     const show = (message: string | null) => {
       error.hidden = message === null;
       error.textContent = message ?? '';
+      syncBody();
       const input = this.input();
       if (input) {
         if (message === null) input.removeAttribute('aria-invalid');
@@ -199,6 +209,7 @@ export class FileOpDialog {
           show(null);
           question.hidden = false;
           question.textContent = followUp.question;
+          syncBody();
           const button = this.confirmButton();
           if (button) button.textContent = followUp.confirm;
           button?.focus();

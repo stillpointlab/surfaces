@@ -108,12 +108,16 @@ export function buildModel(
   return { entries, marks: markMap, rolledUp, signature };
 }
 
-/** Whether the row opens and closes: a folder, or an app with children among the nodes. */
-export function expandable(entry: TreeEntry, mark: TreeMark | undefined): boolean {
-  return entry.children.length > 0 || (entry.folder && !mark?.app);
+/**
+ * Whether the row opens and closes: it has rows under it. A folder listed with
+ * nothing under it (a separate repository, which the host does not read into)
+ * has no chevron, since it would open to nothing.
+ */
+export function expandable(entry: TreeEntry): boolean {
+  return entry.children.length > 0;
 }
 
 export function kindOf(entry: TreeEntry | undefined, mark: TreeMark | undefined): RowKind {
   if (mark?.app) return 'app';
-  return entry && expandable(entry, mark) ? 'folder' : 'file';
+  return entry && (entry.folder || entry.children.length > 0) ? 'folder' : 'file';
 }

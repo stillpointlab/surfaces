@@ -207,6 +207,79 @@ describe('in a repository', () => {
     expect(shown()).toBe(element);
   });
 
+  it('the whitespace control shows over a Changes view only, and sets the element', async () => {
+    start('#/file/a.md');
+    await page.ready;
+    await settle();
+    expect($('.pane-diff').hidden).toBe(true);
+    press('diff');
+    await settle();
+    expect($('.pane-diff').hidden).toBe(false);
+    expect($('.pane-diff-note').textContent).toBe('');
+    const control = $<HTMLSelectElement>('.pane-diff-whitespace select');
+    expect([...control.options].map((option) => option.textContent)).toEqual([
+      'Compared',
+      'Ignored',
+      'Shown',
+    ]);
+    expect(control.value).toBe('compare');
+    expect(shown().getAttribute('ignore-whitespace')).toBe('false');
+    expect(shown().getAttribute('show-whitespace')).toBe('false');
+
+    const element = shown();
+    control.value = 'ignore';
+    control.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(shown()).toBe(element);
+    expect(element.getAttribute('ignore-whitespace')).toBe('true');
+    expect(element.getAttribute('show-whitespace')).toBe('false');
+    control.value = 'show';
+    control.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(element.getAttribute('ignore-whitespace')).toBe('false');
+    expect(element.getAttribute('show-whitespace')).toBe('true');
+
+    // A message in place of the two sides has nothing to compare.
+    await page.navigate({ path: 'head-binary.md', view: 'diff' });
+    await settle();
+    expect(message()).toBe(words.diff.HOST_NOT_TEXT);
+    expect($('.pane-diff').hidden).toBe(true);
+  });
+
+  it('keeps the whitespace choice for the next Changes view and the next page', async () => {
+    start('#/diff/a.md');
+    await page.ready;
+    await settle();
+    const control = $<HTMLSelectElement>('.pane-diff-whitespace select');
+    control.value = 'ignore';
+    control.dispatchEvent(new Event('change', { bubbles: true }));
+    await page.navigate({ path: 'docs/moved.md', view: 'diff' });
+    await settle();
+    expect(shown().getAttribute('ignore-whitespace')).toBe('true');
+
+    page.destroy();
+    document.body.replaceChildren();
+    start('#/diff/a.md');
+    await page.ready;
+    await settle();
+    expect($<HTMLSelectElement>('.pane-diff-whitespace select').value).toBe('ignore');
+    expect(shown().getAttribute('ignore-whitespace')).toBe('true');
+  });
+
+  it('says when the sides differ in line endings or whitespace alone, and follows the file', async () => {
+    start('#/diff/a.md');
+    await page.ready;
+    await settle();
+    host.heads.set('a.md', 'a\nb\n');
+    host.writeOutside('a.md', 'a\r\nb\r\n');
+    await settle();
+    expect($('.pane-diff-note').textContent).toBe(words.diff.endingsOnly('CRLF', 'LF'));
+    host.writeOutside('a.md', 'a\n  b\n');
+    await settle();
+    expect($('.pane-diff-note').textContent).toBe(words.diff.whitespaceOnly);
+    host.writeOutside('a.md', 'a\nc\n');
+    await settle();
+    expect($('.pane-diff-note').textContent).toBe('');
+  });
+
   it('follows a rename of the open file in the Changes view', async () => {
     start('#/diff/a.md');
     await page.ready;

@@ -42,6 +42,10 @@ document.querySelector<ModalDialog>('#rename')?.open();
 | `body`   | The content. It scrolls when it is too tall. |
 | `footer` | Usually the buttons.                         |
 
+A body with nothing to show takes no room: when no element is slotted into `body`, or each one
+is `hidden`, the body is not drawn, so a question that is all title has no empty band above its
+buttons. The dialog follows the slotted elements while it is open.
+
 Opening focuses `[data-autofocus]` or `[autofocus]` in the slotted content, then the first focusable
 slotted control, then the close button. A page should use `data-autofocus`: before the element is
 defined, its content is ordinary in-flow DOM, and native `autofocus` would scroll the page to it.

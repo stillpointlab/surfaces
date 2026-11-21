@@ -329,6 +329,41 @@ host-file-tree {
 }
 
 // Over a locked file's preview: why it does not open in its editor.
+// Over the Changes view: what the view does not mark, and the whitespace control.
+.pane-diff {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-xs $spacing-md;
+  border-bottom: 1px solid $border-light;
+  font-size: 0.8125rem;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.pane-diff-note {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  color: $text-muted;
+}
+
+.pane-diff-whitespace {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: $spacing-xs;
+  color: $text-muted;
+
+  .form-input {
+    padding: 0 $spacing-xs;
+    font-size: 0.8125rem;
+  }
+}
+
 .pane-locked {
   flex: none;
   margin: 0;
@@ -668,6 +703,19 @@ host-file-tree {
   }
 }
 
+.host-menu-label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Why an entry is disabled: a line of its own under the label, which wraps.
+.host-menu-reason {
+  display: block;
+  font-size: 0.75rem;
+  white-space: normal;
+}
+
 .host-menu-danger:not([aria-disabled='true']) {
   color: $error-color;
 }
@@ -678,6 +726,11 @@ host-file-tree {
   display: flex;
   flex-direction: column;
   gap: $spacing-xs;
+
+  // Nothing to show yet (a question with no detail): the dialog draws no body.
+  &[hidden] {
+    display: none;
+  }
 }
 
 .file-op-label {

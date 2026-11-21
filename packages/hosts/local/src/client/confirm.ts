@@ -29,9 +29,12 @@ export function createConfirm(host: HTMLElement): Confirm {
     dialog.title = confirmation.question;
     render(
       dialog,
-      html`<div slot="body">${
-        confirmation.detail ? html`<p class="confirm-detail">${confirmation.detail}</p>` : ''
-      }</div><div slot="footer" class="confirm-actions"><button type="button" class="button" data-answer="cancel" data-autofocus>${confirmation.cancel}</button><button type="button" class="button button-primary" data-answer="confirm">${confirmation.confirm}</button></div>`
+      // With no detail there is no body, and the dialog draws none.
+      html`${
+        confirmation.detail
+          ? html`<div slot="body"><p class="confirm-detail">${confirmation.detail}</p></div>`
+          : ''
+      }<div slot="footer" class="confirm-actions"><button type="button" class="button" data-answer="cancel" data-autofocus>${confirmation.cancel}</button><button type="button" class="button button-primary" data-answer="confirm">${confirmation.confirm}</button></div>`
     );
     return new Promise((resolve) => {
       let answer = false;

@@ -19,6 +19,9 @@ export interface Confirmation {
   cancel: string;
 }
 
+/** A line ending's name in a sentence. */
+const endingWord = (ending: string): string => (ending === 'mixed' ? 'mixed endings' : ending);
+
 export const words = {
   explorer: 'Files',
   explorerTruncated: (shown: number) =>
@@ -55,6 +58,15 @@ export const words = {
     HOST_NOT_TEXT: 'The last commit’s version of this file is not text, so it cannot be compared.',
     HOST_FILE_TOO_LARGE: 'The last commit’s version of this file is too large to compare here.',
     failed: (message: string) => `The last commit’s version could not be read. ${message}`,
+    /** The whitespace control, and its three modes. */
+    whitespace: 'Whitespace',
+    whitespaceModes: { compare: 'Compared', ignore: 'Ignored', show: 'Shown' },
+    /** Above the view, when the sides differ in ways it does not mark. */
+    whitespaceOnly: 'This file differs from the last commit in whitespace alone.',
+    endingsOnly: (file: string, head: string) =>
+      `This file differs from the last commit in line endings alone: ${endingWord(file)} in the file, ${endingWord(head)} in the last commit. No line is marked for that, and git may still count every line as changed.`,
+    endingsToo: (file: string, head: string) =>
+      `Line endings differ: ${endingWord(file)} in the file, ${endingWord(head)} in the last commit. No line is marked for that alone.`,
   },
 
   /** The open file went from disk while it had no unsaved edits. */

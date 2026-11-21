@@ -62,17 +62,37 @@ are carried here as they were written.
     pane uses it for a format that takes a URL.
 - 2026-11-14 (file-operations): a nested repository's row has a chevron that opens to nothing,
   and a disabled menu entry's reason is only a `title`.
+  - Closed 2026-11-21 (Jamie: fix; [#152](https://github.com/stillpointlab/surfaces/pull/152)): a
+    folder with nothing listed under it has no chevron, and its name ends in a slash. A menu
+    entry's reason is a line of text under its label.
 - 2026-11-14 (file-operations): going back to an address from before a rename says there is no
   file at that path.
   - Closed 2026-11-21 (Jamie: by design). The file is no longer at that path, and the page says so.
 - 2026-11-14 (file-operations): a dialog with no detail line shows an empty band between its
   title and its buttons (`<modal-dialog>`'s body padding).
+  - Closed 2026-11-21 (Jamie: fix; [#152](https://github.com/stillpointlab/surfaces/pull/152)):
+    `<modal-dialog>` draws no body when no element is slotted into it, or each one is `hidden`. The
+    local host's two dialogs give it none until there is a detail, a refusal or a second question.
 - 2026-11-14 (git-in-the-host): `HEAD` text is read with no filter, so a repository that
   converts line endings on checkout, or uses a smudge filter, shows every line as changed.
+  - Closed 2026-11-21 (Jamie: say it, as the code diff's whitespace options do;
+    [#152](https://github.com/stillpointlab/surfaces/pull/152)). The line-ending half did not
+    reproduce: `<code-diff>` compares lines and not their endings, so a CRLF file with one edit
+    showed one line. What was missing was any word of it. The Changes view now has the diff's
+    whitespace control (Compared, Ignored, Shown), and says when the sides' line endings differ
+    and when they differ in whitespace alone. No count of whitespace lines against other lines.
+    A smudge filter is still not run, by design: the host runs no filter, so nothing it reads
+    can reach the network.
 - 2026-11-14 (git-in-the-host): a folder whose only file moved out of the served folder loses
   its row, so that deletion shows in the commit dialog and nowhere in the tree.
+  - Closed 2026-11-21 (Jamie: by design, to live with for a while and see how it feels). The tree
+    lists what is on disk, the dot shows on every folder above that still has a row, and the
+    commit dialog lists the deletion.
 - 2026-11-14 (git-in-the-host): `HOST_GIT_FAILED` answers 500, as the mapping it joined does. A
   hook that refuses is not the server's fault; 422 would say so.
+  - Closed 2026-11-21 (Jamie: 4xx, since the repository is the person's and not the server's;
+    [#152](https://github.com/stillpointlab/surfaces/pull/152)): 422 for every failure of git's,
+    since the server cannot tell a hook's refusal from another. `HOST_WRITE_FAILED` stays 500.
 - 2026-11-14 (git-in-the-host): one commit test checks that a `put` has not finished after
   300 ms, the only assertion in the package that depends on time.
   - Closed 2026-11-20 (Jamie: fix; [#149](https://github.com/stillpointlab/surfaces/pull/149)), with

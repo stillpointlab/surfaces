@@ -480,14 +480,14 @@ describe('git', () => {
     expect(git(repo, env, 'rev-list', '--count', '--all')).toBe('1\n');
   });
 
-  it('POST /api/commit answers git’s failure as HOST_GIT_FAILED (500)', async () => {
+  it('POST /api/commit answers git’s failure as HOST_GIT_FAILED (422)', async () => {
     const hook = join(repo, '.git', 'hooks', 'pre-commit');
     writeFileSync(hook, `#!/bin/sh\necho '<b>no</b> & "quotes"' >&2\nexit 1\n`);
     chmodSync(hook, 0o755);
     await start(repo, env).ready();
     writeFileSync(join(repo, 'a.md'), 'edited\n');
     const response = await post({ paths: ['a.md'], message: 'm' });
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(422);
     const body = (await response.json()) as { code: string; message: string };
     expect(body.code).toBe('HOST_GIT_FAILED');
     expect(body.message).toContain('<b>no</b> & "quotes"');
