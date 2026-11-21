@@ -195,7 +195,7 @@ export const words = {
     unknownApp: (app: string) => `This page cannot show the ${app} app.`,
     loadFailed: 'The app could not be loaded.',
     readFailed: (message: string) => `The app could not be read. ${message}`,
-    /** An app's commit summary when its review gives none. */
+    /** An app's commit summary when its review gives none, named for the instance. */
     checkinTitle: (label: string) => `${label} check-in`,
     /** An instance discovery found but cannot open: its manifest, or an overlap. */
     invalidTitle: (label: string) => `${label} cannot open`,

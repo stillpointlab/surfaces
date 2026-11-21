@@ -87,6 +87,9 @@ export interface FakeHost extends HostClient {
   /** Hold every `commit` until `releaseCommit()`. */
   holdCommit: boolean;
   releaseCommit(): void;
+  /** Hold every `changes` until `releaseChanges()`. */
+  holdChanges: boolean;
+  releaseChanges(): void;
   /** The instances `apps()` answers; `setAppLock` changes their `unlocked` and says so. */
   instances: FoundInstance[];
   /** How `appPage` answers; by default a page whose state names the call. */
@@ -125,6 +128,7 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
   let held: (() => void)[] = [];
   let heldPuts: (() => void)[] = [];
   let heldCommits: (() => void)[] = [];
+  let heldChanges: (() => void)[] = [];
   let heldOps: (() => void)[] = [];
   let heldSteps: (() => void)[] = [];
   let commitCount = 0;
@@ -156,6 +160,13 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
     gitCalls: [],
     commits: [],
     holdCommit: false,
+    holdChanges: false,
+    releaseChanges() {
+      const waiting = heldChanges;
+      heldChanges = [];
+      host.holdChanges = false;
+      for (const go of waiting) go();
+    },
     instances: [],
     appCalls: [],
     ops: [],
@@ -310,6 +321,7 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
     },
     async changes(): Promise<Result<{ changes: HostChange[] }>> {
       host.gitCalls.push('changes');
+      if (host.holdChanges) await new Promise<void>((go) => heldChanges.push(go));
       if (host.gitInfo.state !== 'repository') return notARepository(host.gitInfo);
       const changes = Object.entries(host.statuses).map(([path, status]) => {
         const from = host.movedFrom.get(path);

@@ -446,6 +446,23 @@ describe('<spl-inventory-app> check-in', () => {
     expect(review.querySelector('modal-dialog')!.getAttribute('title')).toBe('Commit');
     expect(review.querySelector('[data-answer="confirm"]')!.textContent).toBe('Commit');
     expect(review.querySelector('.checkin-review-branch-name')).not.toBeNull();
+    // The host named no title of its own, so the placeholder is the shell's.
+    expect(review.querySelector<HTMLInputElement>('.checkin-review-title')!.placeholder).toBe(
+      'Inventory check-in'
+    );
+  });
+
+  it('shows the title its host gives an untitled check-in as the placeholder', () => {
+    const el = mountShell(
+      spaceInput({
+        state: { ...SPACE, dirty: DIRTY },
+        checkin: { defaultTitle: 'Workshop assets check-in' },
+      })
+    );
+    checkIn(el);
+    const title = reviewOf(el).querySelector<HTMLInputElement>('.checkin-review-title')!;
+    expect(title.value).toBe('');
+    expect(title.placeholder).toBe('Workshop assets check-in');
   });
 
   it('follows the state set again while it is open, keeping the checks', () => {

@@ -32,6 +32,7 @@
   },
   "dependencies": {
     "@stillpointlab/common-format": "*",
-    "@stillpointlab/modal-dialog-component": "*"
+    "@stillpointlab/modal-dialog-component": "*",
+    "@stillpointlab/spl-icon-component": "*"
   }
 }

@@ -2,7 +2,8 @@
 // card, the pool's order file and each housekeeping file, labelled as Context
 // Manager's check-in dialog labels them (a moved card, a column move as
 // "old → new", "content edited", "backlog priority", "pointer / tags", "new
-// folder"); on a stage view the rows sit under their phase, or "Pool & config".
+// folder"); on a stage view the rows sit under their phase, or "Pool & config",
+// the phases in their order and the pool and config last.
 // And its own words for a host that gives none, which say "check in" and never
 // "commit" or "pull request".
 
@@ -42,10 +43,21 @@ function cardLabel(card: SharedTaskCard): string {
   return 'content edited';
 }
 
+/** Where a group sorts on a stage view: a phase by its number, the pool and config after every phase. */
+function groupRank(group: string | undefined): number {
+  const match = /^Phase (\d+)$/.exec(group ?? '');
+  return match ? Number(match[1]) : Number.POSITIVE_INFINITY;
+}
+
 /**
  * The rows for a request: the cards (by path, under their phase, on a stage
  * view), then the order file, then the housekeeping files. A moved card's old
  * path is its row's `from`, so a check-in takes both halves.
+ *
+ * On a stage view the rows are then put in their groups' order, which the
+ * review keeps: the phases by number, then "Pool & config". A folder made for
+ * a phase with no changed card is that phase's only row, and would otherwise
+ * come after the pool; and paths alone would put phase 10 before phase 2.
  */
 export function tasksCheckinFiles(request: TaskBoardCheckinRequest): CheckinFile[] {
   const onStage = request.stage !== null;
@@ -54,7 +66,7 @@ export function tasksCheckinFiles(request: TaskBoardCheckinRequest): CheckinFile
   const cards = onStage
     ? [...request.cards].sort((a, b) => a.path.localeCompare(b.path))
     : request.cards;
-  return [
+  const files: CheckinFile[] = [
     ...cards.map((card) => ({
       path: card.path,
       ...(card.movedFrom !== undefined ? { from: card.movedFrom } : {}),
@@ -76,6 +88,12 @@ export function tasksCheckinFiles(request: TaskBoardCheckinRequest): CheckinFile
       ...group(file.path),
     })),
   ];
+  if (!onStage) return files;
+  // A stable sort: within a group the rows stay as they were.
+  return files
+    .map((file, index) => ({ file, index }))
+    .sort((a, b) => groupRank(a.file.group) - groupRank(b.file.group) || a.index - b.index)
+    .map(({ file }) => file);
 }
 
 /** What the board's `checkin-request` carries, from a state alone, as the board builds it. */

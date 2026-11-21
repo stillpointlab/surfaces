@@ -265,8 +265,13 @@ are carried here as they were written.
     same question.
 - 2026-11-14 (checkin-review, step 1): while a review is busy, focus falls to the page, since
   the button that had it is disabled. The commit dialog does the same.
+  - Closed 2026-11-21 (Jamie: fix; [#154](https://github.com/stillpointlab/surfaces/pull/154)): the review's two buttons are `aria-disabled` while it
+    is busy, not `disabled`, so the one pressed keeps the focus. The commit dialog is the same
+    element.
 - 2026-11-14 (checkin-review, step 1): a review's groups keep the order they first appear in,
   so a phase's new folder can come after "Pool & config".
+  - Closed 2026-11-21 (Jamie: fix; [#154](https://github.com/stillpointlab/surfaces/pull/154)): on a stage view the tasks shell gives its rows with the
+    phases by number and "Pool & config" last. The review still keeps the order it is given.
 - 2026-11-14 (checkin-review, step 1): inventory's `./shell` entry still exports the name of
   `checkin-request`, which no host hears now.
   - Closed 2026-11-20 ([#137](https://github.com/stillpointlab/surfaces/pull/137)): the
@@ -276,11 +281,19 @@ are carried here as they were written.
   reach the branch or the title.
 - 2026-11-14 (checkin-review, step 2): nothing shows between pressing Commit and the review
   opening while the page reads the changes.
+  - Closed 2026-11-21 (Jamie: fix, with a spinner; [#154](https://github.com/stillpointlab/surfaces/pull/154)): the Commit button is `aria-busy` while
+    the page reads, and shows `<spl-icon>`'s spinner in place of its count once the read has
+    taken 150 ms. The review's confirm button shows the same spinner while the host answers.
 - 2026-11-14 (checkin-review, step 2): the review's error line is framed and monospace for
   git's words, so the review's own short messages ("Choose at least one file…") are monospace
   too in the local host.
+  - Closed 2026-11-21 (Jamie: fix; [#154](https://github.com/stillpointlab/surfaces/pull/154)): the line carries the refusal's code (`data-code`), and
+    the local host sets `HOST_GIT_FAILED` alone in a monospace face. The frame stays for all.
 - 2026-11-14 (checkin-review, step 2): an app's check-in with no title is "`<app>` check-in";
   the instance's own name ("Workshop assets check-in") may read better.
+  - Closed 2026-11-21 (Jamie: fix; [#154](https://github.com/stillpointlab/surfaces/pull/154)): it is named for the instance. The pane gives the shell
+    that title as `checkin.defaultTitle`, a new optional member of the shell's input, and
+    inventory's review shows it as its placeholder.
 - 2026-11-14 (checkin-review, step 2): the app pane asks for git's state at every resolve. The
   branch could come with the `status` event.
 - 2026-11-15 (undo-journal): the Undo and Redo buttons are the glyphs ↶ and ↷, which depend on

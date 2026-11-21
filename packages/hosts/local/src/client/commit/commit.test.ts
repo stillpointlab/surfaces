@@ -8,7 +8,7 @@ import { REVIEW_WORDS } from '@stillpointlab/checkin-review-component';
 import { HOSTILE_PAYLOAD, expectNoHostileMarkup } from '@stillpointlab/common-format/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { startPage } from '../page';
+import { SPINNER_DELAY_MS, startPage } from '../page';
 import { fakeDiff, fakeHost, fakeRegistry } from '../test-support';
 import { words } from '../words';
 
@@ -193,6 +193,44 @@ describe('the review', () => {
     expect(inReview('label[for]')!.textContent).toBe(words.commit.summary);
     expect(inReview('[data-answer="confirm"]')!.textContent).toBe(words.commit.confirm);
     expect(document.activeElement).toBe(summary());
+  });
+
+  it('says it is reading between the press and the review, with a spinner once that takes a moment', async () => {
+    await start();
+    const reads = () => host.gitCalls.filter((call) => call === 'changes').length;
+    const before = reads();
+    host.holdChanges = true;
+    button().focus();
+    button().click();
+    await settle();
+    expect(button().getAttribute('aria-busy')).toBe('true');
+    // Not yet: a quick read shows no spinner.
+    expect(button().dataset.reading).toBeUndefined();
+    expect(button().querySelector('spl-icon')!.getAttribute('icon-name')).toBe('spinner');
+    // The button keeps the focus, and a second press reads nothing more.
+    expect(button().disabled).toBe(false);
+    expect(document.activeElement).toBe(button());
+    button().click();
+    await new Promise((done) => setTimeout(done, SPINNER_DELAY_MS + 50));
+    expect(button().dataset.reading).toBe('');
+    expect(reads()).toBe(before + 1);
+    expect(modal()?.isOpen ?? false).toBe(false);
+
+    host.releaseChanges();
+    await settle();
+    expect(button().hasAttribute('aria-busy')).toBe(false);
+    expect(button().dataset.reading).toBeUndefined();
+    expect(modal().isOpen).toBe(true);
+  });
+
+  it('a read that fails ends the reading state too', async () => {
+    await start();
+    host.changes = failing;
+    button().click();
+    await settle();
+    expect(button().hasAttribute('aria-busy')).toBe(false);
+    expect(button().dataset.reading).toBeUndefined();
+    expect(notice()).toContain('git status failed.');
   });
 
   it('orders folders first and numbered names in order, as the tree does', async () => {

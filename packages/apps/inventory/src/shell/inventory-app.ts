@@ -281,7 +281,7 @@ export class InventoryApp extends HTMLElement implements AppShellElement {
       files: inventoryCheckinFiles(this.dirty),
       words: input.checkin?.words ?? INVENTORY_CHECKIN_WORDS,
       title: '',
-      titlePlaceholder: INVENTORY_CHECKIN_PLACEHOLDER,
+      titlePlaceholder: input.checkin?.defaultTitle ?? INVENTORY_CHECKIN_PLACEHOLDER,
       ...(input.checkin?.branch ? { branch: input.checkin.branch } : {}),
     });
   };
