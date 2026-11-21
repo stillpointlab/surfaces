@@ -185,6 +185,10 @@ the core's root.
   (`whenReady()`, the `ready` attribute) once it has rendered one. `boardState` reads it back.
 - **Attributes.** `variant` (`board` or `stage`, read when the board connects) and `storage-key`
   (where the pool's collapsed state is remembered).
+- **Drops.** A card dragged to a column moves there; on the stage view, to a column of another
+  phase, its file moves. A phase with no card is drawn as its header alone and takes a drop
+  too: the card's file moves there in the column it is in, or the first column for a pool card
+  or one in no column, as the card menu's move to another phase does.
 - **Ops out**, each asked through `requestOp` and naming its card by repo path:
 
   | Op                | Fields                                   | Reply                    |

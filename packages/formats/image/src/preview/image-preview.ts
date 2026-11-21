@@ -81,7 +81,11 @@ export class ImagePreview extends HTMLElement implements ImagePreviewElement {
   private handleLoad = async (): Promise<void> => {
     if (this.state === 'loaded') return;
     this.state = 'loaded';
-    this.svgSizing = await classifySvgSizing(this.src);
+    const src = this.src;
+    const sizing = await classifySvgSizing(src);
+    // The source changed while its SVG was read: the new one has its own load to come.
+    if (this.src !== src) return;
+    this.svgSizing = sizing;
     this.render();
   };
 
@@ -117,9 +121,17 @@ export class ImagePreview extends HTMLElement implements ImagePreviewElement {
     `;
     this.renderStatus();
 
+    // Each render makes a new <img>, which loads its source and says so itself.
+    // The one it replaced may still say something late (its `alt` and `src`
+    // changed together, say): that is about a source no longer shown, so only the
+    // image in the element is heard. Nothing is lost by it: the image that is
+    // there always has its own load or error to come.
     const img = this.root.querySelector('img');
-    img?.addEventListener('load', this.handleLoad, { once: true });
-    img?.addEventListener('error', this.handleError, { once: true });
+    if (img) {
+      const current = (): boolean => this.root.contains(img);
+      img.addEventListener('load', () => current() && void this.handleLoad(), { once: true });
+      img.addEventListener('error', () => current() && this.handleError(), { once: true });
+    }
 
     if (this.state === 'loading') this.ready.begin();
     else this.ready.settle();

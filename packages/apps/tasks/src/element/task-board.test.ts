@@ -716,6 +716,54 @@ describe('TaskBoard component', () => {
       ).toBe('docs/tasks/stage1/phase1');
     });
 
+    it('an empty phase takes a drop: the card’s file moves there, in the column it is in', async () => {
+      const el = mountStage();
+      // The move's card, then the stage read again, and no file links to the old path.
+      host.mockImplementation(async (op: { type: string; path?: string }) =>
+        op.type === 'move-file'
+          ? ok({ card: { path: op.path } })
+          : op.type === 'scan-references'
+            ? ok({ references: [] })
+            : ok({ stage: copy(STAGE_STATE) })
+      );
+      const settled = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+      const empty = el.querySelector('.stage-row--empty') as HTMLElement;
+      expect(empty.getAttribute('data-board-path')).toBe('docs/tasks/stage1/phase2');
+      (document as { elementFromPoint?: unknown }).elementFromPoint = vi
+        .fn()
+        .mockReturnValue(empty);
+      const pointer = (type: string, x: number): MouseEvent =>
+        new MouseEvent(type, { clientX: x, clientY: 10, bubbles: true, button: 0 });
+      const drag = (card: Element): void => {
+        card.dispatchEvent(pointer('pointerdown', 10));
+        document.dispatchEvent(pointer('pointermove', 60));
+        document.dispatchEvent(pointer('pointermove', 150));
+        document.dispatchEvent(pointer('pointerup', 150));
+      };
+
+      // Card 12 is in "in-progress": it keeps that column in the new phase.
+      drag(el.querySelector(sel(12))!);
+      await settled();
+      expect(host).toHaveBeenCalledWith({
+        type: 'move-file',
+        path: P[12],
+        target: { boardPath: 'docs/tasks/stage1/phase2', column: 'in-progress' },
+      });
+
+      // A pool card has no column of its own: it lands in the first one.
+      host.mockClear();
+      (document as { elementFromPoint?: unknown }).elementFromPoint = vi
+        .fn()
+        .mockReturnValue(el.querySelector('.stage-row--empty'));
+      drag(el.querySelector(sel(21))!);
+      await settled();
+      expect(host).toHaveBeenCalledWith({
+        type: 'move-file',
+        path: P[21],
+        target: { boardPath: 'docs/tasks/stage1/phase2', column: STATE.columns[0]!.id },
+      });
+    });
+
     it('checkin-request carries the stage for stage-scoped check-ins', () => {
       const el = mountStage();
       let detail: { stage: number | null; cards: { path: string }[] } | null = null;

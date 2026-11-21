@@ -538,6 +538,13 @@ spl-task-board.dragging .board-card {
       opacity: 0.6;
       padding: 4px 8px;
 
+      // A card dragged over it: the phase takes the drop, as a column does.
+      &.drag-over {
+        opacity: 1;
+        border-color: $primary-color;
+        background-color: $background-hover;
+      }
+
       .stage-row-header {
         margin-bottom: 0;
         font-weight: 400;

@@ -17,6 +17,12 @@ Supported body syntax:
 - `{{paramName}}`
 - `{{#if booleanParam}}...{{/if}}` for a declared `bool` param
 
+In a page the parser sets zod's `jitless` (`z.config`), so zod never tries `new Function` to see
+whether it may compile a check: under a content security policy that attempt is blocked, and
+though zod carries on, the browser reports it in the console. It is zod's global setting, so
+every zod schema on a page that loads this parser is checked the plain way, with the same
+answers. Outside a page (a server) nothing is set.
+
 Param types are `string`, `enum`, `bool`, `number`, and `date`. Helpers, loops, includes, partials,
 arbitrary code execution, and project-content params are intentionally out of scope. Context
 Manager Apply saves Markdown and XML output; JSON is parse/preview-only in 0.1.

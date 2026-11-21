@@ -4,7 +4,10 @@ Preview-only image web components for Stillpoint Lab editor surfaces.
 
 ## Components
 
-- `<image-preview>` displays an image URL in a read-only, fit-to-pane view.
+- `<image-preview>` displays an image URL in a read-only, fit-to-pane view. A change of `src` or
+  `alt` draws a new image, and only the image it shows is heard: a load or a failure that
+  arrives late from the one before is about a source no longer shown, so a failure is reported
+  once, for the source on screen.
 
 ```ts
 import '@stillpointlab/image-editor/preview';

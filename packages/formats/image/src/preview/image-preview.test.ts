@@ -92,4 +92,49 @@ describe('image-preview', () => {
     expect(el.shadowRoot?.textContent).toContain("Couldn't load this image.");
     expect(handler).toHaveBeenCalledWith('Image preview failed to load', { src: '/missing.webp' });
   });
+
+  it('reports one failure when alt and src change together, from the image it shows', () => {
+    const handler = vi.fn();
+    setErrorHandler(handler);
+    const el = create();
+    el.setSource('/first.png', 'First');
+    document.body.appendChild(el);
+    const first = el.shadowRoot!.querySelector('img')!;
+
+    // The next file: its alt lands first, then its src, and each draws a new <img>.
+    el.setSource('/second.png', 'Second');
+    const second = el.shadowRoot!.querySelector('img')!;
+    expect(second).not.toBe(first);
+    expect(second.getAttribute('src')).toBe('/second.png');
+
+    // The first image fails late: it is about a source no longer shown.
+    first.dispatchEvent(new Event('error'));
+    expect(handler).not.toHaveBeenCalled();
+    expect(el.shadowRoot!.textContent).not.toContain("Couldn't load this image.");
+
+    // The image that is shown fails: said once, for its own source.
+    second.dispatchEvent(new Event('error'));
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledWith('Image preview failed to load', { src: '/second.png' });
+    expect(el.shadowRoot!.textContent).toContain("Couldn't load this image.");
+  });
+
+  it('still hears the shown image after a change of alt alone, and a late load of the old one changes nothing', async () => {
+    const el = create();
+    el.setSource('/photo.png', 'A photo');
+    document.body.appendChild(el);
+    const before = el.shadowRoot!.querySelector('img')!;
+    el.setAttribute('alt', 'The same photo');
+    const after = el.shadowRoot!.querySelector('img')!;
+    expect(after).not.toBe(before);
+
+    before.dispatchEvent(new Event('load'));
+    await Promise.resolve();
+    expect(el.shadowRoot!.querySelector('.image-preview__loading')).not.toBeNull();
+
+    after.dispatchEvent(new Event('load'));
+    await el.whenReady();
+    expect(el.shadowRoot!.querySelector('.image-preview__loading')).toBeNull();
+    expect(el.shadowRoot!.querySelector('img')!.getAttribute('alt')).toBe('The same photo');
+  });
 });

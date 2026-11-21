@@ -98,7 +98,9 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
       itemSelector: '.board-card',
       // Pool CARDS are targets too: dropping on one inserts before it
       // (within-pool reorder) or files a board card into the pool there.
-      targetSelector: '.board-card--pool, .board-column',
+      // An empty phase on the stage view is one too: it is drawn as its
+      // header alone, with no column to aim at.
+      targetSelector: '.board-card--pool, .board-column, .stage-row--empty',
       onDrop: (item, target) => {
         if (!this.hasState()) return;
         // Tracked and linked cards alike: the host links a tracked file as
@@ -117,6 +119,18 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
           const beforePath = target.getAttribute('data-path');
           if (fromPool) void this.reorderPool(path, beforePath);
           else act((cardPath) => this.moveCardFile(cardPath, { pool: true }));
+          return;
+        }
+
+        if (target.classList.contains('stage-row--empty')) {
+          // A phase with no card: the card's file moves there, in the column
+          // it is in. A pool card, or one in no column, takes the first, as
+          // the card menu's move to another phase does.
+          const boardPath = target.getAttribute('data-board-path');
+          const column =
+            (fromPool ? null : this.findCard(path)?.card.column) ?? this.columnDefs()[0]?.id;
+          if (boardPath === null || !column) return;
+          act((cardPath) => this.moveCardFile(cardPath, { boardPath, column }));
           return;
         }
 
@@ -973,7 +987,8 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
         const visible = phaseRow.cards.filter((c) => this.isVisible(c));
         if (phaseRow.cards.length === 0) {
           // Empty phases render collapsed (header only) — visible but quiet.
-          return `<section class="stage-row stage-row--empty" data-phase="${phaseRow.phase}">
+          // The row is a drop target by its board path, as a column is.
+          return `<section class="stage-row stage-row--empty" data-phase="${phaseRow.phase}" data-board-path="${escapeHtml(phaseRow.path)}">
               <header class="stage-row-header">${escapeHtml(phaseRow.label)} <span class="column-count">0</span></header>
             </section>`;
         }

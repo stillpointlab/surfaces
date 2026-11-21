@@ -67,8 +67,11 @@ spl-inventory-zone {
 
   .inventory-zone-link {
     display: flex;
+    // On a narrow page the count and the subtotal go under the name, each
+    // whole, so a row is never wider than the page.
+    flex-wrap: wrap;
     align-items: baseline;
-    gap: $spacing-md;
+    gap: $spacing-xs $spacing-md;
     padding: $spacing-sm $spacing-md;
     border: 1px solid $border-color;
     border-radius: $border-radius-md;
@@ -87,7 +90,7 @@ spl-inventory-zone {
 
   .inventory-zone-name {
     font-weight: 600;
-    flex: 1;
+    flex: 1 1 8rem;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -107,12 +110,16 @@ spl-inventory-zone {
     white-space: nowrap;
   }
 
+  // "new" and "edited" beside a zone's name. The warning tokens, as the
+  // check-in bar's notice is a warning: a muted background is the row's own
+  // in a dark scheme, and the badge was only its letters there.
   .inventory-zone-dirty {
     margin-left: $spacing-xs;
     padding: 0 $spacing-xs;
+    border: 1px solid $warning-border;
     border-radius: $border-radius-sm;
-    background: $background-muted;
-    color: $text-secondary;
+    background: $warning-bg;
+    color: $warning-color;
     font-size: 0.7rem;
     font-weight: 500;
     text-transform: uppercase;
@@ -287,7 +294,8 @@ spl-inventory-zone {
 
   .inventory-totals {
     display: flex;
-    gap: $spacing-lg;
+    flex-wrap: wrap;
+    gap: $spacing-xs $spacing-lg;
     align-items: baseline;
     color: $text-secondary;
 
@@ -296,9 +304,16 @@ spl-inventory-zone {
       color: $text-color;
     }
 
+    // A link with the theme's link colour, visited or not: with none of its
+    // own it took the browser's, which is a purple on a dark page.
     .inventory-download {
       margin-left: auto;
       font-size: 0.9rem;
+      color: $primary-blue;
+
+      &:hover {
+        color: $primary-blue-hover;
+      }
 
       &.is-disabled {
         color: $text-muted;
@@ -309,8 +324,9 @@ spl-inventory-zone {
 
   .inventory-checkin-bar {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: $spacing-md;
+    gap: $spacing-xs $spacing-md;
     padding: $spacing-sm $spacing-md;
     border: 1px solid $alert-color;
     border-radius: $border-radius-md;
@@ -337,7 +353,10 @@ spl-inventory-zone {
       flex-wrap: wrap;
     }
 
-    .inventory-add-title {
+    // The title takes the room that is left, in the row of the plain quick
+    // add. In the configured one it is a cell of the grid like the others: a
+    // minimum width there made it wider than its column, under the next field.
+    .inventory-add-main > .inventory-add-title {
       flex: 1;
       min-width: 14rem;
     }
@@ -363,6 +382,8 @@ spl-inventory-zone {
       display: flex;
       flex-direction: column;
       gap: $spacing-xs;
+      // A cell is never wider than its column, whatever it holds.
+      min-width: 0;
 
       span {
         font-size: 0.8rem;
