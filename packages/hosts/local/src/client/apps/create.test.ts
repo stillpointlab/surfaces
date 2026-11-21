@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { startPage } from '../page';
 import { fakeHost, fakeRegistry } from '../test-support';
+import { words } from '../words';
 
 import { createFolderProblem } from './create-dialog';
 import { createAppRegistry } from './registry';
@@ -268,9 +269,62 @@ describe('creating an instance', () => {
     expect(page.instances.map((instance) => instance.manifestPath)).toContain(
       'docs/board/board.yaml'
     );
-    expect(
-      page.tree.shadowRoot!.querySelector('[data-path="docs/board"]')!.getAttribute('data-kind')
-    ).toBe('app');
+    const row = page.tree.shadowRoot!.querySelector('[data-path="docs/board"]')!;
+    expect(row.getAttribute('data-kind')).toBe('app');
+    // The new app is open, and its row is the one selected in the explorer.
+    expect(row.getAttribute('aria-selected')).toBe('true');
+    expect($('.page-notice').textContent).toBe('');
+  });
+
+  it('says so when the host wrote the create with no undo step', async () => {
+    start();
+    await page.ready;
+    host.createAnswer = (request) => {
+      const manifestPath = `${request.folder}/board.yaml`;
+      host.disk.set(manifestPath, '');
+      host.instances.push({ ...BOARD, manifestPath, folder: request.folder });
+      return { ok: true, manifestPath, notice: { kind: 'cannot-undo', reason: 'too-large' } };
+    };
+    menuOn('docs', 'folder');
+    await choose('Create a board here…');
+    press('confirm');
+    await settle();
+    expect(createDialog().isOpen).toBe(false);
+    expect($('.page-notice').textContent).toContain(words.journal.opCannotUndo('too-large'));
+    expect($('.page-notice').dataset.tone).toBe('warning');
+    expect(location.hash).toBe('#/app/docs/board/board.yaml');
+  });
+
+  it('an undo that takes the open app away shows nothing open, and says what was undone', async () => {
+    start();
+    await page.ready;
+    menuOn('docs', 'folder');
+    await choose('Create a board here…');
+    press('confirm');
+    await settle();
+    expect(location.hash).toBe('#/app/docs/board/board.yaml');
+    // The create, as the host's journal keeps it: undo deletes the manifest.
+    host.steps.push({
+      label: 'Board: create',
+      inverse: [{ kind: 'delete', path: 'docs/board/board.yaml' }],
+      forward: [{ kind: 'create', path: 'docs/board/board.yaml', content: '' }],
+    });
+    const at = host.instances.findIndex((found) => found.manifestPath === 'docs/board/board.yaml');
+    const undo = host.undo.bind(host);
+    host.undo = async () => {
+      const answer = await undo();
+      if (answer.ok) host.instances.splice(at, 1);
+      return answer;
+    };
+    host.emit({ type: 'journal' });
+    await settle();
+    $<HTMLButtonElement>('.explorer-undo').click();
+    await settle();
+    expect(location.hash).toBe('');
+    expect($('.app-pane').hidden).toBe(true);
+    expect($('.file-pane').hidden).toBe(false);
+    expect($('.pane-message').textContent).toBe(words.nothingOpen);
+    expect($('.page-notice').textContent).toContain('Undone: Board: create');
   });
 
   it('asks consent at the root, and sends it', async () => {

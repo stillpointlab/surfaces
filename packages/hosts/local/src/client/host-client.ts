@@ -13,7 +13,7 @@ import type {
   FoundInstance,
   LocalHostEvent,
 } from '../shared/apps';
-import type { JournalLabels, JournalMove } from '../shared/journal';
+import type { CannotUndoNotice, JournalLabels, JournalMove } from '../shared/journal';
 import type { FolderNode, Result } from '@stillpointlab/common-format/app';
 import type {
   FileStatus,
@@ -116,7 +116,7 @@ export interface HostClient {
     folder: string;
     confirmRoot?: boolean;
     input: unknown;
-  }): Promise<Result<{ manifestPath: string }>>;
+  }): Promise<Result<{ manifestPath: string; notice?: CannotUndoNotice }>>;
   /** Lock an instance's files, or unlock them; locking answers the manifest's problems now. */
   setAppLock(manifestPath: string, locked: boolean): Promise<Result<AppLockAnswer>>;
   watch(listener: (event: WatchedEvent) => void): () => void;

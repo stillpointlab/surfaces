@@ -79,6 +79,24 @@ seed leaves the pool when its fix lands:
 
 Items 1, 2, 5 and 6 need a pin move in Context Manager after they land, with its walks.
 
+7. **The drain's last task: Context Manager's walks, read against what the batches changed in
+   shared elements,** before the pin moves (Jamie, 2026-11-21: the repin comes once the log is
+   drained, so the walks' fixes are scheduled before it). Known so far:
+   - **The board's dot** is on every card with an uncommitted change
+     ([#156](https://github.com/stillpointlab/surfaces/pull/156)). Eight walks look at
+     `.card-badge--dirty` (03, 06, 07, 08, 09, 10, 17 and 23), and five expect none on some
+     card. One that edits a card's content, or moves it to another phase, and then expects
+     no dot needs its expectation changed.
+   - **The check-in review's buttons** are `aria-disabled` while it is busy, not `disabled`
+     ([#154](https://github.com/stillpointlab/surfaces/pull/154)). A walk that waits on
+     `disabled` needs the attribute.
+   - **`<modal-dialog>`** draws no body when nothing in it shows
+     ([#152](https://github.com/stillpointlab/surfaces/pull/152)); a walk that measures or
+     clicks a dialog's empty body would notice.
+
+   The walks' edits go in the pin's own pull request in Context Manager, in the commit that
+   moves the pin, as the adoption's did.
+
 ## Non-goals
 
 - New features. An entry that wants one becomes a seed.
@@ -97,4 +115,6 @@ Items 1, 2, 5 and 6 need a pin move in Context Manager after they land, with its
 1. After the adoption's first pull request merges: one pull request here for items 1 and 2.
 2. Items 5 and 6, a pull request each.
 3. The remaining entries in batches, a pull request for each batch's fixes and seeds.
-4. One pin move in Context Manager for everything the phase changed, walked.
+4. Item 7: the walks read against the batches' changes to shared elements.
+5. One pin move in Context Manager for everything the phase changed, walked, with the walks'
+   edits from item 7.

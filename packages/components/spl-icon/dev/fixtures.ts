@@ -40,6 +40,8 @@ const ICONS = [
   'arrow-up',
   'arrow-down',
   'arrow-left',
+  'undo',
+  'redo',
   'arrow-right',
 ] as const;
 
