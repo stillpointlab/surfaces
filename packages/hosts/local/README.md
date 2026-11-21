@@ -67,7 +67,8 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
   off."; outside a repository the page shows nothing of git and calls none of its routes.
 - **Commit.** In a repository the explorer's header holds a **Commit** button with the number of
   changed files (one per moved file, deleted files included), disabled when nothing has changed.
-  It reads the branch and the changes, then opens the check-in review
+  It reads the branch and the changes (the button is `aria-busy` meanwhile, and shows a spinner
+  in place of its count once the read has taken 150 ms), then opens the check-in review
   (`@stillpointlab/checkin-review-component`), the same element an app's shell holds: every
   changed file checked, in the tree's order (folders first, numbered names in order), its status
   as its label (coloured by `[data-label]` in `page.scss`) and a moved file as old → new, with an
@@ -76,7 +77,8 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
   says so in the notice and opens nothing. Commit says what is missing (no file, no summary, no
   branch name) under the form and puts focus there, so the button is never disabled without a
   reason. While the commit runs the form is held, and Escape and the close button wait. A
-  refusal, git's own words included, shows under the form as text, the review keeps everything,
+  refusal, git's own words included, shows under the form as text (git's in a monospace face,
+  by the line's `data-code`; the others as sentences), the review keeps everything,
   and focus goes to the field it is about (`HOST_BRANCH_*` the branch, `HOST_COMMIT_NO_MESSAGE`
   the summary, `HOST_COMMIT_NO_PATHS` the files) or to the refusal. When the changes move while
   it is open, or after `HOST_NOT_CHANGED`, it reads them again: checks are kept, a new row starts
@@ -125,7 +127,8 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
   reads the page again on the host's events. The shell's input carries `checkin`: the commit's
   words and, in a repository, the branch, read again each time it is set, with a new one
   offered. A shell's check-in review asks `checkin`, and the pane answers it with the page's
-  commit: the title as the summary ("`<app>` check-in" when there is none), the body as the
+  commit: the title as the summary ("`<the instance's label>` check-in" when there is none, which
+  the pane also gives the shell as `checkin.defaultTitle`), the body as the
   details, `branch` a new branch; `done` with the commit notice's words, or the refusal as it
   is. The commit's `status` event resolves the page again, so the app's marks clear. A folder's menu, and the space under the rows,
   offer "Create <noun> here…" for each app with a create form: a dialog with the folder, the

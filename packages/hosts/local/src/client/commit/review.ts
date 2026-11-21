@@ -39,6 +39,8 @@ export interface CommitReviewContext {
   commit(request: HostCommitRequest): Promise<Result<HostCommit>>;
   /** The page's one notice. */
   notify(notice: Notice): void;
+  /** `open()` started or finished reading the branch and the changes, before any review shows. */
+  reading?(reading: boolean): void;
 }
 
 const NOTICE_TONES = new Set(['info', 'success', 'warning', 'error']);
@@ -109,6 +111,7 @@ export class CommitReview {
     let changes: HostChange[];
     let branch: string | null;
     this.opening = true;
+    this.context.reading?.(true);
     try {
       const [git, read] = await Promise.all([client.git(), client.changes()]);
       if (!read.ok) {
@@ -122,6 +125,7 @@ export class CommitReview {
       return null;
     } finally {
       this.opening = false;
+      this.context.reading?.(false);
     }
     if (changes.length === 0) {
       this.context.notify({ text: words.commit.nothing, tone: 'info' });

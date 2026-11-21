@@ -16,7 +16,13 @@
 // refusal shows under the form as text, with everything kept; a check-in the
 // host took closes it and raises `notification` with the reply's message, and
 // `checkin-accepted` with the op and the reply. While the host answers, a
-// second confirm, Enter, Escape and the close button do nothing.
+// second confirm, Enter, Escape and the close button do nothing. The buttons
+// are `aria-disabled` then, not `disabled`, so the one that was pressed keeps
+// the focus, and confirm shows a spinner beside its busy word.
+//
+// The message line says whose words it holds: `data-code` is the refusal's code
+// when the host refused, and absent for the review's own line and for
+// `showMessage`, so a host can set its refusals (git's output, say) apart.
 //
 // `showMessage` puts the host's own line under the form, where a refusal goes,
 // without moving focus; the next change to the form clears it, as it clears a
@@ -30,6 +36,7 @@
 // Not `close-on-overlay-click`: a stray click must not drop what was typed.
 
 import '@stillpointlab/modal-dialog-component';
+import '@stillpointlab/spl-icon-component';
 import { requestOp } from '@stillpointlab/common-format/app';
 import { defineElement } from '@stillpointlab/common-format/elements';
 import { html, render } from '@stillpointlab/common-format/html';
@@ -402,7 +409,7 @@ export class CheckinReview extends HTMLElement implements CheckinReviewElement {
     }
     if (!still) return;
     this.showWaiting();
-    this.showError(reply.message);
+    this.showError(reply.message, reply.code);
     this.focusField(input.refusalField?.(reply.code) ?? 'error');
   }
 
@@ -414,12 +421,17 @@ export class CheckinReview extends HTMLElement implements CheckinReviewElement {
     this.showRows();
   }
 
-  /** A message under the form as text (a host's own words may span lines), or none. */
-  private showError(message: string | null): void {
+  /**
+   * A message under the form as text (a host's own words may span lines), or
+   * none. `code` is the refusal's, when the words are a refusal's.
+   */
+  private showError(message: string | null, code?: string): void {
     const error = this.dialog?.querySelector<HTMLElement>(`#${this.idOf('error')}`);
     if (!error) return;
     error.hidden = message === null;
     error.textContent = message ?? '';
+    if (message !== null && code !== undefined) error.dataset.code = code;
+    else delete error.dataset.code;
     if (message === null) {
       for (const field of this.dialog!.querySelectorAll('[aria-invalid]')) {
         field.removeAttribute('aria-invalid');
@@ -452,13 +464,21 @@ export class CheckinReview extends HTMLElement implements CheckinReviewElement {
       const field = this.field(name);
       if (field) field.readOnly = busy;
     }
+    // Not `disabled`, which drops the focus of the button that was pressed to
+    // the page behind the dialog. A press while busy is passed over in `onClick`.
     for (const button of dialog.querySelectorAll<HTMLButtonElement>('[data-answer]')) {
-      button.disabled = busy;
+      if (busy) button.setAttribute('aria-disabled', 'true');
+      else button.removeAttribute('aria-disabled');
     }
     const confirm = dialog.querySelector<HTMLButtonElement>('[data-answer="confirm"]');
     const words = this.input?.words;
     if (confirm && words) {
-      confirm.textContent = busy ? (words.busy ?? REVIEW_WORDS.busy) : words.confirm;
+      render(
+        confirm,
+        busy
+          ? html`<spl-icon class="checkin-review-spinner" icon-name="spinner" data-size="small" data-padding="none" aria-hidden="true"></spl-icon>${words.busy ?? REVIEW_WORDS.busy}`
+          : html`${words.confirm}`
+      );
     }
   }
 

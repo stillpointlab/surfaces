@@ -159,6 +159,9 @@ export interface HostPage {
   destroy(): void;
 }
 
+/** How long a read runs before the Commit button shows its spinner. */
+export const SPINNER_DELAY_MS = 150;
+
 /** The history entries the page writes carry their place, so a declined Back can be undone. */
 interface EntryState {
   surfacesIndex: number;
@@ -201,7 +204,7 @@ export function startPage(options: PageOptions): HostPage {
 
   render(
     host,
-    html`<div class="host-page"><nav class="explorer" aria-label="${words.explorer}"><header class="explorer-header"><span class="explorer-name"></span><button type="button" class="button explorer-undo" data-step="undo" disabled>${words.journal.undo}</button><button type="button" class="button explorer-redo" data-step="redo" disabled>${words.journal.redo}</button><button type="button" class="button explorer-commit" hidden>${words.commit.button}<span class="explorer-commit-count"></span></button></header><div class="page-notice" role="status"></div><p class="explorer-note" hidden></p><div class="app-roots" role="group" aria-label="${words.apps.rootRows}" hidden></div><host-file-tree></host-file-tree></nav><main class="pane"><div class="file-pane"></div><div class="app-pane" hidden></div></main></div>`
+    html`<div class="host-page"><nav class="explorer" aria-label="${words.explorer}"><header class="explorer-header"><span class="explorer-name"></span><button type="button" class="button explorer-undo" data-step="undo" disabled>${words.journal.undo}</button><button type="button" class="button explorer-redo" data-step="redo" disabled>${words.journal.redo}</button><button type="button" class="button explorer-commit" hidden>${words.commit.button}<span class="explorer-commit-count"></span><spl-icon class="explorer-commit-spinner" icon-name="spinner" data-size="small" data-padding="none" aria-hidden="true"></spl-icon></button></header><div class="page-notice" role="status"></div><p class="explorer-note" hidden></p><div class="app-roots" role="group" aria-label="${words.apps.rootRows}" hidden></div><host-file-tree></host-file-tree></nav><main class="pane"><div class="file-pane"></div><div class="app-pane" hidden></div></main></div>`
   );
   const tree = host.querySelector('host-file-tree') as HostFileTree;
   const rootName = host.querySelector<HTMLElement>('.explorer-name')!;
@@ -718,6 +721,25 @@ export function startPage(options: PageOptions): HostPage {
     if (!opened) tree.selected = pane.current?.path ?? null;
   }
 
+  /**
+   * Commit was pressed and the review has not opened yet: the page is reading
+   * the changes. The button says so at once (`aria-busy`), and shows a spinner
+   * in place of its count once the read has taken a moment, so a quick read
+   * does not flicker. It keeps the focus: a second press opens nothing.
+   */
+  let spinnerDue: ReturnType<typeof setTimeout> | null = null;
+  function commitReading(reading: boolean): void {
+    if (spinnerDue !== null) clearTimeout(spinnerDue);
+    spinnerDue = null;
+    if (reading) {
+      commitButton.setAttribute('aria-busy', 'true');
+      spinnerDue = setTimeout(() => (commitButton.dataset.reading = ''), SPINNER_DELAY_MS);
+    } else {
+      commitButton.removeAttribute('aria-busy');
+      delete commitButton.dataset.reading;
+    }
+  }
+
   const commit = new CommitReview(host, {
     client,
     unsaved: () => {
@@ -726,6 +748,7 @@ export function startPage(options: PageOptions): HostPage {
     },
     commit: (request) => commitChosen(request),
     notify: (shown) => showNotice(shown),
+    reading: commitReading,
   });
 
   async function openCommit(): Promise<HostCommit | null> {
@@ -1083,6 +1106,7 @@ export function startPage(options: PageOptions): HostPage {
     redo: () => step('redo'),
     destroy() {
       controller.abort();
+      if (spinnerDue !== null) clearTimeout(spinnerDue);
       unwatch();
       appPane.close();
       menu.destroy();

@@ -307,7 +307,8 @@ and lays them out under its top bar, in light DOM.
   Context Manager's dialog labels them (`moved`, with the old path as the row's `from`; a column
   move as `todo → done`, a missing column as `needs attention`; `content edited`;
   `backlog priority`; `pointer / tags`; `new folder`). On a stage view the cards are in path order
-  and every row sits under its phase (`Phase 2`) or `Pool & config`. The title starts as
+  and every row sits under its phase (`Phase 2`) or `Pool & config`, the phases by number and the
+  pool and config last. The title starts as
   "Tasks check-in: `<board>`" and the op's `context` is `{ boardPath, stage }`. After a `started`
   reply the board marks the op's paths in flight (`markCheckinInFlight`) until the host calls
   **`checkinSettled()`**. The words are the host's (`input.checkin.words`) or the shell's own,

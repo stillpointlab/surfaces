@@ -28,6 +28,10 @@
 - docs/tasks/unassigned/seeds/brackets-escaped-in-a-changed-block.md
 - docs/tasks/unassigned/seeds/checkin-review-length-limits.md
 
+# From the drain's sixth batch (2026-11-21, Jamie): the local host's whitespace
+# handling for the Changes view, shared so Context Manager can move to it.
+- docs/tasks/unassigned/seeds/diff-whitespace-in-one-place.md
+
 # From stage 4's follow-ups (2026-11-14).
 - docs/tasks/unassigned/seeds/a-save-keeps-the-file.md
 - docs/tasks/unassigned/seeds/markdown-relative-links.md

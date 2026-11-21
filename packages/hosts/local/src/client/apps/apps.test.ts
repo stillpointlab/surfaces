@@ -604,6 +604,8 @@ describe('the app pane staying current', () => {
     expect(shell().inputs.at(-1)!.checkin).toEqual({
       words: COMMIT_WORDS,
       branch: { current: 'main', offerNew: true },
+      // What a check-in with no title is called: the instance's name, not its app's.
+      defaultTitle: 'Maple St House check-in',
     });
     const before = shell().inputs.length;
     // A switch made elsewhere: no file moved, but the branch did.
@@ -658,7 +660,7 @@ describe('the app pane staying current', () => {
     );
   });
 
-  it('an app’s check-in with no title is “<app> check-in”; a refusal goes back as it is', async () => {
+  it('an app’s check-in with no title is “<the instance’s name> check-in”; a refusal goes back as it is', async () => {
     start('', [HOME, ROOT], (fake) => {
       fake.gitInfo = { state: 'repository', branch: 'main' };
       fake.statuses = { 'places/home/rooms/kitchen.md': 'changed' };
@@ -677,7 +679,7 @@ describe('the app pane staying current', () => {
     });
     expect(host.commits[0]).toEqual({
       paths: ['places/home/rooms/kitchen.md'],
-      message: 'Fake check-in',
+      message: 'Maple St House check-in',
     });
     const invalid = await requestOp(shell(), { type: 'checkin', paths: 'x' } as never);
     expect(invalid).toMatchObject({ ok: false, code: 'APP_OP_INVALID' });

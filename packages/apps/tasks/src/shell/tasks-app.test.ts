@@ -844,11 +844,11 @@ describe('<spl-tasks-app> check-in', () => {
     expect(reviewRows(el).map((row) => [row.group, row.label])).toEqual([
       ['Phase 1', 'todo → done'],
       ['Phase 1', 'content edited'],
+      // A folder made for a phase sits under it, the phases in order and the pool last.
+      ['Phase 2', 'new folder'],
       ['Pool & config', 'moved'],
       ['Pool & config', 'backlog priority'],
       ['Pool & config', 'pointer / tags'],
-      // A folder made for a phase sits under it, the groups in the order they first appear.
-      ['Phase 2', 'new folder'],
     ]);
     expect(reviewOf(el).querySelector<HTMLInputElement>('.checkin-review-title')!.value).toBe(
       'Tasks check-in: Stage 1'

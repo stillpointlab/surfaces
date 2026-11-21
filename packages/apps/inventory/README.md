@@ -168,7 +168,8 @@ and lays one of them out under its bar, in light DOM.
   (`@stillpointlab/checkin-review-component`) and takes its elements' `checkin-request`: the
   request stops at the shell, and a host never hears it. The review opens on the dirty files of
   the latest state or learned reply, each labelled `manifest`, `new` or `changed`, every one
-  checked, with no default title and the placeholder "Inventory check-in". It asks the host
+  checked, with no default title and a placeholder: the title its host gives an untitled
+  check-in (`input.checkin.defaultTitle`), or "Inventory check-in". It asks the host
   `checkin` by path; a reply closes it with the reply's message as a `notification`. The words
   are the host's (`input.checkin.words`) or the shell's own, which say "check in"; a branch is
   offered only when the host gives one (`input.checkin.branch`). When the input is set again

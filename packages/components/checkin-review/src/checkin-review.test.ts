@@ -343,14 +343,22 @@ describe('asking', () => {
     const answering = host();
     open({ title: 's' });
     answering.hold();
+    button('confirm').focus();
     await press('confirm');
     title().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     await press('confirm');
+    button('cancel').click();
     expect(answering.asked).toHaveLength(1);
     expect(review.isBusy).toBe(true);
     expect(dialog().getAttribute('aria-busy')).toBe('true');
     expect(button('confirm').textContent).toBe('Checking in…');
-    expect(button('confirm').disabled).toBe(true);
+    expect(button('confirm').querySelector('spl-icon')!.getAttribute('icon-name')).toBe('spinner');
+    // The buttons say they are off and stay focusable, so the one pressed keeps the focus.
+    for (const answer of ['confirm', 'cancel'] as const) {
+      expect(button(answer).getAttribute('aria-disabled')).toBe('true');
+      expect(button(answer).disabled).toBe(false);
+    }
+    expect(document.activeElement).toBe(button('confirm'));
     expect(title().readOnly).toBe(true);
     expect($<HTMLFieldSetElement>('.checkin-review-files').disabled).toBe(true);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
@@ -396,16 +404,29 @@ describe('asking', () => {
     expect(box('gone.md').checked).toBe(false);
     expect(radio('current')!.checked).toBe(true);
     expect(button('confirm').textContent).toBe(WORDS.confirm);
+    expect(button('confirm').querySelector('spl-icon')).toBeNull();
+    expect(button('confirm').hasAttribute('aria-disabled')).toBe(false);
     expect(review.isBusy).toBe(false);
+    // The line says the words are a refusal's, and which.
+    expect($('.checkin-review-error').dataset.code).toBe('HOST_GIT_FAILED');
 
     // Asking again clears the refusal while the host answers.
     answering.hold();
     button('confirm').click();
     await settle();
     expect(error()).toBeNull();
+    expect($('.checkin-review-error').dataset.code).toBeUndefined();
     answering.release();
     await settle();
     expect(error()).toBe(said);
+
+    // The review's own line, and the host's message, carry no code.
+    for (const path of ['a.md', 'docs/moved.md', 'gone.md']) {
+      if (box(path).checked) box(path).click();
+    }
+    await press('confirm');
+    expect(error()).toBe(WORDS.noFiles);
+    expect($('.checkin-review-error').dataset.code).toBeUndefined();
   });
 
   it('a refusal the host names a field for puts focus there', async () => {

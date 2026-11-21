@@ -81,10 +81,16 @@ checkin: {
 the body loses blank lines before it and space after it; either is left out when empty. `branch`
 is a new branch's name. Enter in a one-line field confirms; in the body, Ctrl+Enter or Cmd+Enter.
 
-While the op is unanswered the review is busy: the fields are held, confirm says `words.busy`, and
-a second confirm, Enter, Escape and the close button do nothing. A refusal shows its message under
-the form as text, many lines kept, with everything kept and focus on it (or on `refusalField`'s
-field); asking again clears it while the host answers. A reply closes it.
+While the op is unanswered the review is busy: the fields are held, confirm says `words.busy`
+beside a spinner (`<spl-icon icon-name="spinner">`), and a second confirm, Enter, Escape and the
+close button do nothing. The two buttons are `aria-disabled` then, not `disabled`, so the one that
+was pressed keeps the focus. A refusal shows its message under the form as text, many lines kept,
+with everything kept and focus on it (or on `refusalField`'s field); asking again clears it while
+the host answers. A reply closes it.
+
+The message line (`.checkin-review-error`) carries `data-code`, the refusal's code, while it shows
+a refusal, and no such attribute for the review's own line or `showMessage`. A host can style one
+refusal apart: the local host sets git's own output in a monospace face.
 
 `messageOf(title, body)` is the message a host over git makes of the two: the title, then a blank
 line and the body. The pure parts (`rowsFor`, `groupsOf`, `checkinProblem`, `checkinOpOf`) are

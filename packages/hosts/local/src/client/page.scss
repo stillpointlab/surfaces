@@ -77,6 +77,21 @@ modal-dialog:not(:defined) {
   display: none;
 }
 
+// Reading the changes before the review opens: the spinner takes the count's place.
+.explorer-commit-spinner {
+  display: none;
+}
+
+.explorer-commit[data-reading] {
+  .explorer-commit-spinner {
+    display: inline-flex;
+  }
+
+  .explorer-commit-count {
+    display: none;
+  }
+}
+
 .explorer-commit-count {
   min-width: 1.25em;
   padding: 0 $spacing-xs;
@@ -793,7 +808,12 @@ checkin-review .checkin-review-error {
   border: 1px solid $error-border;
   border-radius: $border-radius-md;
   background: $error-bg;
-  font-family: ui-monospace, monospace;
+
+  // Git's own words, a hook's output among them, keep their columns. The
+  // review's own lines and the host's other refusals are sentences.
+  &[data-code='HOST_GIT_FAILED'] {
+    font-family: ui-monospace, monospace;
+  }
 
   &:focus-visible {
     outline: 2px solid $focus-ring;

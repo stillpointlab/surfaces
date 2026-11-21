@@ -19,7 +19,7 @@ export const INVENTORY_CHECKIN_WORDS: CheckinWords = {
   nothing: 'Nothing has changed since the last check-in.',
 };
 
-/** The title field's placeholder; there is no default title. */
+/** The title field's placeholder when the host names no default title; the shell has none. */
 export const INVENTORY_CHECKIN_PLACEHOLDER = 'Inventory check-in';
 
 const isObject = (value: unknown): value is Record<string, unknown> =>

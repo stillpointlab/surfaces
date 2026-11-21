@@ -14,7 +14,7 @@
 // - `project` reads one view; `refresh` reads the listing, the statuses and the
 //   instances again;
 // - `checkin`, the shell's check-in review confirmed, is the page's commit of
-//   its paths: the title is the summary ("<the app's label> check-in" when there
+//   its paths: the title is the summary ("<the instance's label> check-in" when there
 //   is none) and the body the details, `branch` a new branch. The reply is
 //   `done` with the commit notice's words; a refusal goes back as it is, so the
 //   review shows git's own words. The commit raises `status`, and the page is
@@ -322,7 +322,13 @@ export class AppPane {
       ...(answer.extras ? { extras: answer.extras } : {}),
       checkin: {
         words: COMMIT_WORDS,
-        ...(git === null ? {} : { branch: { current: git.branch, offerNew: true } }),
+        // Outside a repository there is no commit, so no branch and no title for one.
+        ...(git === null
+          ? {}
+          : {
+              branch: { current: git.branch, offerNew: true },
+              defaultTitle: words.apps.checkinTitle(this.checkinLabel(mounted)),
+            }),
       },
     };
     mounted.shell.setState(input);
@@ -418,7 +424,7 @@ export class AppPane {
       await this.options.refresh();
       return ok();
     }
-    if (op.type === 'checkin') return this.checkin(op, mounted.app.meta.label);
+    if (op.type === 'checkin') return this.checkin(op, this.checkinLabel(mounted));
     const pageOp = mounted.app.pageOps?.[op.type];
     if (pageOp) return pageOp(op);
 
@@ -446,6 +452,11 @@ export class AppPane {
       if (this.shown) this.shown = { ...this.shown, revision: answer.revision };
     }
     return ok(answer.reply);
+  }
+
+  /** What a check-in with no title is named for: the instance, or its app when it has no name. */
+  private checkinLabel(mounted: { app: { meta: { label: string } } }): string {
+    return this.instance?.label || mounted.app.meta.label;
   }
 
   /** An app's check-in: the page's commit of its paths, `done` with the notice's words, or the refusal. */

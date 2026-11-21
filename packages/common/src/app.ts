@@ -616,10 +616,13 @@ export interface AppShellInput {
   state: object | null;
   extras?: Record<string, unknown>;
   /**
-   * What a check-in is to the host: the review's words, and the branch it may go
-   * on. Absent: the shell's own words, which say "check in", and no branch.
+   * What a check-in is to the host: the review's words, the branch it may go
+   * on, and the title the host gives a check-in whose review leaves it empty
+   * (`defaultTitle`), which a shell with no title of its own shows as the
+   * field's placeholder. Absent: the shell's own words, which say "check in",
+   * and no branch.
    */
-  checkin?: { words?: CheckinWords; branch?: CheckinBranch };
+  checkin?: { words?: CheckinWords; branch?: CheckinBranch; defaultTitle?: string };
 }
 
 /**
