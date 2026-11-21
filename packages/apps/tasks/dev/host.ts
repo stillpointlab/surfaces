@@ -3,8 +3,10 @@
 // harness's one memory host (common's runner), as Context Manager's board
 // service answers them over drafts.
 // What only a host does is done here: the host ops (resolving a divergence by
-// dropping it, scanning references, reading a file, a stage's phases, the close
-// dialog's candidates) and showing the board a change lands on. The controls
+// dropping it, scanning references, reading a file) and showing the board a
+// change lands on. This page mounts the bare board and strip, so it also
+// answers the two ops a shell would (a stage's phases, the close dialog's
+// candidates). The controls
 // switch the host off (every op unhandled, so the optimistic render rolls back)
 // or make it refuse the next op.
 import { answerOps, fail, ok } from '@stillpointlab/common-format/app';

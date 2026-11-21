@@ -74,3 +74,13 @@ export type TasksNavOps = {
     reply: { target: { stage: number; phase: number }; moved: number; created?: boolean };
   };
 };
+
+/**
+ * The two element ops that only read a view. `<spl-tasks-app>` answers them
+ * itself through `project`, so they are neither the core's nor a host's. A host
+ * that mounts the bare board and strip answers them as it answers its own.
+ */
+export const TASKS_SHELL_OPS = [
+  'refresh-stage',
+  'close-candidates',
+] as const satisfies readonly (keyof (TaskBoardOps & TasksNavOps))[];

@@ -104,7 +104,8 @@ export const tasksModule: AppModule<
     'set-current',
     'close',
   ],
-  hostOps: ['resolve', 'scan-references', 'read-file', 'refresh-stage', 'close-candidates'],
+  // `refresh-stage` and `close-candidates` are neither: the shell answers them (`TASKS_SHELL_OPS`).
+  hostOps: ['resolve', 'scan-references', 'read-file'],
   // The core reads no clock: a new card is stamped with the host's time.
   toCoreOp: (op, host) =>
     (op.type === 'create-card' ? { ...op, now: host.now } : op) as AppCoreOp<TasksCoreOps>,

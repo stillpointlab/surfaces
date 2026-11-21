@@ -171,7 +171,9 @@ describe('tasksPages: a stage and a phase', () => {
       '/stage/x',
       '/stage/0',
       '/stage/-1',
+      '/stage/3x',
       '/stage/3/phase/0',
+      '/stage/3/phase/6x',
       '/stage/x/phase/1',
     ]) {
       expect(await resolve(path), path).toEqual({ notFound: true });
@@ -179,14 +181,14 @@ describe('tasksPages: a stage and a phase', () => {
     expect(asked).toEqual([]);
   });
 
-  it('reads a number as parseInt does, as Context Manager’s page did', () => {
+  it('reads a number written in digits alone, and nothing else', () => {
     expect(tasksPageNumber('3')).toBe(3);
-    expect(tasksPageNumber('3x')).toBe(3);
-    expect(tasksPageNumber('1.5')).toBe(1);
-    expect(tasksPageNumber('')).toBeNull();
+    expect(tasksPageNumber('12')).toBe(12);
+    for (const param of ['3x', 'x3', '1.5', '03', '0', '-1', '+3', ' 3', '3 ', '1e2', '']) {
+      expect(tasksPageNumber(param), param).toBeNull();
+    }
     expect(tasksPageNumber(undefined)).toBeNull();
-    expect(tasksPageNumber('0')).toBeNull();
-    expect(tasksPageNumber('x3')).toBeNull();
+    expect(tasksPageNumber('9'.repeat(20))).toBeNull();
   });
 });
 

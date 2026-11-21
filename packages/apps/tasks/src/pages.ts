@@ -38,14 +38,18 @@ export type TasksPageExtras = {
   docsRoot: string;
 };
 
+/** A positive whole number as a URL writes it: digits alone, with no leading zero. */
+const PAGE_NUMBER = /^[1-9]\d*$/;
+
 /**
- * A stage or phase number in a page's URL, read as `parseInt` reads it (so
- * `3x` is 3, as Context Manager's page took it), or `null` when that is not a
- * positive integer.
+ * A stage or phase number in a page's URL, or `null` when the segment is not a
+ * positive whole number written in digits alone: `3x`, `1.5`, `03` and `0` are
+ * all not found.
  */
 export function tasksPageNumber(param: string | undefined): number | null {
-  const value = parseInt(param ?? '', 10);
-  return Number.isInteger(value) && value > 0 ? value : null;
+  if (param === undefined || !PAGE_NUMBER.test(param)) return null;
+  const value = Number(param);
+  return Number.isSafeInteger(value) ? value : null;
 }
 
 const NOT_FOUND = { notFound: true } as const;
