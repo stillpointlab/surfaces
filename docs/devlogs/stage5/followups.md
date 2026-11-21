@@ -105,6 +105,8 @@ are carried here as they were written.
   - Carried 2026-11-20 (Jamie) to phase 7,
     [drain-followups](../../tasks/stage5/phase7/specs/drain-followups.md): closed when the
     adoption's step 1 merges.
+  - Closed 2026-11-21 (context-manager#1242, merged 2026-11-20): Context Manager's copies are gone.
+    Its `opSchema.ts` keeps the check-in schemas alone.
 - 2026-11-14 (app-module-grows, step 1): `AppMeta` has no noun for the "… created" notice a host
   shows after a create (Context Manager's client says "Inventory", "Task project"). The local
   host will want one.
@@ -124,6 +126,7 @@ are carried here as they were written.
   copies until context-manager-adopts-apps, as for inventory.
   - Carried 2026-11-20 (Jamie) to phase 7,
     [drain-followups](../../tasks/stage5/phase7/specs/drain-followups.md), with inventory's.
+  - Closed 2026-11-21 (context-manager#1242), with inventory's.
 - 2026-11-14 (app-module-grows, step 2): tasks' `fromChanges` cannot say whether a card's column
   moved (`dirty`, `versionColumn`): that needs the last check-in's content, not a status. The
   harness's workspace works it out from its base files today. host-runner has to choose: the
