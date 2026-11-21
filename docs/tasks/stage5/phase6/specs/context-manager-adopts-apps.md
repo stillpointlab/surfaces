@@ -168,6 +168,73 @@ adopted it still brings:
   file goes to its preview.
 - A root instance's row says "unlocked" in a chip while it is.
 
+## Step 4, read against Context Manager
+
+_Added 2026-11-20, after the first pull request merged
+([context-manager#1242](https://github.com/stillpointlab/context-manager/pull/1242)) and was
+released. Step 4 starts by listing every entry that writes to an app's file. This is that list,
+read in Context Manager at `33c393e4`, and what the claude agent decided from it. The decisions
+are Jamie's to overrule on this section's pull request._
+
+**A good's path is two columns,** `repoConnectionId` and `repoPath`, not only its metadata as
+"Step 4" below says. Every write path already loads them with the good, and an app-only good has
+them from its creation. The check reads nothing new but the connection's instances.
+
+**A person's or an agent's entries, which the lock checks:**
+
+- the editor's draft save, and the draft that rides with a new conversation or a message;
+- the editor's publish, which also opens a pull request for the one file;
+- a draft discarded: the editor's, and the tree's "Discard my changes";
+- a file unlinked;
+- a new file or folder at a path in the repository, and an XMDL apply saved to one;
+- six MCP tools: `publish_version`, `create_repo_file`, `create_repo_folder`,
+  `revert_repo_file`, `release_repo_files` and `delete_goods`. Each writes at once or through an
+  ask a person approves, and both ways end in the same service methods.
+
+**The app's or the system's entries, which pass:** the app host's ops, create and enable; tasks'
+board service; both check-ins; the upstream reconcile; a conversation backed up with its links;
+and a link or a wake (`/import`, `link_repo_file`), which stores the repository's bytes and none
+of the person's. The apps' "Open in editor" links a file this way.
+
+**Not a write to a file:** a good renamed, described or moved between the project's folders
+(never its repository path), its visibility, and a whole connection removed. Nothing outside the
+apps changes a good's repository path, and the tools a model calls in a conversation only read.
+
+**Already refused, and unchanged:** an agent's check-in of a file under an app
+(`PATH_IN_VIEW_SCOPE`), because the app's own check-in carries it.
+
+**What was decided:**
+
+1. **One check, one code.** A helper beside `scopeRoot` takes the connection, the path and
+   whether the request says the scope is unlocked. It refuses with `APP_SCOPE_LOCKED` (409),
+   naming the app and its manifest. It stands in the service methods the entries above reach and
+   not in `DraftService` or the app's own create, which the apps write through.
+2. **The request says so in its body:** `scopeUnlocked: true`, a field like `allowEmpty`, and a
+   query flag on the two `DELETE` routes.
+3. **An agent asks on purpose.** The six tools take the same input. Without it the refusal names
+   the app and says how to ask. An ask keeps the input it was filed with.
+4. **A discard and an unlink count as writes.** Each destroys a change the app may hold: a
+   card's move lives in its draft.
+5. **Every enabled instance locks its folder,** whatever its status, so a manifest that does not
+   parse is fixed by showing the files first. An instance at the root locks the whole repository.
+6. **The tree.** The folder an app is enabled over is one row with the app's icon and label,
+   which opens the app. Its menu has Open and "Show files…", which asks with the local host's
+   words. Shown, the files are under the row, which carries an "unlocked" mark and offers "Lock
+   files". An instance at the root has its row above the tree. The folder picker never offers a
+   folder inside an app.
+7. **The file page.** A file in a locked scope opens read-only behind a banner that names the
+   app and links to it, as a file that has returned to the repository already does. The page has
+   no unlock of its own: the tree is the one place.
+8. **The unlocked state is a page load's.** It is in memory on the project page. Opening a file
+   from an unlocked tree hands it to the file page once, so that page opens for editing; a
+   reload of either page is locked again. This is "every page load starts locked" for a host
+   whose tree and editor are two pages.
+9. **Left as it is:** an unlocked publish still opens its one-file pull request beside the app's
+   check-in. It is in Context Manager's follow-up log.
+10. **The walks.** The lock's walk covers the tree, the preview, the refusal and the reload. An
+    older walk that edits an app's file as a file goes through one helper that hands the unlock
+    over, as the tree does.
+
 ## Work package
 
 - **Owns:** changes in Context Manager only, in the clone `context-manager-surfaces`, plus the
