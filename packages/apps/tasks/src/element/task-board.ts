@@ -7,16 +7,17 @@ import { defineElement } from '@stillpointlab/common-format/elements';
 import { escapeHtml } from '@stillpointlab/common-format/html';
 import { enablePointerDrag } from '@stillpointlab/common-format/pointer-drag';
 
+import { checkinCountOf, checkinRequestOf, hasUncommittedChange } from '../checkinRequest.js';
 import { taskKindById } from '../types.js';
 
 import { boardStyles } from './board.styles';
 import { BoardDialogs } from './dialogs.js';
 
+import type { TaskBoardCheckinRequest } from '../checkinRequest.js';
 import type { TaskBoardOps } from '../elementOps.js';
 import type {
   SharedTaskBoardState,
   SharedTaskCard,
-  SharedTaskHousekeepingFile,
   SharedTaskKindDescriptor,
   SharedTaskPoolState,
   SharedTaskStageState,
@@ -34,19 +35,7 @@ const POOL_COLUMN_ID = '__pool__';
 
 export type { TaskBoardOps };
 
-/** The `checkin-request` event's detail: everything with an uncommitted change. */
-export interface TaskBoardCheckinRequest {
-  boardPath: string;
-  boardLabel: string;
-  /** Set on the stage view: check-in scope is every phase of the stage. */
-  stage: number | null;
-  /** Changed cards as the state carries them (never tracked ones: they have no local work). */
-  cards: SharedTaskCard[];
-  /** The pool's order file when its draft changed (ADR-0020). */
-  orderFile: { path: string } | null;
-  /** Changed non-card repo files (manifest pointer/tags, repo-view new folders). */
-  housekeeping: SharedTaskHousekeepingFile[];
-}
+export type { TaskBoardCheckinRequest };
 
 /**
  * Kanban board over a phase folder's briefs/tasks (ADR-0014). Light-DOM (like
@@ -400,19 +389,13 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
   }
 
   /**
-   * The check-in set: board + pool cards whose draft differs from their
-   * version. Tracked cards can never be in it — they have no local work to
-   * check in (ADR-0023).
+   * What a check-in would take, by the one rule the shell shares
+   * (`checkinRequest.ts`): the changed cards on the board and in the pool,
+   * the pool's order file, the housekeeping files. `null` with no state yet.
    */
-  private changedCards(): SharedTaskCard[] {
-    return [...this.allCards(), ...(this.poolState()?.cards ?? [])].filter(
-      (c) => c.changed && !c.tracked
-    );
-  }
-
-  /** Changed non-card repo files (manifest pointer/tags, repo-view new folders). */
-  private housekeeping(): SharedTaskHousekeepingFile[] {
-    return this.state?.housekeeping ?? this.stageState?.housekeeping ?? [];
+  private checkinRequest(): TaskBoardCheckinRequest | null {
+    const state = this.variant === 'stage' ? this.stageState : this.state;
+    return state ? checkinRequestOf(state, this.variant) : null;
   }
 
   /**
@@ -422,11 +405,8 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
    * even when no card changed.
    */
   private changedCount(): number {
-    return (
-      this.changedCards().length +
-      this.housekeeping().length +
-      (this.poolState()?.order?.changed === true ? 1 : 0)
-    );
+    const request = this.checkinRequest();
+    return request ? checkinCountOf(request) : 0;
   }
 
   private findCard(path: string): { card: SharedTaskCard; fromPool: boolean } | null {
@@ -798,7 +778,10 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
       card.kind !== 'spec'
         ? `<span class="card-badge card-badge--kind-name">${escapeHtml(card.kind)}</span>`
         : '',
-      card.dirty
+      // Any uncommitted change, not a column move alone: a card moved to another
+      // phase or edited is counted in the bar, and marked here as a pool card is.
+      // (`dirty` alone still marks, for a host whose card says no more than that.)
+      card.dirty || hasUncommittedChange(card)
         ? '<span class="card-badge card-badge--dirty" title="Uncommitted change">●</span>'
         : '',
       card.parseError
@@ -856,7 +839,7 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
     const selected = this.selectedPath === card.path ? ' selected' : '';
     const badges = [
       `<span class="card-badge card-badge--kind" title="${escapeHtml(card.kind)}">${escapeHtml(this.kindBadgeOf(card.kind))}</span>`,
-      card.changed
+      hasUncommittedChange(card)
         ? '<span class="card-badge card-badge--dirty" title="Uncommitted change">●</span>'
         : '',
       card.parseError
@@ -1286,20 +1269,10 @@ export class TaskBoard extends HTMLElement implements AppElement<SharedTaskBoard
     }
 
     if (el.dataset.action === 'checkin') {
-      const pool = this.poolState();
+      const request = this.checkinRequest();
+      if (!request) return;
       this.dispatchEvent(
-        new CustomEvent('checkin-request', {
-          detail: {
-            boardPath: this.state?.board.path ?? '',
-            boardLabel: this.state?.board.label ?? `Stage ${this.stageState?.stage}`,
-            stage: this.stageState?.stage ?? null,
-            cards: this.changedCards(),
-            orderFile: pool?.order?.changed === true ? { path: pool.orderPath } : null,
-            housekeeping: this.housekeeping(),
-          } satisfies TaskBoardCheckinRequest,
-          bubbles: true,
-          composed: true,
-        })
+        new CustomEvent('checkin-request', { detail: request, bubbles: true, composed: true })
       );
       return;
     }

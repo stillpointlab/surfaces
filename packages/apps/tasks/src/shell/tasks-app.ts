@@ -46,11 +46,11 @@ import {
 import { defineElement } from '@stillpointlab/common-format/elements';
 import { html, render } from '@stillpointlab/common-format/html';
 
+import { checkinRequestOf } from '../checkinRequest.js';
 import { TASKS_SHELL_OPS } from '../elementOps.js';
 
 import {
   checkinContextOf,
-  checkinRequestOf,
   tasksCheckinFiles,
   TASKS_CHECKIN_WORDS,
   tasksCheckinTitle,

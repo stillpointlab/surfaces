@@ -218,6 +218,9 @@ the core's root.
 
   New card, title and tags close before their op and report a refusal as a notification.
 
+- **A card's dot** (`.card-badge--dirty`, "Uncommitted change") is on every card a check-in
+  would take: moved to another column, moved to another phase, edited or new. The bar's count
+  and `checkin-request` use the same rule (`checkinRequest.ts`).
 - **Requests**, plain bubbling events the host answers with its own UI: `open-card { path }`,
   `checkin-request` (the changed cards, the pool's order file by path, housekeeping files),
   `open-options-menu` (a card's ⋯ menu; answer with `options-menu-select` on the board) and

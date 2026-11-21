@@ -27,3 +27,29 @@ What a spec would have to settle (the claude agent's list, not Jamie's):
 
 Context Manager's side afterwards is one line in each app's shell input, and the route keeps its
 own check.
+
+## Also: where focus goes after a refusal, and a pass over the review's display
+
+Added 2026-11-21, from stage 5's follow-up log (checkin-review, step 2). Jamie's ruling on that
+entry: a seed is fine, and "I think we need a full pass on the review display". So this seed is
+where that pass starts, and the length limits are one item of it.
+
+**Focus after a refusal.** The explorer's commit hands the review a function (`refusalField`), so
+a refusal about the branch puts focus on the branch field and one about the message on the
+title. An app's shell cannot: which code belongs to which field is the host's knowledge, and
+the shell's `checkin` input has no place for it. In an app's review focus goes to the message
+line, which is read out, so nothing is lost. The same sibling as the limits would carry it, as
+data (`refusalFields: { HOST_BRANCH_EXISTS: 'branch', … }`), since a function cannot cross to a
+host that answers over HTTP.
+
+**What a pass over the display would look at** (the claude agent's list, not Jamie's):
+
+- what the host tells the review through a shell, in one place: its words, the branch, the
+  default title (#154), the limits, the refusal fields;
+- the message line: it is framed in the local host and plain in Context Manager, which has no
+  style for `.form-message` (its stage 7 log); it carries `data-code` on a refusal (#154);
+- the rows: labels in the host's or the app's words, groups on a stage view, a moved file as
+  old → new, and the count;
+- the busy state: the spinner and `aria-disabled` buttons (#154), and what a long check-in
+  shows while a job runs elsewhere;
+- the title: required for a commit, a default for tasks, a placeholder for inventory.

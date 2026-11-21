@@ -368,6 +368,27 @@ describe('TaskBoard component', () => {
     expect(el.querySelector(`${sel(22)} .card-badge--dirty`)).not.toBeNull();
   });
 
+  it('marks every card with an uncommitted change, not a column move alone', () => {
+    // Card 11 as a host sends one moved in from another phase, and one only edited:
+    // changed, and in the column it was in.
+    for (const facts of [{ movedFrom: 'docs/tasks/stage1/phase2/briefs/idea.md' }, {}]) {
+      const state = copy(STATE);
+      Object.assign(state.cards[0]!, { changed: true, dirty: false, ...facts });
+      const el = mount(state);
+      expect(el.querySelector(`${sel(11)} .card-badge--dirty`)?.getAttribute('title')).toBe(
+        'Uncommitted change'
+      );
+      // The bar counted it already: card 11 now, card 12, pool card 22 and the pool's order.
+      expect(el.querySelector('.board-dirty-summary')?.textContent).toContain(
+        '4 uncommitted changes'
+      );
+      el.remove();
+    }
+    // An unchanged card has no mark, and neither has a tracked one, which has no local work.
+    const el = mount();
+    expect(el.querySelector(`${sel(11)} .card-badge--dirty`)).toBeNull();
+  });
+
   it('shows column counts, kind/dirty/error badges', () => {
     const el = mount();
     const poolCount = el.querySelector('[data-column-id="__pool__"] .column-count')?.textContent;
