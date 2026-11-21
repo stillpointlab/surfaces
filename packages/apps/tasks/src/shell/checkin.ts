@@ -7,8 +7,8 @@
 // And its own words for a host that gives none, which say "check in" and never
 // "commit" or "pull request".
 
-import type { TaskBoardCheckinRequest } from '../element/task-board.js';
-import type { SharedTaskBoardState, SharedTaskCard, SharedTaskStageState } from '../types.js';
+import type { TaskBoardCheckinRequest } from '../checkinRequest.js';
+import type { SharedTaskCard } from '../types.js';
 import type { CheckinFile } from '@stillpointlab/checkin-review-component';
 import type { CheckinWords } from '@stillpointlab/common-format/app';
 
@@ -94,28 +94,6 @@ export function tasksCheckinFiles(request: TaskBoardCheckinRequest): CheckinFile
     .map((file, index) => ({ file, index }))
     .sort((a, b) => groupRank(a.file.group) - groupRank(b.file.group) || a.index - b.index)
     .map(({ file }) => file);
-}
-
-/** What the board's `checkin-request` carries, from a state alone, as the board builds it. */
-export function checkinRequestOf(
-  state: SharedTaskBoardState | SharedTaskStageState,
-  view: 'board' | 'stage'
-): TaskBoardCheckinRequest {
-  const stage = view === 'stage' ? (state as SharedTaskStageState) : null;
-  const board = view === 'board' ? (state as SharedTaskBoardState) : null;
-  const pool = state.pool;
-  const cards = [
-    ...(stage ? stage.phases.flatMap((phase) => phase.cards) : (board?.cards ?? [])),
-    ...(pool?.cards ?? []),
-  ].filter((card) => card.changed && !card.tracked);
-  return {
-    boardPath: board?.board.path ?? '',
-    boardLabel: board?.board.label ?? `Stage ${stage?.stage}`,
-    stage: stage?.stage ?? null,
-    cards,
-    orderFile: pool?.order?.changed === true ? { path: pool.orderPath } : null,
-    housekeeping: state.housekeeping ?? [],
-  };
 }
 
 /** The context the shell sends with its op: the board's path and the stage. */

@@ -244,9 +244,16 @@ are carried here as they were written.
     can be shown too, and deleting its manifest from the tree makes the outer app valid again.
 - 2026-11-14 (apps-in-the-local-host, step 1): a root instance's row shows a dot for changes
   and no status letter. An instance whose app the page has no shell for still gets a row.
+  - Closed 2026-11-21 (Jamie: by design, both halves). The dot is fine: an app's row stands for a
+    folder. A row with no shell cannot happen while the server and the page name the same apps,
+    and if they ever differ the row's message says the page cannot show that app.
 - 2026-11-14 (apps-in-the-local-host, step 2): a card moved to another phase has `movedFrom` in
   its state and no mark on the board, in the local host as in Context Manager. The board marks
   a column that moved, not a file that did.
+  - Closed 2026-11-21 (Jamie: fix, it should show a dirty mark; [#156](https://github.com/stillpointlab/surfaces/pull/156)): the board's dot is on
+    every card with an uncommitted change (moved to another phase, edited, new), as it already
+    was on a pool card, and as the bar's count counts them. Context Manager's boards show the
+    same after its next pin.
 - 2026-11-14 (apps-in-the-local-host, step 2): each app's create copy says "repository" (the
   folder help, tasks' root warning), which is Context Manager's word. The local host serves a
   folder.
@@ -266,8 +273,15 @@ are carried here as they were written.
     is a script's click landing on the chip.
 - 2026-11-14 (apps-in-the-local-host, step 2): creating an app at the served root, with its
   consent, is covered by tests and was not done by hand.
+  - Closed 2026-11-21 (Jamie: a check by hand is enough; [#156](https://github.com/stillpointlab/surfaces/pull/156)). Done in Chromium against the
+    built host over a new repository: an empty folder shows the root warning and its consent
+    box; Create without the consent is refused in the dialog and writes nothing; with it,
+    `tasks.yaml` is at the root, the instance has its row above the tree with its files hidden,
+    it opens as the board, and Undo names the create.
 - 2026-11-14 (checkin-review, step 1): tasks' shell works out the board's check-in request from
   the state with a copy of the board's own rule, since the board has no method for it.
+  - Closed 2026-11-21 (Jamie: fix; [#156](https://github.com/stillpointlab/surfaces/pull/156)): one rule, `checkinRequestOf` in
+    `packages/apps/tasks/src/checkinRequest.ts`, which the board and the shell both call.
 - 2026-11-14 (checkin-review, step 1): the board's in-flight chip reads "PR…" and speaks of a
   pull request. The word should be the host's.
   - Moved 2026-11-20 to the seed [the host's words in an
@@ -289,6 +303,9 @@ are carried here as they were written.
 - 2026-11-14 (checkin-review, step 2): a shell cannot say where focus goes after a refusal, so
   in an app's review it goes to the refusal's line. Rules a host can pass as data would let it
   reach the branch or the title.
+  - Moved 2026-11-21 (Jamie: a seed, and the review's display needs a full pass; [#156](https://github.com/stillpointlab/surfaces/pull/156)) to the seed
+    [a host gives the check-in review its length limits](../../tasks/unassigned/seeds/checkin-review-length-limits.md),
+    which now starts that pass.
 - 2026-11-14 (checkin-review, step 2): nothing shows between pressing Commit and the review
   opening while the page reads the changes.
   - Closed 2026-11-21 (Jamie: fix, with a spinner; [#154](https://github.com/stillpointlab/surfaces/pull/154)): the Commit button is `aria-busy` while
@@ -306,6 +323,10 @@ are carried here as they were written.
     inventory's review shows it as its placeholder.
 - 2026-11-14 (checkin-review, step 2): the app pane asks for git's state at every resolve. The
   branch could come with the `status` event.
+  - Closed 2026-11-21 (Jamie: fine to leave for now). It is asked each time the pane reads an
+    app's page, beside that read: when an app opens or moves between its pages, when one of its
+    files changes on disk, when git's `HEAD` or index moves or the listing changes while it is
+    open, and when the shell asks for its page again. Never outside a repository.
 - 2026-11-15 (undo-journal): the Undo and Redo buttons are the glyphs ↶ and ↷, which depend on
   the system's font. Two icons in `<spl-icon>` would be steadier.
 - 2026-11-15 (undo-journal): after a create is undone while that app is open, the pane says
