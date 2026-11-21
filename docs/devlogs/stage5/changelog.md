@@ -367,3 +367,108 @@ The agents', in the spec's "As built" section:
   does, the review's op and words, and where the local host's lock differs.
 - The follow-up log holds 71 entries, 19 of them carried from stage 4. It is drained with
   Jamie, a few entries at a time, starting with those that touch the adoption.
+
+---
+
+## Phase 6: Context Manager adopts the apps' pieces (`stage5-phase6-complete`)
+
+Range: `stage5-phase5-complete..stage5-phase6-complete`, 2026-11-20 – 2026-11-21. The phase's code
+is two Context Manager pull requests: context-manager#1242 (72 files, +1,914/−2,959) and
+context-manager#1246 (77 files, +4,036/−308). Here: the close of phases 2 to 5, what the pin
+needed first, and the lock read against Context Manager. The follow-up drain's pull requests
+reached main in the same range; they are phase 7's.
+
+### Shipped
+
+- Context Manager adopts the apps' pieces (context-manager#1242;
+  [spec](../../tasks/stage5/phase6/specs/context-manager-adopts-apps.md), steps 1 to 3): each
+  app's bounds, pages and copy come from its module; the app view page mounts each app's shell;
+  the shells' check-in review replaces both check-in dialogs. Its first commit is the pin alone,
+  at `21d3385`.
+- The lock on an app's files (context-manager#1246; the spec's step 4): an enabled app's files
+  are hidden in the repo tree and refused by the server (`APP_SCOPE_LOCKED`, 409) until a person
+  shows them or an agent asks with `scopeUnlocked`; a file in an app's folder opens read-only
+  behind a banner; six MCP tools take the flag; ADR-0028 is amended.
+- The lock, read against Context Manager
+  ([#147](https://github.com/stillpointlab/surfaces/pull/147)): a section of the spec that lists
+  every entry that writes to an app's file, written before the second pull request.
+- What the pin needed first:
+  - the two app packages' builds split
+    ([#136](https://github.com/stillpointlab/surfaces/pull/136));
+  - `meta.create.subject`, and two leftovers removed
+    ([#137](https://github.com/stillpointlab/surfaces/pull/137));
+  - an app's meta loads its default folder alone, not the naming rules
+    ([#141](https://github.com/stillpointlab/surfaces/pull/141)), found in the pin's sizes.
+- Three fixes Context Manager's stage 7 asked for, which came with the pin: a changed block
+  keeps its square brackets as typed
+  ([#143](https://github.com/stillpointlab/surfaces/pull/143)), Tab stays inside an open dialog
+  ([#144](https://github.com/stillpointlab/surfaces/pull/144)), and a line break inside a
+  paragraph renders as a space ([#145](https://github.com/stillpointlab/surfaces/pull/145)).
+- After the adoption, two changes that waited for it
+  ([#148](https://github.com/stillpointlab/surfaces/pull/148)): the shell's two ops leave
+  `tasksModule.hostOps`, and a tasks page number is digits alone. Context Manager takes them
+  with its next pin.
+- ADR-0040's count, taken again (context-manager#1249): 4,752 lines of Context Manager are
+  still an app's, where 5,850 were after stage 3 and 8,413 before it.
+- A seed: [the check-in review takes length limits from its
+  host](../../tasks/unassigned/seeds/checkin-review-length-limits.md)
+  ([#146](https://github.com/stillpointlab/surfaces/pull/146)).
+
+### Decisions
+
+Jamie's:
+
+- 2026-11-20: the follow-up log is drained before the arc closes, a few entries at a time, with
+  the entries that touch the adoption first, so that Context Manager's pin moves once.
+- 2026-11-20: `e2e:reset` and pushes to the scratch repository were approved for each pull
+  request's walks, and again on 2026-11-21 for the lock's.
+- 2026-11-20: the lock is a second pull request, after a read of every entry that writes to an
+  app's file.
+- He merged both pull requests.
+
+The agents', in the spec's "As built" section and each pull request's description:
+
+- A bad op, view or create input is refused with the module's code (`APP_OP_INVALID` and the
+  rest), where it was `VALIDATION_ERROR`.
+- The review has no length limit of its own; the route's refusal shows in it.
+- `publishVersion`'s default is the checked one, so both check-in services pass `bySystem`,
+  which the spec's non-goals did not foresee.
+- Three entries the list of writes missed are locked too.
+- The lock's follow-ups opened Context Manager's stage 8 log.
+
+### Testing & review
+
+- Tests here: 3,479 at phase 5's close to 3,521 at `051a781`, the drain's included.
+- Context Manager at #1242's tip: type check and lint clean, 4,986 unit tests (5,012 at the
+  pin; the deleted schemas' and pages' tests went with them). At #1246: 5,111.
+- **Walks,** each round after a full build and a reset of the walk database, never both suites
+  at once and never while CI ran:
+  - #1242 at the pin alone and at its tip: inventory 38 of 38, tasks 01 to 27 and 29, every
+    step on its first run;
+  - #1246 at `6e43bf40`: the same, and the new walk 30 failed on a fault of its own (it waited
+    for an autosave the page does not schedule when the text equals the published version);
+  - #1246 at its tip: every step of both suites, walk 30 among them, on its first run.
+- **By hand in Chromium:** at #1242's tip, the board in its shell, a card dragged, and the
+  check-in review's keys; at #1246's tip, the locked row, the "Show files" question, the
+  unlocked row and the file page's banner in both states. One defect was found and fixed in
+  #1246: the unlocked row's caret pointed right with its files shown. An app at a
+  repository's root was not looked at by hand.
+- Each pull request's sizes are in its description: every page gains 0.83 kB with #1242, and
+  nothing every page loads changed with #1246.
+
+### Deferred
+
+- In Context Manager's logs: the review's message line has no style there, and five small
+  entries from the lock (stage 8's log), among them an unlocked publish that still opens its
+  one-file pull request beside the app's check-in.
+- The count script is in neither repository.
+- Context Manager's pin is at `21d3385`. One more move at the end of phase 7 brings #148 and
+  the drain's fixes.
+
+### At the phase's close
+
+- The spec is done, with an "As built" section. The two log entries for the apps' bounds,
+  pages and copy being in both repositories are closed.
+- The pointer is at phase 7, the [follow-up
+  drain](../../tasks/stage5/phase7/specs/drain-followups.md), which has run beside this phase
+  since 2026-11-20: 71 entries when phase 6 opened, 39 left to rule on.

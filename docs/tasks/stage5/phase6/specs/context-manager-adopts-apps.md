@@ -1,5 +1,5 @@
 ---
-column: todo
+column: done
 created: 2026-11-13T18:58:00-07:00
 tags: [apps, host-contract, code, major-feature]
 ---
@@ -360,19 +360,67 @@ saves; a reload hides the files again.
 
 ## Acceptance / completion checklist
 
-- [ ] Both walk suites pass on the pin alone.
-- [ ] After step 1, a module's bounds, pages and copy exist only in this repository.
-- [ ] After step 2, the client halves hold no layout and no page styles of an app.
-- [ ] After step 3, neither app has a check-in dialog of its own.
-- [ ] Both walk suites pass on the first PR's tip, with the walks' edits in the commits that
+- [x] Both walk suites pass on the pin alone.
+- [x] After step 1, a module's bounds, pages and copy exist only in this repository.
+- [x] After step 2, the client halves hold no layout and no page styles of an app.
+- [x] After step 3, neither app has a check-in dialog of its own.
+- [x] Both walk suites pass on the first PR's tip, with the walks' edits in the commits that
       moved the markup.
-- [ ] After step 4, an app's files are hidden in the repo tree until shown, the server refuses
+- [x] After step 4, an app's files are hidden in the repo tree until shown, the server refuses
       a draft to them, and the lock's walk passes with both suites.
-- [ ] Each PR lists its behaviour changes and the sizes before and after.
-- [ ] ADR-0040 is refreshed with the new count.
+- [x] Each PR lists its behaviour changes and the sizes before and after.
+- [x] ADR-0040 is refreshed with the new count (context-manager#1249).
 
 ## Implementation plan
 
 1. PR: the pin; bounds, pages and copy; the shells; the check-in review. Walked at the pin and
    at the tip.
 2. PR: the lock, after listing every entry that writes to an app's file, with its walk.
+
+## As built
+
+_context-manager#1242 (steps 1 to 3, merged 2026-11-20) and context-manager#1246 (the lock, merged
+2026-11-21), each written by an Opus 5.5 sub-agent from a brief in the `context-manager-surfaces`
+clone, then rebuilt on `main`, reviewed, checked and walked by the orchestrating agent. Each
+description lists every behaviour change and the sizes._
+
+- **The pin is `21d3385`,** past the two app packages' split builds (#136), `meta.create.subject`
+  (#137), an app's meta that loads its default folder alone (#141), and three fixes Context
+  Manager's stage 7 asked for (#143 to #145). #1242's first commit is the pin alone, walked.
+- **Step 1.** The op, view and create bounds, the pages (`matchAppPage`) and the copy come from
+  each module. Context Manager's `opSchema.ts` files keep the check-in schemas alone, and both
+  `pages.ts` are gone. A bad op, view or create input is refused with `APP_OP_INVALID`,
+  `APP_VIEW_INVALID` or `APP_CREATE_INVALID`, where it was `VALIDATION_ERROR`, and three page
+  requests that answered 400 answer 404.
+- **Step 2.** The app view page mounts `<spl-inventory-app>` and `<spl-tasks-app>`. Each client
+  half keeps Context Manager's host ops, its path-to-good maps, inventory's export links and
+  tasks' refresh job. Their stylesheets keep the room for the site header and the shared button
+  and form styles the shells borrow.
+- **Step 3.** Both check-in dialogs are gone. Context Manager answers the shell's `checkin` op
+  by mapping paths to its public ids and calling its existing endpoint, and calls
+  `checkinSettled()` when its job ends. The review has no length limit on its title and
+  description; the route still refuses a longer one. That is a seed here,
+  [the check-in review takes length limits from its host](../../../unassigned/seeds/checkin-review-length-limits.md).
+- **Step 4** was read against Context Manager first (#147, the section above), which listed
+  every entry that writes to an app's file. As built:
+  - one helper, `assertScopeUnlocked`, called from eight entries, and one rule for "which app
+    holds this path", shared with the tree and the agent's check-in refusal;
+  - the refusal is `APP_SCOPE_LOCKED` (409), and the flag is `scopeUnlocked: true`; six MCP
+    tools take it;
+  - `publishVersion` serves a person's callers and the system's, and its default is checked:
+    the system's five callers say `bySystem`.
+- **Departures in step 4:**
+  - both check-in services change by one argument (`bySystem: true`), though the non-goals say
+    no change to them;
+  - three entries the list missed are covered: the file page's own Delete, the preview pane's
+    Edit link, and the landing after "New file";
+  - the file page names the app by its kind ("Tasks"), not the instance's label;
+  - its follow-ups opened Context Manager's stage 8 log, since stage 7's had closed.
+- **ADR-0040's count** was taken again at `df2b1aab` (context-manager#1249): 4,752 lines are
+  still an app's, where 5,850 were after stage 3. The script, which was not in either
+  repository, was recovered from the stage 3 session's transcript and reproduces the record's
+  first two columns.
+- **Walks.** Both suites passed at the pin alone, at #1242's tip, and at #1246's tip (inventory
+  38 of 38; tasks 01 to 27, 29 and the new 30). On #1246's first round walk 30 failed on a
+  fault of its own, an autosave the page does not schedule when the text equals the published
+  version; it saves with Ctrl+S now.

@@ -1,5 +1,5 @@
 ---
-column: todo
+column: in-progress
 created: 2026-11-20T16:10:00-07:00
 tags: [apps, host-contract, dev-tooling, code]
 ---
@@ -54,7 +54,8 @@ touch what Context Manager adopts were ruled on first, so that its pin moves onc
    ([#148](https://github.com/stillpointlab/surfaces/pull/148)): digits alone, with no leading
    zero._
 3. **Two copies of each app's bounds, pages and copy,** here and in Context Manager. The
-   adoption's step 1 deletes Context Manager's; the two entries close when it merges.
+   adoption's step 1 deletes Context Manager's; the two entries close when it merges. _Done
+   (context-manager#1242, merged 2026-11-20): both entries are closed._
 4. **The other 58 entries,** in batches. None changes what Context Manager adopts. By where they
    are, roughly: the local host's server and page, the harness, the two apps' elements and
    shells, the check-in review, and the format packages (most of stage 4's carried entries).
