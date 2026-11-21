@@ -60,6 +60,11 @@ const WATCHED_EVENTS = [
   'notification',
   'reload-request',
   'create-validity',
+  // The explorer's tree.
+  'tree-select',
+  'tree-activate',
+  'tree-toggle',
+  'tree-menu',
 ] as const;
 
 let current: { name: string; format: HarnessFormat; elements: HarnessElements } | null = null;
@@ -102,6 +107,9 @@ function wire(el: HTMLElement, tag: string): void {
       } else if (detail && typeof detail === 'object' && 'reason' in detail) {
         const { view, reason } = detail as { view: string; reason: string };
         summary = ` (${view}, ${reason})`;
+      } else if (detail && typeof detail === 'object' && 'path' in detail) {
+        const { path, open } = detail as { path: unknown; open?: boolean };
+        summary = ` (${String(path)}${open === undefined ? '' : open ? ', open' : ', closed'})`;
       }
       log(`${tag} ${type}${summary}`);
     });
@@ -271,7 +279,11 @@ async function selectFormat(name: string, fixtureName?: string): Promise<void> {
   applyReadonly();
   if (rawToggle.checked) applyRaw();
 
-  const first = fixtureName && format.fixtures[fixtureName] ? fixtureName : fixtureSelect.value;
+  // By name, not by content: a fixture may be the empty string.
+  const first =
+    fixtureName !== undefined && Object.hasOwn(format.fixtures, fixtureName)
+      ? fixtureName
+      : fixtureSelect.value;
   fixtureSelect.value = first;
   applyFixture(first);
 }
@@ -303,9 +315,15 @@ narrowToggle.addEventListener('change', () => {
     pane.classList.toggle('narrow', narrowToggle.checked);
   }
 });
-darkToggle.addEventListener('change', () => {
-  document.body.classList.toggle('dark', darkToggle.checked);
-});
+// Dark starts as the system has it and follows it; the box overrides until the system changes.
+const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
+const applyDark = (on: boolean): void => {
+  darkToggle.checked = on;
+  document.body.classList.toggle('dark', on);
+};
+applyDark(systemDark.matches);
+systemDark.addEventListener('change', (event) => applyDark(event.matches));
+darkToggle.addEventListener('change', () => applyDark(darkToggle.checked));
 
 const params = new URLSearchParams(location.search);
 // Raw views use <code-editor> and <code-preview> when they are registered, as a

@@ -27,8 +27,13 @@ are carried here as they were written.
 - 2026-11-14 (format-descriptors): in the harness, a deep link to a fixture whose content is `''`
   falls back to the first fixture (a truthiness test in `main.ts`), and `vite.config.ts`'s
   default-format pattern does not match `@stillpointlab/local-host`.
+  - Closed 2026-11-20 (Jamie: fix; [#150](https://github.com/stillpointlab/surfaces/pull/150)): a
+    fixture is found by its name. The pattern takes a host's package, and the local host has a `dev`
+    script, so `npm run dev` in it opens the harness on the tree.
 - 2026-11-14 (explorer-tree): the harness's event log (`WATCHED_EVENTS`) does not list the
   tree's events, so the tree's fixture keeps a log of its own.
+  - Closed 2026-11-20 (Jamie: fix; [#150](https://github.com/stillpointlab/surfaces/pull/150)): the
+    log lists the tree's four events with their path, and the fixture's own log is gone.
 - 2026-11-14 (host-page): xmdl's validator (zod 4) probes `Function('')`, which the page's
   policy blocks. It falls back, and two policy reports show in the console.
 - 2026-11-14 (host-page): after the event stream reconnects, the page lists again but does not
@@ -137,6 +142,8 @@ are carried here as they were written.
   scrolls sideways.
 - 2026-11-14 (app-shells, step 1): the harness's Dark toggle sets a class and does not follow
   the system's colour scheme, so a check in dark has to tick it.
+  - Closed 2026-11-20 (Jamie: fix; [#150](https://github.com/stillpointlab/surfaces/pull/150)): Dark
+    starts as the system has it and follows it. The box overrides until the system changes.
 - 2026-11-14 (host-runner): `common-format/host`'s entry test reads the word `from` before a
   quote in any string as an import, so two of the memory port's messages are worded around it.
   A tighter pattern would let a message read naturally.
@@ -155,8 +162,14 @@ are carried here as they were written.
   the harness did. The board does not draw `movedFrom`; it is in the state.
 - 2026-11-14 (app-shells, step 2): the harness's "Host answers ops" and "Refuse the next op"
   controls do not reach a shell fixture's host.
+  - Closed 2026-11-20 (Jamie: fix; [#150](https://github.com/stillpointlab/surfaces/pull/150)): both
+    reach the tasks shell's host. Off, no op is claimed. A refusal takes the next op that is not a
+    read (`project`, `refresh`), as inventory's shell fixture already did.
 - 2026-11-14 (app-shells, step 2): in the harness the bare board, hidden, and the shell's board
   both make their dialogs, so an id such as `#new-brief-title` is on the page twice.
+  - Closed 2026-11-20 (Jamie: fix; [#150](https://github.com/stillpointlab/surfaces/pull/150)): only
+    one of the two is on the page at a time. The fixture takes the other off and puts it back when
+    its fixture is chosen.
 - 2026-11-14 (app-shells, step 2): a stage made with "+ stage" has no folder until it has a
   card: the strip shows it because the pointer names it. "Close stage" then moves the pointer
   on, and the empty stage is gone from the strip. The core writes nothing for an empty stage
