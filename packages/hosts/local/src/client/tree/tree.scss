@@ -91,6 +91,11 @@ ul {
   white-space: pre;
 }
 
+// A folder with nothing listed under it: the slash says folder where a chevron would.
+.slash {
+  color: $text-muted;
+}
+
 [data-kind='app'] > .row > .name {
   font-weight: 600;
 }

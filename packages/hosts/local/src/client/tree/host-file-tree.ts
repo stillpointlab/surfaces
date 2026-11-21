@@ -98,7 +98,7 @@ export class HostFileTree extends HTMLElement implements FileTreeElement {
     this.model = next;
     for (const path of this.open) {
       const entry = next.entries.get(path);
-      if (!entry || !expandable(entry, next.marks.get(path))) this.open.delete(path);
+      if (!entry || !expandable(entry)) this.open.delete(path);
     }
     this.renderAll();
   }
@@ -169,7 +169,9 @@ export class HostFileTree extends HTMLElement implements FileTreeElement {
     const entry = this.model.entries.get(path)!;
     const mark = this.model.marks.get(path);
     const kind = kindOf(entry, mark);
-    const opens = expandable(entry, mark);
+    const opens = expandable(entry);
+    // A folder with nothing listed under it: its name ends in a slash, in place of a chevron.
+    const closedFolder = kind === 'folder' && !opens;
     const isOpen = opens && this.open.has(path);
     const app = mark?.app;
     const status = mark?.status === undefined ? undefined : STATUS.get(mark.status);
@@ -177,7 +179,7 @@ export class HostFileTree extends HTMLElement implements FileTreeElement {
       app
         ? html`<spl-icon class="app-icon" icon-name="${app.icon}" data-size="small" data-padding="none" aria-hidden="true" inert></spl-icon>`
         : ''
-    }<span class="name" dir="auto">${app ? app.label : entry.name}</span>${
+    }<span class="name" dir="auto">${app ? app.label : entry.name}${closedFolder ? html`<span class="slash" aria-hidden="true">/</span>` : ''}</span>${
       app?.unlocked
         ? html`<span class="unlocked" title="Unlocked: this app's files are listed, and changes to them skip its rules">unlocked</span>`
         : ''
@@ -220,7 +222,7 @@ export class HostFileTree extends HTMLElement implements FileTreeElement {
   /** Open or close a folder; true when it changed. Raises `tree-toggle`. */
   private setOpen(path: string, open: boolean): boolean {
     const entry = this.model.entries.get(path);
-    if (!entry || !expandable(entry, this.model.marks.get(path))) return false;
+    if (!entry || !expandable(entry)) return false;
     if (this.open.has(path) === open) return false;
     if (open) this.open.add(path);
     else this.open.delete(path);

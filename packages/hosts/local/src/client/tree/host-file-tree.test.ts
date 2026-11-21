@@ -100,11 +100,26 @@ describe('rows', () => {
     expect(item(tree, 'lib').getAttribute('aria-expanded')).toBe('false');
   });
 
-  it('shows an empty folder as a folder that opens to nothing', () => {
-    const tree = mount(['empty/']);
+  it('shows a folder with nothing under it as a folder with no chevron', () => {
+    const tree = mount(['empty/', 'a.md']);
+    const row = item(tree, 'empty');
+    expect(row.dataset.kind).toBe('folder');
+    expect(row.hasAttribute('aria-expanded')).toBe(false);
+    expect(row.querySelector('ul')).toBeNull();
+    expect(row.querySelector('.name')!.textContent).toBe('empty/');
+    expect(item(tree, 'a.md').querySelector('.name')!.textContent).toBe('a.md');
+
+    // A click selects it and opens nothing; a double click and Enter open no file.
+    const heard: string[] = [];
+    for (const type of ['tree-select', 'tree-toggle', 'tree-activate']) {
+      tree.addEventListener(type, () => heard.push(type));
+    }
     line(tree, 'empty').click();
-    expect(item(tree, 'empty').getAttribute('aria-expanded')).toBe('true');
-    expect(shown(tree)).toEqual(['empty']);
+    line(tree, 'empty').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    row.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    row.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(heard).toEqual(['tree-select']);
+    expect(tree.openPaths).toEqual([]);
   });
 });
 

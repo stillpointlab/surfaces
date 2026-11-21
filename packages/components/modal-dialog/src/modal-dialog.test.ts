@@ -253,6 +253,53 @@ describe('ModalDialog markup', () => {
 // jsdom moves no focus for a Tab key, so these do what a browser does: the key
 // goes to the document, and then focus lands on whatever is next. Inside the
 // dialog the next stop past either end is one of its two edges.
+describe('ModalDialog body', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  const section = (dialog: ModalDialog): Element =>
+    dialog.shadowRoot!.querySelector('.modal-body')!;
+  /** A MutationObserver's callback runs in a microtask. */
+  const settle = (): Promise<void> => Promise.resolve();
+
+  it('draws no body when nothing is slotted into it', () => {
+    const dialog = document.createElement('modal-dialog') as ModalDialog;
+    dialog.innerHTML = '<div slot="footer"><button>OK</button></div>';
+    document.body.append(dialog);
+    dialog.open();
+    expect(section(dialog).hasAttribute('data-empty')).toBe(true);
+  });
+
+  it('draws the body when something is, and follows it while open', async () => {
+    const { dialog, body } = mount('<p>Detail.</p>');
+    dialog.open();
+    expect(section(dialog).hasAttribute('data-empty')).toBe(false);
+
+    body.hidden = true;
+    await settle();
+    expect(section(dialog).hasAttribute('data-empty')).toBe(true);
+    body.hidden = false;
+    await settle();
+    expect(section(dialog).hasAttribute('data-empty')).toBe(false);
+
+    body.remove();
+    await settle();
+    expect(section(dialog).hasAttribute('data-empty')).toBe(true);
+    dialog.append(body);
+    await settle();
+    expect(section(dialog).hasAttribute('data-empty')).toBe(false);
+  });
+
+  it('still knows after the title changes while open', () => {
+    const dialog = document.createElement('modal-dialog') as ModalDialog;
+    document.body.append(dialog);
+    dialog.open();
+    dialog.title = 'Another';
+    expect(section(dialog).hasAttribute('data-empty')).toBe(true);
+  });
+});
+
 describe('ModalDialog keeps Tab inside', () => {
   afterEach(() => {
     document.body.innerHTML = '';

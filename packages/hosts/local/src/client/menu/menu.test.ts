@@ -78,7 +78,24 @@ describe('opening', () => {
     const [remove, rename] = items();
     expect(remove!.classList.contains('host-menu-danger')).toBe(true);
     expect(rename!.getAttribute('aria-disabled')).toBe('true');
-    expect(rename!.title).toBe('Not here.');
+    // The reason is a line of the entry, so the keyboard and a touch read it too.
+    expect(rename!.title).toBe('');
+    expect(rename!.querySelector('.host-menu-label')!.textContent).toBe('Rename…');
+    expect(rename!.querySelector('.host-menu-reason')!.textContent).toBe('Not here.');
+    expect(remove!.querySelector('.host-menu-reason')).toBeNull();
+  });
+
+  it('a letter still finds an entry that carries a reason', () => {
+    menu.open({
+      x: 0,
+      y: 0,
+      entries: [
+        { label: 'Delete…', action: () => undefined },
+        { label: 'Rename…', action: () => undefined, disabled: true, title: 'Not here.' },
+      ],
+    });
+    menu.element.dispatchEvent(new KeyboardEvent('keydown', { key: 'r', bubbles: true }));
+    expect(document.activeElement).toBe(items()[1]);
   });
 
   it('stays inside the viewport near the right and bottom edges', () => {

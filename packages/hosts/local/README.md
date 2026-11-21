@@ -57,7 +57,12 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
   with the text at `HEAD` on the left (`GET /api/base`; a moved file's under its old path) and
   the file on the right, read again when either moves. The switch comes and goes with the
   status without touching the editor or its edits; a Changes view whose file stops being changed
-  (a commit) goes to the preview. An image has no Changes. When git was not found and the folder
+  (a commit) goes to the preview. An image has no Changes. Over the view, **Whitespace** chooses
+  how it is treated (Compared, Ignored or Shown: `<code-diff>`'s `ignore-whitespace` and
+  `show-whitespace`), and the page keeps the choice. The view compares lines and not their
+  endings, so beside it the page says when the two sides' line endings differ (git may count
+  every line as changed where the view marks none), and when they differ in whitespace alone.
+  When git was not found and the folder
   looks like a repository, the explorer says "git was not found, so changes and commit are
   off."; outside a repository the page shows nothing of git and calls none of its routes.
 - **Commit.** In a repository the explorer's header holds a **Commit** button with the number of
@@ -96,9 +101,12 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
   first when it has edits; a `move` or `delete` of the open file carries its version as `base`.
   A folder listed with nothing under it (a submodule, a nested repository), a folder holding
   one, and every folder while the list is cut (`truncated`) cannot be renamed or deleted here.
+  Such a folder's row has no chevron, since it would open to nothing, and its name ends in a
+  slash.
 - **The menu** (`page.menu`) is the host's only one: `menu.open({ x, y, entries, label? })`
   shows `{ label, action, danger?, disabled?, title? }` entries at a point in the viewport,
-  kept inside it, and replaces anything open. Escape, Tab, a click outside, a scroll and a
+  kept inside it, and replaces anything open. An entry's `title` (why it is disabled) is a line
+  of text under its label, not a tooltip, so the keyboard and a touch read it. Escape, Tab, a click outside, a scroll and a
   resize close it; Escape, Tab and a choice give focus back (`returnFocus`, or what had focus).
   A row's entries are `page.fileOps.entriesFor({ path, kind })`; another kind of row, or an
   app's request, adds its own in the page's `tree-menu` listener.
@@ -191,8 +199,8 @@ query value). A version is a SHA-256 of the file's bytes, as hex; only equality 
 | 403    | `HOST_FORBIDDEN`: the `Host`, `Origin` or `Sec-Fetch-Site` checks below                                                      |
 | 405    | `HOST_METHOD_NOT_ALLOWED`, with an `Allow` header                                                                            |
 | 413    | `HOST_BODY_TOO_LARGE`: a `PUT` body over 64 MiB                                                                              |
+| 422    | `HOST_GIT_FAILED`: git ran and failed (its message says why). The repository is the person's to put right, so not a 500      |
 | 500    | `HOST_WRITE_FAILED`: a write failed part way (a full disk); what it wrote was taken back                                     |
-| 500    | `HOST_GIT_FAILED`: git ran and failed (its message says why)                                                                 |
 
 **Events** are unnamed server-sent events, one JSON object per `data:` line:
 `{"type":"changed","paths":[...]}` (these files' contents changed, appeared or went),
@@ -337,7 +345,7 @@ port's write lock: a `put` that arrives during a commit waits for it, and the re
   subfolder too. The message is a file in the system's temporary folder, never an argument;
   `whitespace` cleanup trims trailing spaces and blank lines and keeps a line that starts with `#`.
 - **When git refuses** (a hook, no identity set, signing that fails), the answer is
-  `HOST_GIT_FAILED` (500): what failed, that nothing was committed and where the person is, then
+  `HOST_GIT_FAILED` (422): what failed, that nothing was committed and where the person is, then
   `git said:` and git's own words (standard error, then standard output) as text. Past 8,000
   characters the middle is left out, so a hook's first and last lines stay. The paths it added
   with `--intent-to-add` are taken out of the index again, and a new branch it made is undone

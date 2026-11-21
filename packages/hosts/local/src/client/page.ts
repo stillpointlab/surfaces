@@ -69,7 +69,12 @@ import { indexListing } from './file-ops/paths';
 import { deepActiveElement, HostMenu } from './menu/menu';
 import { pageStyles } from './page.styles';
 import { FilePane } from './pane';
-import { readOpenFolders, writeOpenFolders } from './stored';
+import {
+  readDiffWhitespace,
+  readOpenFolders,
+  writeDiffWhitespace,
+  writeOpenFolders,
+} from './stored';
 import './tree/host-file-tree';
 import { words } from './words';
 
@@ -239,6 +244,8 @@ export function startPage(options: PageOptions): HostPage {
     confirm,
     prepare: options.prepare,
     diff: options.diff,
+    diffWhitespace: readDiffWhitespace(),
+    onDiffWhitespace: writeDiffWhitespace,
     onViewRequest: (view, how = 'push') => {
       const current = pane.current;
       if (current) void navigate({ path: current.path, view }, how);

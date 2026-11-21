@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { startPage } from '../page';
 import { BINARY, fakeHost, fakeRegistry } from '../test-support';
+import { words } from '../words';
 
 import type { HostPage } from '../page';
 import type { FakeEditor, FakeHost } from '../test-support';
@@ -145,6 +146,13 @@ describe('the menu on a row', () => {
     await page.refresh();
     askMenu('ext', 'folder');
     expect(menuItems().every((item) => item.disabled)).toBe(true);
+    // Each says why, as text in the entry.
+    expect(
+      [...document.querySelectorAll('.host-menu .host-menu-reason')].map((r) => r.textContent)
+    ).toEqual(Array(3).fill(words.menu.separate));
+    // Its row is a folder with no chevron: there is nothing listed under it.
+    expect(row('ext')!.hasAttribute('aria-expanded')).toBe(false);
+    expect(row('ext')!.dataset.kind).toBe('folder');
     askMenu('docs', 'folder');
     expect(menuItems().map((item) => item.disabled)).toEqual([false, true, true]);
     host.separate.clear();
@@ -431,6 +439,11 @@ describe('Delete', () => {
     expect(buttons).toEqual(['Cancel', 'Delete']);
     // Enter confirms: the Delete button has focus.
     expect(document.activeElement?.textContent).toBe('Delete');
+    // A question with no detail has no body to draw.
+    expect(dialog().querySelector<HTMLElement>('.file-op-body')!.hidden).toBe(true);
+    expect(dialog().shadowRoot!.querySelector('.modal-body')!.hasAttribute('data-empty')).toBe(
+      true
+    );
     await press('confirm');
     expect(host.puts).toEqual([[{ kind: 'delete', path: 'docs/c.txt' }]]);
     expect(host.disk.has('docs/c.txt')).toBe(false);
@@ -491,6 +504,7 @@ describe('Delete', () => {
     expect(dialog().querySelector('.confirm-detail')!.textContent).toBe(
       'b.md has unsaved edits, which will be lost.'
     );
+    expect(dialog().querySelector<HTMLElement>('.file-op-body')!.hidden).toBe(false);
     await press('confirm');
     expect($('.pane-header').hidden).toBe(true);
   });
@@ -502,8 +516,14 @@ describe('Delete', () => {
       code: 'HOST_FILE_NOT_FOUND',
       message: 'There is no file at "docs/b.md".',
     };
+    expect(dialog().querySelector<HTMLElement>('.file-op-body')!.hidden).toBe(true);
     await press('confirm');
     expect(error()).toBe('There is no file at "docs/b.md".');
+    // The refusal is the body now.
+    expect(dialog().querySelector<HTMLElement>('.file-op-body')!.hidden).toBe(false);
+    expect(dialog().shadowRoot!.querySelector('.modal-body')!.hasAttribute('data-empty')).toBe(
+      false
+    );
     expect(dialog().isOpen).toBe(true);
     expect(host.disk.has('docs/b.md')).toBe(true);
   });

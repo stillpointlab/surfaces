@@ -20,7 +20,10 @@ export interface MenuEntry {
   danger?: boolean;
   /** Shown, and reachable by the arrow keys, but not chosen. */
   disabled?: boolean;
-  /** The entry's tooltip and description: why it is disabled, for one. */
+  /**
+   * A line under the label, part of the entry's name: why it is disabled, for
+   * one. Text and not a tooltip, which the keyboard and a touch never see.
+   */
   title?: string;
 }
 
@@ -98,7 +101,7 @@ export class HostMenu {
       this.element,
       html`${request.entries.map(
         (entry, index) =>
-          html`<button type="button" class="host-menu-item${entry.danger ? ' host-menu-danger' : ''}" role="menuitem" tabindex="-1" data-index="${index}"${entry.disabled ? html` aria-disabled="true"` : ''}${entry.title ? html` title="${entry.title}"` : ''}>${entry.label}</button>`
+          html`<button type="button" class="host-menu-item${entry.danger ? ' host-menu-danger' : ''}" role="menuitem" tabindex="-1" data-index="${index}"${entry.disabled ? html` aria-disabled="true"` : ''}><span class="host-menu-label">${entry.label}</span>${entry.title ? html`<span class="host-menu-reason">${entry.title}</span>` : ''}</button>`
       )}`
     );
     if (request.label) this.element.setAttribute('aria-label', request.label);

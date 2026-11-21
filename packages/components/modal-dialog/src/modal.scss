@@ -77,6 +77,11 @@ $mobile-breakpoint: 768px;
   padding: $spacing-xl;
   overflow-y: auto;
   flex: 1;
+
+  // Nothing slotted into it shows: no band between the title and the buttons.
+  &[data-empty] {
+    display: none;
+  }
 }
 
 // Modal footer

@@ -3,6 +3,10 @@
 // A modal dialog: scrim, focus trap, Escape to close, and header, body and footer
 // slots. Moved from Context Manager, which is why it has `open()`/`close()` and
 // `is-open` rather than a native <dialog>.
+//
+// A body with nothing to show takes no room: when no element is slotted into
+// `body`, or each one is `hidden`, the body's section is not drawn, so a question
+// that is all title has no empty band above its buttons.
 
 import { defineElement } from '@stillpointlab/common-format/elements';
 import { html, render } from '@stillpointlab/common-format/html';
@@ -22,6 +26,9 @@ export class ModalDialog extends HTMLElement {
   // back first in the shadow root.
   private readonly styleElement: HTMLStyleElement;
 
+  /** Watches what is slotted into the body while the dialog is open. */
+  private readonly bodyWatch = new MutationObserver(() => this.syncBody());
+
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
@@ -39,6 +46,7 @@ export class ModalDialog extends HTMLElement {
   disconnectedCallback() {
     // Remove global listeners if any (e.g., for Escape key on document)
     document.removeEventListener('keydown', this.handleDocumentKeyDown);
+    this.bodyWatch.disconnect();
   }
 
   attributeChangedCallback(name: string, oldValue: string, newValue: string) {
@@ -100,6 +108,14 @@ export class ModalDialog extends HTMLElement {
     // 2. Add Escape key listener
     document.addEventListener('keydown', this.handleDocumentKeyDown);
 
+    // The body's content may come, go or be hidden while the dialog is open.
+    this.bodyWatch.observe(this, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['hidden', 'slot'],
+    });
+
     // 3. Focus management (focus modal or first element)
     // Needs to happen after render ensures modal is visible.
     //
@@ -145,6 +161,7 @@ export class ModalDialog extends HTMLElement {
 
     // 2. Remove Escape key listener
     document.removeEventListener('keydown', this.handleDocumentKeyDown);
+    this.bodyWatch.disconnect();
 
     // 3. Return focus
     this.previouslyFocusedElement?.focus();
@@ -311,7 +328,18 @@ export class ModalDialog extends HTMLElement {
     // As text, never markup: a title can carry a name a person typed.
     const heading = this.shadowRoot.querySelector('.modal-title');
     if (heading) heading.textContent = this.title;
+    this.syncBody();
     this.setupEventListeners();
+  }
+
+  /** Mark the body's section empty when nothing slotted into it shows. */
+  private syncBody(): void {
+    const section = this.shadowRoot?.querySelector('.modal-body');
+    if (!section) return;
+    const filled = [...this.children].some(
+      (child) => child.slot === 'body' && !(child as HTMLElement).hidden
+    );
+    section.toggleAttribute('data-empty', !filled);
   }
 }
 

@@ -22,7 +22,9 @@
 // the page answers only in a repository) whose format takes text; an image has no
 // text to compare. The switch comes and goes with the status, and never touches
 // the element or its edits; a Changes view whose file is no longer changed asks
-// for the preview.
+// for the preview. Above it are the whitespace control (compared, ignored or
+// shown, which the page keeps) and a line when the two sides differ in line
+// endings, or in whitespace alone (`diff-whitespace.ts`).
 //
 // A file in an app's locked region (`lockedBy`, which the page answers) opens in
 // its preview where its editor was asked for, with a line that says why, and
@@ -33,6 +35,12 @@ import { languageFromPath } from '@stillpointlab/code-format/format';
 import { fileNameOf } from '@stillpointlab/common-format/format';
 import { html, render } from '@stillpointlab/common-format/html';
 
+import {
+  DIFF_WHITESPACE,
+  type DiffWhitespace,
+  whitespaceAttributes,
+  whitespaceNote,
+} from './diff-whitespace';
 import { cannotOpen, words } from './words';
 
 import type { View } from './address';
@@ -67,6 +75,10 @@ export interface PaneOptions {
   statusOf?: (path: string) => FileStatus | undefined;
   /** The element the Changes view mounts: `<code-diff>` by default. */
   diff?: { tag: string; load(): Promise<unknown> };
+  /** How the Changes view treats whitespace when the page starts: compared, by default. */
+  diffWhitespace?: DiffWhitespace;
+  /** The person chose another way, for the page to keep. */
+  onDiffWhitespace?: (mode: DiffWhitespace) => void;
   /** What is shown changed: another file or view, the unsaved mark, or nothing. */
   onState?: (state: PaneState | null) => void;
   /** The label of the app whose locked files hold `path`, or `null` when no app holds it locked. */
@@ -89,6 +101,8 @@ interface Session {
   text: string | null;
   /** In the Changes view, the text at `HEAD`. */
   base?: string;
+  /** In the Changes view, what to say about whitespace the view does not mark. */
+  note?: string | null;
   dirty: boolean;
   banner: Banner | null;
   saveError: string | null;
@@ -127,7 +141,11 @@ export class FilePane {
   private readonly reloadButton: HTMLButtonElement;
   private readonly error: HTMLElement;
   private readonly locked: HTMLElement;
+  private readonly diffBar: HTMLElement;
+  private readonly diffNote: HTMLElement;
+  private readonly diffWhitespace: HTMLSelectElement;
   private readonly body: HTMLElement;
+  private whitespace: DiffWhitespace;
 
   private session: Session | null = null;
   private latest = 0;
@@ -146,7 +164,7 @@ export class FilePane {
     this.options = options;
     render(
       container,
-      html`<header class="pane-header" hidden><span class="pane-path" dir="auto"></span><span class="pane-unsaved" role="img" aria-label="${words.unsaved}" title="${words.unsaved}" hidden>●</span><span class="pane-views" role="group" aria-label="View" hidden></span><button type="button" class="button button-primary pane-save" hidden disabled>${words.save}</button></header><div class="pane-banner" role="alert" hidden><span class="pane-banner-text"></span><button type="button" class="button pane-reload">${words.banner.reload}</button></div><p class="pane-error" role="alert" hidden></p><p class="pane-locked" hidden></p><div class="pane-body"></div>`
+      html`<header class="pane-header" hidden><span class="pane-path" dir="auto"></span><span class="pane-unsaved" role="img" aria-label="${words.unsaved}" title="${words.unsaved}" hidden>●</span><span class="pane-views" role="group" aria-label="View" hidden></span><button type="button" class="button button-primary pane-save" hidden disabled>${words.save}</button></header><div class="pane-banner" role="alert" hidden><span class="pane-banner-text"></span><button type="button" class="button pane-reload">${words.banner.reload}</button></div><p class="pane-error" role="alert" hidden></p><p class="pane-locked" hidden></p><div class="pane-diff" hidden><p class="pane-diff-note"></p><label class="pane-diff-whitespace">${words.diff.whitespace}<select class="form-input">${DIFF_WHITESPACE.map((mode) => html`<option value="${mode}">${words.diff.whitespaceModes[mode]}</option>`)}</select></label></div><div class="pane-body"></div>`
     );
     const find = <T extends HTMLElement>(selector: string) => container.querySelector<T>(selector)!;
     this.header = find('.pane-header');
@@ -159,7 +177,12 @@ export class FilePane {
     this.reloadButton = find('.pane-reload');
     this.error = find('.pane-error');
     this.locked = find('.pane-locked');
+    this.diffBar = find('.pane-diff');
+    this.diffNote = find('.pane-diff-note');
+    this.diffWhitespace = find<HTMLSelectElement>('.pane-diff-whitespace select');
     this.body = find('.pane-body');
+    this.whitespace = options.diffWhitespace ?? 'compare';
+    this.diffWhitespace.value = this.whitespace;
 
     this.views.addEventListener('click', (event) => {
       const view = (event.target as Element).closest<HTMLElement>('[data-view]')?.dataset.view;
@@ -168,6 +191,15 @@ export class FilePane {
     });
     this.saveButton.addEventListener('click', () => void this.save());
     this.reloadButton.addEventListener('click', () => void this.reload());
+    this.diffWhitespace.addEventListener('change', () => {
+      const mode = DIFF_WHITESPACE.find((known) => known === this.diffWhitespace.value);
+      if (!mode || mode === this.whitespace) return;
+      this.whitespace = mode;
+      const s = this.session;
+      // The element compares again by itself when its attributes change.
+      if (s?.view === 'diff' && s.element) this.applyWhitespace(s.element);
+      this.options.onDiffWhitespace?.(mode);
+    });
     this.showNothing();
   }
 
@@ -542,6 +574,7 @@ export class FilePane {
       version: got.version,
       text: got.text,
       base: base.text,
+      note: whitespaceNote(base.text, got.text),
       dirty: false,
       banner: null,
       saveError: null,
@@ -554,7 +587,14 @@ export class FilePane {
     const language = languageFromPath(path);
     if (language) element.setAttribute('language', language);
     else element.removeAttribute('language');
+    this.applyWhitespace(element);
     (element as HTMLElement & DiffElement).setContents({ left, right });
+  }
+
+  private applyWhitespace(element: HTMLElement): void {
+    for (const [name, value] of Object.entries(whitespaceAttributes(this.whitespace))) {
+      if (element.getAttribute(name) !== value) element.setAttribute(name, value);
+    }
   }
 
   /** The Changes view's two sides, read again; drawn again only when one differs. */
@@ -568,8 +608,14 @@ export class FilePane {
       return;
     }
     if (got.text === s.text && base.text === s.base) return;
-    Object.assign(s, { version: got.version, text: got.text, base: base.text });
+    Object.assign(s, {
+      version: got.version,
+      text: got.text,
+      base: base.text,
+      note: whitespaceNote(base.text, got.text),
+    });
     this.applyDiff(s.element, s.path, base.text, got.text);
+    this.renderChrome();
   }
 
   /** Hand the element its content: the text, or a URL the element loads. */
@@ -786,6 +832,9 @@ export class FilePane {
     const holder = s && s.view === 'preview' ? this.lockedBy(s.path) : null;
     this.locked.hidden = holder === null;
     this.locked.textContent = holder === null ? '' : words.apps.lockedLine(holder);
+    // The whitespace control and its line, over a Changes view that has two sides.
+    this.diffBar.hidden = !(s?.view === 'diff' && s.element);
+    this.diffNote.textContent = s?.note ?? '';
 
     this.options.onState?.(this.current);
   }
