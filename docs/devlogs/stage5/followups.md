@@ -143,6 +143,9 @@ are carried here as they were written.
 - 2026-11-14 (app-module-grows, step 1): inventory's `fromChanges` counts changed and new files,
   as its spec says, so a zone or a manifest renamed by hand is not dirty and an app's check-in
   would not list it. The explorer's commit would.
+  - Closed 2026-11-21 (Jamie: fix; [#159](https://github.com/stillpointlab/surfaces/pull/159)): a moved manifest or zone is dirty, with the path it had
+    (`movedFrom`, a new optional member of a dirty file). Its badge and its check-in row say
+    "moved", and the check-in takes both paths.
 - 2026-11-14 (app-module-grows, step 1): the suite's page cases cannot say "the page answers a
   view whose subject is missing, so the host gives not found" (`/room/garage` with no garage).
   `answers: 'not-found'` covers no match and a page that refuses.
@@ -158,6 +161,12 @@ are carried here as they were written.
   moved (`dirty`, `versionColumn`): that needs the last check-in's content, not a status. The
   harness's workspace works it out from its base files today. host-runner has to choose: the
   module reads a base the host supplies, or the mark is given up outside Context Manager.
+  - Closed 2026-11-21 (Jamie: done, and of little weight either way). host-runner chose: a host
+    may give each change the file's text at the last check-in (`base`), and `fromChanges` marks
+    the column move from it; the local host does. Jamie's view: the board's state is the files'
+    frontmatter, and a file being among the changes is enough for tasks to look at it again.
+    What `base` adds is the check-in row reading "todo → done" where it would read "content
+    edited".
 - 2026-11-14 (app-module-grows, step 2): tasks' pages read a stage or phase with `parseInt`, as
   Context Manager's did, so `/stage/3x` opens stage 3. Tighten it once Context Manager has
   adopted the pages.
@@ -172,6 +181,9 @@ are carried here as they were written.
     check is gone. A kind's id is still refused when it is the pool's.
 - 2026-11-14 (app-module-grows, step 2): tasks' `fromChanges` takes every new `.gitkeep` among
   the changes as housekeeping, wherever it is. A host hands it the instance's changes only.
+  - Closed 2026-11-21 (Jamie: by design, to fix if it causes issues later; [#159](https://github.com/stillpointlab/surfaces/pull/159)). The local host
+    hands a module only the changes in its instance's region. The contract's comment on
+    `fromChanges` now says a host does.
 - 2026-11-14 (app-shells, step 1): inventory's build has no splitting, so `./element` and
   `./shell` each carry the two elements, and a page that loads both defines them twice. The
   format packages' splitting (with `dist/chunks` in `sideEffects`) would give one copy.
@@ -199,6 +211,9 @@ are carried here as they were written.
 - 2026-11-14 (host-runner): `common-format/host`'s entry test reads the word `from` before a
   quote in any string as an import, so two of the memory port's messages are worded around it.
   A tighter pattern would let a message read naturally.
+  - Closed 2026-11-21 (Jamie: fix; [#159](https://github.com/stillpointlab/surfaces/pull/159)): the test reads a `from` only in a statement that starts
+    with `import` or `export`, with cases for every form a build writes and for the word in a
+    string. The one message still worded around it reads as the node port's: `has no "from".`
 - 2026-11-14 (host-runner): `createInstance` does not know of a create that was cut off half
   way (the `reusable` files Context Manager passes), and does not check the new instance against
   the others.
@@ -212,6 +227,10 @@ are carried here as they were written.
   link to a path a card only passed through.
 - 2026-11-14 (host-runner): tasks' dirty mark reads a pool card's column as a board card's, as
   the harness did. The board does not draw `movedFrom`; it is in the state.
+  - Closed 2026-11-21 (Jamie: fix; [#159](https://github.com/stillpointlab/surfaces/pull/159)): `fromChanges` marks a column move for a board's cards
+    alone; a pool card is changed, and moved when it is, and never `dirty`. The board marks every
+    changed card since [#156](https://github.com/stillpointlab/surfaces/pull/156), a moved one
+    among them.
 - 2026-11-14 (app-shells, step 2): the harness's "Host answers ops" and "Refuse the next op"
   controls do not reach a shell fixture's host.
   - Closed 2026-11-20 (Jamie: fix; [#150](https://github.com/stillpointlab/surfaces/pull/150)): both

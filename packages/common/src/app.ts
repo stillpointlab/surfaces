@@ -395,6 +395,10 @@ export interface AppModule<
    * The facts, and the snapshot's host parts, for a host that knows nothing but
    * which files changed since the last check-in: the app's counterpart of a
    * format descriptor's `apply`. A host that knows more builds its facts itself.
+   *
+   * A host hands it the instance's own changes and no others: a module may take
+   * a file for its own by its name alone (tasks, every new `.gitkeep`), and
+   * does not ask again whether the path is the instance's.
    */
   fromChanges(changes: readonly AppFileChange[], snapshot: S): AppKnown<Facts, S>;
 }

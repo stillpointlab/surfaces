@@ -159,8 +159,10 @@ and joins a redirect as text onto its base, so a fragment base works. `placeCrea
 `placeTasksCreate`. `fromChanges` reads a host's file statuses as facts: a changed, new or moved
 card is `changed`, a new one is in the snapshot's `created`, a moved one has `movedFrom` and a
 pending move; the order file is `changed` the same way; the manifest and new `.gitkeep` files are
-the housekeeping. What statuses cannot say (a column that moved, a divergence, pull requests) it
-leaves out.
+the housekeeping. A changed or moved card on a board whose change carries its text at the last
+check-in (`base`) is `dirty` when its column differs from that text's, with that column as
+`versionColumn`; a card in the pool never is, since the pool has no columns. What changes cannot
+say (a divergence, pull requests) it leaves out. A host hands it the instance's changes only.
 
 **Drafts.** When to rebase a diverged draft is the host's decision; the comparison is the core's.
 `metadataOnlyCheck(draft, base)` says whether a draft changes only its base's frontmatter, or

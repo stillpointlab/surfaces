@@ -92,6 +92,18 @@ describe('<spl-inventory-overview>', () => {
     expect(attic.querySelector('.inventory-zone-dirty')?.textContent).toBe('new');
   });
 
+  it('badges a zone renamed by hand as moved, and an edited one as edited', () => {
+    const kitchen = SPACE.zones[0]!.path;
+    for (const [entry, badge] of [
+      [{ path: kitchen, kind: 'zone', movedFrom: 'rooms/galley.yaml' }, 'moved'],
+      [{ path: kitchen, kind: 'zone' }, 'edited'],
+    ] as const) {
+      const { el } = mountOverview({ ...SPACE, dirty: [entry] });
+      expect(el.querySelector('.inventory-zone-dirty')?.textContent).toBe(badge);
+      el.remove();
+    }
+  });
+
   it('shows a just-created inventory as entirely new, and asks the page to check it in', () => {
     // spec inventory_create #6: no bespoke banner — every seeded file is dirty
     // and the check-in button is the nudge.

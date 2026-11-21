@@ -76,6 +76,23 @@ describe('tasksFromChanges', () => {
     });
   });
 
+  it('never marks a pool card dirty: the pool has no columns', () => {
+    // The seed's frontmatter says done where the last check-in said todo.
+    const files = { ...FILES, [SEED]: '---\ncolumn: done\n---\n\n# Idea\n' };
+    const { facts } = tasksFromChanges(
+      [{ path: SEED, status: 'changed', base: FILES[SEED] }],
+      snapshotOf(files)
+    );
+    expect(facts.cards?.[SEED]).toEqual({ changed: true });
+    // A card that came to the pool from a board is changed and moved, and no more.
+    const pooled = `docs/tasks/unassigned/specs/a.md`;
+    const moved = tasksFromChanges(
+      [{ path: pooled, status: 'moved', from: CARD, base: '---\ncolumn: done\n---\n\n# A\n' }],
+      snapshotOf({ ...FILES, [pooled]: FILES[CARD]! })
+    );
+    expect(moved.facts.cards?.[pooled]).toEqual({ changed: true, movedFrom: CARD });
+  });
+
   it('marks a moved card dirty from the text it had under its old path', () => {
     const from = 'docs/tasks/stage1/phase2/specs/a.md';
     const { facts } = tasksFromChanges(

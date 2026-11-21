@@ -29,7 +29,7 @@ import type { SafeHtml } from '@stillpointlab/common-format/html';
 function zoneBadge(dirty: SharedInventoryDirtyFile[], path: string): SafeHtml {
   const entry = dirty.find((file) => file.path === path);
   if (!entry) return html``;
-  return html`<span class="inventory-zone-dirty" title="Local changes — not checked in yet">${entry.newFile ? 'new' : 'edited'}</span>`;
+  return html`<span class="inventory-zone-dirty" title="Local changes — not checked in yet">${entry.newFile ? 'new' : entry.movedFrom !== undefined ? 'moved' : 'edited'}</span>`;
 }
 
 export class InventoryOverview

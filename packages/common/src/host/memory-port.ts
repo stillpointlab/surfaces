@@ -154,8 +154,7 @@ function shapeProblem(change: unknown, index: number): string | null {
       if (typeof c.content !== 'string') return `${at} (${c.kind}) has no content.`;
       return null;
     case 'move':
-      // Not the node port's words: the entry test reads a quote after this word as an import.
-      if (typeof c.from !== 'string') return `${at} (move) has no source path.`;
+      if (typeof c.from !== 'string') return `${at} (move) has no "from".`;
       if (c.content !== undefined && typeof c.content !== 'string')
         return `${at} (move) has content that is not a string.`;
       return null;
