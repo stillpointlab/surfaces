@@ -374,6 +374,21 @@ describe('Rename', () => {
     expect(banner()).toBeNull();
   });
 
+  it('a rename gives the open element what the new path implies, and no content over edits', async () => {
+    await start();
+    await openInEditor('a.md');
+    const element = shown();
+    expect(element.dataset.extension).toBe('.md');
+    editor().type('mine');
+    await choose('a.md', 'file', 'Rename…');
+    type('a.txt');
+    await enter();
+    expect(shown()).toBe(element);
+    expect(element.dataset.extension).toBe('.txt');
+    expect(editor().getContent()).toBe('# A\nmine');
+    expect($('.pane-unsaved').hidden).toBe(false);
+  });
+
   it('the open file follows its folder, and shows no message about a deleted file', async () => {
     await start('#/file/docs/b.md');
     await choose('docs', 'folder', 'Rename…');

@@ -4,7 +4,7 @@
 // and two small formats whose elements keep their content as text, so a test
 // drives the page without a server, a real format or a network.
 
-import { createFormatRegistry } from '@stillpointlab/common-format/format';
+import { createFormatRegistry, extensionOf } from '@stillpointlab/common-format/format';
 
 import { inRegion } from '../shared/apps';
 
@@ -562,7 +562,12 @@ export const textFormat: FormatDescriptor = {
   preview: { tag: 'fake-preview', load: async () => undefined },
   editor: { tag: 'fake-editor', load: async () => undefined },
   apply(element, file) {
+    element.dataset.extension = extensionOf(file.path);
     (element as FakePreview).setContent(file.text ?? '');
+  },
+  /** What the path alone implies, as the code format's language is. */
+  applyPath(element, path) {
+    element.dataset.extension = extensionOf(path);
   },
 };
 

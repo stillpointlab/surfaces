@@ -122,10 +122,12 @@ export interface AppPageCase {
   snapshot?: Readonly<Record<string, unknown>>;
   /**
    * What the page answers: a view the core projects (the default), the app's
-   * empty state, not found (no page matches, or the page refuses), or a
-   * redirect to the base followed by `redirect` (a sub-path, then any query).
+   * empty state, not found (no page matches, or the page refuses), a missing
+   * subject (a view the core projects nothing for, on a page that is not
+   * `emptyWhenMissing`, so a host answers not found), or a redirect to the base
+   * followed by `redirect` (a sub-path, then any query).
    */
-  answers?: 'view' | 'empty' | 'not-found' | { redirect: string };
+  answers?: 'view' | 'empty' | 'not-found' | 'missing' | { redirect: string };
 }
 
 /** File changes over one fixture, and the view projected with what `fromChanges` makes of them. */

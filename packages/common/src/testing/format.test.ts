@@ -37,6 +37,8 @@ class SampleSurface extends HTMLElement {
   }
 }
 
+const folderOf = (path: string) => path.slice(0, Math.max(0, path.lastIndexOf('/')));
+
 const defineOnce = (tag: string) => {
   if (!customElements.get(tag)) customElements.define(tag, class extends SampleSurface {});
   return { tag };
@@ -58,8 +60,13 @@ const sampleFormat: FormatDescriptor = {
   },
   apply(element, file) {
     const surface = element as SampleSurface;
+    surface.dataset.folder = folderOf(file.path);
     if (file.path.endsWith('.smp')) surface.setUpperContent(file.text ?? '');
     else surface.setContent(file.text ?? '');
+  },
+  /** What the path alone implies: here its folder, as the code format's language is. */
+  applyPath(element, path) {
+    element.dataset.folder = folderOf(path);
   },
 };
 

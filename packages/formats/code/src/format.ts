@@ -63,6 +63,13 @@ export function languageFromPath(path: string): string | null {
   return LANGUAGES.get(extensionOf(path)) ?? null;
 }
 
+/** The `language` attribute a path implies; none for a path with no known language. */
+function applyLanguage(element: HTMLElement, path: string): void {
+  const language = languageFromPath(path);
+  if (language) element.setAttribute('language', language);
+  else element.removeAttribute('language');
+}
+
 export const codeFormat: FormatDescriptor = {
   id: 'code',
   opens: [...LANGUAGES.keys()],
@@ -70,9 +77,8 @@ export const codeFormat: FormatDescriptor = {
   preview: { tag: 'code-preview', load: () => import('./preview/index') },
   editor: { tag: 'code-editor', load: () => import('./editor/index') },
   apply(element, file) {
-    const language = languageFromPath(file.path);
-    if (language) element.setAttribute('language', language);
-    else element.removeAttribute('language');
+    applyLanguage(element, file.path);
     (element as PreviewElement).setContent(file.text ?? '');
   },
+  applyPath: applyLanguage,
 };

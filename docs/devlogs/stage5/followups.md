@@ -115,6 +115,12 @@ are carried here as they were written.
   so a host that renames an open file cannot ask it for the path's attributes alone (the code
   language). Context Manager keeps one language branch for that. A way to re-derive a path's
   attributes without content would remove it, and the local host's rename would use it too.
+  - Closed 2026-11-22 (Jamie: fix, and a seed for Context Manager's change; [#160](https://github.com/stillpointlab/surfaces/pull/160)): a descriptor
+    may have `applyPath(element, path)`, which sets what the path implies and leaves the content.
+    The code format has it, the descriptor suite checks it, and the local host calls it for a
+    file renamed with edits in it (with none, it already handed the element the new path).
+    Context Manager's branch goes at a later pin: its seed is
+    `docs/tasks/unassigned/seeds/rename-through-the-formats-apply-path.md` there.
 
 ## Stage 5
 
@@ -149,8 +155,15 @@ are carried here as they were written.
 - 2026-11-14 (app-module-grows, step 1): the suite's page cases cannot say "the page answers a
   view whose subject is missing, so the host gives not found" (`/room/garage` with no garage).
   `answers: 'not-found'` covers no match and a page that refuses.
+  - Closed 2026-11-22 (Jamie: fix; [#160](https://github.com/stillpointlab/surfaces/pull/160)): a page case can say `answers: 'missing'`: the page
+    answers a view, the core projects nothing for it, and the page is not `emptyWhenMissing`, so
+    a host answers not found. Inventory has `/room/garage` and tasks `/stage/9`.
 - 2026-11-14 (app-module-grows, step 1): the module has no bound for its host ops
   (`link-editor`); each host bounds them itself.
+  - Closed 2026-11-22 (Jamie: fine to close; [#160](https://github.com/stillpointlab/surfaces/pull/160)) as by design. A host op is the part a host
+    does its own way, its input is a path or two, and the types are shared. Two hosts that
+    accept different input would show as a refusal in one, not as bad data. To look at again if
+    a host op with a richer input appears.
 - 2026-11-14 (app-module-grows, step 2): tasks' bounds, pages and create copy are now in
   `packages/apps/tasks` (`bounds.ts`, `pages.ts`, `meta.ts`) and still in Context Manager. Two
   copies until context-manager-adopts-apps, as for inventory.
@@ -259,6 +272,8 @@ are carried here as they were written.
   fields' looks from classes their host must style (`.button`, `.form-input` and six more).
   Each host styles them again; the harness has stand-ins. A shared partial in `common`'s styles
   would give every host the same.
+  - Moved 2026-11-22 (Jamie: a seed is fine; [#160](https://github.com/stillpointlab/surfaces/pull/160)) to the seed
+    [one look for the apps' buttons and fields](../../tasks/unassigned/seeds/one-look-for-the-apps-buttons-and-fields.md).
 - 2026-11-14 (apps-in-the-local-host, step 1): discovery lists the folder on every write and
   every app route. Keeping the answer until the watcher reports a change would save it once
   folders are large.

@@ -94,4 +94,15 @@ describe('codeFormat.apply', () => {
     expect(element.hasAttribute('language')).toBe(false);
     expect(set).toEqual(['plain']);
   });
+
+  it('applyPath sets the language alone, for a host that renames a file with edits in it', () => {
+    const { element, set } = stand();
+    codeFormat.apply(element, { path: 'a.ts', text: 'const a = 1;\n' });
+
+    codeFormat.applyPath?.(element, 'a.py');
+    expect(element.getAttribute('language')).toBe('Python');
+    codeFormat.applyPath?.(element, 'a');
+    expect(element.hasAttribute('language')).toBe(false);
+    expect(set).toEqual(['const a = 1;\n']);
+  });
 });

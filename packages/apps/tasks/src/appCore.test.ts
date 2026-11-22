@@ -403,6 +403,12 @@ describeAppCore('tasks', {
       },
       { name: 'phase 0', fixture: 'configured', path: '/stage/1/phase/0', answers: 'not-found' },
       {
+        name: 'a stage that is not there',
+        fixture: 'configured',
+        path: '/stage/9',
+        answers: 'missing',
+      },
+      {
         name: 'a manifest gone',
         fixture: 'configured',
         path: '/stage/1/phase/2',

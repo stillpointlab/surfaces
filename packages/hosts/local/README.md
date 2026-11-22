@@ -99,7 +99,8 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
   `move` without content, so any file keeps its bytes. A path is checked before it is sent (not
   empty, no name after a last slash, no `..` segment, no leading slash, nothing listed there or
   above it, a folder not moved into itself) and the server's refusal shows in the same place.
-  The open file follows a rename with its unsaved edits, and closes on a delete, which warns
+  The open file follows a rename with its unsaved edits, taking what its new path implies (a
+  code file's language) through the format's `applyPath`, and closes on a delete, which warns
   first when it has edits; a `move` or `delete` of the open file carries its version as `base`.
   A folder listed with nothing under it (a submodule, a nested repository), a folder holding
   one, and every folder while the list is cut (`truncated`) cannot be renamed or deleted here.

@@ -20,7 +20,10 @@ What every surface shares. No elements of its own.
     and a `load()` that resolves to the package's `./preview` or `./editor` module, so an element
     is never defined twice), and `apply(element, file)`, which hands a mounted element a
     `FormatFile` (`path` with `text` or `url`) through the format's own setter and attributes. The
-    host creates, places, listens to and reads back the element through the contracts above.
+    host creates, places, listens to and reads back the element through the contracts above. A
+    format whose elements take attributes from the path may also have `applyPath(element, path)`,
+    which sets those and leaves the content alone, for a host that renames an open file with
+    edits in it.
   - `createFormatRegistry(formats, { fallback })`: `find(path)` answers the first registered
     format whose `opens` has the path's extension, without regard to case, or `null`. The
     extension is the file name's last dot onwards (`types.d.ts` matches `.ts`; a dotfile such as
@@ -97,8 +100,9 @@ reusable })` whether they fit among a host's paths.
     format runs in a test file that imports only its `./format` entry: importing the entry defines
     none of the format's tags, `preview.load()` (and `editor.load()`) defines its tag, and for each
     sample `apply` on a connected element then `whenReady()` settles, with `getContent()` reading
-    back the text for a text format's editor. Samples are `FormatFile`s, at least one per family
-    of extensions. `load` finishes what jsdom never loads (an image) before the wait.
+    back the text for a text format's editor. A format with `applyPath` is given another
+    sample's path and its own again: the content stays and the attributes are back to what
+    `apply` set. Samples are `FormatFile`s, at least one per family of extensions. `load` finishes what jsdom never loads (an image) before the wait.
   - **Hostile states.** `hostile(state, { except })` returns a deep copy with `HOSTILE_PAYLOAD`
     appended to every string (object keys and the `except`ed property names, such as a `mode` the
     element switches on, stay as they are). The payload breaks out of a quoted attribute and opens
