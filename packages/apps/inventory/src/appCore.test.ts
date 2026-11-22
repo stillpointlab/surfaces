@@ -237,6 +237,7 @@ describeAppCore('inventory', {
       { name: 'a zone', fixture: 'v2 configured', path: '/room/workshop' },
       { name: 'a v1 zone', fixture: 'v1', path: '/room/kitchen' },
       { name: 'a slug of two segments', fixture: 'v1', path: '/room/a%2Fb', answers: 'not-found' },
+      { name: 'a zone that is not there', fixture: 'v1', path: '/room/garage', answers: 'missing' },
     ],
     changes: [
       {

@@ -34,6 +34,13 @@ export interface FormatDescriptor {
   editor?: FormatElementEntry;
   /** Hand a mounted preview or editor its content, with the attributes the path implies. */
   apply(element: HTMLElement, file: FormatFile): void;
+  /**
+   * Give a mounted element the attributes `path` implies and leave its content
+   * alone, for a host that renames an open file with edits in it. A format whose
+   * elements take nothing from the path but their content omits it. What it sets
+   * is what `apply` sets for the same path.
+   */
+  applyPath?(element: HTMLElement, path: string): void;
 }
 
 export interface FormatRegistry {

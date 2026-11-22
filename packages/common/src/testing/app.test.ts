@@ -467,6 +467,12 @@ const moduleChecks: AppModuleOptions = {
     },
     { name: 'a file', fixture: 'commented', path: '/file/notes%2Ftwo.kv' },
     { name: 'not a kv file', fixture: 'commented', path: '/file/README.md', answers: 'not-found' },
+    {
+      name: 'a file that is gone',
+      fixture: 'commented',
+      path: '/file/gone.kv',
+      answers: 'missing',
+    },
     { name: 'no such page', fixture: 'commented', path: '/nowhere', answers: 'not-found' },
   ],
   changes: [
@@ -565,6 +571,21 @@ describe('the module checks fail on a broken module', () => {
     );
     await expect(assertPageResolves(options, missing, moduleChecks.pages![2])).rejects.toThrow(
       /does not project its view/
+    );
+  });
+
+  it('a missing subject the core projects, or a page that shows it as empty', async () => {
+    const gone = { ...moduleChecks.pages![4], path: '/file/notes%2Ftwo.kv' };
+    await expect(assertPageResolves(options, kvModule, gone)).rejects.toThrow(
+      /projects a view whose subject is missing/
+    );
+    const lenient = withPage({ emptyWhenMissing: true }, 1);
+    await expect(assertPageResolves(options, lenient, moduleChecks.pages![4])).rejects.toThrow(
+      /must be not found, and the page is emptyWhenMissing/
+    );
+    const blank = withPage({ resolve: async () => ({ view: null }) }, 1);
+    await expect(assertPageResolves(options, blank, moduleChecks.pages![4])).rejects.toThrow(
+      /must answer a view for its missing subject/
     );
   });
 

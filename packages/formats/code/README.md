@@ -56,7 +56,8 @@ same reason.
 `@stillpointlab/common-format/format`), and `languageFromPath(path)`, the language a path implies by
 its extension (`app.py` → `Python`) or `null`. It opens every extension with a language (the table
 started as Context Manager's), needs the file's text, and `apply` sets `language` from the path, or
-removes it when the path has none, then calls `setContent`. That removal is how a host's fallback
+removes it when the path has none, then calls `setContent`. `applyPath` sets the language alone,
+for a file renamed with edits in it. That removal is how a host's fallback
 shows any other text file as plain text, so register `code` last and as the registry's `fallback`:
 it opens `.md` and `.markdown` too, which `md` should win. Importing it defines no element and loads
 no engine; `load()` resolves to the package's own `./preview` or `./editor` module, so an element is

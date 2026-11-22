@@ -80,6 +80,55 @@ export function describeFormatDescriptor(
           }
         });
       }
+
+      const { applyPath } = format;
+      if (applyPath) {
+        // A rename under edits: the element takes another path's attributes and
+        // keeps its content, and its own path's attributes are what `apply` set.
+        it(`${role}: applyPath sets what apply sets for a path, and leaves the content`, async () => {
+          await entry.load();
+          const element = document.createElement(entry.tag) as ReadyElement;
+          document.body.append(element);
+
+          for (const [index, sample] of samples.entries()) {
+            const other = samples[(index + 1) % samples.length] ?? sample;
+            format.apply(element, sample);
+            options.load?.(element);
+            await settled(element);
+            const applied = attributesOf(element);
+            const content = contentOf(role, format, element);
+
+            applyPath(element, other.path);
+            expect(contentOf(role, format, element), `${sample.path} as ${other.path}`).toBe(
+              content
+            );
+            applyPath(element, sample.path);
+            await settled(element);
+            expect(attributesOf(element), `${sample.path}, back from ${other.path}`).toEqual(
+              applied
+            );
+            expect(contentOf(role, format, element), sample.path).toBe(content);
+          }
+        });
+      }
     }
   });
+}
+
+/** An element's attributes by name, in name order. */
+function attributesOf(element: HTMLElement): [name: string, value: string][] {
+  return [...element.attributes]
+    .map((attribute): [string, string] => [attribute.name, attribute.value])
+    .sort(([a], [b]) => a.localeCompare(b));
+}
+
+/** What an editor of a text format holds, or `null` for an element that cannot say. */
+function contentOf(
+  role: 'preview' | 'editor',
+  format: FormatDescriptor,
+  element: HTMLElement
+): string | null {
+  return role === 'editor' && format.needs === 'text'
+    ? (element as EditorElement).getContent()
+    : null;
 }

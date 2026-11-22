@@ -475,6 +475,17 @@ export async function assertPageResolves(
         true
       );
     }
+    if (answers === 'missing') {
+      // The page cannot know its subject is gone: the host does, from the
+      // projection, and answers not found for a page that has no empty state.
+      expect(view, `${at} must answer a view for its missing subject`).not.toBeNull();
+      expect(state, `${at}: the core projects a view whose subject is missing`).toBeNull();
+      expect(
+        match.page.emptyWhenMissing,
+        `${at}: a missing subject must be not found, and the page is emptyWhenMissing`
+      ).toBe(false);
+      continue;
+    }
     if (answers === 'view') {
       expect(state, `${at}: the core does not project its view`).not.toBeNull();
     } else {

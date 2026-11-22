@@ -444,8 +444,10 @@ export class FilePane {
     const format = registry.find(to) ?? registry.fallback;
     if (s.element && s.format && s.format === format) {
       // The same format: the element stays. With no edits it is handed the new
-      // path, which a format may read (code's language, an image's URL).
+      // path, which a format may read (code's language, an image's URL). With
+      // edits it keeps them, and takes what the path alone implies.
       if (!s.dirty) this.apply(s.format, s.element, to, s.text);
+      else s.format.applyPath?.(s.element, to);
     } else if (!s.dirty) {
       // Another format, or a message: open the file again where it is now.
       void this.open(to, s.view, { force: true });
