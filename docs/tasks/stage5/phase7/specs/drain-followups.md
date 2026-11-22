@@ -1,5 +1,5 @@
 ---
-column: in-progress
+column: done
 created: 2026-11-20T16:10:00-07:00
 tags: [apps, host-contract, dev-tooling, code]
 ---
@@ -129,11 +129,11 @@ Items 1, 2, 5 and 6 need a pin move in Context Manager after they land, with its
 
 ## Acceptance / completion checklist
 
-- [ ] Items 1, 2, 5 and 6 merged here, each with a test that fails without it, and Context
+- [x] Items 1, 2, 5 and 6 merged here, each with a test that fails without it, and Context
       Manager's pin moved past them with both walk suites.
 - [x] Item 3's two entries closed by the adoption's first pull request.
 - [x] Every entry in the follow-up log has its line, each from a ruling of Jamie's.
-- [ ] The stage's changelog lists what was fixed, seeded and dropped.
+- [x] The stage's changelog lists what was fixed, seeded and dropped.
 
 ## Implementation plan
 
@@ -143,3 +143,36 @@ Items 1, 2, 5 and 6 need a pin move in Context Manager after they land, with its
 4. Item 7: the walks read against the batches' changes to shared elements.
 5. One pin move in Context Manager for everything the phase changed, walked, with the walks'
    edits from item 7.
+
+## As built
+
+_Added 2026-11-22, at the phase's close. The record of each entry is its line in the
+[follow-up log](../../../../devlogs/stage5/followups.md); the record of each batch is its pull
+request. This is what the plan above did not say._
+
+- **The count.** The log held 72 entries at the end, one more than when phase 6 opened. 50
+  were fixed, 13 closed with a reason, eight moved to seeds and one is carried, undecided, to
+  the next stage's review of the log: the harness's two ways to read.
+- **Fourteen batches.** The first two were ruled before the adoption (#136 to #138, and one
+  entry that could not be reproduced); batches 3 to 14 are
+  [#149](https://github.com/stillpointlab/surfaces/pull/149) to
+  [#161](https://github.com/stillpointlab/surfaces/pull/161), less #153, which closed phase 6.
+- **Batches stayed at five entries** (Jamie, 2026-11-21). A close, a carry or a seed takes
+  more of his thought than a fix, so those came with fuller reasoning, second-order effects
+  included.
+- **Two pin moves, not one.** Items 5 and 6, and three fixes Context Manager's stage 7 asked
+  for, went with the adoption's pin (`21d3385`) in phase 6. Items 1 and 2 and the batches went
+  with the last one (`452cba4`, context-manager#1272).
+- **Additions to the contracts,** each optional or additive, each in its pull request's
+  description: `HOST_PATH_INVALID` in the port's refusal codes (#151); `defaultTitle` on a
+  shell's check-in (#154); `movedFrom` on an inventory dirty file (#159); `applyPath` on a
+  format descriptor, and `answers: 'missing'` on a page case (#160). The first is the one a
+  port must change for: a port that passed the suite fails four cases until it splits the two
+  codes.
+- **The walks' reading (item 7)** found nothing to change, and the walks agreed: at the pin
+  both suites passed, every step on its first run (inventory 38 of 38; tasks 01 to 27, 29 and
+  30), walk 23 among them.
+- **One step was added to Context Manager's walk 30,** for a fix made there during the close:
+  a locked app file's preview says the app's files are locked (context-manager#1269).
+- **A seed arrived from outside the drain** at its end: a title for a Tasks app (#162), from
+  Context Manager's stage 8.
