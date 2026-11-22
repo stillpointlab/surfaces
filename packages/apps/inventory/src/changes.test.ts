@@ -36,15 +36,21 @@ describe('inventoryFromChanges', () => {
     ]);
   });
 
-  it('leaves out a moved or deleted file', () => {
+  it('marks a moved zone or manifest with the path it had, and leaves out a deleted file', () => {
     const { facts } = inventoryFromChanges(
       [
         { path: 'home/rooms/kitchen.yaml', status: 'moved', from: 'home/rooms/galley.yaml' },
+        { path: 'home/inventory.yaml', status: 'moved', from: 'house/inventory.yaml' },
         { path: 'home/rooms/pantry.yaml', status: 'deleted' },
+        // Not the app's: a moved file beside it.
+        { path: 'home/notes.md', status: 'moved', from: 'home/old-notes.md' },
       ],
       snapshot
     );
-    expect(facts.dirty).toEqual([]);
+    expect(facts.dirty).toEqual([
+      { path: 'home/inventory.yaml', kind: 'manifest', movedFrom: 'house/inventory.yaml' },
+      { path: 'home/rooms/kitchen.yaml', kind: 'zone', movedFrom: 'home/rooms/galley.yaml' },
+    ]);
   });
 
   it('answers facts the overview shows', () => {

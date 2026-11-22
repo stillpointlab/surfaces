@@ -7,9 +7,10 @@
  * - a card that is changed, new or moved is `changed`; a new one is in the
  *   snapshot's `created`; a moved one has `movedFrom`, and its move is in the
  *   snapshot's `moves` (the path it had, as the move's anchor);
- * - a changed or moved card whose change carries its text at the last check-in
- *   (`base`) is `dirty` when its column differs from that text's, with that
- *   column as `versionColumn`;
+ * - a changed or moved card on a board whose change carries its text at the
+ *   last check-in (`base`) is `dirty` when its column differs from that text's,
+ *   with that column as `versionColumn`. A card in the pool is never `dirty`:
+ *   the pool has no columns, so a column in its frontmatter says nothing there;
  * - the pool's order file, when there is one, is `changed` the same way;
  * - the housekeeping files that join a check-in are the manifest, changed, new
  *   or moved, and every new `.gitkeep` (a folder made in the host);
@@ -44,6 +45,8 @@ export function tasksFromChanges(
       ? [...tasks.boards, tasks.pool].flatMap((holder) => kindPathsOf(holder, tasks.manifest.kinds))
       : []
   );
+  // The pool's cards: a column means nothing there.
+  const poolPaths = new Set(tasks ? kindPathsOf(tasks.pool, tasks.manifest.kinds) : []);
   const cards: Record<string, TasksCardFacts> = {};
   const moves: Record<string, string[]> = {};
   const created: string[] = [];
@@ -56,7 +59,12 @@ export function tasksFromChanges(
       moves[change.path] = [change.from];
     }
     const now = snapshot.files[change.path];
-    if (tasks && change.base !== undefined && typeof now === 'string') {
+    if (
+      tasks &&
+      change.base !== undefined &&
+      typeof now === 'string' &&
+      !poolPaths.has(change.path)
+    ) {
       const was = columnOfContent(change.base, tasks.manifest);
       if (columnOfContent(now, tasks.manifest) !== was) {
         facts.dirty = true;

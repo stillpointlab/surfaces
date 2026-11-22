@@ -508,6 +508,25 @@ describe('<spl-inventory-app> check-in', () => {
     expect(seen.names).toEqual(['notification']);
   });
 
+  it('a zone renamed by hand is a "moved" row, and its check-in takes both paths', async () => {
+    const moved = [{ path: 'rooms/kitchen.yaml', kind: 'zone', movedFrom: 'rooms/galley.yaml' }];
+    const el = mountShell(spaceInput({ state: { ...SPACE, dirty: moved } }));
+    const asked: AppOp<InventoryOps & AppShellOps>[] = [];
+    answerOps<InventoryOps & AppShellOps>(el, (op): Result<object> => {
+      asked.push(op);
+      return ok({ status: 'done' });
+    });
+    checkIn(el);
+    expect(reviewRows(el)).toEqual([
+      { checked: true, path: 'rooms/galley.yaml → rooms/kitchen.yaml', label: 'moved' },
+    ]);
+    reviewOf(el).querySelector<HTMLButtonElement>('[data-answer="confirm"]')!.click();
+    await tick();
+    expect(asked).toEqual([
+      { type: 'checkin', paths: ['rooms/kitchen.yaml', 'rooms/galley.yaml'] },
+    ]);
+  });
+
   it('is still there after the layout changes', () => {
     const el = mountShell(spaceInput({ state: { ...SPACE, dirty: DIRTY } }));
     el.setState(zoneInput({ state: { ...CONFIGURED_ZONE, dirty: DIRTY } }));

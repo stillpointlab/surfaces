@@ -167,7 +167,8 @@ and lays one of them out under its bar, in light DOM.
 - **Check-in is the shell's.** It holds one `<checkin-review>`
   (`@stillpointlab/checkin-review-component`) and takes its elements' `checkin-request`: the
   request stops at the shell, and a host never hears it. The review opens on the dirty files of
-  the latest state or learned reply, each labelled `manifest`, `new` or `changed`, every one
+  the latest state or learned reply, each labelled `manifest`, `new`, `moved` or `changed` (a
+  moved file as old → new, so a check-in takes both paths), every one
   checked, with no default title and a placeholder: the title its host gives an untitled
   check-in (`input.checkin.defaultTitle`), or "Inventory check-in". It asks the host
   `checkin` by path; a reply closes it with the reply's message as a `notification`. The words

@@ -1,11 +1,14 @@
 /**
  * The inventory's facts from file changes alone (the app contract's
  * `fromChanges`), for a host that knows only which files differ from the last
- * check-in: the space is enabled, and its dirty files are the changed and new
- * ones that are its manifest or one of its zones, in the order the space lists
- * them (the manifest, then the zones by slug), a new one marked so. A deleted
- * file has no row to mark; a moved one is not counted either (the spec names
- * changed and new files only).
+ * check-in: the space is enabled, and its dirty files are the changed, new and
+ * moved ones that are its manifest or one of its zones, in the order the space
+ * lists them (the manifest, then the zones by slug), a new one marked so and a
+ * moved one with the path it had. A deleted file has no row to mark.
+ *
+ * A moved file counts: a zone renamed by hand differs from the last check-in,
+ * and a host's own commit would list it. (The app's spec named changed and new
+ * files only.)
  */
 import { detectInventoryAt } from './detection.js';
 
@@ -17,10 +20,9 @@ export function inventoryFromChanges(
   changes: readonly AppFileChange[],
   snapshot: InventorySnapshot
 ): AppKnown<InventoryHostFacts, InventorySnapshot> {
-  const status = new Map<string, AppFileChange['status']>();
+  const status = new Map<string, AppFileChange>();
   for (const change of changes) {
-    if (change.status === 'changed' || change.status === 'new')
-      status.set(change.path, change.status);
+    if (change.status !== 'deleted') status.set(change.path, change);
   }
   const detection = detectInventoryAt(snapshot.manifestPath, [], [...snapshot.paths]);
   const files: { path: string; kind: SharedInventoryDirtyFile['kind'] }[] = [
@@ -29,9 +31,16 @@ export function inventoryFromChanges(
   ];
   const dirty: SharedInventoryDirtyFile[] = [];
   for (const { path, kind } of files) {
-    const changed = status.get(path);
-    if (changed === undefined) continue;
-    dirty.push({ path, kind, ...(changed === 'new' ? { newFile: true as const } : {}) });
+    const change = status.get(path);
+    if (change === undefined) continue;
+    dirty.push({
+      path,
+      kind,
+      ...(change.status === 'new' ? { newFile: true as const } : {}),
+      ...(change.status === 'moved' && change.from !== undefined && change.from !== path
+        ? { movedFrom: change.from }
+        : {}),
+    });
   }
   return { facts: { enabled: true, dirty } };
 }

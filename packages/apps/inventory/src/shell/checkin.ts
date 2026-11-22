@@ -33,10 +33,22 @@ export function dirtyOf(state: unknown): SharedInventoryDirtyFile[] | null {
   );
 }
 
-/** One row per dirty file, in the state's order: the manifest is "manifest", a new zone "new". */
+/**
+ * One row per dirty file, in the state's order: the manifest is "manifest", a
+ * new zone "new", a moved one "moved". A moved file's old path is its row's
+ * `from`, so a check-in takes both halves of the rename.
+ */
 export function inventoryCheckinFiles(dirty: readonly SharedInventoryDirtyFile[]): CheckinFile[] {
   return dirty.map((file) => ({
     path: file.path,
-    label: file.kind === 'manifest' ? 'manifest' : file.newFile ? 'new' : 'changed',
+    ...(file.movedFrom !== undefined ? { from: file.movedFrom } : {}),
+    label:
+      file.kind === 'manifest'
+        ? 'manifest'
+        : file.newFile
+          ? 'new'
+          : file.movedFrom !== undefined
+            ? 'moved'
+            : 'changed',
   }));
 }

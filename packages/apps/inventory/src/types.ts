@@ -203,6 +203,11 @@ export interface SharedInventoryDirtyFile {
   path: string;
   kind: 'manifest' | 'zone';
   newFile?: true;
+  /**
+   * The path it had at the last check-in, when it was moved since (renamed by
+   * hand). A check-in takes both paths, so the rename is one change.
+   */
+  movedFrom?: string;
 }
 
 /** Everything the inventory overview renders. */
