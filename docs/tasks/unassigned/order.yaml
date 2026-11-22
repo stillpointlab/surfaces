@@ -47,6 +47,11 @@
 # much of a host's look the apps own.
 - docs/tasks/unassigned/seeds/one-look-for-the-apps-buttons-and-fields.md
 
+# From stage 5's follow-ups, the drain's last batch (2026-11-22, Jamie: "I
+# suspect I'll want CM to adopt the runner but need more info"). A spike's
+# worth of questions.
+- docs/tasks/unassigned/seeds/context-manager-on-the-runner.md
+
 # From stage 4's follow-ups (2026-11-14).
 - docs/tasks/unassigned/seeds/a-save-keeps-the-file.md
 - docs/tasks/unassigned/seeds/markdown-relative-links.md

@@ -230,14 +230,29 @@ are carried here as they were written.
 - 2026-11-14 (host-runner): `createInstance` does not know of a create that was cut off half
   way (the `reusable` files Context Manager passes), and does not check the new instance against
   the others.
+  - Moved 2026-11-22 (Jamie: a seed; [#161](https://github.com/stillpointlab/surfaces/pull/161)) to the seed
+    [Context Manager on the runner](../../tasks/unassigned/seeds/context-manager-on-the-runner.md).
+    Neither happens in the local host: its create is one all-or-nothing write, and it checks
+    for an overlap before calling the runner.
 - 2026-11-14 (host-runner): a `revision` covers the scope's files. A state that reads the
   listing beyond the scope (a board in a folder the manifest does not name yet) would not show
   as stale.
+  - Moved 2026-11-22 (Jamie: a seed; [#161](https://github.com/stillpointlab/surfaces/pull/161)) to the same seed,
+    [Context Manager on the runner](../../tasks/unassigned/seeds/context-manager-on-the-runner.md).
+    The local host's own revision also covers the uncommitted changes in the instance's folder.
 - 2026-11-14 (host-runner): the harness has two ways to read: an op loads the scope through
   `runOp`, and a fixture's view projects every file directly.
+  - Carried 2026-11-22 (Jamie: "I'll hold on this decision for this pass"; [#161](https://github.com/stillpointlab/surfaces/pull/161)), undecided,
+    to the next stage's review of this log. What was found for it: a fixture is the dev page's
+    sample data only. No walk and no unit test loads one, so the two ways can mislead only
+    someone looking at the dev page.
 - 2026-11-14 (host-runner): a pending move keeps the path a card started at and not the paths
   it passed through, in the harness now as in `fromChanges`, so fixing references cannot find a
   link to a path a card only passed through.
+  - Moved 2026-11-22 (Jamie: a seed is OK, "but this one is borderline IMO"; [#161](https://github.com/stillpointlab/surfaces/pull/161)) to the seed
+    [card move undo strands retargeted references](../../tasks/unassigned/seeds/move-undo-reference-strand.md),
+    which holds the same kind of stranded link. It is live in the local host: move a card, fix
+    its references, move it again before a check-in.
 - 2026-11-14 (host-runner): tasks' dirty mark reads a pool card's column as a board card's, as
   the harness did. The board does not draw `movedFrom`; it is in the state.
   - Closed 2026-11-21 (Jamie: fix; [#159](https://github.com/stillpointlab/surfaces/pull/159)): `fromChanges` marks a column move for a board's cards
@@ -258,6 +273,9 @@ are carried here as they were written.
   card: the strip shows it because the pointer names it. "Close stage" then moves the pointer
   on, and the empty stage is gone from the strip. The core writes nothing for an empty stage
   by design; whether an empty stage should outlive its pointer is not decided.
+  - Closed 2026-11-22 (Jamie: "I think empty is fine, if I feel it is broken later we can
+    fix"; [#161](https://github.com/stillpointlab/surfaces/pull/161)) as by design. A stage with no card is its pointer and nothing else, as a new
+    phase is. Closing an empty stage leaves a gap in the numbers and no trace of it in the files.
 - 2026-11-14 (app-shells, step 2): `tasksModule.hostOps` still names `refresh-stage` and
   `close-candidates`, which a shell answers itself. Drop them once every host mounts the shell.
   - Carried 2026-11-20 (Jamie) to phase 7,

@@ -59,6 +59,9 @@ touch what Context Manager adopts were ruled on first, so that its pin moves onc
 4. **The other 58 entries,** in batches. None changes what Context Manager adopts. By where they
    are, roughly: the local host's server and page, the harness, the two apps' elements and
    shells, the check-in review, and the format packages (most of stage 4's carried entries).
+   _Done in fourteen batches, the last on 2026-11-22
+   ([#161](https://github.com/stillpointlab/surfaces/pull/161)). One entry is carried,
+   undecided, to the next stage's review of the log: the harness's two ways to read._
 
 Two defects join the phase (Jamie, 2026-11-20). They were found in Context Manager during its
 stage 7, in elements that live here, and arrived as seeds
@@ -97,6 +100,28 @@ Items 1, 2, 5 and 6 need a pin move in Context Manager after they land, with its
    The walks' edits go in the pin's own pull request in Context Manager, in the commit that
    moves the pin, as the adoption's did.
 
+   _Read on 2026-11-22, with the log drained, against everything that changed in the shared
+   packages since Context Manager's pin (`21d3385`; 33 source files). No walk's expectation has
+   to change by the reading; the walks themselves, run at the pin, decide._
+   - **The board's dot.** The five expectations of no dot are on a card that is tracked again
+     (06, 08, 10), a card whose changes were discarded (09), and a whole board after a refresh
+     with nothing uncommitted (23). None follows an edit or a move to another phase. Walk 23's
+     is the one to watch: it counts every dot on the board, so a card that is linked and
+     differs from its latest version would now show there.
+   - **The review's buttons.** No walk waits on a review button being `disabled`. The walks'
+     `toBeDisabled` and `toBeEnabled` are on the board's Refresh, the file page's Publish and
+     inventory's item dialog.
+   - **A dialog with no body.** No walk measures or clicks a dialog's body.
+   - **Also read, with nothing found:** the review's rows are read by their text and by
+     `data-label="new"`, never by position, so tasks' new group order
+     ([#154](https://github.com/stillpointlab/surfaces/pull/154)) does not show; every walk
+     fills the review's title, so a default title would not either; inventory's badge still
+     reads "new" for a new zone ([#159](https://github.com/stillpointlab/surfaces/pull/159)
+     added "moved"); the download link keeps `is-disabled`.
+   - **For the pin itself, not the walks:** `<checkin-review>` now depends on
+     `@stillpointlab/spl-icon-component`, so Context Manager's lock file changes with the pin;
+     and its unit tests are the check on `tasksModule.hostOps` losing two names (item 1).
+
 ## Non-goals
 
 - New features. An entry that wants one becomes a seed.
@@ -106,8 +131,8 @@ Items 1, 2, 5 and 6 need a pin move in Context Manager after they land, with its
 
 - [ ] Items 1, 2, 5 and 6 merged here, each with a test that fails without it, and Context
       Manager's pin moved past them with both walk suites.
-- [ ] Item 3's two entries closed by the adoption's first pull request.
-- [ ] Every entry in the follow-up log has its line, each from a ruling of Jamie's.
+- [x] Item 3's two entries closed by the adoption's first pull request.
+- [x] Every entry in the follow-up log has its line, each from a ruling of Jamie's.
 - [ ] The stage's changelog lists what was fixed, seeded and dropped.
 
 ## Implementation plan
