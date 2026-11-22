@@ -19,8 +19,10 @@ What is there today (read from the code on 2026-11-22, not tried by hand):
 - **Context Manager's tree** shows what `describeInstance` answers, with the folder added for
   two instances of one kind. It reads the manifest on each read and stores no title.
 - **Context Manager's file page** shows the kind's name (the module's `meta.label`) for a file
-  inside an app, never the instance's title. That part is Context Manager's to change and is
-  not this seed.
+  inside an app, never the instance's title. Showing the title there is Context Manager's
+  change and follows this seed: it has no function that answers one instance's title, only one
+  that answers every instance of a repository. Its follow-up entry was struck in favour of this
+  card on 2026-11-22, so the card carries that part too.
 
 What a spec would have to settle (the claude agent's list, not Jamie's):
 
