@@ -16,10 +16,13 @@
 //
 // A watch is on a folder, not on its path: one removed and made again within a
 // burst (`git rebase`, a checkout between branches that differ by it) is a new
-// folder under the old watch's path, and the old watch hears nothing more. So
-// each watch keeps the folder's identity, and a burst that lists again opens a
-// new watch wherever the path now holds another folder, and says the files in it
-// changed, since what happened there meanwhile went unheard.
+// folder under the old watch's path, and the old watch hears nothing more. So a
+// burst in which a watched folder's own name came or went, as its parent's watch
+// reports it, opens that folder's watch again, and those under it, and says the
+// files in them changed, since what happened there meanwhile went unheard. Each
+// watch also keeps its folder's identity (device and inode) for what no parent
+// reports, the root made again. Identity alone would not do: a file system may
+// give a folder made right after a removal the same inode.
 //
 // A folder outside the tree (git's own, for its `HEAD` and `index`) is watched
 // with `watchNames`, which calls back once per burst that touched one of the names.
@@ -156,7 +159,7 @@ export function createFolderWatcher(options: FolderWatcherOptions): FolderWatche
     }
     if (burst.relist) {
       // A folder made again under a watched path: its files may be other files.
-      const remade = new Set(watchAgainWhereRemade());
+      const remade = new Set(watchAgainWhereRemade(burst.paths));
       if (remade.size > 0) {
         for (const path of nextFiles) {
           const cut = path.lastIndexOf('/');
@@ -193,19 +196,23 @@ export function createFolderWatcher(options: FolderWatcherOptions): FolderWatche
   }
 
   /**
-   * Close each watch whose path holds another folder now, or none, and open
+   * Close each watch whose folder's name came or went in the burst (or a folder
+   * above it did), or whose path holds another folder now, or none, and open
    * watches again. Answers the tree's folders (relative, `''` the root) that
    * were made again.
    */
-  function watchAgainWhereRemade(): string[] {
+  function watchAgainWhereRemade(paths: Pending['paths']): string[] {
+    const cameOrWent = [...paths].filter(([, kind]) => kind === 'rename').map(([path]) => path);
     const remade: string[] = [];
     for (const [folder, watcher] of watches) {
+      const rel = treeFolders.get(folder);
       const now = identityOf(folder);
-      if (now === identities.get(folder)) continue;
+      const named =
+        rel !== undefined && cameOrWent.some((path) => rel === path || rel.startsWith(`${path}/`));
+      if (!named && now === identities.get(folder)) continue;
       watcher.close();
       watches.delete(folder);
       identities.delete(folder);
-      const rel = treeFolders.get(folder);
       if (now !== null && rel !== undefined) remade.push(rel);
     }
     syncWatches();
