@@ -1,8 +1,8 @@
 # Stage 5: The Apps in the Local Host Changelog
 
 - **Dates:** 2026-11-14 – 2026-11-23
-- **Stage Tag:** `stage5-complete` _(created on the merge of Jamie's reflections PR, which follows
-  the stage close PR)_
+- **Stage Tag:** `stage5-complete`, on the stage's last merge: the fix Jamie's validation asked
+  for, which follows his reflections
 
 > Agent-drafted from evidence (merged PRs, git history, task cards). Appended per phase at phase
 > close. Regenerable at any time; see [devlogs](../README.md). Reflections do NOT belong here — they
@@ -588,6 +588,21 @@ line first said 50 and 13; a recount from the log corrected it.)
     open while its create runs; one Escape closes one of two dialogs.
 - **In Context Manager, after the review:** the pin moves again, to `e823abc`
   (context-manager#1274), with what the review and the close fixed in the shared packages.
+
+- **After the phase's tag, from Jamie's validation** (2026-11-23). He ran the
+  [validation card](../../tasks/stage5/phase7/tests/stage-5-validation.test.md), every step
+  ticked, and published it and his [reflections](reflections.md) from Context Manager
+  ([#173](https://github.com/stillpointlab/surfaces/pull/173),
+  [#174](https://github.com/stillpointlab/surfaces/pull/174)). Both failed the format check,
+  and the reflections had lost the three observations
+  [#172](https://github.com/stillpointlab/surfaces/pull/172) added: his draft was begun before
+  it, and Context Manager publishes a draft's whole text. Each got one commit by the agent.
+  Two of the format check's three causes were the md editor's and are fixed ([#175](https://github.com/stillpointlab/surfaces/pull/175)): a list an
+  edit rewrites keeps a blank line after an item that has one inside it (a code block, a second
+  paragraph), and a line break at the end of a paragraph's text leaves no line of spaces. The
+  third, a tick typed `[X]`, is a seed:
+  [a format step for published pull requests](../../tasks/unassigned/seeds/a-format-step-for-published-pull-requests.md).
+  Context Manager takes the fix at its next pin.
 
 ### Decisions
 
