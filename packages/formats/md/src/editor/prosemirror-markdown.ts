@@ -127,6 +127,79 @@ function referencesOf(text: string): References {
   return env.references ?? {};
 }
 
+/** The serializer's own state, which its types leave out: what is written so far, and how. */
+type WriterState = MarkdownSerializerState & {
+  out: string;
+  delim: string;
+  closed: Node | null;
+  inTightList: boolean;
+  flushClose(size?: number): void;
+};
+
+const isList = (node: Node): boolean =>
+  node.type.name === 'bullet_list' || node.type.name === 'ordered_list';
+
+/**
+ * Whether a list item, written tight, has a blank line inside it: it holds a
+ * block after its first that is not a list straight under its text (a code
+ * block, a second paragraph, a quote, a table).
+ */
+function holdsBlankLine(item: Node): boolean {
+  for (let i = 1; i < item.childCount; i += 1) {
+    const child = item.child(i);
+    if (child.isTextblock && child.content.size === 0) continue;
+    if (!isList(child) || item.child(i - 1).type === child.type) return true;
+  }
+  return false;
+}
+
+/**
+ * A list, written tight as the base serializer writes one, but for one thing:
+ * an item that has a blank line inside it is followed by one. The blank line
+ * inside already makes the list a loose one to a reader, so the line after it
+ * changes nothing that is read; without it the next item sits against the end
+ * of a code block, which is not how a formatter (Prettier) writes a list, and
+ * a file an edit touched would fail a format check.
+ */
+function renderList(
+  state: MarkdownSerializerState,
+  node: Node,
+  delim: string,
+  firstDelim: (index: number) => string
+): void {
+  const list = state as WriterState;
+  // As the base serializer opens a list.
+  if (list.closed && list.closed.type === node.type) list.flushClose(3);
+  else if (list.inTightList) list.flushClose(1);
+  const outer = list.inTightList;
+  list.inTightList = true;
+  node.forEach((child, _offset, index) => {
+    if (index > 0) list.flushClose(holdsBlankLine(node.child(index - 1)) ? 2 : 1);
+    state.wrapBlock(delim, firstDelim(index), node, () => state.render(child, node, index));
+  });
+  list.inTightList = outer;
+}
+
+/**
+ * A paragraph's text as written, with no line of spaces alone. A text node may
+ * hold a line break (pasted text does), and the serializer starts each of its
+ * lines with the block's indent: a break at the paragraph's end, or two in a
+ * row, left a line holding the indent and nothing else. Such a line reads as a
+ * blank one, so it is written as one (in a quote, as its `>`), and a break
+ * with nothing after it in the paragraph is not written.
+ */
+function withNoBlankSpaces(written: string, delim: string): string {
+  if (!written.includes('\n')) return written;
+  const blank = delim.trimEnd();
+  const lines = written.split('\n');
+  // The first line goes on from what was written before: it is not one to judge.
+  for (let i = 1; i < lines.length; i += 1) {
+    if (lines[i].trim() === '' || lines[i].trimEnd() === blank) lines[i] = blank;
+  }
+  while (lines.length > 1 && lines[lines.length - 1] === blank) lines.pop();
+  return lines.join('\n');
+}
+
 /** A document's top-level nodes after its frontmatter block, if it has one. */
 function bodyNodes(doc: Node): Node[] {
   const nodes: Node[] = [];
@@ -456,21 +529,25 @@ function buildSerializerNodes(): Record<
     },
 
     bullet_list(state: MarkdownSerializerState, node: Node) {
-      state.renderList(node, '  ', () => '- ');
+      renderList(state, node, '  ', () => '- ');
     },
 
     ordered_list(state: MarkdownSerializerState, node: Node) {
       const start = node.attrs.start || 1;
       const maxWidth = String(start + node.childCount - 1).length;
       const space = state.repeat(' ', maxWidth + 2);
-      state.renderList(node, space, (index: number) => {
+      renderList(state, node, space, (index: number) => {
         const value = String(start + index);
         return state.repeat(' ', maxWidth - value.length) + value + '. ';
       });
     },
 
     paragraph(state: MarkdownSerializerState, node: Node) {
+      const writer = state as WriterState;
+      const from = writer.out.length;
       state.renderInline(node);
+      writer.out =
+        writer.out.slice(0, from) + withNoBlankSpaces(writer.out.slice(from), writer.delim);
       state.closeBlock(node);
     },
 
