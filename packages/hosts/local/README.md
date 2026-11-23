@@ -390,9 +390,10 @@ port's write lock: a `put` that arrives during a commit waits for it, and the re
   every file". A submodule or a nested repository is listed as one folder with nothing under it.
 - The watcher watches each folder that holds a listed file (not the root recursively, which on
   Linux watches each file by itself and loses one replaced by a rename), joins bursts within
-  100 ms, and lists again when a name comes or goes. Each watch keeps the folder it was opened
-  on; a burst that lists again opens a new watch where the path holds another folder now (one
-  removed and made again, as a rebase does) and says its files changed. `watchNames(folder, names, onChange)` watches
+  100 ms, and lists again when a name comes or goes. A burst in which a watched folder's own
+  name came or went (one removed and made again, as a rebase does) opens that folder's watch
+  again, and those under it, and says their files changed; each watch also keeps the folder it
+  was opened on, for the root made again. `watchNames(folder, names, onChange)` watches
   names in a folder outside the root: in a repository, `HEAD` and `index` in git's own folder
   (`git rev-parse --absolute-git-dir`: a worktree's own, and above a served subfolder), which
   sends `status`. The host's own reads never write the index, so reading after the event raises
