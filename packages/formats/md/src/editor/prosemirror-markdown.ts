@@ -622,6 +622,17 @@ function frontmatterBlockString(node: Node): string {
   return (text ? `---\n${text}\n---\n` : '---\n---\n') + trailing;
 }
 
+/**
+ * A body with no frontmatter block, written so that it reads back with none. A
+ * `---` rule at its top, with a later `---` line (a rule, a setext underline),
+ * would load as a frontmatter block and hide all between; that first rule is
+ * written `***`, the same rule, which no frontmatter block starts with. A body
+ * that would not be misread keeps its text.
+ */
+function withNoFrontmatter(body: string): string {
+  return FRONTMATTER_BLOCK_PATTERN.test(body) ? `***${body.slice('---'.length)}` : body;
+}
+
 /** Memoized ProseMirror → markdown serializer (base + plugin serializers). */
 export function getMarkdownSerializer(): MarkdownDocSerializer {
   if (cachedSerializer) return cachedSerializer;
@@ -639,14 +650,16 @@ export function getMarkdownSerializer(): MarkdownDocSerializer {
       const frontmatter = first && first.type.name === 'frontmatter' ? first : null;
       const head = frontmatter ? frontmatterBlockString(frontmatter) : '';
       const body = frontmatter ? content.copy(content.content.cut(frontmatter.nodeSize)) : content;
-      if (!source) return head + whole(body);
+      const withHead = (text: string): string =>
+        frontmatter ? head + text : withNoFrontmatter(text);
+      if (!source) return withHead(whole(body));
 
       const kept = writeKeepingSource(bodyNodes(body), source, {
         write: (nodes) => whole(body.copy(Fragment.from(nodes)), source.definitions),
         read: (text) => bodyNodes(getMarkdownParser().parse(text, { frontmatter: false })),
         references: referencesOf,
       });
-      return head + (kept ?? writeWhole(whole(body), source));
+      return withHead(kept ?? writeWhole(whole(body), source));
     },
   };
 
