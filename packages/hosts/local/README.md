@@ -203,7 +203,7 @@ query value). A version is a SHA-256 of the file's bytes, as hex; only equality 
 | 409    | A commit: `HOST_NOT_CHANGED`, `HOST_PATH_CONFLICTED`, `HOST_GIT_IN_PROGRESS`, `HOST_DETACHED_HEAD`, `HOST_BRANCH_EXISTS`     |
 | 400    | `HOST_PATH_OUTSIDE_ROOT`, `HOST_PATH_INVALID`, `HOST_NOT_TEXT`, `HOST_FILE_TOO_LARGE`, `HOST_BAD_REQUEST`                    |
 | 400    | A commit: `HOST_COMMIT_NO_PATHS`, `HOST_COMMIT_NO_MESSAGE`, `HOST_BRANCH_INVALID`                                            |
-| 403    | `HOST_FORBIDDEN`: the `Host`, `Origin` or `Sec-Fetch-Site` checks below                                                      |
+| 403    | `HOST_FORBIDDEN`: the `Host`, `Origin` or `Sec-Fetch-Site` checks, and a raw file asked for to run (below)                   |
 | 405    | `HOST_METHOD_NOT_ALLOWED`, with an `Allow` header                                                                            |
 | 413    | `HOST_BODY_TOO_LARGE`: a `PUT` body over 64 MiB                                                                              |
 | 422    | `HOST_GIT_FAILED`: git ran and failed (its message says why). The repository is the person's to put right, so not a 500      |
@@ -310,6 +310,12 @@ memory port.
   request that is not a `GET` must carry the host's `Origin` (or its `localhost` twin). Any
   request whose `Origin` is another, and any the browser marks `Sec-Fetch-Site: cross-site` or
   `same-site` (except a navigation), is refused.
+- **A raw file is shown, never run.** `GET /api/raw` refuses a request whose `Sec-Fetch-Dest`
+  says the browser would run or apply it: `script`, `style`, a worker (`worker`, `sharedworker`,
+  `serviceworker`), a worklet (`audioworklet`, `paintworklet`), `xslt`, `manifest` and `json` (a
+  module). The page's scripts may come from its own origin, so a repository's `.js` would
+  otherwise load as the page's own. An image, a document or frame (sandboxed), media, a font
+  and a `fetch` are served, and so is a request with no `Sec-Fetch-Dest` (curl).
 
 ## Git
 
@@ -324,6 +330,11 @@ runs git.
   file) is in the root or above it; `no-repository` otherwise. The look above the root stops
   below a folder `GIT_CEILING_DIRECTORIES` names, as git's own does. Outside `repository` the
   status is `{}`, the git routes refuse, and a write stages nothing.
+- **A served folder its repository ignores** (`git check-ignore -q .`: by a `.gitignore` there
+  or above, or `.git/info/exclude`) is `no-repository`, and the host says once on its terminal
+  that it is served without git: git lists nothing ignored, so the listing walks it. A file in
+  it added with `--force` is tracked, but has no Changes and no commit here. The work tree's top
+  is never asked (git never ignores it), and a `check-ignore` that fails keeps `repository`.
 - **A served root inside a repository** sees only its own paths, relative to itself. A rename
   across its edge is half of one: in from outside is `new`, out to elsewhere is `deleted`.
 - **The statuses:** untracked, added and intent-to-add files are `new`; a staged rename is
@@ -384,7 +395,7 @@ port's write lock: a `put` that arrives during a commit waits for it, and the re
 
 ## The listing and the watcher
 
-- In a git work tree the list is `git ls-files --cached --others --exclude-standard`, with files
+- In `repository` the list is `git ls-files --cached --others --exclude-standard`, with files
   gone from disk left out; elsewhere a walk that skips `.git` and `node_modules`. When `git`
   cannot be run and the folder looks like a repository, the `bin` says "git was not found; listing
   every file". A submodule or a nested repository is listed as one folder with nothing under it.

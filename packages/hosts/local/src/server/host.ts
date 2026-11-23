@@ -146,6 +146,30 @@ const TYPES: Record<string, string> = {
   '.yml': 'text/yaml; charset=utf-8',
 };
 
+/**
+ * The `Sec-Fetch-Dest` values for which `/api/raw` refuses: the browser would run
+ * or apply the response, not show it. The page's policy lets scripts come from its
+ * own origin, so a repository's `.js` served as script would run as the page's own
+ * (were anything ever injected to ask for it). Script and its workers and
+ * worklets, a stylesheet, an XSLT sheet, a web app manifest and a JSON module.
+ * What is shown stays served: an image (the page's own previews), a document or a
+ * frame of one ("open raw"; the response's `sandbox` keeps any script in it off
+ * this origin), media, a font and `empty` (`fetch`). A request with no such header
+ * (curl, an older browser) is served too.
+ */
+const RUN_DESTINATIONS = new Set([
+  'script',
+  'style',
+  'worker',
+  'sharedworker',
+  'serviceworker',
+  'audioworklet',
+  'paintworklet',
+  'xslt',
+  'manifest',
+  'json',
+]);
+
 /** The `Host` values that name this server, from its origin. */
 function hostsFor(origin: URL): Set<string> {
   const hosts = new Set([origin.host.toLowerCase()]);
@@ -300,7 +324,17 @@ export function createHost(options: HostOptions): LocalHost {
       },
     },
     '/api/raw': {
-      GET: async (_request, url) => raw(pathParam(url)),
+      GET: async (request, url) => {
+        const dest = request.headers.get('sec-fetch-dest');
+        if (dest !== null && RUN_DESTINATIONS.has(dest)) {
+          return refuse(
+            'HOST_FORBIDDEN',
+            `A file of the folder is served to be shown, not run (Sec-Fetch-Dest: ${dest}).`,
+            403
+          );
+        }
+        return raw(pathParam(url));
+      },
     },
     '/api/files': {
       PUT: async (request) => {

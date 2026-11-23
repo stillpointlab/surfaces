@@ -140,6 +140,10 @@ export function createGit(options: GitOptions): HostGitAccess {
         const where = await read(['rev-parse', '--show-prefix', '--absolute-git-dir']);
         if (where.ok) {
           const [prefix, gitDir] = where.stdout.toString('utf8').split('\n');
+          if (gitDir && prefix !== '' && (await ignored())) {
+            warn('the served folder is ignored by its repository, so it is served without git.');
+            return { state: 'no-repository', gitFound: true };
+          }
           if (gitDir) return { state: 'repository', prefix, gitDir };
         }
         warn(`git could not say where the repository is; working without git.`);
@@ -153,6 +157,19 @@ export function createGit(options: GitOptions): HostGitAccess {
       return { state: 'no-repository', gitFound: true };
     })();
     return started;
+  }
+
+  /**
+   * Whether the repository ignores the served root (a subfolder: git never
+   * ignores its work tree's top, though `check-ignore .` there answers to a `*`).
+   * git lists nothing ignored, so such a root is served as a folder with no
+   * repository: the listing walks it, and there are no changes and no commit.
+   * Only git's "ignored" (exit 0) counts; "not ignored" (1) and an error keep the
+   * repository. Not `read`'s `--literal-pathspecs`, which `check-ignore` refuses.
+   */
+  async function ignored(): Promise<boolean> {
+    const run = await runGit(['check-ignore', '-q', '.'], { cwd: root, env, read: true });
+    return run.ok;
   }
 
   async function info(): Promise<HostGit> {

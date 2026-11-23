@@ -643,6 +643,37 @@ describe('a commit git refuses leaves everything as it was', () => {
   });
 });
 
+describe('a hook that leaves a child running', () => {
+  const pidFile = () => join(folder.path, 'hook-child.pid');
+  afterEach(() => {
+    // Stopped by the PID the hook wrote, so nothing outlives the test.
+    try {
+      process.kill(Number(readFileSync(pidFile(), 'utf8')), 'SIGKILL');
+    } catch {
+      // never started, or already gone
+    }
+  });
+
+  it('the commit answers within a second of git’s exit, and the next write is not held', async () => {
+    makeRepository(repo, env, { 'a.md': 'a\n' });
+    const path = join(repo, '.git', 'hooks', 'pre-commit');
+    // A background child keeps the hook's output, which is git's, open after git exits.
+    writeFileSync(path, `#!/bin/sh\nsleep 10 &\necho $! > '${pidFile()}'\nexit 0\n`);
+    chmodSync(path, 0o755);
+    writeFiles(repo, { 'a.md': 'a, committed\n' });
+    const p = port();
+    const started = Date.now();
+    expect(await p.commit({ paths: ['a.md'], message: 'm' })).toMatchObject({ ok: true });
+    expect(
+      await p.put([{ kind: 'write', path: 'a.md', content: 'a, written after\n' }])
+    ).toMatchObject({ ok: true });
+    expect(Date.now() - started).toBeLessThan(2000);
+    expect(run('show', 'HEAD:a.md')).toBe('a, committed\n');
+    // The child is still running: the answer did not wait for it.
+    expect(() => process.kill(Number(readFileSync(pidFile(), 'utf8')), 0)).not.toThrow();
+  });
+});
+
 describe('the write lock', () => {
   it('a put that arrives during a commit waits for it', async () => {
     makeRepository(repo, env, { 'a.md': 'a\n' });

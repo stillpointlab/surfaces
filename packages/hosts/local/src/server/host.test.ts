@@ -125,6 +125,57 @@ describe('the routes', () => {
     await other.arrayBuffer();
   });
 
+  it.each([
+    'script',
+    'style',
+    'worker',
+    'sharedworker',
+    'serviceworker',
+    'audioworklet',
+    'paintworklet',
+    'xslt',
+    'manifest',
+    'json',
+  ])(
+    'GET /api/raw refuses a request to run or apply the file (Sec-Fetch-Dest: %s)',
+    async (dest) => {
+      writeFiles(root, { 'tool.js': 'alert(1)\n' });
+      const response = await request('/api/raw?path=tool.js', {
+        headers: {
+          'sec-fetch-dest': dest,
+          'sec-fetch-site': 'same-origin',
+          'sec-fetch-mode': 'no-cors',
+        },
+      });
+      expect(response.status).toBe(403);
+      expect(await response.json()).toEqual({
+        ok: false,
+        code: 'HOST_FORBIDDEN',
+        message: expect.stringContaining(dest),
+      });
+    }
+  );
+
+  it.each(['image', 'document', 'iframe', 'embed', 'object', 'empty', 'video', 'audio', 'font'])(
+    'GET /api/raw serves a request to show the file (Sec-Fetch-Dest: %s)',
+    async (dest) => {
+      const response = await request('/api/raw?path=img/dot.png', {
+        headers: { 'sec-fetch-dest': dest, 'sec-fetch-site': 'same-origin' },
+      });
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-security-policy')).toBe('sandbox');
+      await response.arrayBuffer();
+    }
+  );
+
+  it('GET /api/raw serves a request with no Sec-Fetch-Dest (curl, an older browser) as before', async () => {
+    writeFiles(root, { 'tool.js': 'alert(1)\n' });
+    const response = await request('/api/raw?path=tool.js');
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('text/javascript; charset=utf-8');
+    expect(await response.text()).toBe('alert(1)\n');
+  });
+
   it('GET /api/raw refuses a missing file and a folder with 404', async () => {
     for (const path of ['none.png', 'img']) {
       const response = await request(`/api/raw?path=${path}`);
