@@ -1,22 +1,38 @@
 # Stage 5: The Apps in the Local Host Reflections
 
-**Date:** _to be filled by Jamie, in the PR that follows the stage close_
-
-> Human-led, written at stage close. Agents review (typos, unsubstantiated claims) and may propose
-> attributed notes for the agent-observations section, but never draft or rewrite the human's prose;
-> see [devlogs](../README.md). The mechanical record lives in `changelog.md`.
+**Date:** 2026-11-22
 
 ---
 
 ## Challenges
 
-- _Jamie's._
+- Builds sometimes being failed for resource contention reasons
+- Managing two agents working on the same project from different primary focus points
+  - sometimes hard to know which agent is responsible for overlapping issues
+- Large followup drain effort at stage end
+  - Phases followups were carried over to stage end
+
+    | Logged in                                                                           | Entries | Fixed  | Closed with a reason | Seed  | Carried |
+    | ----------------------------------------------------------------------------------- | ------- | ------ | -------------------- | ----- | ------- |
+    | Stage 4, phase 2 (the local host's page, tree, file operations, format descriptors) | 13      | 12     | 1                    | 0     | 0       |
+    | Stage 4, phase 3 (git in the host)                                                  | 5       | 4      | 1                    | 0     | 0       |
+    | Stage 4, phase 4 (Context Manager adopts the formats)                               | 1       | 1      | 0                    | 0     | 0       |
+    | Stage 5, phase 1 (setup)                                                            | 1       | 1      | 0                    | 0     | 0       |
+    | Stage 5, phase 2 (app module, app shells, host runner)                              | 26      | 17     | 4                    | 4     | 1       |
+    | Stage 5, phase 3 (apps in the local host)                                           | 9       | 3      | 4                    | 2     | 0       |
+    | Stage 5, phase 4 (check-in review)                                                  | 10      | 7      | 1                    | 2     | 0       |
+    | Stage 5, phase 5 (undo)                                                             | 6       | 5      | 1                    | 0     | 0       |
+    | Stage 5, phase 7 (the drain itself)                                                 | 1       | 1      | 0                    | 0     | 0       |
+    | **Total**                                                                           | **72**  | **51** | **12**               | **8** | **1**   |
 
 ---
 
 ## Learnings & reflections
 
-- _Jamie's._
+- Drain followups per phase
+  - Set a limit on how many carried forwards (1-3?)
+- Save stage end for adversarial review and user validation
+  
 
 ---
 
@@ -49,20 +65,11 @@ he may strike any of them._
   a commit whose pre-commit hook ran on the shared machine while CI was building my own push,
   which tripped the resource guard and failed that run.
 
-- (claude) The release review found twenty-five things after the stage had been called done
-  and its log drained, five of them High. The log held what the builders had noticed while
-  building. The readers, who had built none of it, found what sits where two parts meet: a key
-  that repeats into a dialog, a browser's connection limit, a link inside the folder.
-- (claude) Every finding the review deferred had a fix small enough to test, and all were
-  built the next day in an afternoon. "Deferred to the next stage's setup" had been my
-  default for anything past the first priority; the cost of carrying them was larger than the
-  cost of building them.
-- (claude) A mistake of mine at the close: `git stash` is shared by every worktree of a
-  repository. A stash of mine crossed with a sub-agent's, and for a minute each worktree held
-  the other's change. Nothing was committed wrong, by luck more than by care.
-
 ---
 
 ## Looking ahead
 
-- _Jamie's._
+- Need to decide between
+  - start on additional formats (e.g. image, pdf, audio, video)
+  - start on new apps (e.g. character creator, media manager)
+  - continue moving apps remnants out of Context Manager
