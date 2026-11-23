@@ -79,6 +79,8 @@ export interface CheckinInput {
   titleRequired: boolean;
   /** `null` for no new branch; the name typed for a new one. */
   branch: string | null;
+  /** The current branch the review shows (`null`: not on one); absent when it shows none. */
+  onBranch?: string | null;
   context?: Record<string, unknown>;
 }
 
@@ -109,7 +111,10 @@ export function messageOf(title: string, body: string): string {
   return rest === '' ? head : `${head}\n\n${rest}`;
 }
 
-/** The op: each checked row's path, a moved one's old path too; the title, body and branch when given. */
+/**
+ * The op: each checked row's path, a moved one's old path too; the title, body
+ * and branch when given, and the current branch the review showed.
+ */
 export function checkinOpOf(input: CheckinInput): CheckinOp {
   const paths: string[] = [];
   for (const { file, checked } of input.rows) {
@@ -125,6 +130,7 @@ export function checkinOpOf(input: CheckinInput): CheckinOp {
     ...(title === '' ? {} : { title }),
     ...(body === '' ? {} : { body }),
     ...(branch === '' ? {} : { branch }),
+    ...(input.onBranch === undefined ? {} : { onBranch: input.onBranch }),
     ...(input.context === undefined ? {} : { context: input.context }),
   };
 }

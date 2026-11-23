@@ -411,7 +411,7 @@ describe('<spl-tasks-app> links', () => {
 });
 
 describe('<spl-tasks-app> learn and opView', () => {
-  it.each(['edit-manifest', 'create-card', 'set-title', 'set-tags'])(
+  it.each(['create-card', 'set-title', 'set-tags', 'move-file', 'fix-references', 'add-tag'])(
     'reads the board again after %s',
     async (type) => {
       const el = mountShell(boardInput());
@@ -427,16 +427,30 @@ describe('<spl-tasks-app> learn and opView', () => {
     }
   );
 
-  it.each(['move', 'move-file', 'reorder-pool', 'add-tag', 'fix-references', 'set-current'])(
-    'reads nothing again after %s',
-    async (type) => {
-      const el = mountShell(boardInput());
-      const asked = attachHost(el, snapshotOf());
-      el.learn({ type }, ok({}));
-      await tick();
-      expect(asked).toEqual([]);
-    }
-  );
+  it('reads the board and the strip again after edit-manifest, on a board and on a stage', async () => {
+    const el = mountShell(boardInput());
+    const asked = attachHost(el, snapshotOf());
+    el.learn({ type: 'edit-manifest' }, ok({}));
+    await tick();
+    expect(asked).toEqual([
+      { type: 'project', view: { type: 'nav' } },
+      { type: 'project', view: { type: 'board', path: BOARD } },
+    ]);
+    // A stage's cards come with the host's next state; its strip is read here.
+    const stage = mountShell(stageInput());
+    const stageAsked = attachHost(stage, snapshotOf());
+    stage.learn({ type: 'edit-manifest' }, ok({}));
+    await tick();
+    expect(stageAsked).toEqual([{ type: 'project', view: { type: 'nav' } }]);
+  });
+
+  it.each(['move', 'reorder-pool', 'set-current'])('reads nothing again after %s', async (type) => {
+    const el = mountShell(boardInput());
+    const asked = attachHost(el, snapshotOf());
+    el.learn({ type }, ok({}));
+    await tick();
+    expect(asked).toEqual([]);
+  });
 
   it('reads nothing again on a stage, or with no board', async () => {
     for (const input of [stageInput(), emptyInput()]) {

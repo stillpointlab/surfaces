@@ -694,7 +694,10 @@ export type AppShellOps = {
   /**
    * Check in chosen files, by path (a moved file's old path too). `title` and
    * `body` are what was typed, trimmed, and absent when empty; `branch` names a
-   * new branch; `context` is the app's own, passed back untouched. `done`: it is
+   * new branch; `onBranch` is the branch the review showed as the current one
+   * (`null`: not on a branch), when it showed one, so a host can refuse a check-in
+   * to a branch the person was not shown; `context` is the app's own, passed back
+   * untouched. `done`: it is
    * checked in. `started`: the host's check-in runs on, and the host calls the
    * shell's `checkinSettled()` when it ends. `message` is for the page's notice.
    */
@@ -704,6 +707,7 @@ export type AppShellOps = {
       title?: string;
       body?: string;
       branch?: string;
+      onBranch?: string | null;
       context?: Record<string, unknown>;
     };
     reply: { status: 'done' | 'started'; message?: string };

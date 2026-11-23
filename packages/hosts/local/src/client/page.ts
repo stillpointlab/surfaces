@@ -65,7 +65,7 @@ import { appTreeView, holdsChanges, holdsLocked, lockedBy } from './apps/tree-vi
 import { CommitReview } from './commit/review';
 import { createConfirm } from './confirm';
 import { createFileOps } from './file-ops/file-ops';
-import { indexListing } from './file-ops/paths';
+import { filesUnder, indexListing } from './file-ops/paths';
 import { deepActiveElement, HostMenu } from './menu/menu';
 import { pageStyles } from './page.styles';
 import { FilePane } from './pane';
@@ -872,7 +872,11 @@ export function startPage(options: PageOptions): HostPage {
     );
   }
 
-  const createDialog = new CreateDialog(host, client);
+  const createDialog = new CreateDialog(
+    host,
+    client,
+    (folder) => filesUnder((listingIndex ??= indexListing(nodes, truncated)), folder).length
+  );
 
   async function createApp(appId: string, folder: string): Promise<string | null> {
     const app = Object.hasOwn(apps, appId) ? apps[appId] : undefined;

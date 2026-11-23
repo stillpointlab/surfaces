@@ -452,8 +452,8 @@ describe('Delete', () => {
     expect(dialog().title).toBe('Delete c.txt?');
     const buttons = [...dialog().querySelectorAll('button')].map((button) => button.textContent);
     expect(buttons).toEqual(['Cancel', 'Delete']);
-    // Enter confirms: the Delete button has focus.
-    expect(document.activeElement?.textContent).toBe('Delete');
+    // A delete loses something, so Cancel has the focus: an Enter does not delete.
+    expect(document.activeElement?.textContent).toBe('Cancel');
     // A question with no detail has no body to draw.
     expect(dialog().querySelector<HTMLElement>('.file-op-body')!.hidden).toBe(true);
     expect(dialog().shadowRoot!.querySelector('.modal-body')!.hasAttribute('data-empty')).toBe(
@@ -464,6 +464,42 @@ describe('Delete', () => {
     expect(host.disk.has('docs/c.txt')).toBe(false);
     expect(row('docs/c.txt')).toBeNull();
     expect(focusedRow()).toBe('docs');
+  });
+
+  it('a held Enter answers nothing, on the Delete button included', async () => {
+    await start();
+    await choose('docs/c.txt', 'file', 'Delete…');
+    const confirm = dialog().querySelector<HTMLButtonElement>('[data-answer="confirm"]')!;
+    confirm.focus();
+    // The Enter that chose the menu's entry is still down, and repeats.
+    const repeat = new KeyboardEvent('keydown', {
+      key: 'Enter',
+      repeat: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    confirm.dispatchEvent(repeat);
+    await settle();
+    // Prevented, so the browser does not press the button with it.
+    expect(repeat.defaultPrevented).toBe(true);
+    expect(host.puts).toEqual([]);
+    expect(dialog().isOpen).toBe(true);
+    // A new press on the button is left to the browser, which clicks it.
+    const pressed = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    confirm.dispatchEvent(pressed);
+    expect(pressed.defaultPrevented).toBe(false);
+  });
+
+  it('a held Enter in the path field sends nothing', async () => {
+    await start();
+    await choose('a.md', 'file', 'Rename…');
+    type('b.md');
+    field().dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', repeat: true, bubbles: true, cancelable: true })
+    );
+    await settle();
+    expect(host.puts).toEqual([]);
+    expect(dialog().isOpen).toBe(true);
   });
 
   it('a folder: “Delete <name> and the <n> files in it?”, one delete per file in one put', async () => {

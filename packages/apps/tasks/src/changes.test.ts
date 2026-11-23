@@ -68,6 +68,21 @@ describe('tasksFromChanges', () => {
     expect(snapshot).toEqual({ moves: { [CARD]: [from] }, created: [] });
   });
 
+  it('a moved card whose old path holds a card again is two changes, and hides nothing', () => {
+    // A card moved here, and a new card was then made at the path it had.
+    const from = `${PHASE}/specs/b.md`;
+    const { facts, snapshot } = tasksFromChanges(
+      [
+        { path: CARD, status: 'moved', from },
+        { path: from, status: 'new' },
+      ],
+      snapshotOf()
+    );
+    expect(facts.cards).toEqual({ [CARD]: { changed: true }, [from]: { changed: true } });
+    // No pending move, so the board draws the card at the old path.
+    expect(snapshot).toEqual({ moves: {}, created: [from] });
+  });
+
   it('marks a card dirty when its column differs from the text at the last check-in', () => {
     const base = '---\ncolumn: done\n---\n\n# A\n';
     const { facts } = tasksFromChanges([{ path: CARD, status: 'changed', base }], snapshotOf());

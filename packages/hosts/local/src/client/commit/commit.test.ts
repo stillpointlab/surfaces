@@ -265,6 +265,8 @@ describe('the review', () => {
       {
         paths: ['docs/moved.md', 'old.md', 'a.md', 'gone.md'],
         message: 'Edit a and move b\n\nBecause.\n# kept',
+        // The branch the review showed.
+        onBranch: 'main',
       },
     ]);
     expect(await opened).toMatchObject({ short: 'cccccc1', branch: 'main' });
@@ -320,7 +322,8 @@ describe('the review', () => {
     expect(radio('new')!.checked).toBe(true);
     branchName().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     await settle();
-    expect(host.commits[0]).toMatchObject({ branch: 'topic/x' });
+    // The request names the branch the review showed, which the server holds it to.
+    expect(host.commits[0]).toMatchObject({ branch: 'topic/x', onBranch: 'main' });
     expect(await opened).toMatchObject({ branch: 'topic/x' });
     expect(notice()).toContain('on topic/x.');
 
@@ -341,7 +344,7 @@ describe('the review', () => {
     expect(error()).toBe(REVIEW_WORDS.noBranch);
     type(branchName(), 'rescued');
     await press('confirm');
-    expect(host.commits[0]).toMatchObject({ branch: 'rescued' });
+    expect(host.commits[0]).toMatchObject({ branch: 'rescued', onBranch: null });
   });
 
   it('a refusal shows as text under the form, which keeps everything, with focus on it', async () => {

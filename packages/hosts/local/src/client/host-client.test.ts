@@ -237,6 +237,57 @@ describe('createHttpClient', () => {
     expect(source.closed).toBe(true);
   });
 
+  it('gives the stream back while the tab is hidden, and says what went unheard when shown', () => {
+    vi.stubGlobal('EventSource', FakeSource);
+    let hidden = false;
+    const spy = vi.spyOn(document, 'hidden', 'get').mockImplementation(() => hidden);
+    const show = (to: boolean) => {
+      hidden = !to;
+      document.dispatchEvent(new Event('visibilitychange'));
+    };
+    const client = createHttpClient();
+    const events: WatchedEvent[] = [];
+    const stop = client.watch((event) => events.push(event));
+    const first = FakeSource.last;
+    first.onopen?.();
+    show(false);
+    expect(first.closed).toBe(true);
+    expect(FakeSource.last).toBe(first);
+    show(true);
+    const second = FakeSource.last;
+    expect(second).not.toBe(first);
+    expect(events).toEqual([]);
+    second.onopen?.();
+    expect(events).toEqual([{ type: 'listed' }, { type: 'journal' }, { type: 'reconnected' }]);
+    // Shown twice opens one stream.
+    show(true);
+    expect(FakeSource.last).toBe(second);
+    stop();
+    expect(second.closed).toBe(true);
+    // Stopped, a later show opens nothing.
+    show(false);
+    show(true);
+    expect(FakeSource.last).toBe(second);
+    spy.mockRestore();
+  });
+
+  it('a page loaded in a hidden tab opens its stream when shown, and reads again then', () => {
+    vi.stubGlobal('EventSource', FakeSource);
+    let hidden = true;
+    const spy = vi.spyOn(document, 'hidden', 'get').mockImplementation(() => hidden);
+    const before = FakeSource.last;
+    const events: WatchedEvent[] = [];
+    const stop = createHttpClient().watch((event) => events.push(event));
+    expect(FakeSource.last).toBe(before);
+    hidden = false;
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(FakeSource.last).not.toBe(before);
+    FakeSource.last.onopen?.();
+    expect(events).toEqual([{ type: 'listed' }, { type: 'journal' }, { type: 'reconnected' }]);
+    stop();
+    spy.mockRestore();
+  });
+
   it('names a revision in a URL once its file has changed, so an element loads it again', () => {
     vi.stubGlobal('EventSource', FakeSource);
     const client = createHttpClient();

@@ -290,6 +290,8 @@ describe('the delete dialog', () => {
     expect(fileOp().isOpen).toBe(true);
     expect(question()).toBe(words.fileOps.cannotUndo['not-text']);
     expect(host.disk.has('pics/dot.png')).toBe(true);
+    // The second question opens on Cancel too.
+    expect(document.activeElement?.textContent).toBe('Cancel');
     fileOp().querySelector<HTMLButtonElement>('[data-answer="cancel"]')!.click();
     await settle();
     expect(fileOp().isOpen).toBe(false);

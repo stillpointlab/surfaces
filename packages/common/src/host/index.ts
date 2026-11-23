@@ -91,12 +91,15 @@ export type HostChange = AppFileChange;
  * either path of a moved file commits the move, both halves. `message` is the
  * whole message (a summary line, then a blank line and a body if there is one).
  * With `branch`, the commit goes on a new branch of that name, started from the
- * current commit; without it, on the current branch.
+ * current commit; without it, on the current branch. With `onBranch`, the branch
+ * the person was shown (`null`: not on a branch), the commit is refused when git
+ * is no longer there.
  */
 export interface HostCommitRequest {
   paths: string[];
   message: string;
   branch?: string;
+  onBranch?: string | null;
 }
 
 /** A commit made: its id, the short form git chose for it, and the branch it is on. */

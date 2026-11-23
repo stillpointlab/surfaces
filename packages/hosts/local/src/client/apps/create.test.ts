@@ -327,6 +327,34 @@ describe('creating an instance', () => {
     expect($('.page-notice').textContent).toContain('Undone: Board: create');
   });
 
+  it('says when the folder’s files will sit behind the app’s row, and how to see them again', async () => {
+    start();
+    await page.ready;
+    menuOn('docs', 'folder');
+    await choose('Create a board here…');
+    const holds = $<HTMLElement>('.app-create-holds');
+    // A new folder holds nothing.
+    expect(folderField().value).toBe('docs/board');
+    expect(holds.hidden).toBe(true);
+    const typeFolder = (value: string) => {
+      folderField().value = value;
+      folderField().dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    const inDocs = [...host.disk.keys()].filter((path) => path.startsWith('docs/')).length;
+    expect(inDocs).toBeGreaterThan(0);
+    typeFolder('docs/');
+    expect(holds.hidden).toBe(false);
+    expect(holds.textContent).toBe(words.apps.create.holdsFiles(inDocs));
+    expect(words.apps.create.holdsFiles(1)).toBe(
+      'This folder already holds 1 file. The explorer will show the app in the folder’s place; “Show files…” on the app’s row shows it again.'
+    );
+    expect(words.apps.create.holdsFiles(3)).toContain('holds 3 files');
+    // At the root an app holds only the files it names.
+    typeFolder('');
+    expect(holds.hidden).toBe(true);
+    createDialog().close();
+  });
+
   it('asks consent at the root, and sends it', async () => {
     start();
     await page.ready;

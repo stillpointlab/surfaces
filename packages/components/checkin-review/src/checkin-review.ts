@@ -350,6 +350,7 @@ export class CheckinReview extends HTMLElement implements CheckinReviewElement {
       body: this.field('body')?.value ?? '',
       titleRequired: input.titleRequired === true,
       branch: this.chosenBranch(),
+      ...(input.branch === undefined ? {} : { onBranch: input.branch.current }),
       ...(input.context === undefined ? {} : { context: input.context }),
     };
   }
@@ -493,6 +494,8 @@ export class CheckinReview extends HTMLElement implements CheckinReviewElement {
 
   private readonly onKeydown = (event: KeyboardEvent): void => {
     if (event.key !== 'Enter' || !this.input) return;
+    // The Enter that accepts an input method's candidate is the input method's.
+    if (event.isComposing || event.keyCode === 229) return;
     const target = event.target as HTMLElement;
     // Enter in a one-line field confirms; in the body, Ctrl+Enter or Cmd+Enter.
     const confirms =

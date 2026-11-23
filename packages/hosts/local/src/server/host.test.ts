@@ -465,6 +465,8 @@ describe('git', () => {
       [{ paths: ['docs/b.md'], message: 'm' }, 409, 'HOST_NOT_CHANGED'],
       [{ paths: ['a.md'], message: 'm', branch: 'a..b' }, 400, 'HOST_BRANCH_INVALID'],
       [{ paths: ['a.md'], message: 'm', branch: 'main' }, 409, 'HOST_BRANCH_EXISTS'],
+      [{ paths: ['a.md'], message: 'm', onBranch: 3 }, 400, 'HOST_BAD_REQUEST'],
+      [{ paths: ['a.md'], message: 'm', onBranch: 'elsewhere' }, 409, 'HOST_BRANCH_MOVED'],
     ];
     for (const [body, status, code] of cases) {
       const response = await post(body);

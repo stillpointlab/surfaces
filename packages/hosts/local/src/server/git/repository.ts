@@ -28,6 +28,7 @@ import { decodeText } from '../text';
 import {
   PROGRESS_FOLDERS,
   PROGRESS_REFS,
+  branchMoved,
   branchProblem,
   choosePaths,
   gitSaid,
@@ -432,6 +433,9 @@ export function createGit(options: GitOptions): HostGitAccess {
     const busy = await inProgress();
     if (busy) return busy;
     const was = await head();
+    if (asked.onBranch !== undefined && asked.onBranch !== was.branch) {
+      return branchMoved(asked.onBranch, was.branch);
+    }
     if (branch === undefined && was.branch === null) {
       return fail(
         'HOST_DETACHED_HEAD',

@@ -5,6 +5,11 @@
 // kept, and only a write that landed closes it. While a write runs, a second
 // confirm, Enter and Escape do nothing.
 //
+// A question that loses something (`danger`, and every follow-up) opens with the
+// focus on Cancel, as `confirm.ts` does, and a repeating Enter is dropped: the
+// Enter that chose "Delete…" in a menu is still down when the dialog opens, and
+// its repeats must not answer it.
+//
 // A write may answer with one more question (`FollowUp`): a delete the host cannot
 // keep to undo asks whether to delete anyway. The question shows in the dialog,
 // the confirm button takes its words, and confirming runs the follow-up's write.
@@ -122,7 +127,7 @@ export class FileOpDialog {
       request.detail ? html`<p class="confirm-detail">${request.detail}</p>` : html``,
       request.confirm,
       request.danger ?? false,
-      () => this.confirmButton()?.focus(),
+      () => (request.danger ? this.cancelButton() : this.confirmButton())?.focus(),
       () => request.run()
     );
   }
@@ -133,6 +138,10 @@ export class FileOpDialog {
 
   private confirmButton(): HTMLButtonElement | null {
     return this.element.querySelector<HTMLButtonElement>('[data-answer="confirm"]');
+  }
+
+  private cancelButton(): HTMLButtonElement | null {
+    return this.element.querySelector<HTMLButtonElement>('[data-answer="cancel"]');
   }
 
   private ask(
@@ -212,7 +221,8 @@ export class FileOpDialog {
           syncBody();
           const button = this.confirmButton();
           if (button) button.textContent = followUp.confirm;
-          button?.focus();
+          // What a follow-up asks about cannot be taken back.
+          this.cancelButton()?.focus();
           return;
         }
         if (message === null) {
@@ -238,8 +248,14 @@ export class FileOpDialog {
       dialog.addEventListener(
         'keydown',
         (event) => {
+          if (event.key !== 'Enter') return;
+          // A held key answers nothing, on a button included.
+          if (event.repeat) {
+            event.preventDefault();
+            return;
+          }
           // Enter in the field confirms; on a button it presses that button.
-          if (event.key !== 'Enter' || (event.target as Element).closest('button')) return;
+          if ((event.target as Element).closest('button')) return;
           event.preventDefault();
           void go();
         },

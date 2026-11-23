@@ -66,27 +66,33 @@ export function refusalField(code: string): CheckinField | null {
 /**
  * The commit a review's `checkin` op asks for: its paths; the title as the
  * summary, `fallback` when there is none, and the body as the details, joined
- * as the commit dialog joined them; `branch` a new branch.
+ * as the commit dialog joined them; `branch` a new branch; `onBranch` the
+ * branch the review showed, which the server holds the commit to.
  */
 export function commitRequestOf(op: CheckinOp, fallback: string): HostCommitRequest {
   const title = op.title !== undefined && op.title.trim() !== '' ? op.title : fallback;
   const message = messageOf(title, op.body ?? '');
-  return op.branch !== undefined && op.branch.trim() !== ''
-    ? { paths: [...op.paths], message, branch: op.branch.trim() }
-    : { paths: [...op.paths], message };
+  return {
+    paths: [...op.paths],
+    message,
+    ...(op.branch !== undefined && op.branch.trim() !== '' ? { branch: op.branch.trim() } : {}),
+    ...(op.onBranch !== undefined ? { onBranch: op.onBranch } : {}),
+  };
 }
 
 /** An op as a review raised it, checked: string paths, and strings where strings go. */
 export function checkinOpFrom(op: Record<string, unknown>): CheckinOp | null {
-  const { paths, title, body, branch } = op;
+  const { paths, title, body, branch, onBranch } = op;
   if (!Array.isArray(paths) || !paths.every((path) => typeof path === 'string')) return null;
   for (const value of [title, body, branch]) {
     if (value !== undefined && typeof value !== 'string') return null;
   }
+  if (onBranch !== undefined && onBranch !== null && typeof onBranch !== 'string') return null;
   return {
     paths: paths as string[],
     ...(title !== undefined ? { title: title as string } : {}),
     ...(body !== undefined ? { body: body as string } : {}),
     ...(branch !== undefined ? { branch: branch as string } : {}),
+    ...(onBranch !== undefined ? { onBranch: onBranch as string | null } : {}),
   };
 }
