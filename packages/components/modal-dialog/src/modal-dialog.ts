@@ -33,6 +33,8 @@ export class ModalDialog extends HTMLElement {
   private tabbedBackward: boolean | null = null;
   /** The open dialogs in the order they opened, so the last is the one on top. */
   private static opened: ModalDialog[] = [];
+  /** The Escape presses a dialog has closed for, so one press closes one dialog. */
+  private static escaped = new WeakSet<Event>();
 
   // Set as text, so the stylesheet never goes through markup; each render puts it
   // back first in the shadow root.
@@ -188,6 +190,12 @@ export class ModalDialog extends HTMLElement {
   // Bound function for event listener
   private handleDocumentKeyDown = (event: KeyboardEvent): void => {
     if (event.key === 'Escape' && this.isOpen) {
+      // Every open dialog hears the key. One press closes one dialog: the one
+      // opened last, which is the one on top. The one under it waits for the next.
+      if (ModalDialog.escaped.has(event)) return;
+      const open = ModalDialog.opened.filter((each) => each.isConnected && each.isOpen);
+      if (open.length > 0 && open[open.length - 1] !== this) return;
+      ModalDialog.escaped.add(event);
       this.close();
     }
     if (event.key === 'Tab' && this.isOpen) {

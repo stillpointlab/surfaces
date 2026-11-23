@@ -59,6 +59,8 @@ indents with it) is left alone. One limit: going backward past the first stop la
 stop the dialog can read, which leaves out the inside of a closed shadow root or a frame at the
 very end; going forward reaches them.
 
+With two dialogs open, one Escape closes one: the dialog opened last, which is the one on top.
+
 ## Events
 
 All bubble and are composed.
