@@ -39,6 +39,10 @@ holds what is deferred in this repository.
 
 - Phase close: cards to `done`, the `current` pointer in `../tasks/tasks.yaml` moved on, the
   `stage<N>-phase<M>-complete` tag on the phase's last merge, the phase's changelog section.
+- Before a stage closes: a release review of what the stage added, by readers with none of the
+  build's context, as a `review` card; the
+  [release walk](../tasks/unassigned/tests/local-host-release-walk.test.md) run against the built
+  local host; and Jamie's own validation. What they find is fixed or logged before the tags.
 - Stage close: the changelog covers every phase and names the stage tag; `reflections.md` written;
   the devlog PR reviewed and merged; then `stage<N>-complete` tagged on that merge and pushed. The
   next stage opens with its board and reviews the WAL.

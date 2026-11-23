@@ -102,6 +102,9 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
   The open file follows a rename with its unsaved edits, taking what its new path implies (a
   code file's language) through the format's `applyPath`, and closes on a delete, which warns
   first when it has edits; a `move` or `delete` of the open file carries its version as `base`.
+  The delete question, and the second one for a delete the host cannot undo, open with the focus
+  on Cancel, and a repeating Enter answers nothing in the dialog: the Enter that chose the menu's
+  entry is still down when it opens.
   A folder listed with nothing under it (a submodule, a nested repository), a folder holding
   one, and every folder while the list is cut (`truncated`) cannot be renamed or deleted here.
   Such a folder's row has no chevron, since it would open to nothing, and its name ends in a
@@ -170,7 +173,7 @@ beside it: `HostCommitRequest` in, `HostCommit` out, under the port's write lock
 | `GET /api/git`          | `{ state, branch }`: `repository`, `no-repository` or `no-git`; `branch` `null` if detached          |
 | `GET /api/changes`      | `{ ok: true, changes }`, each `{ path, status, from? }` (`from` for a moved file)                    |
 | `GET /api/base?path=`   | `{ ok: true, text }`: the file's text at `HEAD`, under its old path when it moved                    |
-| `POST /api/commit`      | body `{ paths, message, branch? }`; `{ ok: true, commit, short, branch }`, or a refusal              |
+| `POST /api/commit`      | body `{ paths, message, branch?, onBranch? }`; `{ ok: true, commit, short, branch }`, or a refusal   |
 | `GET /api/root`         | `{ name, id }`: the folder's name, and a SHA-256 of its real path                                    |
 | `GET /api/apps`         | `{ apps }`: every instance found (`FoundInstance`), valid or not, locked or not                      |
 | `POST /api/apps/lock`   | body `{ manifestPath, locked }`; `{ ok: true, errors, warnings }` (on lock, the lifecycle's)         |
@@ -218,6 +221,11 @@ every 25 seconds. The server's own writes are reported too.
 When the stream drops and comes back, the page's client says `listed`, `journal` and then
 `reconnected`, its own word and not the server's: the page lists again, and reads the open file
 again, since a change made meanwhile was sent to nobody.
+
+The client holds its stream only while the tab shows. A browser allows six connections to one
+host over HTTP/1.1 across all its tabs, and a stream holds one for good, so a stream in every
+tab left the sixth tab's requests, and then every tab's, waiting. A hidden tab closes its stream;
+shown again it opens one and says the same three words.
 
 ## `put`
 
@@ -286,6 +294,10 @@ memory port.
   the trailing dots and spaces Windows drops, and `git~1`); or when the real path of the nearest
   thing that exists along it, or of the folder that holds it, is outside the real root. A
   symbolic link that leaves the root is listed and cannot be opened, written, moved or deleted.
+  A link that stays inside the root and leads into git's folder (`cfg.md` to `.git/config`) is
+  refused the same way, `HOST_PATH_INVALID`: the name check reads a path as written, so the real
+  path is checked too. An app's lock is asked of where a path leads (`port.leadsTo`) as well as
+  of the path as written.
   The refusal says which: `HOST_PATH_OUTSIDE_ROOT` for a path that would leave the folder (an
   absolute one, a `..`, a link out), and `HOST_PATH_INVALID` for one that stays inside and is not
   a path the host takes (the rest).
@@ -334,7 +346,8 @@ port's write lock: a `put` that arrives during a commit waits for it, and the re
   (`HOST_COMMIT_NO_PATHS`); a message that is empty or only spaces (`HOST_COMMIT_NO_MESSAGE`); a path
   the port would refuse (`HOST_PATH_OUTSIDE_ROOT`, `HOST_PATH_INVALID`); a merge, cherry-pick, revert, rebase, `git am`,
   or a sequence of picks in progress (`HOST_GIT_IN_PROGRESS`, saying which and how to finish or
-  abort it); `HEAD` detached and no branch given (`HOST_DETACHED_HEAD`); a path that is not a
+  abort it); git on another branch than the one the review showed, when the request says which
+  (`onBranch`; `HOST_BRANCH_MOVED`); `HEAD` detached and no branch given (`HOST_DETACHED_HEAD`); a path that is not a
   change or a moved file's old path (`HOST_NOT_CHANGED`); a chosen path in conflict
   (`HOST_PATH_CONFLICTED`); a branch name git refuses, one `@{-1}` style that git would expand, or
   `@` (`HOST_BRANCH_INVALID`); a branch that exists, differs from one only in case, would be a
@@ -377,7 +390,9 @@ port's write lock: a `put` that arrives during a commit waits for it, and the re
   every file". A submodule or a nested repository is listed as one folder with nothing under it.
 - The watcher watches each folder that holds a listed file (not the root recursively, which on
   Linux watches each file by itself and loses one replaced by a rename), joins bursts within
-  100 ms, and lists again when a name comes or goes. `watchNames(folder, names, onChange)` watches
+  100 ms, and lists again when a name comes or goes. Each watch keeps the folder it was opened
+  on; a burst that lists again opens a new watch where the path holds another folder now (one
+  removed and made again, as a rebase does) and says its files changed. `watchNames(folder, names, onChange)` watches
   names in a folder outside the root: in a repository, `HEAD` and `index` in git's own folder
   (`git rev-parse --absolute-git-dir`: a worktree's own, and above a served subfolder), which
   sends `status`. The host's own reads never write the index, so reading after the event raises

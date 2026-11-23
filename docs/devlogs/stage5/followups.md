@@ -431,3 +431,41 @@ are carried here as they were written.
     host's look for a `.git` entry stops below a folder `GIT_CEILING_DIRECTORIES` names, as git's
     does, and the tests' environment names their temporary folder. A third test (`cli.test.ts`) had
     the same fault.
+- 2026-11-22
+  ([release review](../../tasks/stage5/phase7/reviews/stage-5-release-review.md), M4):
+  a commit does not answer, and holds every write, while a hook's child keeps git's output open.
+  `server/git/run.ts` waits for `close`, which waits for every holder of the pipes; a hook that
+  leaves a child in its own session escapes the timeout's signal too. Answer on `exit` after a short
+  drain, then destroy the pipes. Stage 4's code.
+- 2026-11-22 (release review, M7): serving a folder git ignores shows an empty tree, since the
+  listing asks git and git lists nothing ignored. At the start, `git check-ignore -q .`; when
+  ignored, list by the walk. Stage 4's code.
+- 2026-11-22 (release review, M10): a link definition written inside a list item or a block quote is
+  dropped by an edit there, while a paragraph elsewhere still uses it. When the parse's references
+  hold a label the kept definitions do not, write the document whole. None of 609 real files has
+  one.
+- 2026-11-22 (release review, M11): the runner rewrites a file it could not read, with no `base`.
+  Only the pool's `order.yaml` can be written this way (a Latin-1 order file was replaced by
+  `reorder-pool`). Refuse a `write` or `move` whose source has no loaded version.
+- 2026-11-22 (release review, L1): a rule that becomes a markdown file's first block reads back as
+  frontmatter, and the next load hides what follows it. The text stays in the file.
+- 2026-11-22 (release review, L2): `/api/raw` serves a repository's `.js` as script from the page's
+  own origin, so `script-src 'self'` would not stop an injection, if one existed, from loading a
+  file as script. Refuse `Sec-Fetch-Dest: script`, `style` and `worker` there.
+- 2026-11-22 (release review, L3): a tasks kind with the id `constructor` answers 500 on its board
+  until a card exists (`holder.paths[kind.id]` on a plain object, in `boardDetection.ts`).
+- 2026-11-22 (release review, L4): a tasks manifest whose `current` key is quoted is invalid after
+  Set current: a second `current:` is appended. Stage 3's code, both hosts.
+- 2026-11-22 (release review, L6): a page loaded at `#/edit/<a locked app's file>` can mount the
+  editor, since the instances are read after the view is chosen. The server refuses the save.
+- 2026-11-22 (release review, L7): the create dialog closes on Escape while its create runs; the
+  instance still appears.
+- 2026-11-22 (release review, L8): `reorder-pool` sent with no view writes and then answers not
+  found. The shell always sends one.
+- 2026-11-22 (the review's fixes, md): an edit to a block still rewrites two things that read back
+  the same: a bare URL gains angle brackets, and an email autolink (`<me@example.com>`) becomes
+  `[me@example.com](mailto:me@example.com)`. Seen while fixing M9; for [a save keeps the
+  file](../../tasks/unassigned/seeds/a-save-keeps-the-file.md).
+- 2026-11-22 (the review's fixes, modal-dialog): with two `<modal-dialog>`s open, Escape closes
+  both, since each hears the key on the document. Older than stage 5, and nothing in surfaces opens
+  two. The fix for Tab (M12) keeps the order they opened in, which Escape could use.

@@ -1,5 +1,5 @@
 ---
-column: in-progress
+column: done
 created: 2026-11-22T19:32:14-07:00
 tags: [apps, host-contract, dev-tooling, code]
 ---
@@ -330,29 +330,36 @@ Rulings and opinions; nothing was changed.
 
 ## Task list
 
+Triaged with Jamie on 2026-11-22; the [outcome](#outcome) below says what was built.
+
 ### P0 — before a release of the local host
 
-- [ ] **H1:** the delete question gives focus to Cancel and ignores a repeating Enter.
-- [ ] **H2:** a hidden tab gives its event stream back.
-- [ ] **H5, M9:** `link` before `code` in the schema; the text writer inside an autolink and
-      before an entity.
-- [ ] **M1:** a commit is refused when the branch is not the one the review opened on.
-- [ ] **M2 (with L5):** the shell reads again after `move-file`, `fix-references`, `add-tag` and
-      `edit-manifest`.
-- [ ] **M8:** no confirm while an input method is composing.
+- [x] **H1:** the delete question gives focus to Cancel and ignores a repeating Enter. [#165](https://github.com/stillpointlab/surfaces/pull/165)
+- [x] **H2:** a hidden tab gives its event stream back. [#165](https://github.com/stillpointlab/surfaces/pull/165)
+- [x] **H5, M9:** `link` before `code` in the schema; the text writer inside an autolink and
+      before an entity. [#166](https://github.com/stillpointlab/surfaces/pull/166)
+- [x] **M1:** a commit is refused when the branch is not the one the review opened on. [#165](https://github.com/stillpointlab/surfaces/pull/165)
+- [x] **M2 (with L5):** the shell reads again after `move-file`, `fix-references`, `add-tag` and
+      `edit-manifest`. [#165](https://github.com/stillpointlab/surfaces/pull/165)
+- [x] **M8:** no confirm while an input method is composing. [#165](https://github.com/stillpointlab/surfaces/pull/165)
 
 ### P1 — hardening, and one ruling
 
-- [ ] **H3:** Jamie's ruling on a token per run.
-- [ ] **H4:** the watcher follows a folder that was made again.
-- [ ] **M3:** a move whose old path is taken is two changes.
-- [ ] **M4:** a commit answers when git exits.
-- [ ] **M5:** confinement and the lock test the real path.
-- [ ] **M6, M7:** an unreadable manifest is one instance's error; an ignored root is walked.
+- [x] **H3:** Jamie's ruling on a token per run: build it, in phase 1 of the next stage. The seed
+      is [a token for the run](../../../unassigned/seeds/a-token-for-the-run.md).
+- [x] **H4:** the watcher follows a folder that was made again. [#167](https://github.com/stillpointlab/surfaces/pull/167)
+- [x] **M3:** a move whose old path is taken is two changes. [#165](https://github.com/stillpointlab/surfaces/pull/165)
+- [ ] **M4:** a commit answers when git exits. Deferred to the
+      [follow-up log](../../../../devlogs/stage5/followups.md).
+- [x] **M5:** confinement and the lock test the real path. [#167](https://github.com/stillpointlab/surfaces/pull/167)
+- [x] **M6:** an unreadable manifest is one instance's error. [#167](https://github.com/stillpointlab/surfaces/pull/167)
+- [ ] **M7:** an ignored root is walked. Deferred to the follow-up log.
 
 ### P2 — the pool
 
-- [ ] **M10, M11, M12, L1 to L8.**
+- [x] **M12:** Tab with two dialogs open. Raised from P2 because it is a regression from the
+      drain's own Tab fix. [#165](https://github.com/stillpointlab/surfaces/pull/165)
+- [ ] **M10, M11, L1 to L4, L6 to L8:** deferred to the follow-up log, one entry each.
 
 ## Suggested tests to lock in fixes
 
@@ -375,3 +382,48 @@ Rulings and opinions; nothing was changed.
 - `checkin-review.test.ts`: Enter with `isComposing` asks nothing.
 - `packages/formats/md`: an edit beside ``[`code`](url)`` keeps the link, in a list and in a
   table; a bare URL with `~` and `_` and an `&amp;lt;` come back as written.
+
+---
+
+## Outcome
+
+2026-11-22, by the same agent, on Jamie's word to decide what to fix and what to defer.
+
+**Fixed, in three pull requests that touch no file in common:**
+
+- [#165](https://github.com/stillpointlab/surfaces/pull/165), the page, the check-in review, the tasks app and the dialog: H1, H2, M1, M2 with L5,
+  M3, M8 and M12.
+- [#166](https://github.com/stillpointlab/surfaces/pull/166), the md format: H5 and M9.
+- [#167](https://github.com/stillpointlab/surfaces/pull/167), the server: H4, M5 and M6.
+
+Each finding was reproduced before its fix, in a unit test that fails without it or in Chromium
+against the built host, and checked again after. M8 and M12 were not run in a browser: headless
+Chromium has no input method, and nothing in surfaces opens two dialogs.
+
+**Where a fix differs from this card's wording:**
+
+- **M1** is refused by the server, not the page. The review's op carries the branch it showed
+  (`onBranch`, one new optional field in the shared contract), so an app's review is held to it
+  too.
+- **M3** asks whether the old path is among the **changes**, not the snapshot's paths. A host
+  whose snapshot includes upstream holds the old path for a real pending move, and the existing
+  tests say so.
+- **H1** changes what Enter does in the delete dialog: it opens on Cancel now. Jamie may narrow
+  it to the repeat guard alone.
+
+**Rulings (Jamie, 2026-11-22):**
+
+- **H3:** build the token, in phase 1 of the next stage.
+- **A task project created in a folder that already holds files:** the create dialog says the
+  files will sit behind the app's row and names "Show files…" ([#165](https://github.com/stillpointlab/surfaces/pull/165)).
+- **The walk is a `test` card,**
+  [local-host-release-walk](../../../unassigned/tests/local-host-release-walk.test.md), run at
+  each stage's close with a release review and Jamie's own validation
+  ([devlogs](../../../../devlogs/README.md#milestones)).
+
+**Deferred,** each a bullet in the [follow-up log](../../../../devlogs/stage5/followups.md) for
+the next stage's setup: M4, M7, M10, M11, L1 to L4 and L6 to L8. None loses text or opens the
+folder to another origin; each is rare, refused safely, or stage 4's code with a fix that needs
+more care than a close allows.
+
+**Context Manager** takes the md, review, dialog and tasks fixes with its next pin.
