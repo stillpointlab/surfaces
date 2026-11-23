@@ -148,6 +148,32 @@ export class CreateDialog {
       const listening = new AbortController();
       const { signal } = listening;
 
+      // While the create runs the dialog stays, as the file dialogs do: Escape
+      // (heard on the document), the close button and Cancel wait for it. Closed
+      // meanwhile, the instance would appear all the same with nothing said.
+      // A capturing listener runs before each of them.
+      let busy = false;
+      window.addEventListener(
+        'keydown',
+        (event) => {
+          if (busy && event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+        },
+        { signal, capture: true }
+      );
+      dialog.addEventListener(
+        'click',
+        (event) => {
+          if (busy) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+        },
+        { signal, capture: true }
+      );
+
       const go = async (): Promise<void> => {
         if (!form || confirm.disabled) return;
         const at = target();
@@ -158,9 +184,13 @@ export class CreateDialog {
         }
         show(null);
         confirm.disabled = true;
+        busy = true;
+        dialog.setAttribute('aria-busy', 'true');
         try {
           await form.submit();
         } finally {
+          busy = false;
+          dialog.removeAttribute('aria-busy');
           if (dialog.isOpen) confirm.disabled = false;
         }
       };
