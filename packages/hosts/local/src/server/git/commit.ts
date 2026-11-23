@@ -33,7 +33,7 @@ export function readRequest(body: unknown): HostCommitRequest | Failure {
   if (typeof body !== 'object' || body === null) {
     return fail('HOST_BAD_REQUEST', 'The body must be { "paths": [...], "message": "..." }.');
   }
-  const { paths, message, branch } = body as Record<string, unknown>;
+  const { paths, message, branch, onBranch } = body as Record<string, unknown>;
   if (!Array.isArray(paths) || paths.some((path) => typeof path !== 'string')) {
     return fail('HOST_BAD_REQUEST', '"paths" must be a list of paths.');
   }
@@ -42,6 +42,9 @@ export function readRequest(body: unknown): HostCommitRequest | Failure {
   }
   if (branch !== undefined && typeof branch !== 'string') {
     return fail('HOST_BAD_REQUEST', '"branch" must be a string when it is given.');
+  }
+  if (onBranch !== undefined && onBranch !== null && typeof onBranch !== 'string') {
+    return fail('HOST_BAD_REQUEST', '"onBranch" must be a string or null when it is given.');
   }
   if (paths.length === 0) {
     return fail('HOST_COMMIT_NO_PATHS', 'Choose at least one file to commit.');
@@ -53,14 +56,30 @@ export function readRequest(body: unknown): HostCommitRequest | Failure {
     paths: [...new Set(paths as string[])],
     message,
     ...(branch === undefined ? {} : { branch }),
+    ...(onBranch === undefined ? {} : { onBranch: onBranch as string | null }),
   };
+}
+
+/**
+ * The refusal for a commit asked for on one branch when git is on another: a
+ * `git switch` in a terminal while the review was open.
+ */
+export function branchMoved(shown: string | null, now: string | null): Failure {
+  const say = (name: string | null) =>
+    name === null ? 'not on a branch (a detached HEAD)' : `on ${JSON.stringify(name)}`;
+  return fail(
+    'HOST_BRANCH_MOVED',
+    `git is ${say(now)} now, and this was opened ${say(shown)}. Nothing was committed. Close this and open it again to commit where git is.`
+  );
 }
 
 /**
  * The paths a commit names, given the changes: each chosen one, and for a moved
  * file both its paths whichever was chosen, since a commit of one half leaves the
- * other staged (the removal, or the addition). `unchanged` holds the chosen
- * paths that are neither a change nor a moved file's old path.
+ * other staged (the removal, or the addition). A moved file whose old path
+ * holds a file again (made there since, a change of its own) is not one with it:
+ * each is committed when it is chosen. `unchanged` holds the chosen paths that
+ * are neither a change nor a moved file's old path.
  */
 export function choosePaths(
   changes: readonly HostChange[],
@@ -81,7 +100,7 @@ export function choosePaths(
       continue;
     }
     paths.add(change.path);
-    if (change.from !== undefined) paths.add(change.from);
+    if (change.from !== undefined && !byPath.has(change.from)) paths.add(change.from);
   }
   return { paths: [...paths], unchanged };
 }

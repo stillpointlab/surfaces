@@ -69,6 +69,16 @@ describe('which paths a commit takes', () => {
     });
   });
 
+  it('a moved file whose old path holds a new file is two changes, each committed when chosen', () => {
+    const taken = [...changes, { path: 'b.md', status: 'new' as const }];
+    expect(choosePaths(taken, ['new/b.md'])).toEqual({ paths: ['new/b.md'], unchanged: [] });
+    expect(choosePaths(taken, ['b.md'])).toEqual({ paths: ['b.md'], unchanged: [] });
+    expect(choosePaths(taken, ['b.md', 'new/b.md'])).toEqual({
+      paths: ['b.md', 'new/b.md'],
+      unchanged: [],
+    });
+  });
+
   it('names a path that is not a change', () => {
     expect(choosePaths(changes, ['a.md', 'clean.md'])).toEqual({
       paths: ['a.md'],
@@ -381,6 +391,38 @@ describe('a new branch', () => {
     });
     expect(await commit({ paths: ['a.md'], message: 'm', branch: 'rescued' })).toMatchObject({
       branch: 'rescued',
+    });
+  });
+
+  it('a commit asked for on one branch is refused when git is on another, and nothing is made', async () => {
+    writeFiles(repo, { 'a.md': 'edited\n' });
+    // A review opened on main; a `git switch` in a terminal since.
+    run('switch', '-q', '-c', 'elsewhere');
+    const before = snapshot();
+    const refused = await port().commit({ paths: ['a.md'], message: 'm', onBranch: 'main' });
+    expect(refused).toMatchObject({ ok: false, code: 'HOST_BRANCH_MOVED' });
+    expect((refused as { message: string }).message).toBe(
+      'git is on "elsewhere" now, and this was opened on "main". Nothing was committed. Close this and open it again to commit where git is.'
+    );
+    // A new branch would start from the wrong commit too.
+    expect(
+      await port().commit({ paths: ['a.md'], message: 'm', branch: 'topic', onBranch: 'main' })
+    ).toMatchObject({ code: 'HOST_BRANCH_MOVED' });
+    expect(snapshot()).toEqual(before);
+    // Detached since.
+    run('switch', '-q', '--detach');
+    expect(
+      await port().commit({ paths: ['a.md'], message: 'm', branch: 't', onBranch: 'elsewhere' })
+    ).toMatchObject({
+      code: 'HOST_BRANCH_MOVED',
+      message:
+        'git is not on a branch (a detached HEAD) now, and this was opened on "elsewhere". Nothing was committed. Close this and open it again to commit where git is.',
+    });
+    run('switch', '-q', 'elsewhere');
+    expect(snapshot()).toEqual(before);
+    // Where the review says: the commit is made.
+    expect(await commit({ paths: ['a.md'], message: 'm', onBranch: 'elsewhere' })).toMatchObject({
+      branch: 'elsewhere',
     });
   });
 

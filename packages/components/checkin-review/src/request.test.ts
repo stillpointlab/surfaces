@@ -83,6 +83,7 @@ describe('the op', () => {
           title: ' Fix it ',
           body: '\n\n  Why:\n# kept\n\n',
           branch: ' topic ',
+          onBranch: 'main',
           context: { a: 1 },
         })
       )
@@ -91,7 +92,13 @@ describe('the op', () => {
       title: 'Fix it',
       body: '  Why:\n# kept',
       branch: 'topic',
+      onBranch: 'main',
       context: { a: 1 },
+    });
+    // Not on a branch is said too; a review that showed none says nothing.
+    expect(checkinOpOf(input({ rows: [], title: '', onBranch: null }))).toEqual({
+      paths: [],
+      onBranch: null,
     });
   });
 

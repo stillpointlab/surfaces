@@ -295,7 +295,26 @@ describe('the op', () => {
     expect(radio('new')!.checked).toBe(true);
     branchName().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     await settle();
-    expect(asked[0]).toMatchObject({ branch: 'topic/x' });
+    // The op says which branch the review showed as the current one.
+    expect(asked[0]).toMatchObject({ branch: 'topic/x', onBranch: 'main' });
+  });
+
+  it('the Enter that accepts an input method’s candidate confirms nothing', async () => {
+    const { asked } = host();
+    open({ title: 's' });
+    const field = $<HTMLInputElement>('.checkin-review-title');
+    field.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', isComposing: true, bubbles: true })
+    );
+    // Some browsers say it by the key code alone.
+    field.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', keyCode: 229, bubbles: true })
+    );
+    await settle();
+    expect(asked).toEqual([]);
+    field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await settle();
+    expect(asked).toHaveLength(1);
   });
 
   it('the current branch sends no branch; Ctrl+Enter in the body confirms', async () => {
@@ -325,7 +344,7 @@ describe('the op', () => {
     expect(document.activeElement).toBe(branchName());
     type(branchName(), 'rescued');
     await press('confirm');
-    expect(asked[0]).toMatchObject({ branch: 'rescued' });
+    expect(asked[0]).toMatchObject({ branch: 'rescued', onBranch: null });
   });
 
   it('with no new branch offered, says which branch and sends none', async () => {

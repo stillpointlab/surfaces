@@ -6,7 +6,10 @@
  *
  * - a card that is changed, new or moved is `changed`; a new one is in the
  *   snapshot's `created`; a moved one has `movedFrom`, and its move is in the
- *   snapshot's `moves` (the path it had, as the move's anchor);
+ *   snapshot's `moves` (the path it had, as the move's anchor). When the path
+ *   it had is itself among the changes (a card made there since), the move is no
+ *   move: there are two cards and two changes, and nothing pending hides the one
+ *   at the old path;
  * - a changed or moved card on a board whose change carries its text at the
  *   last check-in (`base`) is `dirty` when its column differs from that text's,
  *   with that column as `versionColumn`. A card in the pool is never `dirty`:
@@ -54,7 +57,13 @@ export function tasksFromChanges(
     if (!differs(change.status) || !cardPaths.has(change.path)) continue;
     const facts: TasksCardFacts = { changed: true };
     if (change.status === 'new') created.push(change.path);
-    if (change.status === 'moved' && change.from !== undefined && change.from !== change.path) {
+    if (
+      change.status === 'moved' &&
+      change.from !== undefined &&
+      change.from !== change.path &&
+      // The path it had is taken again: two files, so two changes.
+      !differs(status.get(change.from)?.status)
+    ) {
       facts.movedFrom = change.from;
       moves[change.path] = [change.from];
     }

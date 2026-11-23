@@ -29,6 +29,7 @@ export function statusFor(code: string): number {
     case 'HOST_GIT_IN_PROGRESS':
     case 'HOST_DETACHED_HEAD':
     case 'HOST_BRANCH_EXISTS':
+    case 'HOST_BRANCH_MOVED':
     case 'HOST_SCOPE_LOCKED':
     case 'HOST_APP_INVALID':
     case 'HOST_APP_OVERLAP':
