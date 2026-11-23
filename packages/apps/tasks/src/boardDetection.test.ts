@@ -3,7 +3,10 @@ import { describe, expect, it } from 'vitest';
 import {
   detectBoards,
   detectPool,
+  kindEntriesOf,
+  kindPathsOf,
   synthesizeBoardForPath,
+  synthesizeStagePhaseBoard,
   withSynthesizedBoards,
 } from './boardDetection.js';
 import { BUILTIN_TASK_KINDS } from './types.js';
@@ -230,6 +233,36 @@ describe('custom kind registries', () => {
     const pool = detectPool(nodes, 'docs/tasks/tasks.yaml', KINDS);
     expect(pool.paths.story).toEqual(['docs/tasks/unassigned/stories/backlog_epic.md']);
     expect(pool.paths).not.toHaveProperty('spike');
+  });
+});
+
+describe('a kind whose id is a name every object has', () => {
+  // `constructor`, `toString` and `valueOf` are valid slugs. A board with no
+  // card of that kind holds no key for it, and must answer none, not the
+  // object's own function.
+  const KINDS = ['constructor', 'toString', 'valueOf'].map((id) => ({
+    id,
+    label: id,
+    badge: id.charAt(0),
+    dir: `${id}s`,
+    creatable: true,
+  }));
+
+  it('has no cards on a board that holds none of its kind', () => {
+    const empty = synthesizeStagePhaseBoard('docs/tasks', 1, 1);
+    expect(kindPathsOf(empty, KINDS)).toEqual([]);
+    expect(kindEntriesOf(empty, KINDS)).toEqual([]);
+  });
+
+  it('has its cards once the board holds one', () => {
+    const [board] = detectBoards(
+      [blob('docs/tasks/tasks.yaml'), blob('docs/tasks/stage1/phase1/constructors/idea.md')],
+      'docs/tasks/tasks.yaml',
+      KINDS
+    );
+    expect(kindEntriesOf(board, KINDS)).toEqual([
+      { path: 'docs/tasks/stage1/phase1/constructors/idea.md', kind: 'constructor' },
+    ]);
   });
 });
 

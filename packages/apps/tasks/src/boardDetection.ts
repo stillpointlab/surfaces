@@ -33,13 +33,21 @@ export interface KindPathsHolder {
   paths: Record<string, string[]>;
 }
 
+/**
+ * One kind's card paths, or none. A kind's id is the manifest's to choose, so it
+ * is read as the holder's own key: `constructor` names nothing an object has.
+ */
+function pathsOfKind(holder: KindPathsHolder, kindId: string): string[] {
+  return Object.hasOwn(holder.paths, kindId) ? holder.paths[kindId] : [];
+}
+
 /** Every (path, kind) card entry of a board/pool descriptor, in kind order. */
 export function kindEntriesOf(
   holder: KindPathsHolder,
   kinds: readonly SharedTaskKindDescriptor[]
 ): { path: string; kind: SharedTaskCardKind }[] {
   return kinds.flatMap((kind) =>
-    (holder.paths[kind.id] ?? []).map((path) => ({ path, kind: kind.id }))
+    pathsOfKind(holder, kind.id).map((path) => ({ path, kind: kind.id }))
   );
 }
 
@@ -48,7 +56,7 @@ export function kindPathsOf(
   holder: KindPathsHolder,
   kinds: readonly SharedTaskKindDescriptor[]
 ): string[] {
-  return kinds.flatMap((kind) => holder.paths[kind.id] ?? []);
+  return kinds.flatMap((kind) => pathsOfKind(holder, kind.id));
 }
 
 /**
@@ -242,7 +250,7 @@ export function synthesizeStagePhaseBoard(
   return {
     path: stagePhasePath(docsRoot, stage, phase),
     label: `Stage ${stage} — Phase ${phase}`,
-    // Consumers read `paths[kind.id] ?? []`, so no per-kind keys are needed.
+    // Consumers read a kind's paths as the holder's own key, so no per-kind keys are needed.
     paths: {},
     stage,
     phase,
