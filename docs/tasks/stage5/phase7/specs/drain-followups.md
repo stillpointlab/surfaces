@@ -150,9 +150,10 @@ _Added 2026-11-22, at the phase's close. The record of each entry is its line in
 [follow-up log](../../../../devlogs/stage5/followups.md); the record of each batch is its pull
 request. This is what the plan above did not say._
 
-- **The count.** The log held 72 entries at the end, one more than when phase 6 opened. 50
-  were fixed, 13 closed with a reason, eight moved to seeds and one is carried, undecided, to
-  the next stage's review of the log: the harness's two ways to read.
+- **The count.** The log held 72 entries at the end, one more than when phase 6 opened. 51
+  were fixed, 12 closed with a reason, eight moved to seeds and one is carried, undecided, to
+  the next stage's review of the log: the harness's two ways to read. (This line first said 50
+  and 13; a recount from the log on 2026-11-22 corrected it.)
 - **Fourteen batches.** The first two were ruled before the adoption (#136 to #138, and one
   entry that could not be reproduced); batches 3 to 14 are
   [#149](https://github.com/stillpointlab/surfaces/pull/149) to

@@ -37,6 +37,8 @@ above for what each part once found.
       item with markup in every field; an SVG with script; a branch named as markup. Open every
       view, the row's menu, the rename and delete dialogs, the commit review, the notice, and
       `/api/raw` as a page → no script runs, no policy violation, no request leaves the origin.
+- [ ] A repository's `.js` asked for through `/api/raw` by a `<script>` added from the console →
+      refused (403), and nothing runs.
 
 ## 2. Files
 
@@ -84,6 +86,8 @@ above for what each part once found.
 - [ ] `git switch -c elsewhere` in a terminal while the review is open, then Commit → refused,
       with both branches named and nothing committed.
 - [ ] A new branch from the review → the commit is on it and the page says so.
+- [ ] A `pre-commit` hook that leaves a child running (`(sleep 30 &)`) → the commit answers at
+      once, and so does a save sent after it.
 
 ## 7. The lock and create
 
@@ -93,6 +97,10 @@ above for what each part once found.
 - [ ] An inventory created in a new folder; a task project inside another app; one in a folder
       that already holds files; undone → created; refused; created, and the dialog said the
       files would sit behind the app's row; undone to nothing.
+- [ ] Escape, Cancel and the close button pressed while a create runs → the dialog stays until
+      the create lands.
+- [ ] A reload at `#/edit/<a locked app's file>` → the preview with the locked line, never the
+      editor.
 
 ## 8. Staying current
 
@@ -105,6 +113,8 @@ above for what each part once found.
 
 - [ ] A folder with no git: a save, an item added, undone → no commit button, no Changes view,
       no check-in bar; the rest works.
+- [ ] A folder its repository ignores, served by itself → its files are listed, the server said
+      at its start that it is served without git, and the page shows nothing of git.
 
 ---
 

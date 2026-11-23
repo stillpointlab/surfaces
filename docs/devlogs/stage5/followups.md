@@ -437,35 +437,76 @@ are carried here as they were written.
   `server/git/run.ts` waits for `close`, which waits for every holder of the pipes; a hook that
   leaves a child in its own session escapes the timeout's signal too. Answer on `exit` after a short
   drain, then destroy the pipes. Stage 4's code.
+  - Closed 2026-11-23 (Jamie: as much as possible at the stage's end, not the next one's start; [#169](https://github.com/stillpointlab/surfaces/pull/169)): the answer comes when git itself exits. What git wrote is
+    read for a moment more (100 ms), then the pipes are destroyed. An ordinary run closes its
+    output with its exit and is no slower. A child a hook left running is left running, where
+    it was killed at the commit's timeout before.
 - 2026-11-22 (release review, M7): serving a folder git ignores shows an empty tree, since the
   listing asks git and git lists nothing ignored. At the start, `git check-ignore -q .`; when
   ignored, list by the walk. Stage 4's code.
+  - Closed 2026-11-23 (Jamie: as much as possible at the stage's end, not the next one's start; [#169](https://github.com/stillpointlab/surfaces/pull/169)): a served folder its repository ignores is served as a
+    folder with no repository. The listing walks it, there is no Changes view and no commit,
+    and the server says so once at its start. The card said to walk and keep git; nothing in
+    an ignored folder can be committed, so the page no longer offers to. The repository's own
+    top is never asked, and a `check-ignore` that fails keeps the repository.
 - 2026-11-22 (release review, M10): a link definition written inside a list item or a block quote is
   dropped by an edit there, while a paragraph elsewhere still uses it. When the parse's references
   hold a label the kept definitions do not, write the document whole. None of 609 real files has
   one.
+  - Closed 2026-11-23 (Jamie: as much as possible at the stage's end, not the next one's start; [#170](https://github.com/stillpointlab/surfaces/pull/170)): when the text defines a label inside a block, a save
+    whose output would no longer define every label as the text did writes the document
+    whole, where each link carries its own address. A document with no such definition is
+    written as before.
 - 2026-11-22 (release review, M11): the runner rewrites a file it could not read, with no `base`.
   Only the pool's `order.yaml` can be written this way (a Latin-1 order file was replaced by
   `reorder-pool`). Refuse a `write` or `move` whose source has no loaded version.
+  - Closed 2026-11-23 (Jamie: as much as possible at the stage's end, not the next one's start; [#171](https://github.com/stillpointlab/surfaces/pull/171)): the runner answers a rewrite or a move of a file the load
+    could not read with the port's own refusal for that file (`HOST_NOT_TEXT` for the order
+    file), and writes nothing.
 - 2026-11-22 (release review, L1): a rule that becomes a markdown file's first block reads back as
   frontmatter, and the next load hides what follows it. The text stays in the file.
+  - Closed 2026-11-23 (Jamie: as much as possible at the stage's end, not the next one's start; [#170](https://github.com/stillpointlab/surfaces/pull/170)): a body with no frontmatter that would read back as having
+    one has its first rule written `***`, the same rule. A first block that would not be
+    misread keeps its text.
 - 2026-11-22 (release review, L2): `/api/raw` serves a repository's `.js` as script from the page's
   own origin, so `script-src 'self'` would not stop an injection, if one existed, from loading a
   file as script. Refuse `Sec-Fetch-Dest: script`, `style` and `worker` there.
+  - Closed 2026-11-23 (Jamie: as much as possible at the stage's end, not the next one's start; [#169](https://github.com/stillpointlab/surfaces/pull/169)): the raw route answers 403 to a request the browser marks
+    as one it would run or apply (`Sec-Fetch-Dest`: script, style, a worker, a worklet, `xslt`,
+    `manifest`, `json`). An image, a document, media, a font, a `fetch` and a request with no
+    such header are served as before.
 - 2026-11-22 (release review, L3): a tasks kind with the id `constructor` answers 500 on its board
   until a card exists (`holder.paths[kind.id]` on a plain object, in `boardDetection.ts`).
+  - Closed 2026-11-23 (Jamie: as much as possible at the stage's end, not the next one's start; [#171](https://github.com/stillpointlab/surfaces/pull/171)): a kind's paths are read as the board's own key.
 - 2026-11-22 (release review, L4): a tasks manifest whose `current` key is quoted is invalid after
   Set current: a second `current:` is appended. Stage 3's code, both hosts.
+  - Closed 2026-11-23 (Jamie: as much as possible at the stage's end, not the next one's start; [#171](https://github.com/stillpointlab/surfaces/pull/171)): the manifest's rewriter finds a top-level key in quotes
+    or with a space before its colon. The same fault held for a quoted `tags` key and a new
+    tag, and went with it.
 - 2026-11-22 (release review, L6): a page loaded at `#/edit/<a locked app's file>` can mount the
   editor, since the instances are read after the view is chosen. The server refuses the save.
+  - Closed 2026-11-23 (Jamie: as much as possible at the stage's end, not the next one's start; [#171](https://github.com/stillpointlab/surfaces/pull/171)): an edit address waits for the first listing, as a Changes
+    view and an app's page do, so the lock is known before the view is chosen.
 - 2026-11-22 (release review, L7): the create dialog closes on Escape while its create runs; the
   instance still appears.
+  - Closed 2026-11-23 (Jamie: as much as possible at the stage's end, not the next one's start; [#171](https://github.com/stillpointlab/surfaces/pull/171)): Escape, Cancel and the close button wait for the create,
+    as the file dialogs wait for a write.
 - 2026-11-22 (release review, L8): `reorder-pool` sent with no view writes and then answers not
   found. The shell always sends one.
+  - Closed 2026-11-23 (Jamie: as much as possible at the stage's end, not the next one's start; [#171](https://github.com/stillpointlab/surfaces/pull/171)): the pool is the instance's, the same beside every board
+    and stage, so the reply needs no view.
 - 2026-11-22 (the review's fixes, md): an edit to a block still rewrites two things that read back
   the same: a bare URL gains angle brackets, and an email autolink (`<me@example.com>`) becomes
   `[me@example.com](mailto:me@example.com)`. Seen while fixing M9; for [a save keeps the
   file](../../tasks/unassigned/seeds/a-save-keeps-the-file.md).
+  - Moved 2026-11-23 (the agent's call, for Jamie to overrule: both read back the same, and
+    the spelling an edit keeps is the seed's subject) to the seed
+    [a save keeps the file](../../tasks/unassigned/seeds/a-save-keeps-the-file.md).
 - 2026-11-22 (the review's fixes, modal-dialog): with two `<modal-dialog>`s open, Escape closes
   both, since each hears the key on the document. Older than stage 5, and nothing in surfaces opens
   two. The fix for Tab (M12) keeps the order they opened in, which Escape could use.
+  - Closed 2026-11-23 (Jamie: as much as possible at the stage's end, not the next one's start; [#171](https://github.com/stillpointlab/surfaces/pull/171)): one Escape closes one dialog, the one opened last.
+- 2026-11-23 (the close's fixes, md): a `[d]` typed into a changed block is checked against the
+  definitions between blocks alone (`prosemirror-markdown.ts`, the bracket writer). Where `d` is
+  defined inside a list item or a quote that is kept, the typed text is written with its brackets
+  bare and reads back as a link. Seen while fixing M10; rare, since such definitions are.

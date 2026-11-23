@@ -24,5 +24,8 @@ What is left:
 - **A changed paragraph is written on one line.** A paragraph wrapped by hand loses its wrapping
   when it is edited. Keeping the lines an edit did not touch, or wrapping to the width the
   paragraph had, would close it.
+- **How a link was spelled.** An edit to a block writes a bare URL in angle brackets, and an
+  email autolink (`<me@example.com>`) as `[me@example.com](mailto:me@example.com)`. Both read
+  back the same (stage 5 follow-ups, the release review's fixes).
 - **One test for every editor:** open, save without an edit, compare the bytes; then one edit,
   and compare what else changed.

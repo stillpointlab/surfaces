@@ -1,6 +1,6 @@
 # Stage 5: The Apps in the Local Host Changelog
 
-- **Dates:** 2026-11-14 – 2026-11-22
+- **Dates:** 2026-11-14 – 2026-11-23
 - **Stage Tag:** `stage5-complete` _(created on the merge of Jamie's reflections PR, which follows
   the stage close PR)_
 
@@ -478,8 +478,10 @@ The agents', in the spec's "As built" section and each pull request's descriptio
 
 ## Phase 7: The follow-up log drained (`stage5-phase7-complete`)
 
-Range: `stage5-phase6-complete..stage5-phase7-complete`, 2026-11-21 – 2026-11-22: 19 commits, nine
-merges, 85 files, +1,859/−202; under `packages/`, 72 files, +1,274/−198. The drain began on
+Range: `stage5-phase6-complete..stage5-phase7-complete`, 2026-11-21 – 2026-11-23: P7_COMMITS commits,
+P7_MERGES merges, P7_FILES files, +P7_ADDED/−P7_REMOVED; under `packages/`, P7_PKG_FILES files, +P7_PKG_ADDED/−P7_PKG_REMOVED. The tag was
+first set on the drain's close (`d9dc42d`, 2026-11-22) and moved to the phase's last merge once
+the release review's fixes were in (Jamie: the tags move). The drain began on
 2026-11-20, beside phase 6, so four of its batches ([#149](https://github.com/stillpointlab/surfaces/pull/149) to [#152](https://github.com/stillpointlab/surfaces/pull/152)) and what the pin
 needed first ([#136](https://github.com/stillpointlab/surfaces/pull/136) to [#138](https://github.com/stillpointlab/surfaces/pull/138), [#148](https://github.com/stillpointlab/surfaces/pull/148), listed under phase 6) reached main before that
 tag. They are counted here.
@@ -488,8 +490,9 @@ tag. They are counted here.
 
 The [spec](../../tasks/stage5/phase7/specs/drain-followups.md): every entry of the
 [follow-up log](followups.md) ruled on by Jamie, a few at a time, and each batch's fixes landed
-as one small pull request. Of 72 entries, 50 were fixed, 13 closed with a reason (by design,
-could not be reproduced, or fine as it is), eight moved to seeds, and one is carried.
+as one small pull request. Of 72 entries, 51 were fixed, 12 closed with a reason (by design,
+could not be reproduced, or fine as it is), eight moved to seeds, and one is carried. (This
+line first said 50 and 13; a recount from the log corrected it.)
 
 - **The docs and the tests' ground** ([#149](https://github.com/stillpointlab/surfaces/pull/149)): the root README and the md format's name the
   `./format` entry and the package as they are; two dead links; a `.git` above the temporary
@@ -545,6 +548,46 @@ could not be reproduced, or fine as it is), eight moved to seeds, and one is car
     entry of its stage 8 log passed to the agent that built the lock;
   - a seed for its rename dialog to use `applyPath` (context-manager#1264).
 
+- **The release review** ([#164](https://github.com/stillpointlab/surfaces/pull/164)), asked for
+  by Jamie once the drain had closed: a
+  [review card](../../tasks/stage5/phase7/reviews/stage-5-release-review.md) of everything the
+  stage added, by five readers with none of the build's context, and a walk of the built local
+  host in Chromium. Nothing Critical; five High, twelve Medium, eight Low.
+- **The review's fixes,** in three pull requests that touch no file in common:
+  - the page, the check-in review, the tasks app and the dialog
+    ([#165](https://github.com/stillpointlab/surfaces/pull/165)): a held Enter on "Delete…"
+    deletes nothing; a hidden tab gives its event stream back, so a seventh tab works; a commit
+    is held to the branch its review showed (`onBranch`, `HOST_BRANCH_MOVED`); the tasks shell
+    reads the board again after an op that writes beside its card; a card made where a moved
+    card was is its own change; an input method's Enter confirms nothing; with two dialogs
+    open, Tab stays in the one that has the focus; the create dialog says when a folder's files
+    will sit behind the app's row;
+  - the md format ([#166](https://github.com/stillpointlab/surfaces/pull/166)): a link whose
+    text is code stays a link when its block is edited, and an autolink keeps its address;
+  - the server ([#167](https://github.com/stillpointlab/surfaces/pull/167)): the watcher
+    follows a folder that was removed and made again; a link inside the folder reaches neither
+    git's folder nor round an app's lock; an unreadable manifest is one instance's error.
+- **The review's outcome** ([#168](https://github.com/stillpointlab/surfaces/pull/168)): the
+  card's task list and rulings, the walk kept as a
+  [test card](../../tasks/unassigned/tests/local-host-release-walk.test.md) with a line in the
+  [milestones](../README.md#milestones), and a seed for
+  [a token for the run](../../tasks/unassigned/seeds/a-token-for-the-run.md).
+- **What the review deferred, built at the close** (Jamie, 2026-11-23: as much as possible at a
+  stage's end, with the start of the next one kept for setting up). Thirteen entries the review
+  and its fixes had added to the log; twelve were fixed and one went to a seed:
+  - the server ([#169](https://github.com/stillpointlab/surfaces/pull/169)): a commit answers when git exits, though a hook's child still holds its
+    output; a served folder its repository ignores lists its files, and is served without git;
+    the raw route refuses a request that would run its file as script or style;
+  - the md format ([#170](https://github.com/stillpointlab/surfaces/pull/170)): an edit to a list or a quote that holds a link definition leaves the
+    label defined; a rule that becomes a file's first block never reads back as frontmatter;
+  - the page, the tasks app, the runner and the dialog ([#171](https://github.com/stillpointlab/surfaces/pull/171)): the runner does not write over
+    a file it could not read; a kind may be named `constructor`; a manifest key in quotes is
+    found by Set current and by a new tag; a pool's new order is answered whatever the page; a
+    locked app's file never mounts the editor from an edit address; the create dialog stays
+    open while its create runs; one Escape closes one of two dialogs.
+- **In Context Manager, after the review:** the pin moves again, to PIN_FINAL
+  (context-manager#1274), with what the review and the close fixed in the shared packages.
+
 ### Decisions
 
 Jamie's, one for each entry, in the log under it. Those that set a rule:
@@ -561,6 +604,14 @@ Jamie's, one for each entry, in the log under it. Those that set a rule:
   first; the seed gathers it.
 - 2026-11-22: the harness's two ways to read is held for this pass.
 - 2026-11-22: `e2e:reset` and pushes to the scratch repository were approved for the pin's
+  walks.
+- 2026-11-22: what the release review found is triaged by the agent, fixed or logged. The
+  token for the run (H3) is built in phase 1 of the next stage.
+- 2026-11-22: a stage closes with a release review, the release walk and Jamie's own
+  validation; the phase and stage tags move to where those end.
+- 2026-11-23: as much as possible is done at a stage's end; the start of the next one is for
+  setting up. The log's new entries were read again on that rule, and the agent chose what to
+  build. `e2e:reset` and pushes to the scratch repository were approved for the second pin's
   walks.
 
 The agent's, in each pull request's description: the contract additions (`HOST_PATH_INVALID`,
@@ -592,8 +643,30 @@ The agent's, in each pull request's description: the contract additions (`HOST_P
   hook ran while CI built the same branch, which tripped the resource guard and failed that
   run. It passed when run again.
 
+- **The release review:** every finding was reproduced by the orchestrating agent before it was
+  written down (against the built server with `curl`, in Chromium, or in the source), and every
+  fix has a test that fails without it or a check in Chromium against the built host. Two were
+  not run in a browser: the input method's Enter and Tab with two dialogs.
+- **The close's fixes:** each has a test that fails without it. The server's and the md
+  format's were built by Opus 5.5 sub-agents from a written brief and read by the
+  orchestrating agent. `npm run check` passed on the three branches merged together:
+  3,659 tests.
+- **The second pin's walks** (context-manager#1274): WALKS_FINAL
+- **Jamie's validation,** on a [short card](../../tasks/stage5/phase7/tests/stage-5-validation.test.md)
+  of the stage's main paths, follows the tags.
+- **A fault of the orchestrating agent's at the close:** `git stash` is shared by every
+  worktree of a repository, and a stash of its own crossed with a sub-agent's, so each had the
+  other's uncommitted change for about a minute. Both were put back before either was
+  committed, and the tests were run again.
+
 ### Deferred
 
+- **The token for the run** (the review's H3): any program on the machine can read the served
+  folder, and write to it with one header. Jamie's ruling is to build it in phase 1 of the
+  next stage; its [seed](../../tasks/unassigned/seeds/a-token-for-the-run.md) lists what the
+  spec settles.
+- One log entry is open, from the close: a typed `[d]` beside a definition inside a kept list
+  or quote. One more went to the seed for what a save keeps: how a link was spelled.
 - One log entry is carried, undecided, to the next stage's review: the harness reads an app
   two ways.
 - The seeds above. The one that leaves a defect in place: a link to a path a card only passed
@@ -603,7 +676,8 @@ The agent's, in each pull request's description: the contract additions (`HOST_P
 ### At the phase's close
 
 - The spec is done, with an "As built" section.
-- The follow-up log has a line under every entry.
+- The follow-up log has a line under every entry but one, logged at the close.
+- The release review's card is done: every finding is fixed, in a seed, or in the log.
 - The pointer stays at stage 5, phase 7 until the next stage is set up; its theme is Jamie's
   call.
 
@@ -611,25 +685,31 @@ The agent's, in each pull request's description: the contract additions (`HOST_P
 
 ## Stage totals
 
-- `2c3a3ee..452cba4` (`stage4-complete` to the last merge before the close): 160 commits, 34 of
-  them merges on `main`, 277 files, +30,199/−3,095. Forty-eight pull requests merged here, #109
-  to #162; sixteen of them (#113 to #128, and #131 to #133) reached main in two stacks.
-- Under `packages/` and `tooling/`: 216 files, +24,044/−1,930.
-- Tests: 2,632 at stage 4's close to 3,570.
-- Context Manager carried the stage in four pull requests of code (context-manager#1242 and
-  #1246 for the adoption and the lock, #1272 for the last pin, #1269 for the locked
-  preview), each walked or checked in a browser.
+- `2c3a3ee..ST_END` (`stage4-complete` to the last merge before the close): ST_COMMITS commits, ST_MERGES of
+  them merges on `main`, ST_FILES files, +ST_ADDED/−ST_REMOVED. ST_PRS pull requests merged here, #109
+  to #ST_LAST_PR; sixteen of them (#113 to #128, and #131 to #133) reached main in two stacks.
+- Under `packages/` and `tooling/`: ST_PKG_FILES files, +ST_PKG_ADDED/−ST_PKG_REMOVED.
+- Tests: 2,632 at stage 4's close to 3,659.
+- Context Manager carried the stage in five pull requests of code (context-manager#1242 and
+  #1246 for the adoption and the lock, #1272 and #1274 for the last two pins, #1269 for the
+  locked preview), each walked or checked in a browser.
 - **How the work was done:** phases 2 to 5 were specs implemented by Opus 5.5 sub-agents in
   worktrees of their own, reviewed, checked and stacked by the orchestrating agent, then
   reviewed once more as a whole before Jamie merged the two stacks. Phase 6's two pull
   requests were sub-agents' work, rebuilt, reviewed and walked by the orchestrating agent;
-  the lock was designed from a read of every write first. Phase 7 was the orchestrating agent
-  alone, a batch at a time, each on Jamie's ruling.
+  the lock was designed from a read of every write first. Phase 7's drain was the
+  orchestrating agent alone, a batch at a time, each on Jamie's ruling. The release review was
+  five reader agents and a walk; its fixes and the close's were the orchestrating agent's, but
+  for two of the close's three pull requests, which sub-agents built.
 - **What reached main with no ruling from Jamie:** the departures listed in each spec's "As
-  built" section for phases 2 to 6. In phase 7 nothing did: each entry's line names his ruling.
-- **Follow-ups:** the [follow-up log](followups.md) ends with no open entry and one carried.
-  Seventeen seeds were added to the pool over the stage.
-- **The next stage** is not decided. What may weigh on it: ADR-0040's count in Context Manager
+  built" section for phases 2 to 6. In phase 7's drain nothing did: each entry's line names
+  his ruling. After the release review he gave the agent the triage, and at the close the
+  choice of what to build, so those fixes reached main on his merge and not on a ruling for
+  each; the review card lists where a fix differs from what it proposed.
+- **Follow-ups:** the [follow-up log](followups.md) ends with one open entry and one carried.
+  Eighteen seeds were added to the pool over the stage.
+- **The next stage** is not decided, but for its first phase, which builds the token for the
+  run. What may weigh on the rest: ADR-0040's count in Context Manager
   (4,752 lines there are still an app's; the count script is kept outside both repositories),
   and the seed on Context Manager adopting the runner.
 - No token or cost figures were collected.
