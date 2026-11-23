@@ -32,7 +32,6 @@
 - Drain followups per phase
   - Set a limit on how many carried forwards (1-3?)
 - Save stage end for adversarial review and user validation
-  
 
 ---
 
@@ -64,6 +63,17 @@ he may strike any of them._
   claims in one batch's proposal that I had not checked and corrected in the next message; and
   a commit whose pre-commit hook ran on the shared machine while CI was building my own push,
   which tripped the resource guard and failed that run.
+- (claude) The release review found twenty-five things after the stage had been called done
+  and its log drained, five of them High. The log held what the builders had noticed while
+  building. The readers, who had built none of it, found what sits where two parts meet: a key
+  that repeats into a dialog, a browser's connection limit, a link inside the folder.
+- (claude) Every finding the review deferred had a fix small enough to test, and all were
+  built the next day in an afternoon. "Deferred to the next stage's setup" had been my
+  default for anything past the first priority; the cost of carrying them was larger than the
+  cost of building them.
+- (claude) A mistake of mine at the close: `git stash` is shared by every worktree of a
+  repository. A stash of mine crossed with a sub-agent's, and for a minute each worktree held
+  the other's change. Nothing was committed wrong, by luck more than by care.
 
 ---
 
