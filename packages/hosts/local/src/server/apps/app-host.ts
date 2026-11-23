@@ -173,7 +173,12 @@ export function createAppHost(options: AppHostOptions): AppHost {
         (path): path is string => typeof path === 'string'
       );
       for (const path of paths) {
-        const holder = locked.find((instance) => inRegion(instance, path));
+        // As written, and where the links on it lead: a link into a locked
+        // region is not a way round the lock.
+        const led = await options.port.leadsTo(path);
+        const holder = locked.find(
+          (instance) => inRegion(instance, path) || (led !== null && inRegion(instance, led))
+        );
         if (holder) {
           return {
             ok: false,

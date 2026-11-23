@@ -39,14 +39,14 @@ import {
   unlink,
   writeFile,
 } from 'node:fs/promises';
-import { basename, dirname, join } from 'node:path';
+import { basename, dirname, join, relative, sep } from 'node:path';
 
 import { fail, ok } from '@stillpointlab/common-format/app';
 
 import { createGit } from './git/repository';
 import { MAX_TEXT_BYTES } from './limits';
 import { gitPaths, toNodes, walkPaths } from './listing';
-import { isInside, locate, outsideRoot, pathRefusal } from './paths';
+import { intoGit, isInside, locate, outsideRoot, pathRefusal } from './paths';
 import { decodeText } from './text';
 
 import type { HostGitAccess } from './git/repository';
@@ -97,6 +97,13 @@ export interface NodePort extends StoragePort {
   readonly files: JournalFiles;
   /** How the port lists. The first call asks `git`; later calls answer the same. */
   start(): Promise<PortStart>;
+  /**
+   * Where a path leads once the links on it are followed, relative to the root:
+   * the file a write would write. `null` for a path the host does not take. A
+   * rule about a place (an app's lock) is asked of this as well as of the path
+   * as written, so a link inside the root is not a way round it.
+   */
+  leadsTo(path: string): Promise<string | null>;
   /**
    * Commit the chosen paths (`git.commit`) under the write lock: never while a
    * `put` writes or stages.
@@ -250,7 +257,23 @@ export function createNodePort(options: NodePortOptions): NodePort {
     if (at.kind === 'outside') {
       return outsideRoot(path as string, 'a symbolic link on the path leads out of it.');
     }
+    if (at.kind === 'git') return intoGit(path as string);
     return { path: path as string, at };
+  }
+
+  async function leadsTo(path: string): Promise<string | null> {
+    const placed = await place(path);
+    if ('ok' in placed) return null;
+    const { at } = placed;
+    const real =
+      at.kind === 'file'
+        ? at.real
+        : at.kind === 'missing'
+          ? join(at.base, ...at.rest)
+          : at.kind === 'other'
+            ? at.entry
+            : null;
+    return real === null ? null : relative(root, real).split(sep).join('/');
   }
 
   async function get(path: string): Promise<Result<{ text: string; version: string }>> {
@@ -624,7 +647,7 @@ export function createNodePort(options: NodePortOptions): NodePort {
       }),
   };
 
-  return { root, git, index, files, start, list, get, put, status, commit };
+  return { root, git, index, files, start, leadsTo, list, get, put, status, commit };
 }
 
 /** Remove `folder` and the folders above it while they are empty, up to the root. */

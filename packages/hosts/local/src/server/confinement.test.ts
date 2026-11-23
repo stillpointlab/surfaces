@@ -37,6 +37,9 @@ beforeEach(() => {
   // Links that stay inside: to a file, and (relative) to a folder.
   symlinkSync(join(root, 'real', 'target.md'), join(root, 'in-file'));
   symlinkSync('real', join(root, 'in-dir'));
+  // Links that stay inside and lead into git's folder: to a file in it, and to it.
+  symlinkSync(join('.git', 'config'), join(root, 'cfg.md'));
+  symlinkSync('.git', join(root, 'dotgit'));
   p = createNodePort({ root });
 });
 afterEach(() => folder.cleanup());
@@ -59,8 +62,26 @@ describe('reads', () => {
     ['a link out, as the file', 'out-file', OUTSIDE],
     ['a link out, as a folder on the path', 'out-dir/inner.txt', OUTSIDE],
     ['a link out that leads nowhere', 'out-dangling', OUTSIDE],
+    ['a link to a file in git’s folder', 'cfg.md', INVALID],
+    ['a link to git’s folder, as a folder on the path', 'dotgit/config', INVALID],
   ])('refuses %s', async (_what, path, code) => {
     expect(await p.get(path)).toMatchObject({ ok: false, code });
+  });
+
+  it('says a link leads into git’s folder', async () => {
+    expect(await p.get('cfg.md')).toMatchObject({
+      code: INVALID,
+      message: '"cfg.md" is not a usable path: a symbolic link on it leads into git\'s own folder.',
+    });
+  });
+
+  it('answers where a path leads, for a rule about a place', async () => {
+    expect(await p.leadsTo('a.md')).toBe('a.md');
+    expect(await p.leadsTo('in-file')).toBe('real/target.md');
+    expect(await p.leadsTo('in-dir/target.md')).toBe('real/target.md');
+    expect(await p.leadsTo('in-dir/new/deep.md')).toBe('real/new/deep.md');
+    expect(await p.leadsTo('out-file')).toBeNull();
+    expect(await p.leadsTo('cfg.md')).toBeNull();
   });
 
   it('says which: a path that would leave the folder, or one it does not take', async () => {
@@ -95,6 +116,16 @@ describe('writes', () => {
   // Each with its code: outside the root unless it says otherwise.
   const refusedWrites: Array<[string, PortChange[], string?]> = [
     ['a write through a link out', [{ kind: 'write', path: 'out-file', content: 'x' }]],
+    [
+      'a write through a link to a file in git’s folder',
+      [{ kind: 'write', path: 'cfg.md', content: 'x' }],
+      INVALID,
+    ],
+    [
+      'a create under a link to git’s folder',
+      [{ kind: 'create', path: 'dotgit/hooks/pre-commit', content: 'x' }],
+      INVALID,
+    ],
     [
       'a write under a folder link out',
       [{ kind: 'write', path: 'out-dir/inner.txt', content: 'x' }],
