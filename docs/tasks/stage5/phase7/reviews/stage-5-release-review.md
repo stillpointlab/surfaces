@@ -349,17 +349,20 @@ Triaged with Jamie on 2026-11-22; the [outcome](#outcome) below says what was bu
       is [a token for the run](../../../unassigned/seeds/a-token-for-the-run.md).
 - [x] **H4:** the watcher follows a folder that was made again. [#167](https://github.com/stillpointlab/surfaces/pull/167)
 - [x] **M3:** a move whose old path is taken is two changes. [#165](https://github.com/stillpointlab/surfaces/pull/165)
-- [ ] **M4:** a commit answers when git exits. Deferred to the
-      [follow-up log](../../../../devlogs/stage5/followups.md).
+- [x] **M4:** a commit answers when git exits. Deferred to the
+      [follow-up log](../../../../devlogs/stage5/followups.md), then built at the stage's close. [#169](https://github.com/stillpointlab/surfaces/pull/169)
 - [x] **M5:** confinement and the lock test the real path. [#167](https://github.com/stillpointlab/surfaces/pull/167)
 - [x] **M6:** an unreadable manifest is one instance's error. [#167](https://github.com/stillpointlab/surfaces/pull/167)
-- [ ] **M7:** an ignored root is walked. Deferred to the follow-up log.
+- [x] **M7:** an ignored root is walked. Deferred to the follow-up log, then built at the
+      stage's close. [#169](https://github.com/stillpointlab/surfaces/pull/169)
 
 ### P2 — the pool
 
 - [x] **M12:** Tab with two dialogs open. Raised from P2 because it is a regression from the
       drain's own Tab fix. [#165](https://github.com/stillpointlab/surfaces/pull/165)
-- [ ] **M10, M11, L1 to L4, L6 to L8:** deferred to the follow-up log, one entry each.
+- [x] **M10, M11, L1 to L4, L6 to L8:** deferred to the follow-up log, one entry each, then
+      built at the stage's close: M10 and L1 in [#170](https://github.com/stillpointlab/surfaces/pull/170), L2 in [#169](https://github.com/stillpointlab/surfaces/pull/169), and M11, L3, L4, L6, L7 and L8
+      in [#171](https://github.com/stillpointlab/surfaces/pull/171).
 
 ## Suggested tests to lock in fixes
 
@@ -427,3 +430,30 @@ folder to another origin; each is rare, refused safely, or stage 4's code with a
 more care than a close allows.
 
 **Context Manager** takes the md, review, dialog and tasks fixes with its next pin.
+
+### At the stage's close
+
+2026-11-23. Jamie asked for the log to be read again for what belongs in this stage: as much as
+possible at a stage's end, with the start of the next one kept for setting up. Every deferred
+finding above had a known fix small enough to test, so all eleven were built, with the dialog's
+Escape (found while fixing M12), in three pull requests that touch no file in common:
+
+- [#169](https://github.com/stillpointlab/surfaces/pull/169), the server: M4, M7 and L2.
+- [#170](https://github.com/stillpointlab/surfaces/pull/170), the md format: M10 and L1.
+- [#171](https://github.com/stillpointlab/surfaces/pull/171), the page, the tasks app, the runner and the dialog: M11, L3, L4, L6, L7, L8 and Escape.
+
+Each has a test that fails without it. The server's and the md format's were built by Opus 5.5
+sub-agents from a written brief and read by the orchestrating agent; the third was the
+orchestrating agent's.
+
+**Where a fix differs from this card's wording:**
+
+- **M7** serves an ignored folder as a folder with no repository, where the card said to walk it
+  and keep git. Nothing in an ignored folder can be committed, so the page no longer offers to.
+- **L8** refuses nothing: the reorder is answered with the pool whatever the view, since the
+  pool is the same beside every board and stage.
+- **L4** also covers a quoted `tags` key and a key with a space before its colon, the same fault.
+
+**Not built:** the md editor's spelling of a bare URL and an email autolink in an edited block,
+which went to the seed [a save keeps the file](../../../unassigned/seeds/a-save-keeps-the-file.md),
+and H3's token, which keeps Jamie's ruling: phase 1 of the next stage.
