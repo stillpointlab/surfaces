@@ -13,8 +13,14 @@
 // - with standard input closed once its input is written (git gives hooks none);
 // - on the timeout, its whole process group is sent `SIGTERM` (git removes its
 //   `index.lock` on the way out, and a hook's own children go too), then
-//   `SIGKILL` if anything is still there a moment later. The answer waits for
-//   the group's output to close, so nothing it started outlives it unseen.
+//   `SIGKILL` if anything is still there a moment later;
+// - the answer comes when git itself exits, not when its output closes: a
+//   hook's child that keeps running (`(sleep 60 &)`, or one that left the group
+//   with `setsid`) holds the pipes open, and waiting for them held the commit,
+//   and every write queued behind it, for as long as that child lived. Once git
+//   has exited, what it wrote is read for a moment (`DRAIN_MS`; an ordinary run
+//   closes its output with its exit and answers at once), then the pipes are
+//   destroyed, so the child keeps nothing of this process's open.
 
 import { execFile, spawn } from 'node:child_process';
 
@@ -50,6 +56,9 @@ export interface GitOptions {
 
 /** How long a group sent `SIGTERM` has before it is sent `SIGKILL`. */
 const KILL_GRACE_MS = 2000;
+
+/** How long output git wrote before it exited is read, when something else still holds the pipes. */
+const DRAIN_MS = 100;
 
 export function runGit(args: readonly string[], options: GitOptions): Promise<GitRun> {
   const env = { ...(options.env ?? process.env) };
@@ -148,9 +157,21 @@ function runIsolated(
         });
       }
     });
-    child.on('close', (code) => {
+    let drain: NodeJS.Timeout | undefined;
+    let answered = false;
+    const answer = (code: number | null) => {
+      if (answered) return;
+      answered = true;
       clearTimeout(timer);
-      clearTimeout(killer);
+      clearTimeout(drain);
+      // After a timeout the group may still hold something that ignored `SIGTERM`:
+      // the `SIGKILL` still goes. Otherwise git finished in time, and what its
+      // hooks left running is theirs.
+      if (timedOut) killer?.unref();
+      else clearTimeout(killer);
+      // Whatever git started that still holds the other ends keeps nothing of ours.
+      child.stdout.destroy();
+      child.stderr.destroy();
       const stdout = Buffer.concat(out);
       if (code === 0 && !timedOut && spawnError === null) {
         resolve({ ok: true, stdout });
@@ -165,6 +186,11 @@ function runIsolated(
         stdout: stdout.toString('utf8'),
         timedOut,
       });
+    };
+    // `close` comes after `exit` once the output has closed too: an ordinary run.
+    child.on('close', (code) => answer(code));
+    child.on('exit', (code) => {
+      drain = setTimeout(() => answer(code), DRAIN_MS);
     });
 
     child.stdin.on('error', () => undefined);
