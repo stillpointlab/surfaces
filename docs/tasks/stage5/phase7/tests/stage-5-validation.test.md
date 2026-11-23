@@ -16,69 +16,51 @@ tags: [local-host, apps]
 
 ## Setup (once)
 
-- [ ] In this repository, on `main`: `npm ci && npm run build`.
-- [ ] A scratch repository with one note in it:
+- [x] In this repository, on `main`: `npm ci && npm run build`.
+- [x] A scratch repository with one note in it:
 
-      ```sh
-      mkdir ~/s5 && cd ~/s5 && git init -q
-      printf '# Notes\n\nA first paragraph.\n\nA second paragraph, with [`code`](https://example.com) as a link.\n' > notes.md
-      git add -A && git commit -qm start
-      ```
+  ```sh
+  mkdir ~/s5 && cd ~/s5 && git init -q
+  printf '# Notes\n\nA first paragraph.\n\nA second paragraph, with [`code`](https://example.com) as a link.\n' > notes.md
+  git add -A && git commit -qm start
+  ```
 
-- [ ] `node packages/hosts/local/bin/surfaces.js ~/s5`, and open the address it prints. Nothing
-      here touches a remote.
+- [x] `node packages/hosts/local/bin/surfaces.js ~/s5`, and open the address it prints. Nothing here touches a remote.
 
 ---
 
 ## 1. A file, saved as it was
 
-- [ ] Open `notes.md`, choose Edit, add a word to the first paragraph, Save → Changes is offered
-      beside Preview and Edit, and shows that one line. The second paragraph's link is still a
-      link.
+- [x] Open `notes.md`, choose Edit, add a word to the first paragraph, Save → Changes is offered beside Preview and Edit, and shows that one line. The second paragraph's link is still a link.
 
 ## 2. An app, created and used
 
-- [ ] Right-click the empty space under the rows → "Create a task project here…", folder `board`,
-      Create → the board opens, and the explorer shows one row for the app in the folder's
-      place.
-- [ ] "+ New task", give it a title, Create; then the card's menu → "Move to In progress" → the
-      card carries a dot, and the bar counts the uncommitted changes beside "Check in".
-- [ ] "Create an inventory here…" in a folder `stock`, with a name; add a zone, open it, and add
-      an item → a bar says how many files have local changes.
+- [x] Right-click the empty space under the rows → "Create a task project here…", folder `board`, Create → the board opens, and the explorer shows one row for the app in the folder's place.
+- [x] "+ New task", give it a title, Create; then the card's menu → "Move to In progress" → the card carries a dot, and the bar counts the uncommitted changes beside "Check in".
+- [x] "Create an inventory here…" in a folder `stock`, with a name; add a zone, open it, and add an item → a bar says how many files have local changes.
 
 ## 3. Undo and redo
 
-- [ ] Undo (the explorer's button, or Ctrl+Z outside a field) twice → the item, then the zone,
-      are gone, each named in the notice. Redo twice (the button, or Ctrl+Y) → both are back.
-- [ ] "Delete…" on `notes.md`'s row menu → the question opens with the focus on Cancel. Delete,
-      then Undo → the file is back as it was.
+- [x] Undo (the explorer's button, or Ctrl+Z outside a field) twice → the item, then the zone, are gone, each named in the notice. Redo twice (the button, or Ctrl+Y) → both are back.
+- [x] "Delete…" on `notes.md`'s row menu → the question opens with the focus on Cancel. Delete, then Undo → the file is back as it was.
 
 ## 4. One check-in review
 
-- [ ] On the board, "Check in" → the review lists the board's files alone, not `notes.md` or
-      the inventory's. Untick one, give a summary, Commit → the notice names the commit and the
-      branch, and the unticked file is still a change.
-- [ ] The explorer's Commit button, which shows the count → the same review over everything
-      left. Choose "On a new branch", name it, Commit → the notice names the new branch, the
-      button is disabled at nothing left, and `git log --oneline --all` in a terminal shows both
-      commits.
+- [x] On the board, "Check in" → the review lists the board's files alone, not `notes.md` or the inventory's. Untick one, give a summary, Commit → the notice names the commit and the branch, and the unticked file is still a change.
+- [x] The explorer's Commit button, which shows the count → the same review over everything left. Choose "On a new branch", name it, Commit → the notice names the new branch, the button is disabled at nothing left, and `git log --oneline --all` in a terminal shows both commits.
 
 ## 5. The lock
 
-- [ ] The inventory's row menu → "Show files…", confirmed → its files are rows. Open one, edit
-      and save it → saved. The row menu → "Lock files" → the rows are gone again.
-- [ ] Edit the address to `#/edit/stock/inventory.yaml` and reload → the file opens in its
-      preview, with a line saying whose file it is.
+- [x] The inventory's row menu → "Show files…", confirmed → its files are rows. Open one, edit and save it → saved. The row menu → "Lock files" → the rows are gone again.
+- [x] Edit the address to `#/edit/stock/inventory.yaml` and reload → the file opens in its preview, with a line saying whose file it is.
 
 ## 6. Staying current
 
-- [ ] In a terminal, `echo more >> ~/s5/notes.md` → the open page shows the change without a
-      reload.
-- [ ] Open the page in eight tabs of one window → each lists its rows and opens a file.
+- [x] In a terminal, `echo more >> ~/s5/notes.md` → the open page shows the change without a reload.
+- [x] Open the page in eight tabs of one window → each lists its rows and opens a file.
 
 ---
 
 ## Sign-off
 
-- [ ] Every step passes, or each failure is a bullet in
-      [the stage's follow-up log](../../../../devlogs/stage5/followups.md).
+- [x] Every step passes, or each failure is a bullet in [the stage's follow-up log](../../../../devlogs/stage5/followups.md).
