@@ -478,10 +478,11 @@ The agents', in the spec's "As built" section and each pull request's descriptio
 
 ## Phase 7: The follow-up log drained (`stage5-phase7-complete`)
 
-Range: `stage5-phase6-complete..stage5-phase7-complete`, 2026-11-21 – 2026-11-23: P7_COMMITS commits,
-P7_MERGES merges, P7_FILES files, +P7_ADDED/−P7_REMOVED; under `packages/`, P7_PKG_FILES files, +P7_PKG_ADDED/−P7_PKG_REMOVED. The tag was
+Range: `stage5-phase6-complete..stage5-phase7-complete`, 2026-11-21 – 2026-11-23: 51 commits,
+18 merges, 129 files, +4,501/−349; under `packages/`, 110 files, +3,025/−340. The tag was
 first set on the drain's close (`d9dc42d`, 2026-11-22) and moved to the phase's last merge once
-the release review's fixes were in (Jamie: the tags move). The drain began on
+the release review's fixes were in (Jamie: the tags move); the counts end at `e823abc`, the
+last merge before the close's own docs. The drain began on
 2026-11-20, beside phase 6, so four of its batches ([#149](https://github.com/stillpointlab/surfaces/pull/149) to [#152](https://github.com/stillpointlab/surfaces/pull/152)) and what the pin
 needed first ([#136](https://github.com/stillpointlab/surfaces/pull/136) to [#138](https://github.com/stillpointlab/surfaces/pull/138), [#148](https://github.com/stillpointlab/surfaces/pull/148), listed under phase 6) reached main before that
 tag. They are counted here.
@@ -585,7 +586,7 @@ line first said 50 and 13; a recount from the log corrected it.)
     found by Set current and by a new tag; a pool's new order is answered whatever the page; a
     locked app's file never mounts the editor from an edit address; the create dialog stays
     open while its create runs; one Escape closes one of two dialogs.
-- **In Context Manager, after the review:** the pin moves again, to PIN_FINAL
+- **In Context Manager, after the review:** the pin moves again, to `e823abc`
   (context-manager#1274), with what the review and the close fixed in the shared packages.
 
 ### Decisions
@@ -685,10 +686,10 @@ The agent's, in each pull request's description: the contract additions (`HOST_P
 
 ## Stage totals
 
-- `2c3a3ee..ST_END` (`stage4-complete` to the last merge before the close): ST_COMMITS commits, ST_MERGES of
-  them merges on `main`, ST_FILES files, +ST_ADDED/−ST_REMOVED. ST_PRS pull requests merged here, #109
-  to #ST_LAST_PR; sixteen of them (#113 to #128, and #131 to #133) reached main in two stacks.
-- Under `packages/` and `tooling/`: ST_PKG_FILES files, +ST_PKG_ADDED/−ST_PKG_REMOVED.
+- `2c3a3ee..e823abc` (`stage4-complete` to the last merge before the close): 192 commits, 43 of
+  them merges on `main`, 294 files, +32,768/−3,169. Fifty-seven pull requests merged here, #109
+  to #171; sixteen of them (#113 to #128, and #131 to #133) reached main in two stacks.
+- Under `packages/` and `tooling/`: 228 files, +25,727/−2,004.
 - Tests: 2,632 at stage 4's close to 3,659.
 - Context Manager carried the stage in five pull requests of code (context-manager#1242 and
   #1246 for the adoption and the lock, #1272 and #1274 for the last two pins, #1269 for the
