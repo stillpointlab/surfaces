@@ -92,12 +92,20 @@ export interface TasksNavigate {
   href: string;
 }
 
-/** The ops whose change the board behind a dialog shows: the shell reads the board again. */
+/**
+ * The ops after which the shell reads the board again: those whose change the
+ * board behind a dialog shows, and those that write a file beside the card they
+ * name (the pool's order on a move out of it, other cards' links, the manifest's
+ * tags), whose marks the count and the check-in would otherwise miss.
+ */
 const READS_THE_BOARD_AGAIN: ReadonlySet<string> = new Set([
   'edit-manifest',
   'create-card',
   'set-title',
   'set-tags',
+  'move-file',
+  'fix-references',
+  'add-tag',
 ]);
 
 /** The elements' ops the shell answers itself, through `project`. */
@@ -180,8 +188,13 @@ export class TasksApp extends HTMLElement implements AppShellElement {
     this.board?.clearCheckinInFlight();
   }
 
-  /** After a dialog's change lands, the board behind it is read again. */
+  /**
+   * After a change lands that the board, or the strip, does not show by itself,
+   * it is read again: the strip after the manifest's settings (its done column
+   * decides what "Close…" lists).
+   */
   learn(op: { type: string }, _reply: object): void {
+    if (op.type === 'edit-manifest') void this.readNavAgain();
     if (!READS_THE_BOARD_AGAIN.has(op.type)) return;
     if (this.view()?.type !== 'board') return;
     void this.readViewAgain();
