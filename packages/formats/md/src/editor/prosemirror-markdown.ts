@@ -14,7 +14,7 @@ import { buildSource, writeKeepingSource, writeWhole } from './markdown-source';
 import { getSchema } from './prosemirror-schema';
 import { getEditorPlugins } from './registry';
 
-import type { MarkdownSource } from './markdown-source';
+import type { MarkdownSource, References } from './markdown-source';
 import type { MarkdownIt, Token } from 'markdown-it';
 
 export type { MarkdownSource } from './markdown-source';
@@ -120,6 +120,13 @@ export interface MarkdownDocParser {
   schema: Schema;
 }
 
+/** The link reference definitions `text` holds, read as the editor reads them. */
+function referencesOf(text: string): References {
+  const env: { references?: References } = {};
+  getEditorMarkdownIt().parse(text, env);
+  return env.references ?? {};
+}
+
 /** A document's top-level nodes after its frontmatter block, if it has one. */
 function bodyNodes(doc: Node): Node[] {
   const nodes: Node[] = [];
@@ -168,13 +175,15 @@ export function getMarkdownParser(): MarkdownDocParser {
           text = split.body;
         }
       }
-      // Token list from markdown-it (to detect tables, and to find each block's lines).
-      const tokens = markdownIt.parse(text, {});
+      // Token list from markdown-it (to detect tables, and to find each block's
+      // lines), and the link definitions it found.
+      const env: { references?: References } = {};
+      const tokens = markdownIt.parse(text, env);
 
       // The source is the body's: the frontmatter block keeps its own bytes (`raw`).
       const attach = (doc: Node): ParsedMarkdown => ({
         doc: frontmatterNode ? doc.copy(Fragment.from(frontmatterNode).append(doc.content)) : doc,
-        source: buildSource(text, tokens, bodyNodes(doc)),
+        source: buildSource(text, tokens, bodyNodes(doc), env.references, referencesOf),
       });
 
       const doc = baseParser.parse(text);
@@ -613,6 +622,17 @@ function frontmatterBlockString(node: Node): string {
   return (text ? `---\n${text}\n---\n` : '---\n---\n') + trailing;
 }
 
+/**
+ * A body with no frontmatter block, written so that it reads back with none. A
+ * `---` rule at its top, with a later `---` line (a rule, a setext underline),
+ * would load as a frontmatter block and hide all between; that first rule is
+ * written `***`, the same rule, which no frontmatter block starts with. A body
+ * that would not be misread keeps its text.
+ */
+function withNoFrontmatter(body: string): string {
+  return FRONTMATTER_BLOCK_PATTERN.test(body) ? `***${body.slice('---'.length)}` : body;
+}
+
 /** Memoized ProseMirror → markdown serializer (base + plugin serializers). */
 export function getMarkdownSerializer(): MarkdownDocSerializer {
   if (cachedSerializer) return cachedSerializer;
@@ -630,13 +650,16 @@ export function getMarkdownSerializer(): MarkdownDocSerializer {
       const frontmatter = first && first.type.name === 'frontmatter' ? first : null;
       const head = frontmatter ? frontmatterBlockString(frontmatter) : '';
       const body = frontmatter ? content.copy(content.content.cut(frontmatter.nodeSize)) : content;
-      if (!source) return head + whole(body);
+      const withHead = (text: string): string =>
+        frontmatter ? head + text : withNoFrontmatter(text);
+      if (!source) return withHead(whole(body));
 
       const kept = writeKeepingSource(bodyNodes(body), source, {
         write: (nodes) => whole(body.copy(Fragment.from(nodes)), source.definitions),
         read: (text) => bodyNodes(getMarkdownParser().parse(text, { frontmatter: false })),
+        references: referencesOf,
       });
-      return head + (kept ?? writeWhole(whole(body), source));
+      return withHead(kept ?? writeWhole(whole(body), source));
     },
   };
 

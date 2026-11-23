@@ -1,4 +1,5 @@
 import { Fragment } from 'prosemirror-model';
+import { EditorState } from 'prosemirror-state';
 import { describe, expect, it } from 'vitest';
 
 import { alignBlocks } from './markdown-source';
@@ -145,6 +146,89 @@ describe('a save keeps the text it did not change', () => {
     const written = edit(DOCUMENT, (blocks) => [...blocks, schema.nodes.paragraph.create()]);
 
     expect(written).toBe(DOCUMENT);
+  });
+});
+
+describe('a link definition inside a list item or a quote', () => {
+  /** `doc` with `typed` put in after the first `after` in its text: an edit in the rich view. */
+  function typeAfter(doc: Node, after: string, typed: string): Node {
+    let at = -1;
+    doc.descendants((node, pos) => {
+      if (at >= 0) return false;
+      const found = node.isText ? node.text!.indexOf(after) : -1;
+      if (found >= 0) at = pos + found + after.length;
+      return true;
+    });
+    expect(at).toBeGreaterThanOrEqual(0);
+    return EditorState.create({ doc }).tr.insertText(typed, at).doc;
+  }
+
+  /** The address and title of the link on `text`, the saved text read back the way the editor reads it. */
+  function linkOn(markdown: string, text: string): { href: string; title: string | null } | null {
+    let link: { href: string; title: string | null } | null = null;
+    parser.parse(markdown).descendants((node) => {
+      const mark = node.isText && node.text === text ? node.marks.find(isLink) : undefined;
+      if (mark) link = { href: mark.attrs.href as string, title: mark.attrs.title as string };
+    });
+    return link;
+  }
+  const isLink = (mark: { type: { name: string } }): boolean => mark.type.name === 'link';
+
+  const DOCS = { href: 'https://example.com/docs', title: 'The docs' };
+  const NESTED_IN_LIST = '- one\n- two\n\n  [d]: https://example.com/docs "The docs"';
+  // A block between the link and the definition's block, so the seams an edit
+  // there makes are not where the link is.
+  const IN_LIST = ['See [the docs][d] for more.', 'Between.', NESTED_IN_LIST, 'The end.']
+    .join('\n\n')
+    .concat('\n');
+  const IN_QUOTE = [
+    'See [the docs][d] for more.',
+    'Between.',
+    '> A quote,\n> wrapped.\n>\n> [d]: https://example.com/docs "The docs"',
+    'The end.',
+  ]
+    .join('\n\n')
+    .concat('\n');
+
+  /** Read `text`, type `typed` after `after`, and write it back with the source. */
+  function save(text: string, after: string, typed: string): string {
+    const { doc, source } = parser.parseWithSource(text);
+    expect(source).not.toBeNull();
+    expect(linkOn(text, 'the docs')).toEqual(DOCS);
+    return serializer.serialize(typeAfter(doc, after, typed), source);
+  }
+
+  it('is not written away by an edit in its list: the link elsewhere keeps its address', () => {
+    const written = save(IN_LIST, 'two', ', edited');
+
+    expect(written).toContain('two, edited');
+    expect(linkOn(written, 'the docs')).toEqual(DOCS);
+    // Written whole, as before the source was kept: the link carries its address.
+    expect(written).toContain('[the docs](https://example.com/docs "The docs")');
+  });
+
+  it('is not written away by an edit in its quote: the link elsewhere keeps its address', () => {
+    const written = save(IN_QUOTE, 'A quote,', ' edited,');
+
+    expect(written).toContain('A quote, edited,');
+    expect(linkOn(written, 'the docs')).toEqual(DOCS);
+  });
+
+  it('stays in its block, and every other block keeps its text, when the edit is elsewhere', () => {
+    expect(save(IN_LIST, 'The end', ', edited')).toBe(
+      IN_LIST.replace('The end.', 'The end, edited.')
+    );
+    expect(save(IN_QUOTE, 'The end', ', edited')).toBe(
+      IN_QUOTE.replace('The end.', 'The end, edited.')
+    );
+  });
+
+  it('goes with its list, the rest kept, when a definition between blocks says the same', () => {
+    const text = `${IN_LIST}\n[d]: https://example.com/docs "The docs"\n`;
+    const written = save(text, 'two', ', edited');
+
+    expect(written).toBe(text.replace(NESTED_IN_LIST, '- one\n- two, edited'));
+    expect(linkOn(written, 'the docs')).toEqual(DOCS);
   });
 });
 

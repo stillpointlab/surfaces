@@ -1,3 +1,4 @@
+import { Fragment } from 'prosemirror-model';
 import { describe, expect, it } from 'vitest';
 
 import { getMarkdownParser, getMarkdownSerializer } from './prosemirror-markdown';
@@ -142,5 +143,116 @@ describe('frontmatter round trips', () => {
     expect(doc.firstChild?.textContent).toBe('a: 1');
     expect(nodeTypes(doc).filter((t) => t === 'frontmatter')).toHaveLength(1);
     expect(nodeTypes(doc)).toContain('horizontal_rule');
+  });
+});
+
+describe('a rule that becomes the first block', () => {
+  /** Read `text` as the editor loads it, change its blocks, and save it with its source. */
+  function save(text: string, change: (blocks: Node[]) => Node[]): string {
+    const { doc, source } = parser.parseWithSource(text);
+    expect(source).not.toBeNull();
+    const blocks: Node[] = [];
+    doc.forEach((node) => blocks.push(node));
+    return serializer.serialize(doc.copy(Fragment.fromArray(change(blocks))), source);
+  }
+  const withoutFirst = (blocks: Node[]): Node[] => blocks.slice(1);
+
+  /** Each top-level block of `text` read as the editor loads it: its type and its text. */
+  const blocksOf = (text: string): string[] => {
+    const blocks: string[] = [];
+    parser.parseWithSource(text).doc.forEach((node) => {
+      blocks.push(`${node.type.name}:${node.textContent}`);
+    });
+    return blocks;
+  };
+
+  it('is written `***`, so the next load shows every block, not frontmatter', () => {
+    const text = 'Above the rule.\n\n---\n\nFirst after.\n\nA heading\n---\n\nLast.\n';
+    const written = save(text, withoutFirst);
+
+    expect(written).toBe('***\n\nFirst after.\n\nA heading\n---\n\nLast.\n');
+    expect(blocksOf(written)).toEqual([
+      'horizontal_rule:',
+      'paragraph:First after.',
+      'heading:A heading',
+      'paragraph:Last.',
+    ]);
+  });
+
+  it('is written `***` when a later `---` rule would close the block', () => {
+    const text = 'Above.\n\n---\n\nMiddle.\n\n---\n\nEnd.\n';
+    const written = save(text, withoutFirst);
+
+    expect(written).toBe('***\n\nMiddle.\n\n---\n\nEnd.\n');
+    expect(blocksOf(written)).toEqual([
+      'horizontal_rule:',
+      'paragraph:Middle.',
+      'horizontal_rule:',
+      'paragraph:End.',
+    ]);
+  });
+
+  it('keeps its line breaks: CRLF', () => {
+    const text = 'Above.\r\n\r\n---\r\n\r\nMiddle.\r\n\r\n---\r\n\r\nEnd.\r\n';
+
+    expect(save(text, withoutFirst)).toBe('***\r\n\r\nMiddle.\r\n\r\n---\r\n\r\nEnd.\r\n');
+  });
+
+  it('that was first already is written `***` once an edit adds a `---` after it', () => {
+    const text = '---\n\nText.\n';
+    expect(blocksOf(text)[0]).toBe('horizontal_rule:');
+    const rule = parser.schema.nodes.horizontal_rule.create();
+    const written = save(text, (blocks) => [...blocks, rule]);
+
+    expect(written).toBe('***\n\nText.\n\n---\n');
+    expect(blocksOf(written)).toEqual(['horizontal_rule:', 'paragraph:Text.', 'horizontal_rule:']);
+  });
+
+  it('that was first already keeps its text while nothing would close it', () => {
+    const text = '---\n\nText.\n';
+    const edited = parser.schema.nodes.paragraph.create(null, parser.schema.text('Edited.'));
+
+    expect(save(text, (blocks) => [blocks[0], edited])).toBe('---\n\nEdited.\n');
+    expect(save('Above.\n\n---\n', withoutFirst)).toBe('---\n');
+  });
+
+  it('keeps its text when it could not open frontmatter: `- - -`, `___`, `----`', () => {
+    for (const rule of ['- - -', '___', '----', '***']) {
+      const text = `Above.\n\n${rule}\n\nMiddle.\n\n---\n\nEnd.\n`;
+      const written = save(text, withoutFirst);
+
+      expect(written).toBe(`${rule}\n\nMiddle.\n\n---\n\nEnd.\n`);
+      expect(blocksOf(written)[0]).toBe('horizontal_rule:');
+    }
+  });
+
+  it('under a real frontmatter block is left as it is', () => {
+    const text = '---\na: 1\n---\n\nAbove.\n\n---\n\nMiddle.\n\n---\n\nEnd.\n';
+    const written = save(text, (blocks) => blocks.filter((_, index) => index !== 1));
+
+    expect(written).toBe('---\na: 1\n---\n\n---\n\nMiddle.\n\n---\n\nEnd.\n');
+    expect(blocksOf(written)).toEqual([
+      'frontmatter:a: 1',
+      'horizontal_rule:',
+      'paragraph:Middle.',
+      'horizontal_rule:',
+      'paragraph:End.',
+    ]);
+  });
+
+  it('is written `***` by a document written whole, with no source', () => {
+    const { schema } = parser;
+    const doc = schema.nodes.doc.create(null, [
+      schema.nodes.horizontal_rule.create(),
+      schema.nodes.paragraph.create(null, schema.text('Text.')),
+      schema.nodes.horizontal_rule.create(),
+    ]);
+
+    expect(serializer.serialize(doc)).toBe('***\n\nText.\n\n---');
+  });
+
+  it('leaves an empty document empty', () => {
+    expect(serializer.serialize(parser.parse(''))).toBe('');
+    expect(save('Only.\n', () => [])).toBe('');
   });
 });
