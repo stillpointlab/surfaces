@@ -4,6 +4,11 @@
 // The folder, the consent and the dialog are the host's; the form's fields are
 // the app's.
 //
+// An app's folder is one row in the explorer, so the files already in the
+// folder typed go behind that row once the app is there. The dialog says so
+// under the field, with how to see them again ("Show files…"), while the folder
+// holds any.
+//
 // Create (or Enter in the folder) checks the folder and then asks the form to
 // `submit()`. The form raises its one op, `create`, which the dialog answers by
 // sending the form's input with the folder to `HostClient.appCreate`; a refusal
@@ -56,7 +61,9 @@ export class CreateDialog {
 
   constructor(
     host: HTMLElement,
-    private readonly client: HostClient
+    private readonly client: HostClient,
+    /** How many listed files a folder holds, at any depth. */
+    private readonly filesIn: (folder: string) => number = () => 0
   ) {
     this.element = document.createElement('modal-dialog') as ModalDialog;
     this.element.className = 'app-create';
@@ -91,7 +98,7 @@ export class CreateDialog {
       .join(' ');
     render(
       dialog,
-      html`<div slot="body" class="app-create-body"><div class="form-field"><label class="form-label" for="${FOLDER_ID}">${words.apps.create.folder}</label><input id="${FOLDER_ID}" class="form-input app-create-folder" type="text" spellcheck="false" autocomplete="off" autocapitalize="off" aria-describedby="${ERROR_ID}" data-autofocus><p class="form-help">${help}</p></div>${
+      html`<div slot="body" class="app-create-body"><div class="form-field"><label class="form-label" for="${FOLDER_ID}">${words.apps.create.folder}</label><input id="${FOLDER_ID}" class="form-input app-create-folder" type="text" spellcheck="false" autocomplete="off" autocapitalize="off" aria-describedby="${ERROR_ID}" data-autofocus><p class="form-help">${help}</p><p class="form-help app-create-holds" hidden></p></div>${
         create.rootConsent
           ? html`<div class="app-create-root" hidden><p class="app-create-warning">${create.rootConsent.warning}</p><label class="app-create-consent"><input id="${CONSENT_ID}" type="checkbox"> ${create.rootConsent.confirm}</label></div>`
           : ''
@@ -110,8 +117,14 @@ export class CreateDialog {
       if (message === null) input.removeAttribute('aria-invalid');
       else input.setAttribute('aria-invalid', 'true');
     };
+    const holds = dialog.querySelector<HTMLElement>('.app-create-holds')!;
     const showRoot = (): void => {
-      if (rootBlock) rootBlock.hidden = input.value.trim() !== '';
+      const typed = input.value.trim().replace(/\/+$/, '');
+      if (rootBlock) rootBlock.hidden = typed !== '';
+      // At the root an app holds only the files it names, so nothing goes behind a row.
+      const count = typed === '' || createFolderProblem(typed) !== null ? 0 : this.filesIn(typed);
+      holds.hidden = count === 0;
+      holds.textContent = count === 0 ? '' : words.apps.create.holdsFiles(count);
     };
     showRoot();
 

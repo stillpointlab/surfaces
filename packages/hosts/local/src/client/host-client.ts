@@ -226,36 +226,61 @@ export function createHttpClient(base = ''): HostClient {
     undo: () => result('/api/undo', post({})),
     redo: () => result('/api/redo', post({})),
     watch(listener) {
-      const source = new EventSource(url('/api/events'));
-      let dropped = false;
-      source.onmessage = (message: MessageEvent<string>) => {
-        let event: LocalHostEvent;
-        try {
-          event = JSON.parse(message.data) as LocalHostEvent;
-        } catch {
-          return;
+      // One stream, and only while the tab shows. A browser allows six connections
+      // to one host over HTTP/1.1, across all its tabs, and an event stream holds
+      // one for good: with a stream in every tab, the sixth tab's requests, and
+      // then every tab's, wait with no word. A hidden tab gives its stream back.
+      let source: EventSource | null = null;
+      // Whether the next stream to open follows a gap in which changes went unheard.
+      let stale = document.hidden;
+      const open = () => {
+        const opened = new EventSource(url('/api/events'));
+        source = opened;
+        opened.onmessage = (message: MessageEvent<string>) => {
+          let event: LocalHostEvent;
+          try {
+            event = JSON.parse(message.data) as LocalHostEvent;
+          } catch {
+            return;
+          }
+          if (event.type === 'changed') {
+            for (const path of event.paths) revisions.set(path, (revisions.get(path) ?? 0) + 1);
+          }
+          listener(event);
+        };
+        // The browser reconnects by itself. Whatever changed while the stream was
+        // down, or closed under a hidden tab, was not sent, so the next open says
+        // the list is stale, and the journal with it: a server that restarted has
+        // no steps. Then it says so itself, for what no event names: the file that
+        // is open.
+        opened.onerror = () => {
+          stale = true;
+        };
+        opened.onopen = () => {
+          if (!stale) return;
+          stale = false;
+          reconnections += 1;
+          listener({ type: 'listed' });
+          listener({ type: 'journal' });
+          listener({ type: 'reconnected' });
+        };
+      };
+      const onVisibility = () => {
+        if (document.hidden) {
+          source?.close();
+          source = null;
+          stale = true;
+        } else if (!source) {
+          open();
         }
-        if (event.type === 'changed') {
-          for (const path of event.paths) revisions.set(path, (revisions.get(path) ?? 0) + 1);
-        }
-        listener(event);
       };
-      // The browser reconnects by itself. Whatever changed while the stream was
-      // down was not sent, so a reconnection says the list is stale, and the
-      // journal with it: a server that restarted has no steps. Then it says so
-      // itself, for what no event names: the file that is open.
-      source.onerror = () => {
-        dropped = true;
+      document.addEventListener('visibilitychange', onVisibility);
+      if (!document.hidden) open();
+      return () => {
+        document.removeEventListener('visibilitychange', onVisibility);
+        source?.close();
+        source = null;
       };
-      source.onopen = () => {
-        if (!dropped) return;
-        dropped = false;
-        reconnections += 1;
-        listener({ type: 'listed' });
-        listener({ type: 'journal' });
-        listener({ type: 'reconnected' });
-      };
-      return () => source.close();
     },
   };
 }

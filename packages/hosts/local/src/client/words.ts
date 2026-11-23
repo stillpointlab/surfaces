@@ -209,6 +209,9 @@ export const words = {
       folder: 'Folder',
       folderExample: (example: string) => `For example ${example}.`,
       rootHelp: 'Leave it empty to create at the root of the served folder.',
+      /** Under the folder, while it already holds files: they go behind the app's row. */
+      holdsFiles: (count: number) =>
+        `This folder already holds ${count === 1 ? '1 file' : `${count} files`}. The explorer will show the app in the folder’s place; “Show files…” on the app’s row shows ${count === 1 ? 'it' : 'them'} again.`,
       confirm: 'Create',
       cancel: 'Cancel',
       loadFailed: 'The form could not be loaded.',
