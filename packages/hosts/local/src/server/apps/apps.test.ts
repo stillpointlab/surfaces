@@ -2,7 +2,7 @@
 // discovery, the lock and its check on `PUT /api/files`, the `apps` event, and the
 // page, project and op routes over inventory's real module.
 
-import { readFileSync } from 'node:fs';
+import { chmodSync, existsSync, readFileSync, symlinkSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { loadInstance } from '@stillpointlab/common-format/host';
@@ -170,6 +170,43 @@ describe('the lock', () => {
     expect(into.status).toBe(409);
     expect(readFileSync(join(root, 'home/rooms/kitchen.yaml'), 'utf8')).toBe(KITCHEN);
   });
+
+  it('refuses a write that reaches a locked file through a link in the folder', async () => {
+    await start(house);
+    // Another name for the app's folder, as git would check one out.
+    symlinkSync('home', join(root, 'h2'));
+    const write = await put([{ kind: 'write', path: 'h2/rooms/kitchen.yaml', content: 'x' }]);
+    expect(write.status).toBe(409);
+    expect(await write.json()).toMatchObject({
+      code: 'HOST_SCOPE_LOCKED',
+      message: expect.stringContaining('"h2/rooms/kitchen.yaml" belongs to'),
+    });
+    const create = await put([{ kind: 'create', path: 'h2/new.md', content: '' }]);
+    expect(create.status).toBe(409);
+    expect(existsSync(join(root, 'home/new.md'))).toBe(false);
+    expect(readFileSync(join(root, 'home/rooms/kitchen.yaml'), 'utf8')).toBe(KITCHEN);
+  });
+
+  it.skipIf(process.getuid?.() === 0)(
+    'a manifest that cannot be read is that instance’s error, and other writes still land',
+    async () => {
+      await start({ ...house, 'vendor/thing/inventory.yaml': MANIFEST, 'notes.md': 'n' });
+      chmodSync(join(root, 'vendor/thing/inventory.yaml'), 0o000);
+      try {
+        const found = await apps();
+        expect(found.map((instance) => [instance.manifestPath, instance.valid])).toEqual([
+          ['home/inventory.yaml', true],
+          ['vendor/thing/inventory.yaml', false],
+        ]);
+        expect(found[1].errors).toEqual(['The manifest could not be read: EACCES.']);
+        const write = await put([{ kind: 'create', path: 'other.md', content: 'o' }]);
+        expect(write.status).toBe(200);
+        expect(readFileSync(join(root, 'other.md'), 'utf8')).toBe('o');
+      } finally {
+        chmodSync(join(root, 'vendor/thing/inventory.yaml'), 0o644);
+      }
+    }
+  );
 
   it('takes a write outside every region', async () => {
     await start(house);

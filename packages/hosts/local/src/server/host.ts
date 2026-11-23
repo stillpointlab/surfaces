@@ -46,7 +46,7 @@ import { DEFAULT_APPS, DEFAULT_HOST_OPS } from './apps/registry';
 import { createJournal } from './journal/journal';
 import { labelFor } from './journal/labels';
 import { LIST_LIMIT } from './limits';
-import { isInside, locate, outsideRoot, pathRefusal } from './paths';
+import { intoGit, isInside, locate, outsideRoot, pathRefusal } from './paths';
 import { createNodePort } from './port';
 import { json, readBody, refusal, refuse, SECURITY_HEADERS } from './respond';
 import { createFolderWatcher } from './watcher';
@@ -421,6 +421,7 @@ export function createHost(options: HostOptions): LocalHost {
     if (at.kind === 'outside') {
       return refusal(outsideRoot(path, 'a symbolic link on the path leads out of it.'));
     }
+    if (at.kind === 'git') return refusal(intoGit(path));
     const missing = (): Response =>
       refuse('HOST_FILE_NOT_FOUND', `There is no file at ${JSON.stringify(path)}.`, 404);
     if (at.kind !== 'file' || !isInside(root, at.real)) return missing();

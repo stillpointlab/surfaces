@@ -9,7 +9,7 @@
 // neither mounts: one executor per path (Context Manager's ADR-0028).
 
 import type { FoundInstance } from '../../shared/apps';
-import type { AnyAppModule, FolderNode } from '@stillpointlab/common-format/app';
+import type { AnyAppModule, Failure, FolderNode } from '@stillpointlab/common-format/app';
 import type { StoragePort } from '@stillpointlab/common-format/host';
 
 /** The folder a manifest sits in: `''` at the root. */
@@ -68,7 +68,15 @@ export async function discover(
     candidates.map(async (manifestPath): Promise<FoundInstance> => {
       const module = byName.get(nameOf(manifestPath))!;
       const folder = folderOf(manifestPath);
-      const read = await port.get(manifestPath);
+      // A manifest that cannot be read (another account's file, say) is this
+      // instance's error, not the failure of every request that looks for apps.
+      const read = await port.get(manifestPath).catch((error: unknown): Failure => ({
+        ok: false,
+        code: 'HOST_READ_FAILED',
+        message: `The manifest could not be read: ${
+          (error as NodeJS.ErrnoException | null)?.code ?? String(error)
+        }.`,
+      }));
       const content = read.ok ? read.text : null;
       const errors: string[] = [];
       let scope: string[] = [manifestPath];

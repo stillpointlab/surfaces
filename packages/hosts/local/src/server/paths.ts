@@ -12,7 +12,7 @@
 // it is listed and cannot be opened, written through, moved or deleted.
 
 import { lstat, readlink, realpath, stat } from 'node:fs/promises';
-import { dirname, isAbsolute, join, resolve, sep } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 import { fail } from '@stillpointlab/common-format/app';
 
@@ -88,6 +88,24 @@ export function pathRefusal(path: unknown): Failure | null {
   return fail('HOST_PATH_INVALID', `${JSON.stringify(shown)} is not a usable path: ${problem.why}`);
 }
 
+/**
+ * Whether `path` (a real path inside the root) is in git's own folder: the first
+ * check reads a path as written, and a link inside the root (`cfg.md` to
+ * `.git/config`, which git checks out of a cloned repository) leads there under
+ * another name.
+ */
+export function isInGit(root: string, path: string): boolean {
+  return relative(root, path).split(sep).some(isGitName);
+}
+
+/** The refusal for a path a link takes into git's own folder. */
+export function intoGit(path: string): Failure {
+  return fail(
+    'HOST_PATH_INVALID',
+    `${JSON.stringify(path)} is not a usable path: a symbolic link on it leads into git's own folder.`
+  );
+}
+
 /** Whether `path` (a real path) is the root or under it. */
 export function isInside(root: string, path: string): boolean {
   return path === root || path.startsWith(root.endsWith(sep) ? root : root + sep);
@@ -100,6 +118,8 @@ export function isInside(root: string, path: string): boolean {
 export type Location =
   /** A link along the path, or the name itself, leads outside the root. */
   | { kind: 'outside' }
+  /** A link along the path, or the name itself, leads into git's own folder. */
+  | { kind: 'git' }
   /** A file: `real` is where its bytes are, `entry` the name in its real folder (maybe a link). */
   | { kind: 'file'; real: string; entry: string }
   /** Something that is not a file: a folder, a link that leads nowhere, a socket. */
@@ -165,6 +185,7 @@ export async function locate(root: string, path: string): Promise<Location> {
   // followed, so a link to a folder outside fails here wherever it stands.
   const folder = await nearestReal(dirname(lexical));
   if (folder === null || !isInside(root, folder)) return { kind: 'outside' };
+  if (isInGit(root, folder)) return { kind: 'git' };
 
   let exists = true;
   try {
@@ -178,6 +199,7 @@ export async function locate(root: string, path: string): Promise<Location> {
     const entry = join(folder, segments[segments.length - 1]);
     const real = await nearestReal(lexical);
     if (real === null || !isInside(root, real)) return { kind: 'outside' };
+    if (isInGit(root, real)) return { kind: 'git' };
     try {
       if ((await stat(real)).isFile() && real === (await realpath(lexical))) {
         return { kind: 'file', real, entry };
@@ -200,6 +222,7 @@ export async function locate(root: string, path: string): Promise<Location> {
     }
     const real = await nearestReal(at);
     if (real === null || !isInside(root, real)) return { kind: 'outside' };
+    if (isInGit(root, real)) return { kind: 'git' };
     // It must itself resolve to a folder: a link that leads nowhere is in the way,
     // even when where it would lead is inside the root.
     let folderReal: string | null = null;

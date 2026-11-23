@@ -1,4 +1,4 @@
-import { mkdirSync, renameSync, writeFileSync } from 'node:fs';
+import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -50,6 +50,44 @@ describe('createFolderWatcher', () => {
     await watcher.ready;
     // The root, docs and docs/deep; not the empty folder.
     expect(watcher.watched).toBe(3);
+  });
+
+  it('still hears a folder that was removed and made again in one burst', async () => {
+    const root = join(folder.path, 'root');
+    writeFiles(root, { 'a.md': 'a', 'docs/b.md': 'b' });
+    const port = createNodePort({ root });
+    const sent: HostEvent[] = [];
+    const changedPaths = () =>
+      sent.flatMap((event) => (event.type === 'changed' ? event.paths : []));
+    let wait = waitFor(() => changedPaths().includes('docs/b.md'));
+    watcher = createFolderWatcher({
+      root,
+      list: () => port.list(),
+      send: (event) => {
+        sent.push(event);
+        wait.poke();
+      },
+      burstMs: 40,
+    });
+    await watcher.ready;
+    // As a rebase does: the folder goes and comes back, with the same file in it.
+    rmSync(join(root, 'docs'), { recursive: true });
+    mkdirSync(join(root, 'docs'));
+    writeFileSync(join(root, 'docs/b.md'), 'b');
+    // The listing is the same; the file in the folder made again is said to have changed.
+    await wait.done;
+    expect(sent.some((event) => event.type === 'listed')).toBe(false);
+    expect(watcher.watched).toBe(2);
+
+    // And a later change in it, and a new file, are heard.
+    sent.length = 0;
+    wait = waitFor(
+      () => changedPaths().includes('docs/b.md') && changedPaths().includes('docs/new.md')
+    );
+    writeFileSync(join(root, 'docs/b.md'), 'b, edited');
+    writeFileSync(join(root, 'docs/new.md'), 'n');
+    await wait.done;
+    expect(sent.some((event) => event.type === 'listed')).toBe(true);
   });
 
   it('watches names in a folder outside the tree, through a replace by rename', async () => {

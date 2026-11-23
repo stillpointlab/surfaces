@@ -14,10 +14,20 @@
 // listed files whose contents changed, appeared or went. Names nothing lists (a
 // write's temporary file, an ignored log) are passed over.
 //
+// A watch is on a folder, not on its path: one removed and made again within a
+// burst (`git rebase`, a checkout between branches that differ by it) is a new
+// folder under the old watch's path, and the old watch hears nothing more. So a
+// burst in which a watched folder's own name came or went, as its parent's watch
+// reports it, opens that folder's watch again, and those under it, and says the
+// files in them changed, since what happened there meanwhile went unheard. Each
+// watch also keeps its folder's identity (device and inode) for what no parent
+// reports, the root made again. Identity alone would not do: a file system may
+// give a folder made right after a removal the same inode.
+//
 // A folder outside the tree (git's own, for its `HEAD` and `index`) is watched
 // with `watchNames`, which calls back once per burst that touched one of the names.
 
-import { watch } from 'node:fs';
+import { statSync, watch } from 'node:fs';
 import { join } from 'node:path';
 
 import { BURST_MAX_MS, BURST_MS } from './limits';
@@ -75,6 +85,8 @@ export function createFolderWatcher(options: FolderWatcherOptions): FolderWatche
 
   /** Every open watch, by absolute folder. */
   const watches = new Map<string, FSWatcher>();
+  /** The folder each watch was opened on (its device and inode), by absolute folder. */
+  const identities = new Map<string, string>();
   /** The tree's folders, absolute to relative ('' for the root). */
   let treeFolders = new Map<string, string>();
   /** Watches outside the tree, by absolute folder. */
@@ -145,6 +157,16 @@ export function createFolderWatcher(options: FolderWatcherOptions): FolderWatche
     for (const path of burst.paths.keys()) {
       if (files.has(path) || nextFiles.has(path)) touched.add(path);
     }
+    if (burst.relist) {
+      // A folder made again under a watched path: its files may be other files.
+      const remade = new Set(watchAgainWhereRemade(burst.paths));
+      if (remade.size > 0) {
+        for (const path of nextFiles) {
+          const cut = path.lastIndexOf('/');
+          if (remade.has(cut < 0 ? '' : path.slice(0, cut))) touched.add(path);
+        }
+      }
+    }
     if (listed) {
       for (const path of nextFiles) if (!files.has(path)) touched.add(path);
       for (const path of files) if (!nextFiles.has(path)) touched.add(path);
@@ -163,12 +185,47 @@ export function createFolderWatcher(options: FolderWatcherOptions): FolderWatche
     syncWatches();
   }
 
+  /** The folder at a path, as the system names it; `null` when there is none. */
+  function identityOf(folder: string): string | null {
+    try {
+      const stat = statSync(folder);
+      return stat.isDirectory() ? `${stat.dev}:${stat.ino}` : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Close each watch whose folder's name came or went in the burst (or a folder
+   * above it did), or whose path holds another folder now, or none, and open
+   * watches again. Answers the tree's folders (relative, `''` the root) that
+   * were made again.
+   */
+  function watchAgainWhereRemade(paths: Pending['paths']): string[] {
+    const cameOrWent = [...paths].filter(([, kind]) => kind === 'rename').map(([path]) => path);
+    const remade: string[] = [];
+    for (const [folder, watcher] of watches) {
+      const rel = treeFolders.get(folder);
+      const now = identityOf(folder);
+      const named =
+        rel !== undefined && cameOrWent.some((path) => rel === path || rel.startsWith(`${path}/`));
+      if (!named && now === identities.get(folder)) continue;
+      watcher.close();
+      watches.delete(folder);
+      identities.delete(folder);
+      if (now !== null && rel !== undefined) remade.push(rel);
+    }
+    syncWatches();
+    return remade;
+  }
+
   function syncWatches(): void {
     const wanted = new Set([...treeFolders.keys(), ...nameWatches.keys()]);
     for (const [folder, watcher] of watches) {
       if (!wanted.has(folder)) {
         watcher.close();
         watches.delete(folder);
+        identities.delete(folder);
       }
     }
     for (const folder of wanted) {
@@ -180,9 +237,14 @@ export function createFolderWatcher(options: FolderWatcherOptions): FolderWatche
         // A watched folder that goes away errors on some systems; its parent reports it.
         watcher.on('error', () => {
           watcher.close();
-          if (watches.get(folder) === watcher) watches.delete(folder);
+          if (watches.get(folder) === watcher) {
+            watches.delete(folder);
+            identities.delete(folder);
+          }
         });
         watches.set(folder, watcher);
+        const identity = identityOf(folder);
+        if (identity !== null) identities.set(folder, identity);
       } catch (error) {
         const code = (error as NodeJS.ErrnoException).code;
         if (code === 'ENOENT' || code === 'ENOTDIR') continue;
