@@ -73,8 +73,11 @@ function written(before: TasksSnapshot, changes: readonly FileChange[]): TasksSn
   return { ...before, paths, files };
 }
 
+type RunView = { type: 'board'; path: string } | { type: 'stage'; stage: number } | undefined;
+
 /** An element op applied as a host does, and the module's reply to it. */
-function run(op: AppOp<TasksElementOps>, view = { type: 'board' as const, path: PHASE }) {
+function run(op: AppOp<TasksElementOps>, ...at: [view?: RunView]) {
+  const view = at.length === 0 ? { type: 'board' as const, path: PHASE } : at[0];
   const before = snapshot();
   const applied = tasksModule.core.apply(
     before,
@@ -108,6 +111,18 @@ describe('tasksModule', () => {
   it('answers a reorder with the pool of the view on screen', () => {
     const order = ['docs/tasks/unassigned/seeds/two.md', 'docs/tasks/unassigned/seeds/one.md'];
     const reply = run({ type: 'reorder-pool', paths: order });
+    expect(reply.ok).toBe(true);
+    const pool = (reply as unknown as { pool: { cards: { path: string }[] } }).pool;
+    expect(pool.cards.map((card) => card.path)).toEqual(order);
+  });
+
+  it.each<[string, RunView]>([
+    ['no view', undefined],
+    ['a stage', { type: 'stage', stage: 1 }],
+    ['a board that is not there', { type: 'board', path: 'docs/tasks/stage9/phase9' }],
+  ])('answers a reorder sent with %s with the pool all the same', (_w, view) => {
+    const order = ['docs/tasks/unassigned/seeds/two.md', 'docs/tasks/unassigned/seeds/one.md'];
+    const reply = run({ type: 'reorder-pool', paths: order }, view);
     expect(reply.ok).toBe(true);
     const pool = (reply as unknown as { pool: { cards: { path: string }[] } }).pool;
     expect(pool.cards.map((card) => card.path)).toEqual(order);

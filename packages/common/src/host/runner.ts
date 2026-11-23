@@ -195,6 +195,20 @@ function namedTwice(changes: readonly FileChange[]): string | null {
   return null;
 }
 
+/**
+ * The first file the changes rewrite or move that the load could not read, or
+ * `null`. Such a file has no version, so its write would carry no base and
+ * replace whatever is there.
+ */
+function unreadSource(loaded: LoadedInstance, changes: readonly FileChange[]): string | null {
+  for (const change of changes) {
+    if (change.kind === 'create') continue;
+    const source = change.kind === 'move' ? change.from : change.path;
+    if (loaded.versions[source] === undefined) return source;
+  }
+  return null;
+}
+
 /** The changes as the port writes them: each rewrite and move at the version it was read at. */
 function withBases(loaded: LoadedInstance, changes: readonly FileChange[]): PortChange[] {
   return changes.map((change) => {
@@ -209,7 +223,8 @@ function withBases(loaded: LoadedInstance, changes: readonly FileChange[]): Port
  * one of the module's core ops; it and the view are inside the module's
  * bounds; the instance is loaded and the host's knowledge laid over; the core
  * applies it; every change is the instance's; the changes are written in one
- * `put`, each rewrite and move at the version it was read at; and the module's
+ * `put`, each rewrite and move at the version it was read at (a file the load
+ * could not read is not written over: the port's refusal is the answer); and the module's
  * reply is read from the instance loaded again, with that load's revision.
  * An op that changes nothing writes nothing and replies from the first load.
  */
@@ -256,6 +271,14 @@ export async function runOp(
         'APP_CHANGES_INVALID',
         `The op's changes name ${JSON.stringify(twice)} twice; a write names each path once.`
       );
+    }
+    const unread = unreadSource(loaded, changes);
+    if (unread !== null) {
+      // The port says why, as it did at the load; a file it reads now moved on under the op.
+      const read = await host.port.get(unread);
+      return read.ok
+        ? fail('HOST_FILE_CHANGED', `${unread} changed while the op ran. Read it again.`)
+        : read;
     }
     const written = await host.port.put(withBases(loaded, changes));
     if (!written.ok) return written;

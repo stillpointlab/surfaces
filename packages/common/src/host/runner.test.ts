@@ -568,6 +568,26 @@ describe('runOp', () => {
       expect(host.port.files()['notes/a.note']).toBe('theirs');
     });
 
+    it.each<[string, FileChange]>([
+      ['rewrites', { kind: 'write', path: 'notes/binary.note', content: 'text now' }],
+      [
+        'moves',
+        { kind: 'move', from: 'notes/binary.note', path: 'notes/text.note', content: 'text now' },
+      ],
+    ])(
+      'refuses a change that %s a file the load could not read, with the port’s reason',
+      async (_w, change) => {
+        const host = hostOver({ ...FILES, 'notes/binary.note': 'PNG\0' });
+        const answer = await runOp(host, module, MANIFEST, {
+          op: { type: 'raw', changes: [change] },
+        });
+        expect(answer).toMatchObject({ ok: false, code: 'HOST_NOT_TEXT' });
+        expect(hostRefusalClass('HOST_NOT_TEXT')).toBe('invalid');
+        expect(host.port.puts).toEqual([]);
+        expect(host.port.files()['notes/binary.note']).toBe('PNG\0');
+      }
+    );
+
     it('answers a create onto a file that is there with the port’s conflict', async () => {
       const host = hostOver();
       const answer = await runOp(host, module, MANIFEST, {

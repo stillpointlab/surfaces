@@ -1071,9 +1071,12 @@ export function startPage(options: PageOptions): HostPage {
     const firstListing = new Promise<void>((done) => (listed = done));
     const opening = (async () => {
       const first = parseAddress(location.hash);
-      // The Changes view is offered by status, and an app is found among the
-      // instances, so both wait for the first listing.
-      if (first?.view === 'diff' || first?.view === 'app') await firstListing;
+      // The Changes view is offered by status, an app is found among the
+      // instances, and an editor is refused for a locked app's file, which the
+      // instances say: all three wait for the first listing.
+      if (first?.view === 'diff' || first?.view === 'app' || first?.view === 'edit') {
+        await firstListing;
+      }
       const address = parseAddress(location.hash, manifests());
       if (address) await openAddress(address);
     })();

@@ -448,6 +448,27 @@ describe('ModalDialog keeps Tab inside', () => {
     expect(focused()).toBe(closeButton(under));
   });
 
+  it('with two open, Escape closes the one on top, and the next Escape the other', async () => {
+    const under = await opened(`<input id="under" type="text" />${FOOTER}`);
+    const over = await opened(`<input id="over" type="text" />${FOOTER}`);
+    const escape = (): boolean =>
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    escape();
+    expect(over.isOpen).toBe(false);
+    expect(under.isOpen).toBe(true);
+    escape();
+    expect(under.isOpen).toBe(false);
+
+    // Opened again in the other order, the one opened last is still the one that closes.
+    over.open();
+    under.open();
+    escape();
+    expect(under.isOpen).toBe(false);
+    expect(over.isOpen).toBe(true);
+    over.close();
+  });
+
   it('leaves alone a Tab that something inside took for itself', async () => {
     const outside = document.createElement('button');
     document.body.append(outside);

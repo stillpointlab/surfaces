@@ -262,6 +262,27 @@ describe('the row and the lock', () => {
     expect($('.pane-locked').hidden).toBe(false);
   });
 
+  it('never mounts the editor for a locked file opened by its address, however slow the listing', async () => {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((go) => (release = go));
+    start('#/edit/places/home/rooms/kitchen.md', [HOME, ROOT], (held) => {
+      const apps = held.apps.bind(held);
+      held.apps = async () => {
+        await gate;
+        return apps();
+      };
+    });
+    // The instances are not read yet, so the page cannot know of the lock.
+    await settle();
+    expect(document.querySelector('fake-editor')).toBeNull();
+    release();
+    await page.ready;
+    await settle();
+    expect(document.querySelector('fake-editor')).toBeNull();
+    expect($('.pane-body').firstElementChild!.localName).toBe('fake-preview');
+    expect($('.pane-locked').hidden).toBe(false);
+  });
+
   it('disables Rename… and Delete… on a folder above a locked instance, with the reason', async () => {
     start();
     await page.ready;

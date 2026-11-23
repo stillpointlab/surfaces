@@ -89,6 +89,51 @@ describe('rewriteManifestCurrent', () => {
   });
 });
 
+describe('a top-level key written another way YAML reads as the same key', () => {
+  // A second `current:` (or `tags:`) under a quoted one is a duplicate key,
+  // and the manifest no longer parses.
+  it.each([
+    ['double quotes', '"current":'],
+    ['single quotes', "'current':"],
+    ['space before the colon', 'current :'],
+  ])('replaces a current block whose key is in %s, adding no second key', (_w, key) => {
+    const before = `${MANIFEST}${key}\n  stage: 2\n  phase: 10\n\ntags:\n  - infra\n`;
+    const result = rewriteManifestCurrent(before, { stage: 3, phase: 6 });
+    expect(result).toBe(`${MANIFEST}current:\n  stage: 3\n  phase: 6\n\ntags:\n  - infra\n`);
+    const parsed = parseTasksManifest(result);
+    expect(parsed.ok && parsed.manifest.current).toEqual({ stage: 3, phase: 6 });
+  });
+
+  it('keeps a quoted key’s inline flow mapping inline', () => {
+    const before = `${MANIFEST}"current": { stage: 2, phase: 10 }\n`;
+    const result = rewriteManifestCurrent(before, { stage: 3, phase: 1 });
+    expect(result).toBe(`${MANIFEST}current: { stage: 3, phase: 1 }\n`);
+  });
+
+  it('appends a tag to a quoted tags block, and to a quoted flow list', () => {
+    const block = written(appendManifestTag(`${MANIFEST}"tags":\n  - infra\n`, 'ui'));
+    expect(block).toBe(`${MANIFEST}"tags":\n  - infra\n  - ui\n`);
+    const flow = written(appendManifestTag(`${MANIFEST}'tags': [infra]\n`, 'ui'));
+    expect(flow).toBe(`${MANIFEST}'tags': [infra, ui]\n`);
+    for (const text of [block, flow]) {
+      const parsed = parseTasksManifest(text);
+      expect(parsed.ok && parsed.manifest.tags).toEqual(['infra', 'ui']);
+    }
+  });
+
+  it('sets a scalar whose key is quoted in place', () => {
+    const before = MANIFEST.replace('defaultColumn: briefed', '"defaultColumn": briefed');
+    const result = written(patchManifestTopLevelScalar(before, 'defaultColumn', 'done'));
+    expect(result).toBe(MANIFEST.replace('defaultColumn: briefed', 'defaultColumn: done'));
+  });
+
+  it('still does not take a longer key for the one asked for', () => {
+    const before = `${MANIFEST}currently: nothing\n`;
+    const result = rewriteManifestCurrent(before, { stage: 3, phase: 5 });
+    expect(result).toBe(`${before}current:\n  stage: 3\n  phase: 5\n`);
+  });
+});
+
 describe('appendManifestTag', () => {
   it('creates the registry when missing', () => {
     const result = written(appendManifestTag(MANIFEST, 'infra'));

@@ -276,6 +276,45 @@ describe('creating an instance', () => {
     expect($('.page-notice').textContent).toBe('');
   });
 
+  it('stays open while the create runs: Escape, Cancel and the close button wait for it', async () => {
+    start();
+    await page.ready;
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((go) => (release = go));
+    const create = host.appCreate.bind(host);
+    host.appCreate = async (request) => {
+      await gate;
+      return create(request);
+    };
+    menuOn('docs', 'folder');
+    await choose('Create a board here…');
+    press('confirm');
+    await settle();
+    expect(createDialog().getAttribute('aria-busy')).toBe('true');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    press('cancel');
+    createDialog().shadowRoot!.querySelector<HTMLElement>('.modal-close-button')!.click();
+    await settle();
+    expect(createDialog().isOpen).toBe(true);
+    release();
+    await settle();
+    // The create lands, and the dialog closes by itself with the app open.
+    expect(createDialog().isOpen).toBe(false);
+    expect(createDialog().hasAttribute('aria-busy')).toBe(false);
+    expect(location.hash).toBe('#/app/docs/board/board.yaml');
+  });
+
+  it('closes on Escape when no create is running', async () => {
+    start();
+    await page.ready;
+    menuOn('docs', 'folder');
+    await choose('Create a board here…');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await settle();
+    expect(createDialog().isOpen).toBe(false);
+    expect(host.creates).toEqual([]);
+  });
+
   it('says so when the host wrote the create with no undo step', async () => {
     start();
     await page.ready;

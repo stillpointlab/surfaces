@@ -72,9 +72,24 @@ function blockEnd(lines: string[], keyLineIndex: number): number {
   return end;
 }
 
+/**
+ * A top-level key's line however the key is written: bare, in either quote, or
+ * with space before its colon. All four are the one key to YAML, so a rewrite
+ * that knew only the bare form would add the key a second time.
+ */
+function topLevelKeyPattern(key: string): RegExp {
+  return new RegExp(`^(?:${key}|"${key}"|'${key}')[ \\t]*:(?=\\s|$)`);
+}
+
 function findTopLevelKey(lines: string[], key: string): number {
-  const pattern = new RegExp(`^${key}:(\\s|$)`);
+  const pattern = topLevelKeyPattern(key);
   return lines.findIndex((line) => pattern.test(textOf(line)));
+}
+
+/** What follows a top-level key's colon on its own line, trimmed. */
+function inlineValueOf(lineText: string, key: string): string {
+  const match = topLevelKeyPattern(key).exec(lineText);
+  return match ? lineText.slice(match[0].length).trim() : '';
 }
 
 /** Append lines at the end of the file, preserving a single trailing newline. */
@@ -123,7 +138,7 @@ export function rewriteManifestCurrent(
     return appendLines(content, blockLines, eol);
   }
 
-  const inlineValue = textOf(lines[index]).slice('current:'.length).trim();
+  const inlineValue = inlineValueOf(textOf(lines[index]), 'current');
   const replacement =
     inlineValue !== '' && !inlineValue.startsWith('#')
       ? [`current: { stage: ${current.stage}, phase: ${current.phase} }`]
@@ -161,7 +176,7 @@ function sectionItems(
     );
   const keyIndex = findTopLevelKey(lines, section);
   if (keyIndex === -1) return unpatchable('is not declared');
-  const inlineValue = textOf(lines[keyIndex]).slice(`${section}:`.length).trim();
+  const inlineValue = inlineValueOf(textOf(lines[keyIndex]), section);
   if (inlineValue !== '' && !inlineValue.startsWith('#')) {
     return unpatchable('is a single-line flow list the app cannot patch safely');
   }
@@ -419,7 +434,7 @@ export function appendManifestTag(content: string, tag: string): Result<{ conten
   }
 
   const keyLineText = textOf(lines[index]);
-  const inlineValue = keyLineText.slice('tags:'.length).trim();
+  const inlineValue = inlineValueOf(keyLineText, 'tags');
   if (inlineValue.startsWith('[')) {
     // Single-line flow list: insert before the closing bracket — then VERIFY
     // by re-parsing. A `]` inside a trailing comment or a flow list spanning
