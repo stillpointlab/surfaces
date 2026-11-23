@@ -203,7 +203,7 @@ query value). A version is a SHA-256 of the file's bytes, as hex; only equality 
 | 409    | A commit: `HOST_NOT_CHANGED`, `HOST_PATH_CONFLICTED`, `HOST_GIT_IN_PROGRESS`, `HOST_DETACHED_HEAD`, `HOST_BRANCH_EXISTS`     |
 | 400    | `HOST_PATH_OUTSIDE_ROOT`, `HOST_PATH_INVALID`, `HOST_NOT_TEXT`, `HOST_FILE_TOO_LARGE`, `HOST_BAD_REQUEST`                    |
 | 400    | A commit: `HOST_COMMIT_NO_PATHS`, `HOST_COMMIT_NO_MESSAGE`, `HOST_BRANCH_INVALID`                                            |
-| 403    | `HOST_FORBIDDEN`: the `Host`, `Origin` or `Sec-Fetch-Site` checks below                                                      |
+| 403    | `HOST_FORBIDDEN`: the `Host`, `Origin` or `Sec-Fetch-Site` checks, and a raw file asked for to run (below)                   |
 | 405    | `HOST_METHOD_NOT_ALLOWED`, with an `Allow` header                                                                            |
 | 413    | `HOST_BODY_TOO_LARGE`: a `PUT` body over 64 MiB                                                                              |
 | 422    | `HOST_GIT_FAILED`: git ran and failed (its message says why). The repository is the person's to put right, so not a 500      |
@@ -310,6 +310,12 @@ memory port.
   request that is not a `GET` must carry the host's `Origin` (or its `localhost` twin). Any
   request whose `Origin` is another, and any the browser marks `Sec-Fetch-Site: cross-site` or
   `same-site` (except a navigation), is refused.
+- **A raw file is shown, never run.** `GET /api/raw` refuses a request whose `Sec-Fetch-Dest`
+  says the browser would run or apply it: `script`, `style`, a worker (`worker`, `sharedworker`,
+  `serviceworker`), a worklet (`audioworklet`, `paintworklet`), `xslt`, `manifest` and `json` (a
+  module). The page's scripts may come from its own origin, so a repository's `.js` would
+  otherwise load as the page's own. An image, a document or frame (sandboxed), media, a font
+  and a `fetch` are served, and so is a request with no `Sec-Fetch-Dest` (curl).
 
 ## Git
 
