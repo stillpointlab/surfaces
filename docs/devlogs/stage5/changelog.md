@@ -652,7 +652,12 @@ The agent's, in each pull request's description: the contract additions (`HOST_P
   format's were built by Opus 5.5 sub-agents from a written brief and read by the
   orchestrating agent. `npm run check` passed on the three branches merged together:
   3,659 tests.
-- **The second pin's walks** (context-manager#1274): WALKS_FINAL
+- **The second pin's walks** (context-manager#1274, at `4720302a`), run as the first pin's
+  were: inventory 38 of 38, tasks 01 to 27, 29 and 30, every step on its first run. Context
+  Manager's unit suite at the pin: 5,272 tests. The pin was walked first at `cdccad7`, before
+  the close's fixes: there tasks walk 22 failed once on a race in a walk helper (it left the
+  lock's one-shot note before the page on screen had taken its own), which the pull request
+  fixes, and the suite then passed whole.
 - **Jamie's validation,** on a [short card](../../tasks/stage5/phase7/tests/stage-5-validation.test.md)
   of the stage's main paths, follows the tags.
 - **A fault of the orchestrating agent's at the close:** `git stash` is shared by every
