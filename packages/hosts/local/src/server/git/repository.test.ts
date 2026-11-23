@@ -3,8 +3,9 @@
 // deletes (and nothing else). Every repository sets its own identity and branch
 // and reads no global configuration (`test-support.ts`).
 
-import { mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { chmodSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { delimiter, join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -134,6 +135,78 @@ describe('start and info', () => {
     expect(await noGit.changes()).toMatchObject({ ok: false, code: 'HOST_GIT_NOT_FOUND' });
     expect(await noGit.base('a.md')).toMatchObject({ ok: false, code: 'HOST_GIT_NOT_FOUND' });
     expect(await noGit.status()).toEqual({});
+  });
+});
+
+describe('a served folder its repository ignores', () => {
+  beforeEach(() => {
+    makeRepository(repo, env, {
+      '.gitignore': 'scratch/\n',
+      'top.md': 't',
+      'sub/s.md': 's',
+      'parent/.gitignore': 'inner/\n',
+      'parent/p.md': 'p',
+    });
+    writeFiles(repo, {
+      'scratch/a.md': 'a',
+      'scratch/deep/b.md': 'b',
+      'parent/inner/i.md': 'i',
+      'excluded/e.md': 'e',
+    });
+    writeFileSync(join(repo, '.git', 'info', 'exclude'), 'excluded/\n');
+  });
+
+  const noRepository = { state: 'no-repository', gitFound: true };
+
+  it('is served with no repository, and the host says why once', async () => {
+    const g = access(join(repo, 'scratch'));
+    expect(await g.start()).toEqual(noRepository);
+    expect(await g.info()).toEqual({ state: 'no-repository', branch: null });
+    expect(await g.changes()).toMatchObject({ ok: false, code: 'HOST_NOT_A_REPOSITORY' });
+    expect(await g.status()).toEqual({});
+    expect(warnings).toEqual([
+      'the served folder is ignored by its repository, so it is served without git.',
+    ]);
+  });
+
+  it('is listed by the walk, so its files show', async () => {
+    const p = port(join(repo, 'scratch'));
+    expect(await p.start()).toMatchObject({ listing: 'walk', git: 'no-repository' });
+    expect((await p.list()).map((node) => node.path)).toEqual(['a.md', 'deep', 'deep/b.md']);
+  });
+
+  it('a folder under an ignored one, one a parent’s pattern ignores, and one info/exclude does', async () => {
+    for (const at of ['scratch/deep', 'parent/inner', 'excluded']) {
+      expect(await access(join(repo, at)).start()).toEqual(noRepository);
+    }
+  });
+
+  it('the repository’s top is never ignored, even by a `*`; a folder not ignored is in it', async () => {
+    writeFileSync(join(repo, '.gitignore'), '*\n!*/\n');
+    expect((await access().start()).state).toBe('repository');
+    writeFileSync(join(repo, '.gitignore'), '*\n');
+    expect((await access().start()).state).toBe('repository');
+    writeFileSync(join(repo, '.gitignore'), 'scratch/\n');
+    expect(await access(join(repo, 'sub')).start()).toEqual({
+      state: 'repository',
+      prefix: 'sub/',
+      gitDir: join(repo, '.git'),
+    });
+    expect((await access(join(repo, 'parent')).start()).state).toBe('repository');
+    expect(warnings).toEqual([]);
+  });
+
+  it('when git cannot answer whether it is ignored, the repository stands', async () => {
+    // A git that fails `check-ignore` alone, and runs everything else.
+    const realGit = execFileSync('sh', ['-c', 'command -v git'], { env, encoding: 'utf8' }).trim();
+    const bin = join(folder.path, 'bin');
+    writeFiles(bin, {
+      git: `#!/bin/sh\nif [ "$1" = check-ignore ]; then echo "fatal: no" >&2; exit 128; fi\nexec '${realGit}' "$@"\n`,
+    });
+    chmodSync(join(bin, 'git'), 0o755);
+    const g = access(join(repo, 'scratch'), { PATH: `${bin}${delimiter}${env.PATH ?? ''}` });
+    expect(await g.start()).toMatchObject({ state: 'repository', prefix: 'scratch/' });
+    expect(warnings).toEqual([]);
   });
 });
 

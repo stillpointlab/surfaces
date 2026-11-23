@@ -324,6 +324,11 @@ runs git.
   file) is in the root or above it; `no-repository` otherwise. The look above the root stops
   below a folder `GIT_CEILING_DIRECTORIES` names, as git's own does. Outside `repository` the
   status is `{}`, the git routes refuse, and a write stages nothing.
+- **A served folder its repository ignores** (`git check-ignore -q .`: by a `.gitignore` there
+  or above, or `.git/info/exclude`) is `no-repository`, and the host says once on its terminal
+  that it is served without git: git lists nothing ignored, so the listing walks it. A file in
+  it added with `--force` is tracked, but has no Changes and no commit here. The work tree's top
+  is never asked (git never ignores it), and a `check-ignore` that fails keeps `repository`.
 - **A served root inside a repository** sees only its own paths, relative to itself. A rename
   across its edge is half of one: in from outside is `new`, out to elsewhere is `deleted`.
 - **The statuses:** untracked, added and intent-to-add files are `new`; a staged rename is
@@ -384,7 +389,7 @@ port's write lock: a `put` that arrives during a commit waits for it, and the re
 
 ## The listing and the watcher
 
-- In a git work tree the list is `git ls-files --cached --others --exclude-standard`, with files
+- In `repository` the list is `git ls-files --cached --others --exclude-standard`, with files
   gone from disk left out; elsewhere a walk that skips `.git` and `node_modules`. When `git`
   cannot be run and the folder looks like a repository, the `bin` says "git was not found; listing
   every file". A submodule or a nested repository is listed as one folder with nothing under it.
