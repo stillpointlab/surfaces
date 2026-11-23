@@ -14,7 +14,7 @@ import { placeTasksCreate } from './create.js';
 import { tasksLifecycle } from './lifecycle.js';
 import { tasksMeta } from './meta.js';
 import { tasksPages } from './pages.js';
-import { projectResolvedCard, resolveTasks } from './projection.js';
+import { projectResolvedCard, projectTasksPool, resolveTasks } from './projection.js';
 
 import type { TasksCoreOps, TasksViews } from './core.js';
 import type { CreateTasksInput, TasksCreatePlan } from './create.js';
@@ -109,7 +109,7 @@ export const tasksModule: AppModule<
   // The core reads no clock: a new card is stamped with the host's time.
   toCoreOp: (op, host) =>
     (op.type === 'create-card' ? { ...op, now: host.now } : op) as AppCoreOp<TasksCoreOps>,
-  reply: (op, applied, { snapshot, facts, view }) => {
+  reply: (op, applied, { snapshot, facts }) => {
     switch (op.type) {
       case 'move':
         return withCard(snapshot, facts, op.path);
@@ -117,14 +117,12 @@ export const tasksModule: AppModule<
       case 'create-card':
         return withCard(snapshot, facts, applied.path as string);
       case 'reorder-pool': {
-        // The pool of whatever the page shows: a board, or a stage's phases.
-        const state =
-          view?.type === 'stage'
-            ? tasksCore.project(snapshot, view, facts)
-            : view?.type === 'board'
-              ? tasksCore.project(snapshot, view, facts)
-              : null;
-        return state?.pool ? ok({ pool: state.pool }) : fail('TASKS_BOARD_NOT_FOUND', 'No pool');
+        // The pool is the instance's, the same beside every board and stage, so
+        // the answer needs no view: an order that was written is never "not found".
+        const resolved = resolveTasks(snapshot);
+        if (!resolved?.ok)
+          return resolved ?? fail('TASKS_MANIFEST_NOT_FOUND', 'tasks.yaml is gone');
+        return ok({ pool: projectTasksPool(snapshot, resolved.tasks, facts) });
       }
       case 'create-stage-phase':
         return ok({ stage: applied.stage, phase: applied.phase });
