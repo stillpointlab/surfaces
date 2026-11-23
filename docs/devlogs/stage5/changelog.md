@@ -1,7 +1,8 @@
 # Stage 5: The Apps in the Local Host Changelog
 
-- **Dates:** 2026-11-14 –
-- **Stage Tag:** TBD _(filled with `stage5-complete` at stage close)_
+- **Dates:** 2026-11-14 – 2026-11-22
+- **Stage Tag:** `stage5-complete` _(created on the merge of Jamie's reflections PR, which follows
+  the stage close PR)_
 
 > Agent-drafted from evidence (merged PRs, git history, task cards). Appended per phase at phase
 > close. Regenerable at any time; see [devlogs](../README.md). Reflections do NOT belong here — they
@@ -472,3 +473,163 @@ The agents', in the spec's "As built" section and each pull request's descriptio
 - The pointer is at phase 7, the [follow-up
   drain](../../tasks/stage5/phase7/specs/drain-followups.md), which has run beside this phase
   since 2026-11-20: 71 entries when phase 6 opened, 39 left to rule on.
+
+---
+
+## Phase 7: The follow-up log drained (`stage5-phase7-complete`)
+
+Range: `stage5-phase6-complete..stage5-phase7-complete`, 2026-11-21 – 2026-11-22: 19 commits, nine
+merges, 85 files, +1,859/−202; under `packages/`, 72 files, +1,274/−198. The drain began on
+2026-11-20, beside phase 6, so four of its batches ([#149](https://github.com/stillpointlab/surfaces/pull/149) to [#152](https://github.com/stillpointlab/surfaces/pull/152)) and what the pin
+needed first ([#136](https://github.com/stillpointlab/surfaces/pull/136) to [#138](https://github.com/stillpointlab/surfaces/pull/138), [#148](https://github.com/stillpointlab/surfaces/pull/148), listed under phase 6) reached main before that
+tag. They are counted here.
+
+### Shipped
+
+The [spec](../../tasks/stage5/phase7/specs/drain-followups.md): every entry of the
+[follow-up log](followups.md) ruled on by Jamie, a few at a time, and each batch's fixes landed
+as one small pull request. Of 72 entries, 50 were fixed, 13 closed with a reason (by design,
+could not be reproduced, or fine as it is), eight moved to seeds, and one is carried.
+
+- **The docs and the tests' ground** ([#149](https://github.com/stillpointlab/surfaces/pull/149)): the root README and the md format's name the
+  `./format` entry and the package as they are; two dead links; a `.git` above the temporary
+  folder no longer fails the local host's tests (the host's look for one stops at
+  `GIT_CEILING_DIRECTORIES`).
+- **The dev harness** ([#150](https://github.com/stillpointlab/surfaces/pull/150)): a link to an empty fixture opens it; the log lists the
+  tree's events; Dark follows the system's scheme; the tasks shell fixture's host can be
+  switched off or made to refuse; a dialog's id is on the page once.
+- **The local host's page** ([#151](https://github.com/stillpointlab/surfaces/pull/151), [#152](https://github.com/stillpointlab/surfaces/pull/152)):
+  - the open file is read again when the event stream comes back, and the tree's focus ring
+    follows a selection set from outside;
+  - a path refused for how it is written has its own code, `HOST_PATH_INVALID`, in the port's
+    contract and its conformance suite;
+  - an open image is no longer read as text; a folder with nothing listed under it has no
+    caret and a trailing slash; a disabled menu entry's reason is text, not a tooltip; a
+    dialog with nothing in its body draws no body;
+  - the Changes view has a whitespace control (compare, ignore, show) and says when two sides
+    differ in line endings or whitespace alone; a git failure answers 422.
+- **The check-in review** ([#154](https://github.com/stillpointlab/surfaces/pull/154)): its buttons stay focusable while it is busy, the
+  confirm button shows a spinner, and a refusal's line carries its code; tasks' groups are in
+  phase order; the local host's Commit button shows it is reading; inside a repository the
+  title field offers a default.
+- **Apps in the local host** ([#155](https://github.com/stillpointlab/surfaces/pull/155), [#157](https://github.com/stillpointlab/surfaces/pull/157)): an app's `read-file` host op reads only
+  the instance's own files; the bases an app's facts are made from follow the host's commit;
+  undo and redo have icons and a second key (Ctrl+Y); an undone create leaves the app's page;
+  a commit and an undo cannot interleave; a step the journal cannot keep says so.
+- **The two apps** ([#156](https://github.com/stillpointlab/surfaces/pull/156), [#158](https://github.com/stillpointlab/surfaces/pull/158), [#159](https://github.com/stillpointlab/surfaces/pull/159)):
+  - one rule for what a check-in takes (`checkinRequestOf`), used by the board and the shell,
+    and a dot on every card with an uncommitted change;
+  - an empty phase on the stage view takes a dropped card; inventory's download link, dirty
+    badge and narrow layout; a zone renamed outside the app is "moved", checked in as one
+    rename; a pool card is never marked as having moved column;
+  - `<image-preview>` hears only the image it shows; the xmdl parser no longer trips a
+    content security policy (`z.config({ jitless: true })`).
+- **The contracts** ([#160](https://github.com/stillpointlab/surfaces/pull/160)): a format descriptor may have `applyPath`, which sets what a
+  path implies and leaves the content, so a file renamed with edits in it takes its new
+  language; the app suite's page cases can say a subject is missing.
+- **Seeds,** each ranked in `order.yaml`:
+  [the host's words in an app](../../tasks/unassigned/seeds/the-hosts-words-in-an-app.md),
+  [diff whitespace in one place](../../tasks/unassigned/seeds/diff-whitespace-in-one-place.md),
+  [the local host keeps its listing](../../tasks/unassigned/seeds/the-local-host-keeps-its-listing.md),
+  [how the icons are made](../../tasks/unassigned/seeds/how-the-icons-are-made.md),
+  [delete an app](../../tasks/unassigned/seeds/delete-an-app.md),
+  [one look for the apps' buttons and fields](../../tasks/unassigned/seeds/one-look-for-the-apps-buttons-and-fields.md)
+  and [Context Manager on the runner](../../tasks/unassigned/seeds/context-manager-on-the-runner.md).
+  Two older seeds grew: the review's length limits (a pass over its display) and stranded
+  references (a path a card only passed through). A seed for [a Tasks app's
+  title](../../tasks/unassigned/seeds/a-title-for-a-tasks-app.md) came from Context Manager's
+  stage 8 ([#162](https://github.com/stillpointlab/surfaces/pull/162)).
+- **In Context Manager:**
+  - the pin moves once, to `452cba4`, with everything above (context-manager#1272);
+  - a locked app file's preview says the app's files are locked (context-manager#1269), an
+    entry of its stage 8 log passed to the agent that built the lock;
+  - a seed for its rename dialog to use `applyPath` (context-manager#1264).
+
+### Decisions
+
+Jamie's, one for each entry, in the log under it. Those that set a rule:
+
+- 2026-11-21: batches stay at five entries. A close, a carry or a seed takes more thought than
+  a fix, because of its second-order effects, so those come with fuller reasoning.
+- 2026-11-21: a git failure is a 4xx: the repository is the person's, not the server's.
+- 2026-11-21: an app deals only with the files it holds.
+- 2026-11-21: the pin moves once, after the log is drained, so the walks are read against the
+  drain as its last task.
+- 2026-11-22: the board's state is the files' frontmatter, and a file being among the changes
+  is enough for tasks to look again.
+- 2026-11-22: Context Manager adopting the runner is likely wanted, and needs more information
+  first; the seed gathers it.
+- 2026-11-22: the harness's two ways to read is held for this pass.
+- 2026-11-22: `e2e:reset` and pushes to the scratch repository were approved for the pin's
+  walks.
+
+The agent's, in each pull request's description: the contract additions (`HOST_PATH_INVALID`,
+`AppShellInput.checkin.defaultTitle`, `movedFrom` on an inventory dirty file, `applyPath`,
+`answers: 'missing'`), each optional or additive, and what was left out of a fix and why.
+
+### Testing & review
+
+- `npm run check` passed from a clean tree for every pull request: 3,521 tests at `051a781` to
+  3,570 at the close.
+- Each fix has a test that fails without it, where a test can say it. The exceptions are in
+  the pull requests' descriptions: the timed assertion kept as it was, and the looks checked
+  by hand.
+- **By hand in Chromium,** for each batch that changed what a person sees, against the local
+  host (dev mode, and the built server where a content security policy mattered) or the dev
+  harness; each pull request lists its checks.
+- **Context Manager's walks, read against the drain** ([#161](https://github.com/stillpointlab/surfaces/pull/161)): no expectation had to
+  change by the reading.
+- **The pin's walks** (context-manager#1272, at `e951acfa`), after a full build and a reset of
+  the walk database, never both suites at once, and started with CI idle: inventory 38 of 38,
+  tasks 01 to 27, 29 and 30, every step on its first run. Walk 23, the one the reading named
+  to watch, passed. Walk 30 gained a step for the locked preview. Context Manager's unit suite
+  at the pin: 5,181 tests.
+- **The locked preview** (context-manager#1269) was reproduced in Chromium before it was
+  changed. One part of the report did not reproduce: the document tree lists no linked
+  repository file at all.
+- **Two faults of the orchestrating agent's on the shared machine:** a local build that
+  overlapped a CI run on Context Manager's main, which passed; and a commit whose pre-commit
+  hook ran while CI built the same branch, which tripped the resource guard and failed that
+  run. It passed when run again.
+
+### Deferred
+
+- One log entry is carried, undecided, to the next stage's review: the harness reads an app
+  two ways.
+- The seeds above. The one that leaves a defect in place: a link to a path a card only passed
+  through is not found by the reference fix.
+- Context Manager's rename dialog keeps its own language branch until its seed is taken up.
+
+### At the phase's close
+
+- The spec is done, with an "As built" section.
+- The follow-up log has a line under every entry.
+- The pointer stays at stage 5, phase 7 until the next stage is set up; its theme is Jamie's
+  call.
+
+---
+
+## Stage totals
+
+- `2c3a3ee..452cba4` (`stage4-complete` to the last merge before the close): 160 commits, 34 of
+  them merges on `main`, 277 files, +30,199/−3,095. Forty-eight pull requests merged here, #109
+  to #162; sixteen of them (#113 to #128, and #131 to #133) reached main in two stacks.
+- Under `packages/` and `tooling/`: 216 files, +24,044/−1,930.
+- Tests: 2,632 at stage 4's close to 3,570.
+- Context Manager carried the stage in four pull requests of code (context-manager#1242 and
+  #1246 for the adoption and the lock, #1272 for the last pin, #1269 for the locked
+  preview), each walked or checked in a browser.
+- **How the work was done:** phases 2 to 5 were specs implemented by Opus 5.5 sub-agents in
+  worktrees of their own, reviewed, checked and stacked by the orchestrating agent, then
+  reviewed once more as a whole before Jamie merged the two stacks. Phase 6's two pull
+  requests were sub-agents' work, rebuilt, reviewed and walked by the orchestrating agent;
+  the lock was designed from a read of every write first. Phase 7 was the orchestrating agent
+  alone, a batch at a time, each on Jamie's ruling.
+- **What reached main with no ruling from Jamie:** the departures listed in each spec's "As
+  built" section for phases 2 to 6. In phase 7 nothing did: each entry's line names his ruling.
+- **Follow-ups:** the [follow-up log](followups.md) ends with no open entry and one carried.
+  Seventeen seeds were added to the pool over the stage.
+- **The next stage** is not decided. What may weigh on it: ADR-0040's count in Context Manager
+  (4,752 lines there are still an app's; the count script is kept outside both repositories),
+  and the seed on Context Manager adopting the runner.
+- No token or cost figures were collected.
