@@ -421,6 +421,33 @@ describe('ModalDialog keeps Tab inside', () => {
     expect(focused()).toBe(dialog.querySelector('#save'));
   });
 
+  it('with two open, leaves focus in the other one, and takes focus from the page for the one on top', async () => {
+    const outside = document.createElement('button');
+    document.body.append(outside);
+    const under = await opened(`<input id="under" type="text" />${FOOTER}`);
+    const over = await opened(`<input id="over" type="text" />${FOOTER}`);
+
+    // Focus in the one on top: the one under it does not pull it away.
+    over.querySelector<HTMLElement>('#over')!.focus();
+    expect(tab()).toBe(false);
+    expect(focused()).toBe(over.querySelector('#over'));
+    // And in the one under: the key is the browser's there too.
+    under.querySelector<HTMLElement>('#under')!.focus();
+    expect(tab()).toBe(false);
+    expect(focused()).toBe(under.querySelector('#under'));
+
+    // From the page behind both, focus comes into the one opened last.
+    outside.focus();
+    expect(tab()).toBe(true);
+    expect(focused()).toBe(closeButton(over));
+
+    // Closed, the other one is the only one again.
+    over.close();
+    outside.focus();
+    expect(tab()).toBe(true);
+    expect(focused()).toBe(closeButton(under));
+  });
+
   it('leaves alone a Tab that something inside took for itself', async () => {
     const outside = document.createElement('button');
     document.body.append(outside);

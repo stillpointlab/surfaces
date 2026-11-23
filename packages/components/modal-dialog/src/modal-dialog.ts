@@ -13,6 +13,16 @@ import { html, render } from '@stillpointlab/common-format/html';
 
 import { modalStyles } from './modal.styles';
 
+/**
+ * The focused element. At the document, focus inside a shadow root reads as that
+ * root's host, so this follows it down.
+ */
+function deepActiveElement(): Element | null {
+  let active = document.activeElement;
+  while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+  return active;
+}
+
 export class ModalDialog extends HTMLElement {
   static get observedAttributes() {
     return ['is-open', 'title'];
@@ -21,6 +31,8 @@ export class ModalDialog extends HTMLElement {
   private previouslyFocusedElement: HTMLElement | null = null;
   /** Which way the last Tab went, until an edge has used it. */
   private tabbedBackward: boolean | null = null;
+  /** The open dialogs in the order they opened, so the last is the one on top. */
+  private static opened: ModalDialog[] = [];
 
   // Set as text, so the stylesheet never goes through markup; each render puts it
   // back first in the shadow root.
@@ -46,6 +58,7 @@ export class ModalDialog extends HTMLElement {
   disconnectedCallback() {
     // Remove global listeners if any (e.g., for Escape key on document)
     document.removeEventListener('keydown', this.handleDocumentKeyDown);
+    ModalDialog.opened = ModalDialog.opened.filter((each) => each !== this);
     this.bodyWatch.disconnect();
   }
 
@@ -107,6 +120,7 @@ export class ModalDialog extends HTMLElement {
 
     // 2. Add Escape key listener
     document.addEventListener('keydown', this.handleDocumentKeyDown);
+    ModalDialog.opened = [...ModalDialog.opened.filter((each) => each !== this), this];
 
     // The body's content may come, go or be hidden while the dialog is open.
     this.bodyWatch.observe(this, {
@@ -161,6 +175,7 @@ export class ModalDialog extends HTMLElement {
 
     // 2. Remove Escape key listener
     document.removeEventListener('keydown', this.handleDocumentKeyDown);
+    ModalDialog.opened = ModalDialog.opened.filter((each) => each !== this);
     this.bodyWatch.disconnect();
 
     // 3. Return focus
@@ -234,13 +249,9 @@ export class ModalDialog extends HTMLElement {
     return false;
   }
 
-  /**
-   * The focused element when it is in the dialog. At the document, focus inside
-   * a shadow root reads as that root's host, so this follows it down.
-   */
+  /** The focused element when it is in the dialog. */
   private focusedInside(): Element | null {
-    let active = document.activeElement;
-    while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+    const active = deepActiveElement();
     return active && this.holds(active) ? active : null;
   }
 
@@ -249,12 +260,21 @@ export class ModalDialog extends HTMLElement {
    * the two edges turn it round. This notes which way the key goes, and takes
    * the one case no edge sees: focus that is outside the dialog (the page behind
    * it, or nothing) comes in at the end the key points to.
+   *
+   * Every open dialog hears the key. With two open, focus inside the other one
+   * is that dialog's to keep, and focus in neither goes to the one opened last.
    */
   private trapFocus(event: KeyboardEvent): void {
     // Something inside took the key for itself: an editor that indents with Tab.
     if (event.defaultPrevented) return;
     this.tabbedBackward = event.shiftKey;
     if (this.focusedInside()) return;
+    this.tabbedBackward = null;
+    const open = ModalDialog.opened.filter((each) => each.isConnected && each.isOpen);
+    const active = deepActiveElement();
+    if (active && open.some((other) => other !== this && other.holds(active))) return;
+    if (open.length > 0 && open[open.length - 1] !== this) return;
+    this.tabbedBackward = event.shiftKey;
     this.turnAt(event.shiftKey ? 'start' : 'end');
     event.preventDefault();
   }
