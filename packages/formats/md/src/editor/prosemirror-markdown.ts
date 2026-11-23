@@ -256,7 +256,8 @@ function parseInlineTokens(tokens: Token[]): Node | Node[] {
     } else if (token.type === 'code_inline') {
       if (token.content) {
         const content = token.content.replace(/\\\|/g, '|');
-        const codeNode = schema.text(content, [schema.marks.code.create()]);
+        // With the marks around it: a link whose text is code keeps its link.
+        const codeNode = schema.text(content, [...markStack, schema.marks.code.create()]);
         nodes.push(codeNode);
       }
     } else if (token.type === 'strong_open') {
@@ -465,15 +466,19 @@ function buildSerializerNodes(): Record<
     },
 
     text(state: MarkdownSerializerState, node: Node) {
-      if (!bracketsAsTyped) {
-        state.text(node.text || '');
+      // Inside an autolink (`<https://…>`) a backslash is itself, so the text
+      // goes as it is: an escaped `~` or `_` there would change the address.
+      if ((state as unknown as { inAutolink?: boolean }).inAutolink) {
+        state.text(node.text || '', false);
         return;
       }
-      // The second writing (see `writeBrackets`): this node's brackets lose the
-      // backslash the first gave them, but for a pair a link could start at.
       const esc = state.esc;
-      state.esc = (text: string, startOfLine?: boolean) =>
-        unescapeBrackets(esc.call(state, text, startOfLine));
+      state.esc = (text: string, startOfLine?: boolean) => {
+        const escaped = escapeReferences(esc.call(state, text, startOfLine));
+        // The second writing (see `writeBrackets`): this node's brackets lose the
+        // backslash the first gave them, but for a pair a link could start at.
+        return bracketsAsTyped ? unescapeBrackets(escaped) : escaped;
+      };
       try {
         state.text(node.text || '');
       } finally {
@@ -504,6 +509,22 @@ const serializerMarks = {
 let bracketsAsTyped = false;
 
 const ESCAPED_BRACKET = /\\[[\]]/;
+
+/** An `&` that starts a character reference: `&lt;`, `&#35;`, `&#x23;`. */
+const REFERENCE_START = /&(?=(?:#[0-9]{1,7}|#[xX][0-9a-fA-F]{1,6}|[A-Za-z][A-Za-z0-9]{1,31});)/g;
+
+/** A `<` that starts an autolink: `<scheme:…>` or `<name@host>`. */
+const AUTOLINK_START = /<(?=[A-Za-z][A-Za-z0-9+.-]{1,31}:[^\s<>]*>|[^\s<>@]+@[^\s<>]+>)/g;
+
+/**
+ * `escaped` with a backslash before what would read back as something else: an
+ * `&` that starts a character reference (text that says `&lt;` would come back
+ * as `<`), and a `<` that starts an autolink (text that says `<me@example.com>`
+ * would come back as a link). The serializer escapes neither.
+ */
+export function escapeReferences(escaped: string): string {
+  return escaped.replace(REFERENCE_START, '\\&').replace(AUTOLINK_START, '\\<');
+}
 
 /**
  * `escaped` (text the serializer has escaped) with the backslash taken off its

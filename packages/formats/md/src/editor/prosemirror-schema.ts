@@ -304,14 +304,10 @@ const marks: Record<string, MarkSpec> = {
     },
   },
 
-  // Code
-  code: {
-    parseDOM: [{ tag: 'code' }],
-    toDOM() {
-      return ['code'];
-    },
-  },
-
+  // Link, then code: a mark declared later is written inside one declared
+  // earlier, and the markdown writer puts a code span's backticks right for the
+  // innermost mark only. With `code` before `link`, ``[`name`](url)`` was
+  // written back as `` `[name](url)` ``: no link any more.
   // Link
   link: {
     attrs: {
@@ -330,6 +326,14 @@ const marks: Record<string, MarkSpec> = {
     ],
     toDOM(node) {
       return ['a', node.attrs];
+    },
+  },
+
+  // Code
+  code: {
+    parseDOM: [{ tag: 'code' }],
+    toDOM() {
+      return ['code'];
     },
   },
 };
