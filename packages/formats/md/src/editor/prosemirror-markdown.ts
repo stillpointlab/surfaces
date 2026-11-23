@@ -14,7 +14,7 @@ import { buildSource, writeKeepingSource, writeWhole } from './markdown-source';
 import { getSchema } from './prosemirror-schema';
 import { getEditorPlugins } from './registry';
 
-import type { MarkdownSource } from './markdown-source';
+import type { MarkdownSource, References } from './markdown-source';
 import type { MarkdownIt, Token } from 'markdown-it';
 
 export type { MarkdownSource } from './markdown-source';
@@ -120,6 +120,13 @@ export interface MarkdownDocParser {
   schema: Schema;
 }
 
+/** The link reference definitions `text` holds, read as the editor reads them. */
+function referencesOf(text: string): References {
+  const env: { references?: References } = {};
+  getEditorMarkdownIt().parse(text, env);
+  return env.references ?? {};
+}
+
 /** A document's top-level nodes after its frontmatter block, if it has one. */
 function bodyNodes(doc: Node): Node[] {
   const nodes: Node[] = [];
@@ -168,13 +175,15 @@ export function getMarkdownParser(): MarkdownDocParser {
           text = split.body;
         }
       }
-      // Token list from markdown-it (to detect tables, and to find each block's lines).
-      const tokens = markdownIt.parse(text, {});
+      // Token list from markdown-it (to detect tables, and to find each block's
+      // lines), and the link definitions it found.
+      const env: { references?: References } = {};
+      const tokens = markdownIt.parse(text, env);
 
       // The source is the body's: the frontmatter block keeps its own bytes (`raw`).
       const attach = (doc: Node): ParsedMarkdown => ({
         doc: frontmatterNode ? doc.copy(Fragment.from(frontmatterNode).append(doc.content)) : doc,
-        source: buildSource(text, tokens, bodyNodes(doc)),
+        source: buildSource(text, tokens, bodyNodes(doc), env.references, referencesOf),
       });
 
       const doc = baseParser.parse(text);
@@ -635,6 +644,7 @@ export function getMarkdownSerializer(): MarkdownDocSerializer {
       const kept = writeKeepingSource(bodyNodes(body), source, {
         write: (nodes) => whole(body.copy(Fragment.from(nodes)), source.definitions),
         read: (text) => bodyNodes(getMarkdownParser().parse(text, { frontmatter: false })),
+        references: referencesOf,
       });
       return head + (kept ?? writeWhole(whole(body), source));
     },

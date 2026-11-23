@@ -13,11 +13,27 @@
 // place where the output puts text next to text it did not sit next to is parsed
 // again and compared with the nodes it should give. If any differs, nothing is
 // kept and the caller writes the document the old way.
+//
+// A link definition is no node. One between blocks is kept with the gap it sits
+// in; one inside a list item or a quote goes with that block when the block is
+// written anew, and a `[text][label]` kept elsewhere would point nowhere. So when
+// the text defines a label inside a block, the output must still define every
+// label as the text did, or nothing is kept: written whole, each link carries
+// its own address.
 
 import { lineBreakOf, withLineBreak } from '@stillpointlab/common-format';
 
 import type { Token } from 'markdown-it';
 import type { Node } from 'prosemirror-model';
+
+/** What a link reference definition says, as markdown-it records it in `env.references`. */
+export interface Reference {
+  href: string;
+  title: string;
+}
+
+/** The labels a text defines (markdown-it's normalised labels), and what each says. */
+export type References = Readonly<Record<string, Reference>>;
 
 /** One top-level block as it was written. */
 interface SourceBlock {
@@ -39,6 +55,11 @@ export interface MarkdownSource {
   tail: string;
   /** Text between blocks that parsed to no node (link reference definitions), for parsing a part alone. */
   definitions: string;
+  /**
+   * Every label the text defines, when some are defined inside a block (a list
+   * item, a quote) and so not in `definitions`; `null` when all are there.
+   */
+  references: References | null;
 }
 
 /** What the serializer and the parser do for this module, so it knows neither. */
@@ -47,6 +68,8 @@ export interface SourceIo {
   write(nodes: readonly Node[]): string;
   /** A body's text as its top-level nodes. */
   read(text: string): readonly Node[];
+  /** The link reference definitions a body's text holds. */
+  references(text: string): References;
 }
 
 /** The node each top-level token becomes, where this module knows; any other token is trusted. */
@@ -70,15 +93,27 @@ function lineStarts(text: string): (line: number) => number {
   return (line) => (line < starts.length ? starts[line] : text.length);
 }
 
+/** Whether `after` defines every label of `before`, each with the same address and title. */
+function defines(after: References, before: References): boolean {
+  return Object.entries(before).every(([label, { href, title }]) => {
+    const now = Object.prototype.hasOwnProperty.call(after, label) ? after[label] : undefined;
+    return now !== undefined && now.href === href && now.title === title;
+  });
+}
+
 /**
  * The source of a body, from the tokens markdown-it made of `text` and the
  * top-level nodes they became. `null` when the two do not line up one to one,
  * and then nothing is kept: the document is written the serializer's way.
+ * `references` is what markdown-it found `text` defines, and `referencesOf`
+ * reads the definitions of a text, here those between the blocks.
  */
 export function buildSource(
   text: string,
   tokens: readonly Token[],
-  nodes: readonly Node[]
+  nodes: readonly Node[],
+  references: References = {},
+  referencesOf: (text: string) => References = () => ({})
 ): MarkdownSource | null {
   const tops = tokens.filter((token) => token.level === 0 && token.nesting >= 0 && token.map);
   if (tops.length === 0 || tops.length !== nodes.length) return null;
@@ -102,12 +137,16 @@ export function buildSource(
   const preamble = text.slice(0, at(tops[0].map![0]));
   if (/\S/.test(preamble)) definitions = preamble + definitions;
 
+  const nested =
+    Object.keys(references).length > 0 && !defines(referencesOf(definitions), references);
+
   return {
     eol: lineBreakOf(text),
     preamble,
     blocks,
     tail: text.slice(text.trimEnd().length),
     definitions,
+    references: nested ? references : null,
   };
 }
 
@@ -258,6 +297,9 @@ export function writeKeepingSource(
     last++;
     first = last;
   }
+
+  // A definition that went with a block written anew leaves its label undefined.
+  if (source.references && !defines(io.references(out), source.references)) return null;
 
   // The text ends as it did: with its final newline, or without.
   const final = pieces[pieces.length - 1];
