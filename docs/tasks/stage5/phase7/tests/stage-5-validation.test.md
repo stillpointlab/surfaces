@@ -1,5 +1,5 @@
 ---
-column: todo
+column: done
 created: 2026-11-23T10:26:00-07:00
 tags: [local-host, apps]
 ---
