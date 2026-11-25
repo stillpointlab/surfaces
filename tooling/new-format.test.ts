@@ -8,7 +8,7 @@ import { join, relative } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { scaffold } from './new-format.mjs';
+import { formatScaffold, scaffold } from './new-format.mjs';
 
 /** Every file under `dir`, relative to it. */
 function filesUnder(dir: string): string[] {
@@ -69,6 +69,19 @@ describe.each([
     expect(
       filesUnder(dest).filter((file) => /(^|\/)(node_modules|dist)\/|\.styles\.ts$/.test(file))
     ).toEqual([]);
+  });
+
+  it('formats what a long name pushed past the width, and then has nothing left to format', async () => {
+    const dest = scaffold('a-format-with-quite-a-long-name', { url, into });
+
+    expect(await formatScaffold(dest)).not.toEqual([]);
+    expect(await formatScaffold(dest)).toEqual([]);
+  });
+
+  it('leaves a short name as the template wrote it', async () => {
+    const dest = scaffold('clip', { url, into });
+
+    expect(await formatScaffold(dest)).toEqual([]);
   });
 
   it('refuses a folder that exists and a name that is not kebab-case', () => {

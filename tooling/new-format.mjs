@@ -9,8 +9,9 @@
 // builds, lints and tests with every other package, so the result does too with
 // no edits beyond its name, appears in the harness (`npm run dev`) through its
 // dev/fixtures.ts, and a host registers it through its `./format` descriptor.
+// A longer name makes longer lines, so the command formats what it wrote.
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -71,8 +72,39 @@ export function scaffold(name, { url = false, into = formatsDir } = {}) {
   return dest;
 }
 
+/**
+ * Format every file under `dest` as the repository's own are, and return those
+ * that changed. A template is formatted for the name `sample`; a longer name can
+ * push a line past the width, and `npm run format` would then fail on a package
+ * nobody has touched. The rules are read for a file of the same name at the
+ * repository's root (a `package.json` has rules of its own), so a folder outside
+ * it (a test's) is formatted alike.
+ *
+ * @param {string} dest
+ * @returns {Promise<string[]>}
+ */
+export async function formatScaffold(dest) {
+  const prettier = await import('prettier');
+  const changed = [];
+  for (const entry of readdirSync(dest, { recursive: true, withFileTypes: true })) {
+    if (!entry.isFile()) continue;
+    const file = join(entry.parentPath, entry.name);
+    const standIn = join(root, basename(file));
+    const info = await prettier.getFileInfo(standIn);
+    if (info.inferredParser === null) continue;
+    const options = (await prettier.resolveConfig(standIn)) ?? {};
+    const text = readFileSync(file, 'utf8');
+    const formatted = await prettier.format(text, { ...options, parser: info.inferredParser });
+    if (formatted !== text) {
+      writeFileSync(file, formatted);
+      changed.push(relative(dest, file));
+    }
+  }
+  return changed;
+}
+
 /** `npm run new-format -- <name> [--url]` */
-function main(args) {
+async function main(args) {
   const flags = args.filter((arg) => arg.startsWith('-'));
   const names = args.filter((arg) => !arg.startsWith('-'));
   if (names.length !== 1 || flags.some((flag) => flag !== '--url') || !NAME.test(names[0])) {
@@ -87,10 +119,11 @@ function main(args) {
     console.error(error instanceof Error ? error.message : error);
     process.exit(1);
   }
+  await formatScaffold(dest);
   console.log(`created ${relative(root, dest)} (@stillpointlab/${name}-format)`);
   console.log('next: npm install, then add the row to the root README table and run npm run check');
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  main(process.argv.slice(2));
+  await main(process.argv.slice(2));
 }

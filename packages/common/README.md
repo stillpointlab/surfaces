@@ -5,7 +5,8 @@ What every surface shares. No elements of its own.
 - **Logging.** `setErrorHandler`, `setReporter`, `reportError`, `report`: injectable, console by
   default. One module instance serves every format, so a host configures it once; each format also
   re-exports the setters for callers that configure through the format they load.
-- **Contracts.** `PreviewElement`, `EditorElement`, `ImagePreviewElement`, `DiffElement` and the
+- **Contracts.** `PreviewElement`, `EditorElement`, `UrlPreviewElement` (a preview given a URL;
+  `ImagePreviewElement` is its older name), `DiffElement` and the
   keymap-mode types: the structural interfaces a host drives a surface through. All extend
   `ReadyElement`: `whenReady()` resolves once the element is hydrated and its latest content is in
   the DOM, mirrored by a `ready` attribute and event.
@@ -92,7 +93,8 @@ reusable })` whether they fit among a host's paths.
     `<script>` or `<style>` (set a stylesheet as `textContent`), or as a URL: it does not stop
     `javascript:`, so an `href` comes from code that builds the URL, never from a data string.
 - **Conformance suites** (`@stillpointlab/common-format/testing`). `describePreviewContract`,
-  `describeEditorContract`, `describeImagePreviewContract`, `describeDiffContract`, and for the raw
+  `describeEditorContract`, `describeUrlPreviewContract` (and `describeImagePreviewContract`, the
+  same suite with image's hooks), `describeDiffContract`, and for the raw
   view `describeRawViewContract` and `describeKeymapModeContract`, and for app elements
   `describeAppElementContract`: vitest suites a format or app runs for each element it ships, asserting what the contracts promise and nothing more.
   They import `vitest`, so they live in their own entry and never reach a runtime bundle.
