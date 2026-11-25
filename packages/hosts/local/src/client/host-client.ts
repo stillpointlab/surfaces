@@ -41,10 +41,12 @@ export type {
 export type { CannotUndoNotice, JournalLabels, JournalMove, UnkeptReason } from '../shared/journal';
 
 /**
- * What a watcher hears: the host's events, and the client's own word that the
- * stream came back after it dropped, when anything may have changed unheard.
+ * What a watcher hears: the host's events, and the client's own words: that the
+ * stream came back after it dropped, when anything may have changed unheard; and
+ * that the server was started again (`restarted`), once, after which the stream
+ * is closed for good.
  */
-export type WatchedEvent = LocalHostEvent | { type: 'reconnected' };
+export type WatchedEvent = LocalHostEvent | { type: 'reconnected' } | { type: 'restarted' };
 
 /** How a write goes: `unjournaled` when the person agreed it cannot be undone. */
 export interface PutOptions {
@@ -125,14 +127,64 @@ export interface HostClient {
 /** The code a client answers with when the server could not be reached or answered nonsense. */
 export const UNREACHABLE = 'HOST_UNREACHABLE';
 
+/** The host's refusal of a request without its run's token. */
+export const TOKEN_REQUIRED = 'HOST_TOKEN_REQUIRED';
+
 /**
  * A `HostClient` over the local server's routes, at `base` (`''` for the page's
  * own origin). `get` and `put` answer a refusal as a `Result` failure, with the
  * server's code, and a failure to reach the server as `HOST_UNREACHABLE`; the
  * other reads throw, since the page cannot work without them.
+ *
+ * The run's token travels in the cookie the printed address set, which the
+ * browser sends with every request here, the event stream and every element's
+ * load included: nothing here sets it. A page left open across a restart holds
+ * the old run's cookie, and the new run refuses every request with
+ * `HOST_TOKEN_REQUIRED`. The client tells its watchers `restarted` the first
+ * time a call is refused so, or the stream fails and `GET /api/root` is, and
+ * closes the stream for good: retrying it would be refused every time.
  */
 export function createHttpClient(base = ''): HostClient {
   const url = (route: string) => `${base}${route}`;
+  const watchers = new Set<(event: WatchedEvent) => void>();
+  /** Each watch's stream, closed for good when the server is found started again. */
+  const streams = new Set<() => void>();
+  let restarted = false;
+  let checking = false;
+
+  function sawRestart(): void {
+    if (restarted) return;
+    restarted = true;
+    for (const halt of streams) halt();
+    for (const listener of watchers) listener({ type: 'restarted' });
+  }
+
+  /** `fetch`, noting a refusal for want of the run's token. */
+  async function call(route: string, init?: RequestInit): Promise<Response> {
+    const response = await fetch(url(route), init);
+    if (response.status === 403) {
+      const body = (await response
+        .clone()
+        .json()
+        .catch(() => null)) as { code?: unknown } | null;
+      if (body?.code === TOKEN_REQUIRED) sawRestart();
+    }
+    return response;
+  }
+
+  /** The stream failed: ask a route whether this page's run is over, or the server only away. */
+  async function checkRun(): Promise<void> {
+    if (checking || restarted) return;
+    checking = true;
+    try {
+      const response = await call('/api/root', { headers: { accept: 'application/json' } });
+      void response.body?.cancel().catch(() => undefined);
+    } catch {
+      // not reachable: the stream retries by itself
+    } finally {
+      checking = false;
+    }
+  }
   // How often each path has changed while this client watched: `urlFor` names the
   // revision, so an element given the URL again after a change loads the new
   // bytes rather than the browser's copy of the old (the server reads `path` alone).
@@ -141,7 +193,7 @@ export function createHttpClient(base = ''): HostClient {
   let reconnections = 0;
 
   async function read<T>(route: string): Promise<T> {
-    const response = await fetch(url(route), { headers: { accept: 'application/json' } });
+    const response = await call(route, { headers: { accept: 'application/json' } });
     if (!response.ok) {
       const body = (await response.json().catch(() => null)) as { message?: string } | null;
       throw new Error(body?.message ?? `${route} answered ${response.status}.`);
@@ -163,7 +215,7 @@ export function createHttpClient(base = ''): HostClient {
   ): Promise<Result<T>> {
     let response: Response;
     try {
-      response = await fetch(url(route), init);
+      response = await call(route, init);
     } catch (error) {
       return { ok: false, code: UNREACHABLE, message: `The host could not be reached (${error}).` };
     }
@@ -234,6 +286,7 @@ export function createHttpClient(base = ''): HostClient {
       // Whether the next stream to open follows a gap in which changes went unheard.
       let stale = document.hidden;
       const open = () => {
+        if (restarted) return;
         const opened = new EventSource(url('/api/events'));
         source = opened;
         opened.onmessage = (message: MessageEvent<string>) => {
@@ -253,8 +306,12 @@ export function createHttpClient(base = ''): HostClient {
         // the list is stale, and the journal with it: a server that restarted has
         // no steps. Then it says so itself, for what no event names: the file that
         // is open.
+        // A page of an earlier run is refused the stream; the browser gives up on a
+        // refusal, and keeps trying while the server is away. `checkRun` tells the two
+        // apart.
         opened.onerror = () => {
           stale = true;
+          void checkRun();
         };
         opened.onopen = () => {
           if (!stale) return;
@@ -274,12 +331,19 @@ export function createHttpClient(base = ''): HostClient {
           open();
         }
       };
+      const halt = () => {
+        source?.close();
+        source = null;
+      };
+      watchers.add(listener);
+      streams.add(halt);
       document.addEventListener('visibilitychange', onVisibility);
       if (!document.hidden) open();
       return () => {
+        watchers.delete(listener);
+        streams.delete(halt);
         document.removeEventListener('visibilitychange', onVisibility);
-        source?.close();
-        source = null;
+        halt();
       };
     },
   };

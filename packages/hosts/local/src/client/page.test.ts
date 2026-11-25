@@ -452,6 +452,33 @@ describe('a change on disk', () => {
   });
 });
 
+describe('a server started again', () => {
+  beforeEach(async () => {
+    start();
+    await page.ready;
+  });
+
+  it('shows the notice that stays: no close button, and nothing replaces it', async () => {
+    page.notify({ text: 'Committed abc1234 on main.', tone: 'success' });
+    host.emit({ type: 'restarted' });
+    await settle();
+    const notice = $('.page-notice');
+    expect(notice.textContent).toBe(
+      'This page’s server was started again. Open the address its terminal printed.'
+    );
+    expect(notice.dataset.tone).toBe('error');
+    expect(notice.getAttribute('role')).toBe('status');
+    expect(notice.querySelector('.page-notice-close')).toBeNull();
+    page.notify({ text: 'Undone: Delete a.md', tone: 'info' });
+    page.notify(null);
+    host.emit({ type: 'restarted' });
+    await settle();
+    expect(notice.textContent).toBe(
+      'This page’s server was started again. Open the address its terminal printed.'
+    );
+  });
+});
+
 describe('leaving unsaved edits', () => {
   beforeEach(async () => {
     start('#/edit/a.md');
