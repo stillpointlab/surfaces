@@ -157,17 +157,25 @@ describe('the routes', () => {
     }
   );
 
-  it.each(['image', 'document', 'iframe', 'embed', 'object', 'empty', 'video', 'audio', 'font'])(
-    'GET /api/raw serves a request to show the file (Sec-Fetch-Dest: %s)',
-    async (dest) => {
-      const response = await request('/api/raw/img/dot.png', {
-        headers: { 'sec-fetch-dest': dest, 'sec-fetch-site': 'same-origin' },
-      });
-      expect(response.status).toBe(200);
-      expect(response.headers.get('content-security-policy')).toBe('sandbox');
-      await response.arrayBuffer();
-    }
-  );
+  it.each([
+    'image',
+    'document',
+    'iframe',
+    'embed',
+    'object',
+    'empty',
+    'video',
+    'audio',
+    'track',
+    'font',
+  ])('GET /api/raw serves a request to show the file (Sec-Fetch-Dest: %s)', async (dest) => {
+    const response = await request('/api/raw/img/dot.png', {
+      headers: { 'sec-fetch-dest': dest, 'sec-fetch-site': 'same-origin' },
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-security-policy')).toBe('sandbox');
+    await response.arrayBuffer();
+  });
 
   it('GET /api/raw serves a request with no Sec-Fetch-Dest (curl, an older browser) as before', async () => {
     writeFiles(root, { 'tool.js': 'alert(1)\n' });
@@ -263,6 +271,15 @@ describe('the routes', () => {
       expect(response.headers.get('content-security-policy')).toBe('sandbox');
       expect(response.headers.get('x-content-type-options')).toBe('nosniff');
       expect(new Uint8Array(await response.arrayBuffer())).toEqual(new Uint8Array(bytes));
+    });
+
+    it('answers a media element’s first ask, bytes=0-, with 206 and the whole file', async () => {
+      const response = await request('/api/raw/img/dot.png', {
+        headers: { range: 'bytes=0-', 'sec-fetch-dest': 'video', 'sec-fetch-site': 'same-origin' },
+      });
+      expect(response.status).toBe(206);
+      expect(response.headers.get('content-range')).toBe('bytes 0-3/4');
+      expect((await response.arrayBuffer()).byteLength).toBe(4);
     });
 
     it.each(['bytes=4-', 'bytes=4-10', 'bytes=-0'])(
