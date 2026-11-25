@@ -207,7 +207,8 @@ How the page learns of a restart:
 
 Checked:
 
-- `npm run check` from a clean tree: 3,695 tests.
+- The full check of the tip, in CI: 3,695 tests. The sub-agent ran `npm run check` from a clean
+  tree before the review's one fix: 3,694.
 - By hand in Chromium on the built server: the address without the token (the words alone); the
   printed address (the page, and no token left in the address); an image; a markdown file saved;
   a tasks board; a commit; a create and its undo; a second tab; a `fetch` without the cookie;
