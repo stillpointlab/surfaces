@@ -1,5 +1,5 @@
 ---
-column: todo
+column: in-progress
 created: 2026-11-25T17:00:00-07:00
 tags: [local-host, security, code]
 ---
@@ -7,8 +7,8 @@ tags: [local-host, security, code]
 # Spec: a token for the run
 
 _From the seed [a token for the run](../seeds/a-token-for-the-run.md), which Jamie ruled into this
-phase on 2026-11-22 (the stage 5 release review's H3). One PR here. Three rulings are asked of
-Jamie under "Decision" before it is built._
+phase on 2026-11-22 (the stage 5 release review's H3). One PR here. His three rulings on it are
+under "Decision"._
 
 ## High-level goal
 
@@ -123,22 +123,17 @@ the other three today. The upgrade that carries Vite's reloads is held to it too
 
 ## Decision
 
-Three rulings for Jamie, each with the agent's lean:
+Jamie, 2026-11-25, on the three rulings this spec asked for:
 
-1. **A cookie, or a header.** The seed left this open.
-   - _A cookie_ (the lean, and what this spec is written for): the browser carries it on every
-     request, the ones in libraries included, and a reload and a second tab work. It costs the
-     cross-port point above.
-   - _A header:_ the page reads the token from the address, keeps it in `localStorage` (which is
-     kept for one port) and sets it on each `fetch`. Nothing else can set a header, so the event
-     stream, every `<img>`, `<video>` and `<audio>`, each segment hls.js asks for and each range
-     pdf.js asks for would carry the token in its address instead, and every format that loads a
-     file would have to be given it. No cross-port point.
-2. **The cross-port point is accepted** with the cookie, and written in the README. Lean: yes.
-   Jupyter's notebook server makes the same trade.
-3. **The page's own files are behind the token too.** They are the built client and hold no
-   secret; behind it, a person without the token meets the words that say what to do and not a
-   page that fails. Lean: yes.
+1. **A cookie.** The other way was a header: the page would read the token from the address,
+   keep it in `localStorage` (which is kept for one port) and set it on each `fetch`. Nothing
+   else can set a header, so the event stream, every `<img>`, `<video>` and `<audio>`, each
+   segment hls.js asks for and each range pdf.js asks for would have carried the token in its
+   address, and every format that loads a file would have had to be given it.
+2. **The cross-port point is accepted:** "that is fine, local host is trusted enough". It is
+   written in the README. Jupyter's notebook server makes the same trade.
+3. **The page's own files are behind the token too.** They hold no secret; behind it, a person
+   without the token meets the words that say what to do and not a page that fails.
 
 ## Acceptance / completion checklist
 
