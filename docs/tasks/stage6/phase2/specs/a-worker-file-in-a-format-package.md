@@ -13,8 +13,8 @@ size depends on what the proof shows._
 
 ## High-level goal
 
-A format package can ship a worker as a file of its own, and both hosts load it from their own
-origin. Whoever writes the PDF format in phase 4 follows a way that is written down and proved.
+A format package can ship a web worker as a file of its own, and both hosts load it from their
+own origin. Whoever writes the PDF format in phase 4 follows a way that is written down and proved.
 
 ## Related context
 
@@ -29,16 +29,30 @@ origin. Whoever writes the PDF format in phase 4 follows a way that is written d
   (Vite, in the local host and in Context Manager). The local host's development mode maps a
   package's entries to its source, a fourth path.
 
+## The name
+
+Jamie, 2026-11-25: a format already has `<format>-preview` and `<format>-editor`, so
+`<format>-worker` is the name. A worker is not an element, so it has no tag; the convention is
+its entry and its files, beside the other two:
+
+| Part    | Entry       | Source         | Built file        |
+| ------- | ----------- | -------------- | ----------------- |
+| Preview | `./preview` | `src/preview/` | `dist/preview.js` |
+| Editor  | `./editor`  | `src/editor/`  | `dist/editor.js`  |
+| Worker  | `./worker`  | `src/worker/`  | `dist/worker.js`  |
+
+Where a name is wanted (a log line, a `Worker`'s `name`), it is `<format>-worker`.
+
 ## What is not known
 
 How a package names its worker so that all of those find it. Two ways are candidates:
 
-1. **The package builds the worker as an entry of its own** (`dist/worker.js`), and its code
-   names it relative to itself (`new URL('./worker.js', import.meta.url)`). Vite follows that
-   pattern in a dependency when it builds; whether it survives tsup's split chunks, whose files
-   sit in `dist/chunks/`, and the development mode's source mapping, is not known.
-2. **The host gives the address.** The package exports the worker as an entry, the host builds
-   it as one of its own files, and hands its address to the element. This is known to work and
+1. **The package's code names its `./worker` entry relative to itself**
+   (`new URL('./worker.js', import.meta.url)`). Vite follows that pattern in a dependency when
+   it builds; whether it survives tsup's split chunks, whose files sit in `dist/chunks/`, and
+   the development mode's source mapping, is not known.
+2. **The host gives the address.** The host builds the package's `./worker` entry as one of its
+   own files and hands its address to the element. This is known to work and
    costs each host a line for each format with a worker, and the descriptor a member to carry
    the address.
 

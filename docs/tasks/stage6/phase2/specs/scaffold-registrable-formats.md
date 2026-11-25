@@ -24,8 +24,8 @@ template is tested where the template lies, by `npm run check`.
   README.
 - The model for a format that is given a URL is `packages/formats/image/`: a descriptor with
   `needs: 'url'`, one preview element with `setSource`, no editor.
-- Depends on: nothing. [Browser tests in CI](browser-tests-in-ci.md) switches the new template's
-  tests to a browser after this lands.
+- Depends on: nothing. [Browser tests](browser-tests-in-ci.md) adds one browser test to the new
+  template after this lands.
 
 ## What happens today
 
@@ -58,13 +58,24 @@ used, as today.
 
 ### 3. The contract it is tested against
 
-`ImagePreviewElement` and `describeImagePreviewContract` are named for image and say nothing
-that is image's alone. In `common`:
+A contract in `common` is what a host may ask of an element, and there is one for each role, not
+one for each format: the previews of md, code, sheet and xmdl all answer to `PreviewElement`. A
+preview that is given a URL has one too, and today it is named for its only member:
+`ImagePreviewElement`, which is `setSource(src, alt)` and the ready signal, with nothing in it
+that is image's alone.
 
-- the contract becomes `UrlPreviewElement`, and the suite `describeUrlPreviewContract`, whose
-  `load` and `fail` hooks have no default that looks for an `<img>`;
-- `ImagePreviewElement` and `describeImagePreviewContract` stay, as the same contract and a call
-  of the same suite with image's hooks, so image and Context Manager change nothing.
+- The contract becomes `UrlPreviewElement`, the role, and the suite `describeUrlPreviewContract`,
+  whose `load` and `fail` hooks have no default that looks for an `<img>`.
+- **Each format still has its own element and its own type.** The elements are `<image-preview>`,
+  `<video-preview>`, `<audio-preview>` and `<pdf-preview>`, each in its package. A format's type
+  (`VideoPreviewElement`) is exported from its package and extends the role's contract with
+  whatever is that format's alone, when it has something: a video's position, a PDF's page.
+  Nothing is added to a format's type until a host asks for it.
+- `ImagePreviewElement` and `describeImagePreviewContract` stay in `common` as they are named,
+  as the same contract and a call of the same suite with image's hooks, so image and Context
+  Manager change nothing.
+- The URL template exports `SamplePreviewElement` in that way, so a scaffolded format starts
+  with a type of its own name.
 
 ### 4. The templates are workspaces
 
