@@ -242,7 +242,9 @@ function withoutToken(url: URL): string {
         return true;
       }
     });
-  return kept.length === 0 ? url.pathname : `${url.pathname}?${kept.join('&')}`;
+  // One leading slash: `//elsewhere/` as a `Location` would name another host.
+  const pathname = url.pathname.replace(/^\/{2,}/, '/');
+  return kept.length === 0 ? pathname : `${pathname}?${kept.join('&')}`;
 }
 
 /**

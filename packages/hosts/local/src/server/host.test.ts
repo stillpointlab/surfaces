@@ -756,6 +756,12 @@ describe('the token', () => {
     expect(head.headers.get('set-cookie')).toContain(`surfaces-5199=${token};`);
   });
 
+  it('redirects to a path of this host, however many slashes the address began with', async () => {
+    const response = await request(`//elsewhere.example/?token=${token}`);
+    expect(response.status).toBe(303);
+    expect(response.headers.get('location')).toBe('/elsewhere.example/');
+  });
+
   it('refuses a wrong token in the address and sets nothing, a cookie or not', async () => {
     const carried: Record<string, string>[] = [{}, { cookie }];
     for (const headers of carried) {
