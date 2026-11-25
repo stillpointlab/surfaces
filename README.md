@@ -6,16 +6,18 @@ few **components** they share. Formats and apps
 are stateless clients of the same host contract (`get` / `list` / `put`, where `put` is a proposal),
 so they share one toolchain, one `common` package and, in time, one scaffold.
 
-| Package                  | npm name                          | Ships                                                                  |
-| ------------------------ | --------------------------------- | ---------------------------------------------------------------------- |
-| `packages/common`        | `@stillpointlab/common-format`    | logging, contracts, ready gate, tokens, conformance suites             |
-| `packages/formats/md`    | `@stillpointlab/md-format`        | core + `<md-preview>` + `<md-editor>`                                  |
-| `packages/formats/code`  | `@stillpointlab/code-format`      | core + `<code-preview>` + `<code-editor>`, `<code-diff>`               |
-| `packages/formats/sheet` | `@stillpointlab/sheet-format`     | core + `<sheet-preview>` + `<sheet-editor>`, `<sheet-grid>`            |
-| `packages/formats/xmdl`  | `@stillpointlab/xmdl-format`      | core + `<xmdl-preview>` + `<xmdl-editor>`                              |
-| `packages/formats/image` | `@stillpointlab/image-format`     | `<image-preview>` only                                                 |
-| `packages/apps/`         |                                   | tasks and inventory arrive with the apps breakout                      |
-| `packages/components/`   | `@stillpointlab/<name>-component` | shared UI elements: `<modal-dialog>`, `<spl-icon>`, `<checkin-review>` |
+| Package                       | npm name                           | Ships                                                                  |
+| ----------------------------- | ---------------------------------- | ---------------------------------------------------------------------- |
+| `packages/common`             | `@stillpointlab/common-format`     | logging, contracts, ready gate, tokens, conformance suites             |
+| `packages/formats/md`         | `@stillpointlab/md-format`         | core + `<md-preview>` + `<md-editor>`                                  |
+| `packages/formats/code`       | `@stillpointlab/code-format`       | core + `<code-preview>` + `<code-editor>`, `<code-diff>`               |
+| `packages/formats/sheet`      | `@stillpointlab/sheet-format`      | core + `<sheet-preview>` + `<sheet-editor>`, `<sheet-grid>`            |
+| `packages/formats/xmdl`       | `@stillpointlab/xmdl-format`       | core + `<xmdl-preview>` + `<xmdl-editor>`                              |
+| `packages/formats/image`      | `@stillpointlab/image-format`      | `<image-preview>` only                                                 |
+| `packages/apps/`              |                                    | tasks and inventory arrive with the apps breakout                      |
+| `packages/components/`        | `@stillpointlab/<name>-component`  | shared UI elements: `<modal-dialog>`, `<spl-icon>`, `<checkin-review>` |
+| `tooling/template/format`     | `@stillpointlab/sample-format`     | the text template: core + `<sample-preview>` + `<sample-editor>`       |
+| `tooling/template/url-format` | `@stillpointlab/sample-url-format` | the URL template: `<sample-url-preview>` only                          |
 
 Every format opens in the one harness (`npm run dev`, <http://localhost:5180>); see
 [the harness](#the-harness) below.
@@ -42,8 +44,9 @@ tooling/
   gen-styles.mjs     SCSS -> `*.styles.ts` string modules for shadow roots (all packages, or one)
   tsup.ts            the shared build: ESM + CJS + d.ts per entry
   vitest.ts          the shared test preset
-  new-format.mjs     scaffolds packages/formats/<name> from tooling/template/format
-  template/format/   a complete, buildable sample format: what every new one starts from
+  new-format.mjs     scaffolds packages/formats/<name> from a template (`--url` for the URL one)
+  template/format/   a complete text format with an editor: what a new one starts from
+  template/url-format/ a complete preview given a URL, no editor: what `--url` starts from
   harness/           the one playground: mounts any format from its dev/fixtures.ts
 docs/
   tasks/             this repository's own task boards (tasks.yaml + templates)
@@ -73,13 +76,16 @@ cd packages/formats/sheet   # or any package
 npm run dev                 # the harness opened on this package
 npm test                    # that package only
 
-npm run new-format -- video # a new format from the template; then npm install and add its row above
+npm run new-format -- notes        # a text format with an editor, from tooling/template/format
+npm run new-format -- video --url  # a preview given a URL, from tooling/template/url-format
+                                   # then npm install, and add its row above
 ```
 
 ## The harness
 
 `tooling/harness/` is the one playground. It finds every `dev/fixtures.ts` under
-`packages/formats/*`, `packages/components/*`, `packages/apps/*` and `packages/hosts/*`, mounts
+`packages/formats/*`, `packages/components/*`, `packages/apps/*`, `packages/hosts/*` and
+`tooling/template/*` (each template under its package's name, `sample` or `sample-url`), mounts
 the chosen one's elements by role (editor beside preview, extras below), applies a fixture,
 mirrors edits into the preview, reads the source back, and shows each element's `ready` state and
 events. Read-only, narrow panes and light/dark (with the shared `--spl-*` tokens) are common
@@ -90,10 +96,10 @@ A package's `dev/fixtures.ts` default-exports a `HarnessFormat` (`tooling/harnes
 
 - `format`: the format's descriptor, from its `./format` entry. The harness takes the editor and
   preview tags from it, loads them through it, and applies a fixture with its `apply`, as a host
-  does. The five formats mount this way.
+  does. The five formats and the two templates mount this way.
 - `elements` (`editor`, `preview`, `extra` tags): what to mount without a descriptor, for which the
-  module imports its own entries so the elements register. Components, apps and the template name
-  theirs here. With `format`, only `extra` is read (`<code-diff>`).
+  module imports its own entries so the elements register. Components and apps name theirs
+  here. With `format`, only `extra` is read (`<code-diff>`).
 - `fixtures`: name → content, or `{ content, path, apply }`. `path` is the file the content stands
   for, which a descriptor reads attributes from (the code language, a `.sheet` document); `apply`
   drives a setter beyond the contract.
@@ -101,7 +107,7 @@ A package's `dev/fixtures.ts` default-exports a `HarnessFormat` (`tooling/harnes
   `mirror: false` when a plain `setContent` mirror would lose something.
 
 The harness drives elements only through the contracts in `common` and a format's descriptor;
-whatever a package wants beyond them, it does in `apply` or a control. The template ships a
+whatever a package wants beyond them, it does in `apply` or a control. Each template ships a
 minimal one, so a new format appears in the harness with no edits beyond its name.
 
 ## The format convention
@@ -109,18 +115,27 @@ minimal one, so a new format appears in the harness with no edits beyond its nam
 Every format exposes the same entry points, so the host and the scaffold can rely on the shape
 instead of reading each package:
 
-| Entry       | Ships                                                                           |
-| ----------- | ------------------------------------------------------------------------------- |
-| `.`         | the core: parser, document model, theme, anything isomorphic                    |
-| `./preview` | the read-only element, implementing `PreviewElement`                            |
-| `./editor`  | the interactive element, implementing `EditorElement`; only if it has one       |
-| `./format`  | the descriptor: which paths the format opens, and how a host loads and fills it |
+| Entry       | Ships                                                                                  |
+| ----------- | -------------------------------------------------------------------------------------- |
+| `.`         | the core: parser, document model, theme, anything isomorphic                           |
+| `./preview` | the read-only element, implementing `PreviewElement` (`UrlPreviewElement` given a URL) |
+| `./editor`  | the interactive element, implementing `EditorElement`; only if it has one              |
+| `./format`  | the descriptor: which paths the format opens, and how a host loads and fills it        |
 
 `./format` is light: importing it defines no element and loads no editor. Its `load()` functions
 import `./preview` and `./editor`, which the build keeps as files of their own. A host gives the
 descriptors to `createFormatRegistry` (`@stillpointlab/common-format/format`; see
-[`packages/common/README.md`](packages/common/README.md)). The five formats ship one; the
-template does not yet, so a new format adds its own.
+[`packages/common/README.md`](packages/common/README.md)). The five formats and both templates
+ship one, so a host registers a new format with one import of its `./format` and one entry in its
+list.
+
+A format given a URL (image, and video, audio or PDF to come) has a preview and no editor, and its
+descriptor `needs: 'url'`. Its element answers to `UrlPreviewElement`, the role's contract in
+`common` (`setSource(src, name)` and the ready signal), and keeps its own tag and its own exported
+type extending that contract (`VideoPreviewElement`), to which it adds what is its alone once a host
+asks for it. `ImagePreviewElement` is the same contract under image's name. The URL template
+(`npm run new-format -- <name> --url`) starts one: `<name>PreviewElement`, the empty, loading,
+loaded and failed states, and `describeUrlPreviewContract` with hooks for its media.
 
 Formats may add subpaths of their own (`md` has `./markdown`, `code` has `./diff`, `sheet` has
 several). For the formats that predate the convention, `.` still registers the editor and exports
@@ -129,9 +144,9 @@ everything; `./editor` is the explicit alias.
 `packages/common` (`@stillpointlab/common-format`) holds what every surface shares and nothing
 else: the injectable logging (`setErrorHandler`, `setReporter`; one instance for all formats, which
 each format also re-exports), the element contracts the host drives (`PreviewElement`,
-`EditorElement`, `ImagePreviewElement`, `DiffElement`), the ready gate behind them, the `--spl-*`
-SCSS tokens (see "Theming"), and the contract conformance suites
-(`@stillpointlab/common-format/testing`).
+`EditorElement`, `UrlPreviewElement` with its image name `ImagePreviewElement`, `DiffElement`),
+the ready gate behind them, the `--spl-*` SCSS tokens (see "Theming"), and the contract
+conformance suites (`@stillpointlab/common-format/testing`).
 
 ### Ready
 
@@ -218,8 +233,8 @@ change. Read-only raw text runs in Normal without changing the recorded mode, an
 event. `describeKeymapModeContract` proves it, in a test file of its own since it defines a
 `<code-editor>` stand-in.
 
-The template's sample editor and preview implement all of it, so a new format starts with a raw
-view. The harness has a Raw control, logs `view-change`, and registers `<code-editor>` and
+The text template's sample editor and preview implement all of it, so a new format starts with a
+raw view. The harness has a Raw control, logs `view-change`, and registers `<code-editor>` and
 `<code-preview>` (`?raw=plain` leaves them out).
 
 ### Lazy engines
@@ -327,12 +342,12 @@ stylesheet.
 ### Conformance
 
 `@stillpointlab/common-format/testing` exports `describePreviewContract`, `describeEditorContract`,
-`describeImagePreviewContract` and `describeDiffContract`: vitest `describe` blocks a format runs
-in `src/contract.test.ts` for each element it ships. They prove readiness, set and read back,
-`content-change` on user edits and never on `setContent`, `readonly`, keymap modes and focus,
-settling after a DOM move and after a reconnect,
-and take hooks for what only the format knows (how to tell content reached the DOM, how to
-perform one edit). They use no fake timers, private fields or jsdom-specific stubs, so they run
+`describeUrlPreviewContract` (and `describeImagePreviewContract`, the same with image's hooks) and
+`describeDiffContract`: vitest `describe` blocks a format runs in `src/contract.test.ts` for each
+element it ships. They prove readiness, set and read back, `content-change` on user edits and never
+on `setContent`, `readonly`, keymap modes and focus, settling after a DOM move and after a
+reconnect, and take hooks for what only the format knows (how to tell content reached the DOM, how
+to perform one edit, how its media is told it loaded or failed). They use no fake timers, private fields or jsdom-specific stubs, so they run
 unchanged under vitest browser mode: a package that needs a real browser (media editors, clipboard)
 sets `formatTest({ browser: true })` in its `vitest.config.ts` and the root adds `@vitest/browser`,
 `@vitest/browser-playwright` and Playwright's Chromium at that point. Until then everything runs on
