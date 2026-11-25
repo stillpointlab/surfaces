@@ -168,3 +168,63 @@ Jamie, 2026-11-25, on the three rulings this spec asked for:
 - **Owns:** `packages/hosts/local/`, and the release walk card.
 - **Must not change:** `packages/common/` and the format and app packages.
 - **Runs beside:** the phase 2 specs, which are written while this is built.
+
+## As built
+
+Built by an Opus 5.5 sub-agent, read and checked by the orchestrating agent, which added the
+last point of the first list.
+
+Where the build differs from the plan:
+
+- **The exchange is in `createRequestCheck`,** not in `createHost`'s page branch, so development
+  mode gets it from the same function. The check's answer is now a refusal, the exchange's
+  redirect, or `null`; `createHost` and `createDevPage` send whichever it gives.
+  `createRequestCheck(origin, token)` takes the token as a second argument, and `createDevPage`'s
+  options gain it.
+- **A token in a query is the exchange and nothing else.** `/api/list?token=<the token>` is
+  refused. A wrong token in the page's address is refused even when the request also carries
+  the right cookie.
+- **Development mode checks an upgrade without its query.** Vite's reload socket has a `token`
+  of Vite's own in its address, which would have been read as a wrong one. The upgrade still
+  needs the cookie, the right `Host` and an `Origin`.
+- **The comparison is over SHA-256 digests,** which are one length whatever was sent. Every
+  value carried is compared (several cookies of the name, and a `Bearer`).
+- **The cookie's name is `surfaces` alone** where the origin has no port.
+- **The plain page is `text/plain`,** the words and a new line. The code is in the JSON refusal
+  only.
+- **`RunningCli.url` is the existing `Serving.url`.** No field was added.
+- **The redirect keeps one leading slash.** `//elsewhere/?token=<the token>` would have been
+  answered `Location: //elsewhere/`, which a browser reads as another host. It took the right
+  token to get that answer.
+
+How the page learns of a restart:
+
+- Every call goes through one function that reads the code of a `403`. On the stream's failure
+  the client asks `GET /api/root`, one check at a time.
+- The first `HOST_TOKEN_REQUIRED` closes every stream for good and tells the page once
+  (`{ type: 'restarted' }`, the client's own event). The page's notice then stays: no close
+  button, and no later notice replaces it.
+
+Checked:
+
+- `npm run check` from a clean tree: 3,695 tests.
+- By hand in Chromium on the built server: the address without the token (the words alone); the
+  printed address (the page, and no token left in the address); an image; a markdown file saved;
+  a tasks board; a commit; a create and its undo; a second tab; a `fetch` without the cookie;
+  a restart on the same port (the notice, and no stream request after it, a hidden and shown
+  tab included); the new address in the same tab.
+- `curl`: `/api/list` without the token and with `Authorization: Bearer`; the exchange with the
+  right token and a wrong one.
+- Development mode: the refusals for the page, a source file and Vite's client; the exchange;
+  the reload socket connecting with the cookie.
+
+Not tried:
+
+- Firefox, for the host itself. The cookie's travel was tried there on the spike's server.
+- The printed address followed from a link on another site. The cookie is `SameSite=Strict`, so
+  the page after the redirect is most likely refused until it is loaded again.
+- An app's op from a board after the exchange. The commit, the create and the undo are writes
+  that carried the cookie.
+
+A latent fault in `dev-page.test.ts` was fixed on the way: its refusal cases built their `Host`
+before the port was known, so each asked as `evil.example:undefined`.
