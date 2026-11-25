@@ -10,7 +10,9 @@
 // The page's content security policy lets scripts come from the host's own
 // origin alone. Styles may be inline as well: the formats' elements write their
 // stylesheets into their shadow roots at run time (CodeMirror, ProseMirror and
-// each element's generated styles), and no element can carry a nonce. The same
+// each element's generated styles), and no element can carry a nonce. Media may
+// be a `blob:` URL: a streaming library feeds a `<video>` through one of its own
+// making (a `MediaSource`), and Chromium holds that URL to `media-src`. The same
 // policy is a `<meta>` in `src/client/index.html`, so the built files carry it
 // wherever they are loaded from; a test holds the two equal.
 
@@ -27,7 +29,7 @@ export const PAGE_POLICY = [
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
   "connect-src 'self'",
-  "media-src 'self'",
+  "media-src 'self' blob:",
   "object-src 'none'",
   "frame-src 'none'",
   "base-uri 'none'",

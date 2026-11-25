@@ -128,6 +128,10 @@ describe('the policy', () => {
     expect(PAGE_HEADERS['content-security-policy']).toBe(`${PAGE_POLICY}; frame-ancestors 'none'`);
   });
 
+  it('lets media be a blob: URL, which a streaming library feeds a <video> through', () => {
+    expect(PAGE_POLICY).toContain("media-src 'self' blob:;");
+  });
+
   it('lets scripts come from the page alone', () => {
     expect(PAGE_POLICY).toContain("script-src 'self'");
     expect(PAGE_POLICY).not.toMatch(/script-src[^;]*'unsafe/);
