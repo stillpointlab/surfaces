@@ -10,6 +10,6 @@
     "../../packages/components/*/dev/fixtures.ts",
     "../../packages/apps/*/dev/fixtures.ts",
     "../../packages/hosts/*/dev/fixtures.ts",
-    "../../tooling/template/*/dev/fixtures.ts"
+    "../template/*/dev/fixtures.ts"
   ]
 }
