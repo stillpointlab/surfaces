@@ -149,7 +149,8 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
 - **The content security policy** (`PAGE_POLICY` in `src/server/page.ts`, and the same `<meta>` in
   `src/client/index.html`) lets scripts come from the page's own origin alone. Styles may also be
   inline, because the elements write their stylesheets into their shadow roots at run time.
-  Images may be `data:` and `blob:` URLs as well; nothing loads from another origin.
+  Images may be `data:` and `blob:` URLs as well, and media `blob:` URLs, through which a
+  streaming library feeds a `<video>`; nothing loads from another origin.
 - **The workspace packages** resolve to their sources in the build and in development mode
   (`workspaceAliases`), so each module exists once and the client needs no other package built.
 
@@ -169,7 +170,7 @@ beside it: `HostCommitRequest` in, `HostCommit` out, under the port's write lock
 | ----------------------- | ---------------------------------------------------------------------------------------------------- |
 | `GET /api/list`         | `{ nodes, truncated }`: every file and folder; past 20,000 nodes cut, and saying so                  |
 | `GET /api/file?path=`   | `{ ok: true, text, version }`, or a refusal                                                          |
-| `GET /api/raw?path=`    | the bytes, typed by extension, with `nosniff` and `Content-Security-Policy: sandbox`                 |
+| `GET /api/raw/<path>`   | the bytes, typed by extension, with `nosniff` and `Content-Security-Policy: sandbox`; in ranges      |
 | `PUT /api/files`        | body `{ changes: PortChange[], unjournaled?: true }`; `{ ok: true, versions }`, or a refusal         |
 | `GET /api/journal`      | `{ ok: true, undo, redo }`: the label of the step each would take next, or `null`                    |
 | `POST /api/undo`        | `{ ok: true, label, moved: [{ from, path }], deleted }`: what undoing the newest step did            |
@@ -192,6 +193,18 @@ beside it: `HostCommitRequest` in, `HostCommit` out, under the port's write lock
 A path is relative to the root with `/` separators, in the `path` query (percent-encoded as any
 query value). A version is a SHA-256 of the file's bytes, as hex; only equality matters.
 
+**The raw route** takes the path in the address's own path, each segment percent-encoded
+(`/api/raw/docs/a%20b.png`), so an address relative to a file resolves to its neighbour: a
+playlist's `seg0.m4s` is `/api/raw/docs/seg0.m4s`. Any query (the page's `?rev=`) is ignored.
+The rest of the address after `/api/raw/` is decoded once, whole, and checked as any path is,
+so an encoded `..%2F` is refused. The URL parser has already resolved `.` and `..` segments, in
+any spelling (`%2e%2e`), and read a backslash as `/`: an address that climbs out of `/api/raw/`
+is no route's. A trailing slash is an empty segment, and refused. Every answer carries
+`Accept-Ranges: bytes`. One range (`bytes=a-b`, `bytes=a-`, `bytes=-n`) is answered `206` with
+its `Content-Range`, and only that part of the file is read; one with no byte of the file in it,
+`416` with `Content-Range: bytes */<size>`. Several ranges, or a header that does not parse, are
+answered with the whole file. `HEAD`, `If-Range` and entity tags are not answered.
+
 **Refusals** are `{ ok: false, code, message }`:
 
 | Status | Codes                                                                                                                        |
@@ -209,6 +222,7 @@ query value). A version is a SHA-256 of the file's bytes, as hex; only equality 
 | 400    | `HOST_PATH_OUTSIDE_ROOT`, `HOST_PATH_INVALID`, `HOST_NOT_TEXT`, `HOST_FILE_TOO_LARGE`, `HOST_BAD_REQUEST`                    |
 | 400    | A commit: `HOST_COMMIT_NO_PATHS`, `HOST_COMMIT_NO_MESSAGE`, `HOST_BRANCH_INVALID`                                            |
 | 403    | `HOST_FORBIDDEN`: the `Host`, `Origin` or `Sec-Fetch-Site` checks, and a raw file asked for to run (below)                   |
+| 416    | `HOST_RANGE_NOT_SATISFIABLE`: a raw file's range with no byte of the file in it, with `Content-Range: bytes */<size>`        |
 | 403    | `HOST_TOKEN_REQUIRED`: no run's token (below); outside `/api/` a plain page with the same words                              |
 | 405    | `HOST_METHOD_NOT_ALLOWED`, with an `Allow` header                                                                            |
 | 413    | `HOST_BODY_TOO_LARGE`: a `PUT` body over 64 MiB                                                                              |
@@ -321,12 +335,13 @@ memory port.
   request whose `Origin` is another, and any the browser marks `Sec-Fetch-Site: cross-site` or
   `same-site` (except a navigation), is refused. Then every request must carry the run's token
   (below).
-- **A raw file is shown, never run.** `GET /api/raw` refuses a request whose `Sec-Fetch-Dest`
-  says the browser would run or apply it: `script`, `style`, a worker (`worker`, `sharedworker`,
-  `serviceworker`), a worklet (`audioworklet`, `paintworklet`), `xslt`, `manifest` and `json` (a
-  module). The page's scripts may come from its own origin, so a repository's `.js` would
-  otherwise load as the page's own. An image, a document or frame (sandboxed), media, a font
-  and a `fetch` are served, and so is a request with no `Sec-Fetch-Dest` (curl).
+- **A raw file is shown, never run.** `GET /api/raw/<path>` refuses a request whose
+  `Sec-Fetch-Dest` says the browser would run or apply it: `script`, `style`, a worker (`worker`,
+  `sharedworker`, `serviceworker`), a worklet (`audioworklet`, `paintworklet`), `xslt`,
+  `manifest` and `json` (a module). The page's scripts may come from its own origin, so a
+  repository's `.js` would otherwise load as the page's own. An image, a document or frame
+  (sandboxed), media (`video`, `audio`, `track`), a font and a `fetch` are served, and so is a
+  request with no `Sec-Fetch-Dest` (curl).
 
 ## Who the host answers
 
