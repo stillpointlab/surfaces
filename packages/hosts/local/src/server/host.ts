@@ -59,6 +59,7 @@ import { labelFor } from './journal/labels';
 import { LIST_LIMIT } from './limits';
 import { intoGit, isInside, locate, outsideRoot, pathRefusal } from './paths';
 import { createNodePort } from './port';
+import { rangeOf } from './range';
 import { json, readBody, refusal, refuse, SECURITY_HEADERS, tokenRequired } from './respond';
 import { createFolderWatcher } from './watcher';
 
@@ -541,26 +542,34 @@ export function createHost(options: HostOptions): LocalHost {
     // relative to it (a playlist's segment) resolves to the file's neighbour.
     [RAW_PREFIX]: {
       GET: async (request, url) => {
-        const dest = request.headers.get('sec-fetch-dest');
-        if (dest !== null && RUN_DESTINATIONS.has(dest)) {
-          return refuse(
-            'HOST_FORBIDDEN',
-            `A file of the folder is served to be shown, not run (Sec-Fetch-Dest: ${dest}).`,
-            403
-          );
-        }
-        const path = rawPath(url);
-        if (path === null) {
-          return refuse(
-            'HOST_PATH_INVALID',
-            `${JSON.stringify(url.pathname)} is not a usable path: its encoding does not decode.`,
-            400
-          );
-        }
-        return raw(path);
+        // Every answer of the route says it takes ranges, a refusal's too.
+        const answer = await rawRoute(request, url);
+        answer.headers.set('accept-ranges', 'bytes');
+        return answer;
       },
     },
   };
+
+  /** The raw route: what would be run is refused, then the address is read as a path. */
+  async function rawRoute(request: Request, url: URL): Promise<Response> {
+    const dest = request.headers.get('sec-fetch-dest');
+    if (dest !== null && RUN_DESTINATIONS.has(dest)) {
+      return refuse(
+        'HOST_FORBIDDEN',
+        `A file of the folder is served to be shown, not run (Sec-Fetch-Dest: ${dest}).`,
+        403
+      );
+    }
+    const path = rawPath(url);
+    if (path === null) {
+      return refuse(
+        'HOST_PATH_INVALID',
+        `${JSON.stringify(url.pathname)} is not a usable path: its encoding does not decode.`,
+        400
+      );
+    }
+    return raw(path, request.headers.get('range'));
+  }
 
   function routeFor(pathname: string): Partial<Record<string, Handler>> | undefined {
     const route = routes[pathname];
@@ -593,7 +602,12 @@ export function createHost(options: HostOptions): LocalHost {
     return journal.port(labelFor(changes), { unkept: 'refuse' }).put(changes);
   }
 
-  async function raw(path: string): Promise<Response> {
+  /**
+   * A file's bytes: all of them, or the one range `range` asks for (`206`), read
+   * from the file and no more. A range with no byte of the file in it (one that
+   * starts past its end) is `416`.
+   */
+  async function raw(path: string, range: string | null): Promise<Response> {
     const refused = pathRefusal(path);
     if (refused !== null) return refusal(refused);
     const at = await locate(root, path);
@@ -616,15 +630,28 @@ export function createHost(options: HostOptions): LocalHost {
       await handle?.close();
       return missing();
     }
+    const asked = rangeOf(range, size);
+    if (asked === 'unsatisfiable') {
+      await handle.close();
+      return refuse(
+        'HOST_RANGE_NOT_SATISFIABLE',
+        `The range ${JSON.stringify(range)} asks for no byte of a file of ${size} bytes.`,
+        416,
+        { 'content-range': `bytes */${size}` }
+      );
+    }
+    const headers: Record<string, string> = {
+      'content-type': TYPES[extname(path).toLowerCase()] ?? 'application/octet-stream',
+      'content-length': String(asked === null ? size : asked.end - asked.start + 1),
+      'content-security-policy': 'sandbox',
+      ...SECURITY_HEADERS,
+    };
+    if (asked !== null) headers['content-range'] = `bytes ${asked.start}-${asked.end}/${size}`;
     // The stream closes the handle when it ends or is cancelled.
-    const stream = handle.createReadStream();
+    const stream = handle.createReadStream(asked ?? {});
     return new Response(Readable.toWeb(stream) as ReadableStream<Uint8Array>, {
-      headers: {
-        'content-type': TYPES[extname(path).toLowerCase()] ?? 'application/octet-stream',
-        'content-length': String(size),
-        'content-security-policy': 'sandbox',
-        ...SECURITY_HEADERS,
-      },
+      status: asked === null ? 200 : 206,
+      headers,
     });
   }
 

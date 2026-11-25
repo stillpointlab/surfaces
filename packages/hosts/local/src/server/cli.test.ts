@@ -186,6 +186,19 @@ describe('surfaces', () => {
     expect(await asWritten('/api/raw/a.md')).toEqual({ status: 200, body: 'a' });
   });
 
+  it('answers a range of a raw file over HTTP, with its length and where it falls', async () => {
+    const { url, auth } = await serve(['site', '--port', '0']);
+    writeFileSync(join(folder.path, 'site', 'long.txt'), '0123456789');
+    const response = await fetch(`${url}api/raw/long.txt`, {
+      headers: { ...auth, range: 'bytes=2-5' },
+    });
+    expect(response.status).toBe(206);
+    expect(response.headers.get('accept-ranges')).toBe('bytes');
+    expect(response.headers.get('content-range')).toBe('bytes 2-5/10');
+    expect(response.headers.get('content-length')).toBe('4');
+    expect(await response.text()).toBe('2345');
+  });
+
   it('streams events over HTTP', async () => {
     const { url, auth } = await serve(['site', '--port', '0']);
     const response = await fetch(`${url}api/events`, { headers: auth });

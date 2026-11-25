@@ -211,6 +211,96 @@ describe('the routes', () => {
     }
   });
 
+  describe('GET /api/raw/<path> in ranges', () => {
+    const ranged = (path: string, range: string) => request(path, { headers: { range } });
+
+    it('says it takes ranges on every answer, a refusal’s too', async () => {
+      const answers = [
+        await request('/api/raw/img/dot.png'),
+        await ranged('/api/raw/img/dot.png', 'bytes=0-1'),
+        await ranged('/api/raw/img/dot.png', 'bytes=9-'),
+        await request('/api/raw/none.png'),
+        await request('/api/raw/'),
+        await request('/api/raw/a.md', { headers: { 'sec-fetch-dest': 'script' } }),
+      ];
+      expect(answers.map((answer) => answer.status)).toEqual([200, 206, 416, 404, 400, 403]);
+      for (const answer of answers) {
+        expect(answer.headers.get('accept-ranges')).toBe('bytes');
+        await answer.arrayBuffer();
+      }
+    });
+
+    it.each([
+      ['bytes=0-1', [0x89, 0x50], 'bytes 0-1/4'],
+      ['bytes=1-', [0x50, 0, 7], 'bytes 1-3/4'],
+      ['bytes=-2', [0, 7], 'bytes 2-3/4'],
+      ['bytes=2-99', [0, 7], 'bytes 2-3/4'],
+    ])('answers %s with 206 and that part', async (range, bytes, contentRange) => {
+      const response = await ranged('/api/raw/img/dot.png', range);
+      expect(response.status).toBe(206);
+      expect(response.headers.get('content-range')).toBe(contentRange);
+      expect(response.headers.get('content-length')).toBe(String(bytes.length));
+      expect(response.headers.get('content-type')).toBe('image/png');
+      expect(response.headers.get('content-security-policy')).toBe('sandbox');
+      expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+      expect(new Uint8Array(await response.arrayBuffer())).toEqual(new Uint8Array(bytes));
+    });
+
+    it.each(['bytes=4-', 'bytes=4-10', 'bytes=-0'])(
+      'answers %s, past the end, with 416 and the size',
+      async (range) => {
+        const response = await ranged('/api/raw/img/dot.png', range);
+        expect(response.status).toBe(416);
+        expect(response.headers.get('content-range')).toBe('bytes */4');
+        expect(await response.json()).toEqual({
+          ok: false,
+          code: 'HOST_RANGE_NOT_SATISFIABLE',
+          message: expect.any(String),
+        });
+      }
+    );
+
+    it('answers any range of an empty file with 416', async () => {
+      writeFiles(root, { 'empty.txt': '' });
+      const response = await ranged('/api/raw/empty.txt', 'bytes=0-');
+      expect(response.status).toBe(416);
+      expect(response.headers.get('content-range')).toBe('bytes */0');
+      await response.arrayBuffer();
+    });
+
+    it.each(['bytes=0-0,2-3', 'bytes=0-0, 2-3', 'bytes=3-1', 'bytes=x-y', 'lines=1-2', 'bytes='])(
+      'answers %s with the whole file, as if no range were asked',
+      async (range) => {
+        const response = await ranged('/api/raw/img/dot.png', range);
+        expect(response.status).toBe(200);
+        expect(response.headers.get('content-range')).toBeNull();
+        expect(response.headers.get('content-length')).toBe('4');
+        expect(new Uint8Array(await response.arrayBuffer())).toEqual(
+          new Uint8Array([0x89, 0x50, 0, 7])
+        );
+      }
+    );
+
+    it('reads a range of a file larger than one read, across the reads', async () => {
+      // A stream reads 64 KiB at a time: this file is several reads long.
+      const bytes = new Uint8Array(300 * 1024);
+      for (let i = 0; i < bytes.length; i += 1) bytes[i] = (i * 7919 + (i >> 8)) % 251;
+      writeFiles(root, { 'big.webm': bytes });
+      for (const [range, start, end] of [
+        ['bytes=65000-200000', 65000, 200000],
+        ['bytes=131072-', 131072, bytes.length - 1],
+        ['bytes=-70000', bytes.length - 70000, bytes.length - 1],
+      ] as const) {
+        const response = await ranged('/api/raw/big.webm', range);
+        expect(response.status).toBe(206);
+        expect(response.headers.get('content-type')).toBe('video/webm');
+        expect(response.headers.get('content-range')).toBe(`bytes ${start}-${end}/${bytes.length}`);
+        expect(response.headers.get('content-length')).toBe(String(end - start + 1));
+        expect(new Uint8Array(await response.arrayBuffer())).toEqual(bytes.slice(start, end + 1));
+      }
+    });
+  });
+
   it('PUT /api/files writes and answers the versions', async () => {
     const base = versionOf(Buffer.from('# A\n'));
     const response = await put([
