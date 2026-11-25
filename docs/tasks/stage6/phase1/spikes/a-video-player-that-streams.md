@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 177
+completed: 2026-11-25
 created: 2026-11-25T15:10:00-07:00
 tags: [formats, feature, host-contract]
 ---
@@ -140,6 +142,20 @@ alone has no neighbours, so a playlist as a lone good cannot play.
 3. **Our own controls.** The agent reads "our own basic video player" as controls drawn by us and
    not the browser's. If the browser's controls on our element would do for a first pass, the
    video step is a good deal smaller.
+
+## Rulings
+
+Jamie, 2026-11-25, the day this was written:
+
+- **The video recommendation stands, and MPEG-DASH waits.** hls.js is the library, loaded only
+  when an `.m3u8` is opened. MPEG-DASH is [a seed](../../../unassigned/seeds/mpeg-dash-streams.md).
+- **Streams come from the folder for now,** with a server's and Context Manager's planned for
+  later: [a seed](../../../unassigned/seeds/streams-from-beyond-the-folder.md).
+- **`media-src 'self' blob:` is allowed.** Context Manager needs it too: its policy names no
+  `media-src`, so media falls to `default-src 'self'`.
+- **The browser's controls for now,** if hls.js works with them. It does: every case above ran
+  with `controls` set on the element. Players of our own for video and audio are
+  [a seed](../../../unassigned/seeds/players-of-our-own.md).
 
 ## References
 

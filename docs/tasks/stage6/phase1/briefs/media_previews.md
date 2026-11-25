@@ -1,5 +1,7 @@
 ---
-column: todo
+column: done
+pr: 177
+completed: 2026-11-25
 created: 2026-11-25T13:40:00-07:00
 tags: [formats, feature, scaffold, dev-tooling, docs]
 ---
@@ -11,15 +13,15 @@ tags: [formats, feature, scaffold, dev-tooling, docs]
 # Brief: media previews
 
 _Drafted by the claude agent on 2026-11-25, at stage 6's opening, from the plan Jamie agreed that
-day, and amended the same day with his answers to its first nine questions. The phases are a
-proposal until he rules on them._
+day, and amended the same day with his answers to its questions and his rulings on the streaming
+spike._
 
 ## High-level goal
 
 A PDF, an audio file and a video file each open as a preview, in the local host and in Context
-Manager, the way an image does today. A video plays in a basic player of our own, and that
-player can play a stream. Each is a format package made with the scaffold, so the stage also
-leaves a scaffold whose output a host can register.
+Manager, the way an image does today. A video plays in an element of our own that can also play
+an HLS stream. Each is a format package made with the scaffold, so the stage also leaves a
+scaffold whose output a host can register.
 
 ## Background
 
@@ -69,7 +71,7 @@ Read at surfaces `e4758a2` and Context Manager `2b4182fd`.
 
 - In the local host, a `.pdf`, an audio file or a video file chosen in the tree shows in the
   page. A long video seeks. A file the browser cannot play says so in words.
-- A playlist (`.m3u8`, `.mpd`) with its segments beside it plays in the same player.
+- An HLS playlist (`.m3u8`) with its segments beside it plays in the same element.
 - In Context Manager, the same goods preview where an image does today.
 - `npm run new-format -- <name>` makes a package a host can register with no edit by hand, and
   the template is tested where it lies.
@@ -82,7 +84,7 @@ In order:
 | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------- |
 | 1     | This brief and the [streaming spike](../spikes/a-video-player-that-streams.md); the token, as a spec and its build; the specs for phase 2                                                        | here            |
 | 2     | Groundwork: the scaffold makes a registrable format and tests in place; browser tests in CI; the raw route answers range requests and gives an address by path; a package can ship a worker file | here            |
-| 3     | The audio preview; the video player: a plain file, then HLS, then MPEG-DASH                                                                                                                      | here            |
+| 3     | The audio preview; the video preview: a plain file, then HLS through hls.js                                                                                                                      | here            |
 | 4     | PDF preview                                                                                                                                                                                      | here            |
 | 5     | Context Manager adopts the three                                                                                                                                                                 | Context Manager |
 | 6     | The close: release review, release walk, Jamie's validation; the spike on writing bytes                                                                                                          | here            |
@@ -117,8 +119,8 @@ None of these holds a phase up:
 - **Preview only.** No editor for any of the three, and no write of a media file. The storage port
   stays text.
 - **Neither host's policy is loosened** for a frame or an object. What a PDF needs to draw is
-  built into the package and served from the host's own origin. The one loosening asked for is
-  `blob:` for media (open question 2).
+  built into the package and served from the host's own origin. The one loosening is `blob:` for
+  media, which Jamie allowed (11 below).
 - **A plain media file loads no streaming library.** An engine loads when a playlist is opened.
 - **Nothing the five text formats or image do changes.**
 - **The descriptor's contract holds** unless a spec shows a preview cannot be built on it.
@@ -149,13 +151,22 @@ Jamie's answers on 2026-11-25 to this brief's first draft:
    [a changed block comes back with its brackets escaped](../../../unassigned/seeds/brackets-escaped-in-a-changed-block.md).
    Both are closed in [stage 5's log](../../../../devlogs/stage5/followups.md).
 
+His rulings the same day on the spike's recommendation and its three questions:
+
+10. **The video recommendation stands, without MPEG-DASH.** A plain file plays through `<video>`
+    with no library, and hls.js loads only when an `.m3u8` is opened. MPEG-DASH is
+    [a seed](../../../unassigned/seeds/mpeg-dash-streams.md).
+11. **Streams come from the folder for now:** a playlist with its segments beside it. A stream
+    from a server, and Context Manager serving one, are planned for later and are
+    [a seed](../../../unassigned/seeds/streams-from-beyond-the-folder.md).
+12. **`media-src 'self' blob:` is allowed.** Context Manager needs the same change: its policy
+    names no `media-src`, so media falls to `default-src 'self'`, which refuses `blob:`. Its
+    adoption makes it.
+13. **The browser's own controls for now,** on our element. The spike's streams were played and
+    sought through hls.js with those controls on. Players of our own for video and audio, most
+    likely two, are [a seed](../../../unassigned/seeds/players-of-our-own.md).
+
 ## Open questions
 
-From the [spike](../spikes/a-video-player-that-streams.md), which gives the agent's lean on each:
-
-1. **Where streams come from.** A playlist in the folder with its segments beside it is what
-   the stage builds. A stream on another server, a host cutting a stored video into a stream,
-   and live video are each a larger step: in this stage, or seeds?
-2. **`media-src 'self' blob:`** in both hosts' policies, which a streaming library cannot play
-   without in Chromium.
-3. **Controls drawn by us,** or the browser's controls on our element for a first pass?
+None. The [spike](../spikes/a-video-player-that-streams.md)'s three were ruled on the day it was
+written, as 10 to 13 above.

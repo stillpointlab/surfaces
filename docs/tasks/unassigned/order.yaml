@@ -6,6 +6,12 @@
 - docs/tasks/unassigned/seeds/basic-media-editors.md
 - docs/tasks/unassigned/seeds/media-manager.md
 
+# From stage 6's streaming spike (Jamie's rulings, 2026-11-25): what the video
+# and audio previews leave for later.
+- docs/tasks/unassigned/seeds/players-of-our-own.md
+- docs/tasks/unassigned/seeds/streams-from-beyond-the-folder.md
+- docs/tasks/unassigned/seeds/mpeg-dash-streams.md
+
 # From Jamie's stage 5 validation, published from Context Manager (2026-11-23).
 - docs/tasks/unassigned/seeds/a-format-step-for-published-pull-requests.md
 
