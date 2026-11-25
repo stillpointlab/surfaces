@@ -10,6 +10,7 @@ export type {
   PreviewElement,
   ReadyElement,
   SurfaceView,
+  UrlPreviewElement,
   ViewChangeDetail,
   ViewChangeReason,
 } from './contracts';
