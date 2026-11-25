@@ -47,6 +47,13 @@ output differed in anything but those backslashes.
 list item's paragraph. A checkbox to click is the reason to give it a node, and that is a
 feature, not this defect.
 
+**A typed `[d]` whose definition is inside a kept block.** A `[d]` typed into a changed block is
+checked against the definitions between blocks alone (`prosemirror-markdown.ts`, the bracket
+writer). Where `d` is defined inside a list item or a quote that is kept, the typed text is
+written with its brackets bare and reads back as a link. Seen while fixing M10 at stage 5's
+close; rare, since such definitions are. Moved here from stage 5's follow-ups (Jamie,
+2026-11-25).
+
 Related: [a save keeps the rest of the file](a-save-keeps-the-file.md), whose "inside a list or a
 table" point is the same rewrite seen from the other side: an edit to one item still rewrites the
 whole list, now without touching its boxes.

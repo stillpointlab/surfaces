@@ -11,13 +11,15 @@ tags: [formats, feature, scaffold, dev-tooling, docs]
 # Brief: media previews
 
 _Drafted by the claude agent on 2026-11-25, at stage 6's opening, from the plan Jamie agreed that
-day. The phases below and the leans under "Open questions" are proposals until he rules on them._
+day, and amended the same day with his answers to its first nine questions. The phases are a
+proposal until he rules on them._
 
 ## High-level goal
 
 A PDF, an audio file and a video file each open as a preview, in the local host and in Context
-Manager, the way an image does today. Each is a format package made with the scaffold, so the
-stage also leaves a scaffold whose output a host can register.
+Manager, the way an image does today. A video plays in a basic player of our own, and that
+player can play a stream. Each is a format package made with the scaffold, so the stage also
+leaves a scaffold whose output a host can register.
 
 ## Background
 
@@ -46,7 +48,9 @@ Read at surfaces `e4758a2` and Context Manager `2b4182fd`.
   its loading and failed states, and no editor.
 - **The local host's `/api/raw` names the types** for `.pdf`, `.mp3`, `.wav`, `.oga`, `.ogg`,
   `.weba`, `.mp4`, `.webm` and `.ogv`. It sends a whole file in one response and does not answer
-  a range request, which a browser needs to seek in a long video.
+  a range request, which a browser needs to seek in a long video. A file's address carries its
+  path in the query (`/api/raw?path=…`), so an address relative to the file does not reach its
+  neighbours: a playlist cannot find its segments.
 - **The local host's page policy** allows media from its own origin (`media-src 'self'`) and
   scripts from its own origin, which covers a worker. It allows no frame and no object
   (`frame-src 'none'`, `object-src 'none'`), and a raw response carries `sandbox`. A PDF cannot be
@@ -65,6 +69,7 @@ Read at surfaces `e4758a2` and Context Manager `2b4182fd`.
 
 - In the local host, a `.pdf`, an audio file or a video file chosen in the tree shows in the
   page. A long video seeks. A file the browser cannot play says so in words.
+- A playlist (`.m3u8`, `.mpd`) with its segments beside it plays in the same player.
 - In Context Manager, the same goods preview where an image does today.
 - `npm run new-format -- <name>` makes a package a host can register with no edit by hand, and
   the template is tested where it lies.
@@ -73,21 +78,21 @@ Read at surfaces `e4758a2` and Context Manager `2b4182fd`.
 
 In order:
 
-| Phase | What                                                                                                                           | Where           |
-| ----- | ------------------------------------------------------------------------------------------------------------------------------ | --------------- |
-| 1     | This brief; the token, as a spec and its build; the specs for phase 2                                                          | here            |
-| 2     | Groundwork: the scaffold makes a registrable format and tests in place; browser tests in CI; `/api/raw` answers range requests | here            |
-| 3     | Audio and video previews                                                                                                       | here            |
-| 4     | PDF preview                                                                                                                    | here            |
-| 5     | Context Manager adopts the three                                                                                               | Context Manager |
-| 6     | The close: release review, release walk, Jamie's validation                                                                    | here            |
+| Phase | What                                                                                                                                                                                             | Where           |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------- |
+| 1     | This brief and the [streaming spike](../spikes/a-video-player-that-streams.md); the token, as a spec and its build; the specs for phase 2                                                        | here            |
+| 2     | Groundwork: the scaffold makes a registrable format and tests in place; browser tests in CI; the raw route answers range requests and gives an address by path; a package can ship a worker file | here            |
+| 3     | The audio preview; the video player: a plain file, then HLS, then MPEG-DASH                                                                                                                      | here            |
+| 4     | PDF preview                                                                                                                                                                                      | here            |
+| 5     | Context Manager adopts the three                                                                                                                                                                 | Context Manager |
+| 6     | The close: release review, release walk, Jamie's validation; the spike on writing bytes                                                                                                          | here            |
 
 ## How the stage runs
 
 What stage 5 did, kept, with what Jamie's reflections on it change:
 
 - **The follow-up log is drained at each phase's close,** not at the stage's end. A phase carries
-  on only a few entries (question 8).
+  on at most three entries.
 - **The stage's end is for the release review and Jamie's validation,** and what they find is
   built then, not deferred to the next stage's start.
 - **One integration in Context Manager,** at the end, with the walks at that pin.
@@ -105,48 +110,52 @@ None of these holds a phase up:
   [media manager](../../../unassigned/seeds/media-manager.md).
 - **A spike on writing bytes** through the storage port, at the stage's close, so
   [very basic media editors](../../../unassigned/seeds/basic-media-editors.md) can start from an
-  answer (question 7).
+  answer.
 
 ## Constraints
 
 - **Preview only.** No editor for any of the three, and no write of a media file. The storage port
   stays text.
 - **Neither host's policy is loosened** for a frame or an object. What a PDF needs to draw is
-  built into the package and served from the host's own origin.
-- **Nothing the five text formats do changes,** and image changes only if question 4 says so.
+  built into the package and served from the host's own origin. The one loosening asked for is
+  `blob:` for media (open question 2).
+- **A plain media file loads no streaming library.** An engine loads when a playlist is opened.
+- **Nothing the five text formats or image do changes.**
 - **The descriptor's contract holds** unless a spec shows a preview cannot be built on it.
 - **Context Manager's part is its own:** the rows in its table, how it serves a large file, and
   its limits are decided in its adoption spec, not here.
 
+## Decided
+
+Jamie's answers on 2026-11-25 to this brief's first draft:
+
+1. **Three packages:** PDF, audio and video each have their own.
+2. **A basic video player of our own, which can play a stream:** HLS through hls.js or something
+   like it, and the other streaming formats. The
+   [spike](../spikes/a-video-player-that-streams.md) was run the same day.
+3. **pdf.js** for PDF. Its spec still opens with the checks the seed left: the worker as a built
+   file of its own, and what a JPEG 2000 image does under each host's policy.
+4. **Image gains nothing in this stage.** A source view for SVG goes with the image editor, and
+   is noted in [its seed](../../../unassigned/seeds/image-editor-basic.md).
+5. **Every common ending the browsers play.** The spike played one file of each in Chromium and
+   Firefox: its list is the specs' starting point, and WAV and MP3 are on it.
+6. **Context Manager may limit a file's size for now,** and serves audio and video as a stream a
+   player can seek in.
+7. **The spike on writing bytes is in this stage's close.**
+8. **A phase carries on at most three follow-ups,** a number open to change. The aim is that
+   the stage's close never meets a log of fifty again.
+9. **Stage 5's two open entries:** the harness keeps its two ways to read for now, and the typed
+   `[d]` joins the seed
+   [a changed block comes back with its brackets escaped](../../../unassigned/seeds/brackets-escaped-in-a-changed-block.md).
+   Both are closed in [stage 5's log](../../../../devlogs/stage5/followups.md).
+
 ## Open questions
 
-Each has the agent's lean. Answers on the pull request, as before.
+From the [spike](../spikes/a-video-player-that-streams.md), which gives the agent's lean on each:
 
-1. **One package for each of PDF, audio and video, or audio and video in one?** Lean: three. The
-   convention is one format for one kind of good, and what audio and video share is a `<audio>` or
-   `<video>` element.
-2. **The browser's own controls for audio and video?** Lean: yes, with no player of our own and
-   no library. A waveform or a thumbnail is a later wish.
-3. **pdf.js for PDF.** Jamie, 2026-11-25: a fine choice, to be looked at once more when its spec
-   is written. That look checks what the seed left open (the worker as its own built file, what
-   happens to a JPEG 2000 image under each host's policy) and the size of what a page loads.
-   Today's read adds one point for it: the local host allows no frame, so the browser's own
-   viewer is not a way there.
-4. **Does image gain anything in this stage?** The media seed notes it has no raw view, and that
-   SVG is text. Lean: no; a source view for SVG is small and can ride with the first media
-   editor.
-5. **Which file endings open?** Lean: those `/api/raw` names today, and each spec adds what
-   Chromium and Firefox both play (`.m4a`, `.flac`, `.mov` are the likely asks). `.ogg` stays
-   audio.
-6. **How large a file does Context Manager serve, and how?** Its image route sends a whole file.
-   A video needs ranges and most likely a stream from where the file is kept. Lean: its adoption
-   spec decides, after a read of how it holds a large good; this is the adoption's largest part.
-7. **The spike on writing bytes: in this stage's close, or stage 7's start?** Lean: this stage's
-   close, since stage 7 may open on the editors.
-8. **How many follow-ups may a phase carry on?** The reflections ask "1-3?". Lean: three.
-9. **The two entries carried from stage 5's log** ([the stage 6 log](../../../../devlogs/stage6/followups.md)):
-   - the harness's two ways to read. Lean: close by design, since a fixture is the dev page's
-     sample data and no test loads one;
-   - a typed `[d]` whose definition is inside a kept list item. Lean: add it to the seed
-     [a changed block comes back with its brackets escaped](../../../unassigned/seeds/brackets-escaped-in-a-changed-block.md),
-     which is the same writer.
+1. **Where streams come from.** A playlist in the folder with its segments beside it is what
+   the stage builds. A stream on another server, a host cutting a stored video into a stream,
+   and live video are each a larger step: in this stage, or seeds?
+2. **`media-src 'self' blob:`** in both hosts' policies, which a streaming library cannot play
+   without in Chromium.
+3. **Controls drawn by us,** or the browser's controls on our element for a first pass?

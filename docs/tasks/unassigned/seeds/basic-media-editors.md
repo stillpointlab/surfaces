@@ -11,7 +11,8 @@ candidate for stage 7, before or beside the [media manager](media-manager.md).
 
 What the pool already holds:
 
-- [Image editor (basic)](image-editor-basic.md): import, crop, resize, rotate and flip.
+- [Image editor (basic)](image-editor-basic.md): import, crop, resize, rotate and flip, and a
+  source view for SVG.
 - [Video editor](video-editor.md): a title and no more.
 - Nothing for audio. The [dictation editor](dictation-editor.md) records; it does not edit.
 
