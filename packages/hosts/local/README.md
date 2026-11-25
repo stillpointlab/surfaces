@@ -8,7 +8,8 @@ nothing here needs Context Manager. See the
 [host-page spec](../../../docs/tasks/stage4/phase2/specs/host-page.md), the
 [file-operations spec](../../../docs/tasks/stage4/phase2/specs/file-operations.md) and
 [git in the host](../../../docs/tasks/stage4/phase3/specs/git-in-the-host.md), and
-[apps in the local host](../../../docs/tasks/stage5/phase3/specs/apps-in-the-local-host.md).
+[apps in the local host](../../../docs/tasks/stage5/phase3/specs/apps-in-the-local-host.md), and
+[a token for the run](../../../docs/tasks/stage6/phase1/specs/a-token-for-the-run.md).
 
 ## Running it
 
@@ -22,7 +23,9 @@ nothing here needs Context Manager. See the
   `npm run build --workspace @stillpointlab/local-host`, which writes `dist/server` and
   `dist/client`), and anywhere once linked (`npm link` from `packages/hosts/local`). The port
   defaults to 5190. It binds to `127.0.0.1` only, and refuses a path that is not a folder and a
-  port in use. The command is `bin/surfaces.js`, checked in so npm links it when it installs; it
+  port in use. It prints the address to open, with the run's token in it
+  (`Serving <root> at http://127.0.0.1:5190/?token=<token>`): see
+  [Who the host answers](#who-the-host-answers). The command is `bin/surfaces.js`, checked in so npm links it when it installs; it
   runs the built `dist/server/bin.js`.
 
 ## The page
@@ -138,7 +141,9 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
   offer "Create <noun> here…" for each app with a create form: a dialog with the folder, the
   app's root consent where it asks one, and the app's own form.
 - **The notice** under the explorer's header is the page's one: a commit, an app's
-  notification, or what a lock reports.
+  notification, or what a lock reports. A page left open while its server started again says
+  "This page’s server was started again. Open the address its terminal printed." there, with no
+  close button, and nothing replaces it.
 - **Markdown is untrusted:** the page installs a renderer that sanitizes with DOMPurify before any
   md element mounts.
 - **The content security policy** (`PAGE_POLICY` in `src/server/page.ts`, and the same `<meta>` in
@@ -150,7 +155,7 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
 
 ## As a library
 
-`createHost({ root, origin })` answers the web's `Request` with a `Response`; `close()` ends its
+`createHost({ root, origin, token })` answers the web's `Request` with a `Response`; `close()` ends its
 event streams and its watcher. The `bin` is `nodeListener` around it on `node:http`, and a desktop
 shell can serve the same handler under its own scheme. `createNodePort({ root })` is the
 `StoragePort` (from `@stillpointlab/common-format/host`) over the folder, with `commit(request)`
@@ -204,6 +209,7 @@ query value). A version is a SHA-256 of the file's bytes, as hex; only equality 
 | 400    | `HOST_PATH_OUTSIDE_ROOT`, `HOST_PATH_INVALID`, `HOST_NOT_TEXT`, `HOST_FILE_TOO_LARGE`, `HOST_BAD_REQUEST`                    |
 | 400    | A commit: `HOST_COMMIT_NO_PATHS`, `HOST_COMMIT_NO_MESSAGE`, `HOST_BRANCH_INVALID`                                            |
 | 403    | `HOST_FORBIDDEN`: the `Host`, `Origin` or `Sec-Fetch-Site` checks, and a raw file asked for to run (below)                   |
+| 403    | `HOST_TOKEN_REQUIRED`: no run's token (below); outside `/api/` a plain page with the same words                              |
 | 405    | `HOST_METHOD_NOT_ALLOWED`, with an `Allow` header                                                                            |
 | 413    | `HOST_BODY_TOO_LARGE`: a `PUT` body over 64 MiB                                                                              |
 | 422    | `HOST_GIT_FAILED`: git ran and failed (its message says why). The repository is the person's to put right, so not a 500      |
@@ -221,6 +227,10 @@ every 25 seconds. The server's own writes are reported too.
 When the stream drops and comes back, the page's client says `listed`, `journal` and then
 `reconnected`, its own word and not the server's: the page lists again, and reads the open file
 again, since a change made meanwhile was sent to nobody.
+
+A page of an earlier run (its server was started again) is refused every request. The client
+says `restarted`, once, when a call is refused with `HOST_TOKEN_REQUIRED` or the stream fails and
+`GET /api/root` is, and then closes the stream for good; the page says so in its notice.
 
 The client holds its stream only while the tab shows. A browser allows six connections to one
 host over HTTP/1.1 across all its tabs, and a stream holds one for good, so a stream in every
@@ -309,13 +319,55 @@ memory port.
 - **Requests.** The `Host` must be the host's own (`127.0.0.1:<port>` or `localhost:<port>`). A
   request that is not a `GET` must carry the host's `Origin` (or its `localhost` twin). Any
   request whose `Origin` is another, and any the browser marks `Sec-Fetch-Site: cross-site` or
-  `same-site` (except a navigation), is refused.
+  `same-site` (except a navigation), is refused. Then every request must carry the run's token
+  (below).
 - **A raw file is shown, never run.** `GET /api/raw` refuses a request whose `Sec-Fetch-Dest`
   says the browser would run or apply it: `script`, `style`, a worker (`worker`, `sharedworker`,
   `serviceworker`), a worklet (`audioworklet`, `paintworklet`), `xslt`, `manifest` and `json` (a
   module). The page's scripts may come from its own origin, so a repository's `.js` would
   otherwise load as the page's own. An image, a document or frame (sandboxed), media, a font
   and a `fetch` are served, and so is a request with no `Sec-Fetch-Dest` (curl).
+
+## Who the host answers
+
+Only someone who has the address the command printed. The three checks above keep out another
+site in the browser; they do not keep out another program, which can send any `Host` and
+`Origin` it likes. So each start makes a token, and every request on every route, the page's own
+files, `/api/events` and `/api/raw` included, must carry it.
+
+- **The token** is 32 random bytes from `node:crypto`, written as base64url, new at each start.
+  The printed address carries it: `http://127.0.0.1:5190/?token=<token>`.
+- **The exchange.** A `GET` or `HEAD` for the page (any path outside `/api/`) with `token` in its
+  query is answered `303` to the same path and query without it, and sets the cookie
+  `surfaces-<port>=<token>; HttpOnly; SameSite=Strict; Path=/`. The port is in the name, so two
+  runs on two ports each keep their own. A wrong token is refused and sets nothing. The token in
+  a query is taken only there: `/api/list?token=…` is refused.
+- **Where it travels.** In the cookie, which the browser sends with every request to the host:
+  the page's `fetch`es, the event stream, every `<img>`, `<video>` and `<audio>`, what a library
+  fetches, a second tab opened at the address without the token. Nothing in the page sets it.
+  A program sends `Authorization: Bearer <token>` instead (the tests do). The comparison takes
+  the same time whatever was sent (`timingSafeEqual` over SHA-256 digests).
+- **Without it** a request is refused with `403`: under `/api/` the JSON refusal
+  `HOST_TOKEN_REQUIRED`, "Open the address the `surfaces` command printed in its terminal.";
+  for the page a plain page with the same words and nothing about the folder served. The three
+  checks above run first, so a request another site started is refused by them, with the token
+  or without.
+- **A restart** makes a new token. A page left open holds the old run's cookie and is refused;
+  it says so (above) and stops retrying its stream. Opening the new address sets the new cookie.
+- **Development mode** holds what Vite serves to the same check, the exchange included, and its
+  HMR socket too (the browser sends the cookie with it).
+- **As a library**, `createHost({ token: null })` turns the check off, and the `null` is written
+  out: a desktop shell that serves the handler under a scheme of its own.
+
+### What it does not stop
+
+- **A program running as the same person, unsandboxed.** It can read the folder itself.
+- **Another server on `127.0.0.1` that the person visits in the same browser while the host
+  runs.** A cookie belongs to a host name and not to a port, so the browser sends that server
+  the cookie, and with it a program can call the host. The token is new at each start, and a
+  visit to `localhost` at another port is sent nothing. Jamie accepted this ("local host is
+  trusted enough"); Jupyter's notebook server makes the same trade.
+- **Anything on the wire.** There is no TLS, and the server listens on loopback alone.
 
 ## Git
 
