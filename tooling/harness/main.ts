@@ -10,18 +10,32 @@ declare const __HARNESS_DEFAULT_FORMAT__: string;
 
 type FormatModule = { default: HarnessFormat };
 
-// Every format, component, app and host with a fixtures module, loaded only when selected.
+// Every format, component, app and host with a fixtures module, and the format
+// templates, loaded only when selected.
 const modules = import.meta.glob<FormatModule>([
   '../../packages/formats/*/dev/fixtures.ts',
   '../../packages/components/*/dev/fixtures.ts',
   '../../packages/apps/*/dev/fixtures.ts',
   '../../packages/hosts/*/dev/fixtures.ts',
+  '../../tooling/template/*/dev/fixtures.ts',
 ]);
+/**
+ * A template shows under its package's name, as a package's `npm run dev` asks
+ * for it (vite.config.ts): `format` is `@stillpointlab/sample-format`, so
+ * `sample`; `url-format` is `@stillpointlab/sample-url-format`, so `sample-url`.
+ */
+function templateName(path: string): string | undefined {
+  const folder = /tooling\/template\/([^/]+)\/dev\/fixtures\.ts$/.exec(path)?.[1];
+  if (folder === undefined) return undefined;
+  const kind = folder.replace(/-?format$/, '');
+  return kind ? `sample-${kind}` : 'sample';
+}
+
 const formats = new Map<string, () => Promise<FormatModule>>();
 for (const [path, load] of Object.entries(modules)) {
-  const name = /packages\/(?:formats|components|apps|hosts)\/([^/]+)\/dev\/fixtures\.ts$/.exec(
-    path
-  )?.[1];
+  const name =
+    /packages\/(?:formats|components|apps|hosts)\/([^/]+)\/dev\/fixtures\.ts$/.exec(path)?.[1] ??
+    templateName(path);
   if (name) formats.set(name, load);
 }
 

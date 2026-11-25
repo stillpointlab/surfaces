@@ -9,6 +9,7 @@
     "../../packages/formats/*/dev/fixtures.ts",
     "../../packages/components/*/dev/fixtures.ts",
     "../../packages/apps/*/dev/fixtures.ts",
-    "../../packages/hosts/*/dev/fixtures.ts"
+    "../../packages/hosts/*/dev/fixtures.ts",
+    "../../tooling/template/*/dev/fixtures.ts"
   ]
 }
