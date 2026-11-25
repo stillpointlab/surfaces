@@ -273,13 +273,15 @@ describe('the routes', () => {
     });
   });
 
-  it('/api/raw/ serves what a dot segment or a backslash resolves to inside it, as a browser asks', async () => {
+  // An encoded slash is decoded with the rest, so it separates as `/` does.
+  it('/api/raw/ serves what a dot segment, a backslash or an encoded slash leads to inside it', async () => {
     const host = createHost({ root, origin, token: null });
     try {
       for (const address of [
         '/api/raw/docs/../a.md',
         '/api/raw/./a.md',
         '/api/raw/real\\target.md',
+        '/api/raw/real%2Ftarget.md',
       ]) {
         const response = await host.fetch(new Request(`${origin}${address}`));
         expect({ address, status: response.status }).toEqual({ address, status: 200 });
