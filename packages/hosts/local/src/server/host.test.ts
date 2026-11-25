@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createHost } from './host';
 import { LIST_LIMIT } from './limits';
+import { createStaticPage } from './page';
 import { versionOf } from './port';
 import { eventReader, git, gitEnv, makeRepository, tempFolder, writeFiles } from './test-support';
 
@@ -32,7 +33,7 @@ afterEach(async () => {
 });
 
 function start(at = root, env?: NodeJS.ProcessEnv): LocalHost {
-  host = createHost({ root: at, origin, env, warn: () => undefined });
+  host = createHost({ root: at, origin, token: null, env, warn: () => undefined });
   return host;
 }
 
@@ -628,5 +629,177 @@ describe('git', () => {
     expect(git(tree, env, 'diff', '--cached', '--name-status')).toBe('D\tdocs/b.md\n');
     expect(await json('/api/git')).toEqual({ state: 'repository', branch: 'side' });
     await events.close();
+  });
+});
+
+describe('the token', () => {
+  // As `runCli` makes it: 32 random bytes, base64url.
+  const token = 'Zm9yIHRoZSBydW4sIGFuZCBmb3Igbm90aGluZyBlbHNl';
+  const words = 'Open the address the `surfaces` command printed in its terminal.';
+  const cookie = `surfaces-5199=${token}`;
+  let repo: string;
+  let env: NodeJS.ProcessEnv;
+
+  beforeEach(() => {
+    env = gitEnv(folder.path);
+    repo = join(folder.path, 'repo');
+    makeRepository(repo, env, { 'a.md': '# A\n', 'img/dot.png': 'png' });
+    writeFiles(folder.path, {
+      'client/index.html': '<!doctype html><title>the page</title>',
+      'client/assets/index-abc.js': 'console.log(1)',
+    });
+    host = createHost({
+      root: repo,
+      origin,
+      token,
+      env,
+      warn: () => undefined,
+      page: createStaticPage(join(folder.path, 'client')),
+    });
+  });
+
+  /** Every route the checklist names, as the page would send it but for the token. */
+  const everyRoute = (headers: Record<string, string> = {}, content = 'over') =>
+    [
+      ['GET /', () => request('/', { headers })],
+      ['GET a page asset', () => request('/assets/index-abc.js', { headers })],
+      ['GET /api/list', () => request('/api/list', { headers })],
+      ['GET /api/file', () => request('/api/file?path=a.md', { headers })],
+      ['GET /api/raw', () => request('/api/raw?path=img/dot.png', { headers })],
+      ['GET /api/events', () => request('/api/events', { headers })],
+      [
+        'PUT /api/files',
+        () => put([{ kind: 'write', path: 'a.md', content }], { origin, ...headers }),
+      ],
+      [
+        'POST /api/commit',
+        () =>
+          request('/api/commit', {
+            method: 'POST',
+            headers: { origin, 'content-type': 'application/json', ...headers },
+            body: JSON.stringify({ paths: ['a.md'], message: 'm' }),
+          }),
+      ],
+    ] as const;
+
+  it('refuses a request with no token on every route: JSON under /api/, a plain page else', async () => {
+    writeFileSync(join(repo, 'a.md'), 'edited\n');
+    for (const [what, send] of everyRoute()) {
+      const response = await send();
+      expect({ what, status: response.status }).toEqual({ what, status: 403 });
+      if (what.includes('/api/')) {
+        expect(await response.json()).toEqual({
+          ok: false,
+          code: 'HOST_TOKEN_REQUIRED',
+          message: words,
+        });
+      } else {
+        expect(response.headers.get('content-type')).toBe('text/plain; charset=utf-8');
+        const body = await response.text();
+        expect(body).toBe(`${words}\n`);
+        expect(body).not.toContain('repo');
+      }
+    }
+    expect(readFileSync(join(repo, 'a.md'), 'utf8')).toBe('edited\n');
+    expect(git(repo, env, 'rev-list', '--count', '--all')).toBe('1\n');
+  });
+
+  it('answers every route with the cookie, or with Authorization: Bearer', async () => {
+    const carried: Record<string, string>[] = [
+      { cookie },
+      { cookie: `theme=dark; ${cookie}; other=1` },
+      { authorization: `Bearer ${token}` },
+    ];
+    for (const [i, headers] of carried.entries()) {
+      // Each round writes and commits something new.
+      for (const [what, send] of everyRoute(headers, `round ${i}\n`)) {
+        const response = await send();
+        expect({ what, status: response.status }).toEqual({ what, status: 200 });
+        await response.body?.cancel();
+      }
+    }
+  });
+
+  it.each([
+    ['a wrong cookie', { cookie: 'surfaces-5199=not-the-token' }],
+    ['the token under another port’s cookie', { cookie: `surfaces-5200=${token}` }],
+    ['a wrong Bearer', { authorization: 'Bearer not-the-token' }],
+    ['the token in another scheme', { authorization: `Basic ${token}` }],
+    ['the token with a character more', { authorization: `Bearer ${token}x` }],
+    ['the token with a character less', { cookie: `surfaces-5199=${token.slice(0, -1)}` }],
+  ])('refuses %s', async (_what, headers: Record<string, string>) => {
+    const response = await request('/api/list', { headers });
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ code: 'HOST_TOKEN_REQUIRED' });
+  });
+
+  it('exchanges the printed address for the cookie, and redirects to it without the token', async () => {
+    const response = await request(`/?token=${token}`);
+    expect(response.status).toBe(303);
+    expect(response.headers.get('location')).toBe('/');
+    expect(response.headers.get('set-cookie')).toBe(
+      `surfaces-5199=${token}; HttpOnly; SameSite=Strict; Path=/`
+    );
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('referrer-policy')).toBe('no-referrer');
+    // The cookie it set opens the page.
+    const page = await request('/', { headers: { cookie } });
+    expect(await page.text()).toContain('<title>the page</title>');
+  });
+
+  it('keeps the rest of the address, as sent, and takes a HEAD too', async () => {
+    const response = await request(`/assets/index-abc.js?a=1&token=${token}&b=x%20y+z&token=2`);
+    expect(response.status).toBe(303);
+    expect(response.headers.get('location')).toBe('/assets/index-abc.js?a=1&b=x%20y+z');
+    const head = await request(`/?token=${token}`, { method: 'HEAD', headers: { origin } });
+    expect(head.status).toBe(303);
+    expect(head.headers.get('set-cookie')).toContain(`surfaces-5199=${token};`);
+  });
+
+  it('refuses a wrong token in the address and sets nothing, a cookie or not', async () => {
+    const carried: Record<string, string>[] = [{}, { cookie }];
+    for (const headers of carried) {
+      const response = await request('/?token=wrong', { headers });
+      expect(response.status).toBe(403);
+      expect(response.headers.get('set-cookie')).toBeNull();
+      expect(await response.text()).toBe(`${words}\n`);
+    }
+  });
+
+  it('takes the token in the address only for the page: the API is not an exchange', async () => {
+    const response = await request(`/api/list?token=${token}`);
+    expect(response.status).toBe(403);
+    expect(response.headers.get('set-cookie')).toBeNull();
+    expect(await response.json()).toMatchObject({ code: 'HOST_TOKEN_REQUIRED' });
+  });
+
+  it('runs the Host, Origin and Sec-Fetch-Site checks first, with the token or without', async () => {
+    const tokens: Record<string, string>[] = [{}, { cookie }, { authorization: `Bearer ${token}` }];
+    for (const carried of tokens) {
+      for (const response of [
+        await request('/api/file?path=a.md', { headers: { ...carried, host: 'evil.example' } }),
+        await request('/api/file?path=a.md', {
+          headers: { ...carried, origin: 'https://evil.example' },
+        }),
+        await request('/api/raw?path=img/dot.png', {
+          headers: { ...carried, 'sec-fetch-site': 'cross-site', 'sec-fetch-mode': 'no-cors' },
+        }),
+        await put([{ kind: 'write', path: 'a.md', content: 'x' }], carried),
+        await request(`/?token=${token}`, { headers: { ...carried, host: 'evil.example' } }),
+      ]) {
+        expect(response.status).toBe(403);
+        expect(await response.json()).toMatchObject({ code: 'HOST_FORBIDDEN' });
+      }
+    }
+    expect(readFileSync(join(repo, 'a.md'), 'utf8')).toBe('# A\n');
+  });
+
+  it('createHost({ token: null }) answers with no token, and has no exchange', async () => {
+    await host.close();
+    host = createHost({ root: repo, origin, token: null, env, warn: () => undefined });
+    expect((await request('/api/list')).status).toBe(200);
+    const page = await request(`/?token=${token}`);
+    expect(page.status).toBe(404);
+    expect(page.headers.get('set-cookie')).toBeNull();
   });
 });

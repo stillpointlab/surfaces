@@ -30,6 +30,7 @@ beforeEach(() => {
   host = createHost({
     root: join(folder.path, 'served'),
     origin,
+    token: null,
     warn: () => undefined,
     page: createStaticPage(client),
   });

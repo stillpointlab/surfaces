@@ -39,6 +39,8 @@ export function statusFor(code: string): number {
     case 'HOST_UNDO_CONFLICT':
     case 'HOST_CANNOT_UNDO':
       return 409;
+    case 'HOST_TOKEN_REQUIRED':
+      return 403;
     case 'HOST_GIT_FAILED':
       return 422;
     case 'HOST_WRITE_FAILED':
@@ -87,6 +89,23 @@ export function refuse(
   headers?: Record<string, string>
 ): Response {
   return json({ ok: false, code, message }, status, headers);
+}
+
+/** What every request without the run's token is told, on every route. */
+export const TOKEN_REQUIRED = 'Open the address the `surfaces` command printed in its terminal.';
+
+/**
+ * The refusal of a request without the run's token: under `/api/` the JSON
+ * refusal every other one is; for the page (any other path) a plain page with
+ * the same words, so a person who has lost the address meets what to do, and
+ * nothing about the folder served.
+ */
+export function tokenRequired(api: boolean): Response {
+  if (api) return refuse('HOST_TOKEN_REQUIRED', TOKEN_REQUIRED, 403);
+  return new Response(`${TOKEN_REQUIRED}\n`, {
+    status: 403,
+    headers: { 'content-type': 'text/plain; charset=utf-8', ...SECURITY_HEADERS },
+  });
 }
 
 /** A request's body as text, refused past `MAX_BODY_BYTES`. */

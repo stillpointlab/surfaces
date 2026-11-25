@@ -2,7 +2,7 @@
 // `Response`, so the `bin` is a thin adapter from `node:http`, and a desktop shell
 // can serve the same handler under its own scheme.
 //
-// Every request passes three checks before its route (`createRequestCheck`, which
+// Every request passes four checks before its route (`createRequestCheck`, which
 // development mode applies to what Vite serves as well):
 //
 // - its `Host` is the host's own (`127.0.0.1:<port>` or `localhost:<port>`, from
@@ -12,7 +12,18 @@
 //   loopback twin, `localhost` for `127.0.0.1` and back, the same server);
 // - a request another site's page started is refused, by its `Origin` on any
 //   method, and by `Sec-Fetch-Site` when the browser sends it, except a
-//   navigation (a link to the host from elsewhere still opens it).
+//   navigation (a link to the host from elsewhere still opens it);
+// - it carries the run's token (`token`), as the cookie `surfaces-<port>` or as
+//   `Authorization: Bearer <token>`, on every route, the page's own files
+//   included: the first three keep out another site, this one keeps out another
+//   program (another account, a container, a sandboxed agent that reaches
+//   loopback), which can set any header but has not seen the printed address.
+//   The address carries the token in its query once; a `GET` or `HEAD` for the
+//   page with it is the exchange, answered `303` to the same address without it,
+//   with the cookie set. A cookie, not a header the page sets, because nothing
+//   else can set a header: an `<img>`, a `<video>`, the event stream and what a
+//   library fetches all carry the cookie as they are. `null` turns this check
+//   off (a desktop shell serving the handler under a scheme of its own).
 //
 // In a git repository the watcher also watches `HEAD` and `index` in git's own
 // folder (a worktree's, or the one above a served subfolder), and the stream sends
@@ -36,7 +47,7 @@
 // app's op and a create are a step each (`apps/app-host.ts`). The stream sends
 // `{ type: 'journal' }` when the steps change.
 
-import { createHash } from 'node:crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { constants, open } from 'node:fs/promises';
 import { basename, extname } from 'node:path';
 import { Readable } from 'node:stream';
@@ -48,7 +59,7 @@ import { labelFor } from './journal/labels';
 import { LIST_LIMIT } from './limits';
 import { intoGit, isInside, locate, outsideRoot, pathRefusal } from './paths';
 import { createNodePort } from './port';
-import { json, readBody, refusal, refuse, SECURITY_HEADERS } from './respond';
+import { json, readBody, refusal, refuse, SECURITY_HEADERS, tokenRequired } from './respond';
 import { createFolderWatcher } from './watcher';
 
 import type { LocalHostEvent } from '../shared/apps';
@@ -78,6 +89,13 @@ export interface HostOptions {
   root: string;
   /** The page's origin (`http://127.0.0.1:5190`): the `Host` and `Origin` checks read it. */
   origin: string;
+  /**
+   * The run's token, which every request must carry (the cookie the printed
+   * address sets, or `Authorization: Bearer`). `null` turns the check off, and is
+   * written out where it is meant: a desktop shell that serves the handler under
+   * a scheme of its own, and the tests that are not about the token.
+   */
+  token: string | null;
   /** The environment `git` runs in; the process's own by default. */
   env?: NodeJS.ProcessEnv;
   /** Something the host could not do but can work without. The default prints it. */
@@ -187,21 +205,99 @@ export interface CheckedRequest {
 }
 
 /**
- * The checks every request passes before it is answered, for the host whose page
- * is at `origin`: a `Response` that refuses it, or `null`.
+ * The cookie that carries the token for the host at `origin`, named for its port:
+ * a cookie belongs to a host name and not to a port, so two runs on two ports
+ * each keep their own.
  */
-export function createRequestCheck(origin: string): (request: CheckedRequest) => Response | null {
+export function tokenCookieName(origin: string): string {
+  const { port } = new URL(origin);
+  return port === '' ? 'surfaces' : `surfaces-${port}`;
+}
+
+/** Fixed-length digests, so comparing them takes the same time whatever was sent. */
+const digest = (value: string): Buffer => createHash('sha256').update(value).digest();
+
+/** The values a cookie header gives `name` (another server on the same name may set one too). */
+function cookieValues(header: string | null, name: string): string[] {
+  if (header === null) return [];
+  const values: string[] = [];
+  for (const pair of header.split(';')) {
+    const at = pair.indexOf('=');
+    if (at >= 0 && pair.slice(0, at).trim() === name) values.push(pair.slice(at + 1).trim());
+  }
+  return values;
+}
+
+/** A URL's path and query with every `token` taken out of the query, the rest as sent. */
+function withoutToken(url: URL): string {
+  const kept = url.search
+    .slice(1)
+    .split('&')
+    .filter((part) => {
+      if (part === '') return false;
+      const name = part.split('=')[0];
+      try {
+        return decodeURIComponent(name.replace(/\+/g, ' ')) !== 'token';
+      } catch {
+        return true;
+      }
+    });
+  return kept.length === 0 ? url.pathname : `${url.pathname}?${kept.join('&')}`;
+}
+
+/**
+ * The checks every request passes before it is answered, for the host whose page
+ * is at `origin` and whose run's token is `token` (`null`: no token asked): a
+ * `Response` that refuses it, the exchange's redirect, or `null` to answer it.
+ */
+export function createRequestCheck(
+  origin: string,
+  token: string | null
+): (request: CheckedRequest) => Response | null {
   const base = new URL(origin);
   const allowedHosts = hostsFor(base);
   const allowedOrigins = new Set([...allowedHosts].map((host) => `${base.protocol}//${host}`));
+  const cookie = tokenCookieName(origin);
+  const expected = token === null ? null : digest(token);
+  const isToken = (sent: string): boolean =>
+    expected !== null && timingSafeEqual(digest(sent), expected);
+
+  /** The fourth check, once the first three have passed. */
+  function checkToken(request: CheckedRequest, url: URL | null): Response | null {
+    if (token === null) return null;
+    const api = url === null || url.pathname.startsWith('/api/');
+    // The exchange: the printed address, for the page. A wrong token sets nothing.
+    const sent = url?.searchParams.get('token') ?? null;
+    if (!api && sent !== null && (request.method === 'GET' || request.method === 'HEAD')) {
+      if (!isToken(sent)) return tokenRequired(false);
+      return new Response(null, {
+        status: 303,
+        headers: {
+          location: withoutToken(url!),
+          'set-cookie': `${cookie}=${token}; HttpOnly; SameSite=Strict; Path=/`,
+          ...SECURITY_HEADERS,
+        },
+      });
+    }
+    const bearer = /^Bearer\s+(\S+)\s*$/i.exec(request.headers.get('authorization') ?? '')?.[1];
+    const carried = [
+      ...cookieValues(request.headers.get('cookie'), cookie),
+      ...(bearer === undefined ? [] : [bearer]),
+    ];
+    // Every value is compared, so the time taken says nothing of which matched.
+    let matched = false;
+    for (const value of carried) if (isToken(value)) matched = true;
+    return matched ? null : tokenRequired(api);
+  }
+
   return (request) => {
-    let fallback = '';
+    let url: URL | null = null;
     try {
-      fallback = new URL(request.url).host;
+      url = new URL(request.url);
     } catch {
       // no usable URL: the `Host` header alone decides
     }
-    const host = (request.headers.get('host') ?? fallback).toLowerCase();
+    const host = (request.headers.get('host') ?? url?.host ?? '').toLowerCase();
     if (!allowedHosts.has(host)) {
       return refuse(
         'HOST_FORBIDDEN',
@@ -221,12 +317,12 @@ export function createRequestCheck(origin: string): (request: CheckedRequest) =>
     if ((site === 'cross-site' || site === 'same-site') && mode !== 'navigate') {
       return refuse('HOST_FORBIDDEN', 'Another site cannot read this server.', 403);
     }
-    return null;
+    return checkToken(request, url);
   };
 }
 
 export function createHost(options: HostOptions): LocalHost {
-  const check = createRequestCheck(options.origin);
+  const check = createRequestCheck(options.origin, options.token);
   const warn = options.warn ?? ((message: string) => console.warn(`surfaces: ${message}`));
 
   const port = createNodePort({ root: options.root, env: options.env, warn });
@@ -520,8 +616,9 @@ export function createHost(options: HostOptions): LocalHost {
     } catch {
       return refuse('HOST_BAD_REQUEST', 'The request has no usable URL.', 400);
     }
-    const refused = check(request);
-    if (refused) return refused;
+    // A refusal, or the exchange's redirect: either is the whole answer.
+    const checked = check(request);
+    if (checked) return checked;
     const route = routes[url.pathname];
     if (!route && options.page && !url.pathname.startsWith('/api/')) {
       if (request.method !== 'GET' && request.method !== 'HEAD') {

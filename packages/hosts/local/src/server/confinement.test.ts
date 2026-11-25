@@ -219,7 +219,7 @@ describe('writes', () => {
 describe('the routes', () => {
   const origin = 'http://127.0.0.1:5199';
   const get = async (rawPath: string, route = 'file') => {
-    const host = createHost({ root, origin });
+    const host = createHost({ root, origin, token: null });
     try {
       const response = await host.fetch(new Request(`${origin}/api/${route}?path=${rawPath}`));
       return { status: response.status, body: (await response.json()) as { code?: string } };
@@ -247,7 +247,7 @@ describe('the routes', () => {
   });
 
   it('PUT /api/files refuses a write through a link out', async () => {
-    const host = createHost({ root, origin });
+    const host = createHost({ root, origin, token: null });
     try {
       const response = await host.fetch(
         new Request(`${origin}/api/files`, {

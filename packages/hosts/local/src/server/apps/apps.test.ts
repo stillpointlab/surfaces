@@ -46,7 +46,7 @@ async function start(
 ): Promise<LocalHost> {
   if (repository) makeRepository(root, env, files);
   else writeFiles(root, files);
-  host = createHost({ root, origin, env, warn: () => undefined, apps: modules });
+  host = createHost({ root, origin, token: null, env, warn: () => undefined, apps: modules });
   await host.ready();
   return host;
 }

@@ -2,7 +2,13 @@
 // this; tests call it with their own output and port 0. The page is the built
 // client in `dist/client`; development mode (`npm run serve`, through `dev.ts`)
 // serves it from Vite instead, loaded only then.
+//
+// Each start makes a new token (32 random bytes, base64url), and the address it
+// prints carries it: only someone who has read the terminal can open the page,
+// and a page left open across a restart holds the old run's cookie, which the
+// new run refuses (the page says so).
 
+import { randomBytes } from 'node:crypto';
 import { stat } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { resolve } from 'node:path';
@@ -39,6 +45,7 @@ export interface CliOptions {
 }
 
 export interface Serving {
+  /** The printed address: the page's, with the run's token in its query. */
   url: string;
   host: LocalHost;
   server: Server;
@@ -117,9 +124,11 @@ export async function runCli(
   const address = server.address();
   const actual = typeof address === 'object' && address ? address.port : port;
   base = `http://127.0.0.1:${actual}`;
+  const token = randomBytes(32).toString('base64url');
   const host = createHost({
     root,
     origin: base,
+    token,
     env: io.env,
     warn: (message) => io.err(`surfaces: ${message}`),
     page: options.dev ? undefined : createStaticPage(options.clientDir ?? CLIENT_DIST),
@@ -132,7 +141,7 @@ export async function runCli(
   if (options.dev) {
     try {
       const { createDevPage } = await import('./dev-page');
-      const page = await createDevPage({ server, origin: base, api });
+      const page = await createDevPage({ server, origin: base, token, api });
       handle = page.handle;
       closePage = page.close;
     } catch (error) {
@@ -149,7 +158,7 @@ export async function runCli(
   if (!start.gitFound && start.looksLikeRepository) {
     io.err('surfaces: git was not found; listing every file');
   }
-  const url = `${base}/`;
+  const url = `${base}/?token=${token}`;
   io.out(`Serving ${host.port.root} at ${url}`);
 
   return {
