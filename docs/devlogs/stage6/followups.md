@@ -21,3 +21,11 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
 - 2026-11-25 (a token for the run): `statusFor` in `respond.ts` has no case for
   `HOST_FORBIDDEN`, which falls to 400. Every caller passes 403 itself, so nothing is wrong
   today.
+
+## Phase 2
+
+- 2026-11-25 (the raw route serves media): the raw route answers `cache-control: no-store`, so a
+  browser keeps no media on disk and a seek back in a long file is downloaded again.
+- 2026-11-25 (the raw route serves media): a file is sent after its size is read, so one that
+  shrinks while it is sent ends short of its `Content-Length`. Older than the ranges, which it
+  now holds for too.
