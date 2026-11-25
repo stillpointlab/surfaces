@@ -90,7 +90,7 @@ describe('opening', () => {
     await page.navigate({ path: 'pic.png', view: 'edit' });
     await settle();
     expect(shown().localName).toBe('fake-image');
-    expect(shown().getAttribute('src')).toBe('/api/raw?path=pic.png');
+    expect(shown().getAttribute('src')).toBe('/api/raw/pic.png');
     expect(location.hash).toBe('#/file/pic.png');
     expect($('.pane-views').hidden).toBe(true);
   });

@@ -105,7 +105,7 @@ describe('the routes', () => {
   });
 
   it('GET /api/raw sends the bytes, the type for the extension, nosniff and a sandbox', async () => {
-    const response = await request('/api/raw?path=img/dot.png');
+    const response = await request('/api/raw/img/dot.png');
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toBe('image/png');
     expect(response.headers.get('x-content-type-options')).toBe('nosniff');
@@ -117,11 +117,11 @@ describe('the routes', () => {
 
   it('GET /api/raw sends an HTML file sandboxed, and an unknown extension as bytes', async () => {
     writeFiles(root, { 'page.html': '<script>alert(1)</script>', 'blob.xyz': 'x' });
-    const html = await request('/api/raw?path=page.html');
+    const html = await request('/api/raw/page.html');
     expect(html.headers.get('content-type')).toBe('text/html; charset=utf-8');
     expect(html.headers.get('content-security-policy')).toBe('sandbox');
     await html.arrayBuffer();
-    const other = await request('/api/raw?path=blob.xyz');
+    const other = await request('/api/raw/blob.xyz');
     expect(other.headers.get('content-type')).toBe('application/octet-stream');
     await other.arrayBuffer();
   });
@@ -141,7 +141,7 @@ describe('the routes', () => {
     'GET /api/raw refuses a request to run or apply the file (Sec-Fetch-Dest: %s)',
     async (dest) => {
       writeFiles(root, { 'tool.js': 'alert(1)\n' });
-      const response = await request('/api/raw?path=tool.js', {
+      const response = await request('/api/raw/tool.js', {
         headers: {
           'sec-fetch-dest': dest,
           'sec-fetch-site': 'same-origin',
@@ -160,7 +160,7 @@ describe('the routes', () => {
   it.each(['image', 'document', 'iframe', 'embed', 'object', 'empty', 'video', 'audio', 'font'])(
     'GET /api/raw serves a request to show the file (Sec-Fetch-Dest: %s)',
     async (dest) => {
-      const response = await request('/api/raw?path=img/dot.png', {
+      const response = await request('/api/raw/img/dot.png', {
         headers: { 'sec-fetch-dest': dest, 'sec-fetch-site': 'same-origin' },
       });
       expect(response.status).toBe(200);
@@ -171,15 +171,41 @@ describe('the routes', () => {
 
   it('GET /api/raw serves a request with no Sec-Fetch-Dest (curl, an older browser) as before', async () => {
     writeFiles(root, { 'tool.js': 'alert(1)\n' });
-    const response = await request('/api/raw?path=tool.js');
+    const response = await request('/api/raw/tool.js');
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toBe('text/javascript; charset=utf-8');
     expect(await response.text()).toBe('alert(1)\n');
   });
 
+  it.each([
+    'deep/er/nested.txt',
+    'with space/a b.txt',
+    'hash#1.txt',
+    'what?.txt',
+    '100%.txt',
+    '%41.txt',
+    'all # ? % & = + ;/at once.txt',
+    'ünï/çødé.txt',
+  ])('GET /api/raw/<path> serves %s, each segment encoded as urlFor encodes it', async (path) => {
+    writeFiles(root, { [path]: `the bytes of ${path}` });
+    // As `rawAddress` in the client makes it: the separators as they are.
+    const address = `/api/raw/${path.split('/').map(encodeURIComponent).join('/')}?rev=3`;
+    const response = await request(address);
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe(`the bytes of ${path}`);
+  });
+
+  it('GET /api/raw/<path> resolves a relative address to the file’s neighbour', async () => {
+    writeFiles(root, { 'hls/a b/list.m3u8': '#EXTM3U\n', 'hls/a b/seg 0.m4s': 'segment' });
+    const playlist = new URL(`${origin}/api/raw/hls/a%20b/list.m3u8`);
+    const segment = new URL('seg%200.m4s', playlist);
+    expect(segment.pathname).toBe('/api/raw/hls/a%20b/seg%200.m4s');
+    expect(await (await request(segment.pathname)).text()).toBe('segment');
+  });
+
   it('GET /api/raw refuses a missing file and a folder with 404', async () => {
     for (const path of ['none.png', 'img']) {
-      const response = await request(`/api/raw?path=${path}`);
+      const response = await request(`/api/raw/${path}`);
       expect(response.status).toBe(404);
       expect(await response.json()).toMatchObject({ code: 'HOST_FILE_NOT_FOUND' });
     }
@@ -326,7 +352,7 @@ describe('the request checks', () => {
 
   it('refuses what another site started by Sec-Fetch-Site, except a navigation', async () => {
     const fetchFrom = (site: string, mode: string) =>
-      request('/api/raw?path=img/dot.png', {
+      request('/api/raw/img/dot.png', {
         headers: { 'sec-fetch-site': site, 'sec-fetch-mode': mode },
       });
     expect((await fetchFrom('cross-site', 'no-cors')).status).toBe(403);
@@ -665,7 +691,7 @@ describe('the token', () => {
       ['GET a page asset', () => request('/assets/index-abc.js', { headers })],
       ['GET /api/list', () => request('/api/list', { headers })],
       ['GET /api/file', () => request('/api/file?path=a.md', { headers })],
-      ['GET /api/raw', () => request('/api/raw?path=img/dot.png', { headers })],
+      ['GET /api/raw', () => request('/api/raw/img/dot.png', { headers })],
       ['GET /api/events', () => request('/api/events', { headers })],
       [
         'PUT /api/files',
@@ -787,7 +813,7 @@ describe('the token', () => {
         await request('/api/file?path=a.md', {
           headers: { ...carried, origin: 'https://evil.example' },
         }),
-        await request('/api/raw?path=img/dot.png', {
+        await request('/api/raw/img/dot.png', {
           headers: { ...carried, 'sec-fetch-site': 'cross-site', 'sec-fetch-mode': 'no-cors' },
         }),
         await put([{ kind: 'write', path: 'a.md', content: 'x' }], carried),

@@ -218,10 +218,11 @@ describe('writes', () => {
 
 describe('the routes', () => {
   const origin = 'http://127.0.0.1:5199';
-  const get = async (rawPath: string, route = 'file') => {
+  /** One request by its address as sent; the URL parser reads it as a browser would. */
+  const get = async (address: string) => {
     const host = createHost({ root, origin, token: null });
     try {
-      const response = await host.fetch(new Request(`${origin}/api/${route}?path=${rawPath}`));
+      const response = await host.fetch(new Request(`${origin}${address}`));
       return { status: response.status, body: (await response.json()) as { code?: string } };
     } finally {
       await host.close();
@@ -230,20 +231,90 @@ describe('the routes', () => {
 
   it.each([
     ['percent-encoded ..', '..%2Foutside%2Fsecret.txt', OUTSIDE],
-    ['percent-encoded dots', '%2e%2e/outside/secret.txt', OUTSIDE],
     ['an encoded separator inside ..', 'docs%2F..%2F..%2Foutside%2Fsecret.txt', OUTSIDE],
     ['a doubled separator', 'docs//b.md', INVALID],
     ['a leading separator', '%2Fetc%2Fpasswd', OUTSIDE],
     ['an encoded backslash', '..%5Coutside%5Csecret.txt', INVALID],
     ['an encoded NUL', 'a.md%00.png', INVALID],
+    ['.git', '.git/config', INVALID],
     ['.git, encoded', '%2Egit/config', INVALID],
     ['a link out', 'out-file', OUTSIDE],
     ['a folder link out', 'out-dir/inner.txt', OUTSIDE],
-  ])('/api/file and /api/raw refuse %s with 400', async (_what, rawPath, code) => {
-    for (const route of ['file', 'raw']) {
-      const { status, body } = await get(rawPath, route);
-      expect({ route, status, code: body.code }).toEqual({ route, status: 400, code });
+    ['a link out that leads nowhere', 'out-dangling', OUTSIDE],
+    ['a link into git’s folder', 'cfg.md', INVALID],
+    ['a link to git’s folder, as a folder on the path', 'dotgit/config', INVALID],
+  ])('/api/file?path= and /api/raw/ refuse %s with 400', async (_what, rawPath, code) => {
+    for (const address of [`/api/file?path=${rawPath}`, `/api/raw/${rawPath}`]) {
+      const { status, body } = await get(address);
+      expect({ address, status, code: body.code }).toEqual({ address, status: 400, code });
     }
+  });
+
+  it('/api/file?path= refuses percent-encoded dots with 400', async () => {
+    expect(await get('/api/file?path=%2e%2e/outside/secret.txt')).toEqual({
+      status: 400,
+      body: expect.objectContaining({ code: OUTSIDE }),
+    });
+  });
+
+  // The raw route's path is the address's own, so the URL parser has resolved its
+  // dot segments, in any spelling, and read a backslash as `/`, before the host
+  // sees it: an address that climbs out of `/api/raw/` is no route's at all.
+  it.each([
+    ['..', '/api/raw/../outside/secret.txt'],
+    ['.. past a folder', '/api/raw/docs/../../outside/secret.txt'],
+    ['percent-encoded dots', '/api/raw/%2e%2e/outside/secret.txt'],
+    ['dots half encoded', '/api/raw/.%2E/%2e./outside/secret.txt'],
+    ['backslashes', '/api/raw/..\\..\\outside\\secret.txt'],
+  ])('/api/raw/ by %s leaves the route, and reaches no file', async (_what, address) => {
+    expect(await get(address)).toEqual({
+      status: 404,
+      body: expect.objectContaining({ code: 'HOST_NO_ROUTE' }),
+    });
+  });
+
+  it('/api/raw/ serves what a dot segment or a backslash resolves to inside it, as a browser asks', async () => {
+    const host = createHost({ root, origin, token: null });
+    try {
+      for (const address of [
+        '/api/raw/docs/../a.md',
+        '/api/raw/./a.md',
+        '/api/raw/real\\target.md',
+      ]) {
+        const response = await host.fetch(new Request(`${origin}${address}`));
+        expect({ address, status: response.status }).toEqual({ address, status: 200 });
+        await response.arrayBuffer();
+      }
+    } finally {
+      await host.close();
+    }
+  });
+
+  it.each([
+    ['a trailing slash', '/api/raw/docs/', INVALID],
+    ['no path', '/api/raw/', INVALID],
+    ['an encoding that does not decode', '/api/raw/a%E0%A4%A.md', INVALID],
+    ['a stray percent sign', '/api/raw/100%.md', INVALID],
+  ])('/api/raw/ refuses %s with 400', async (_what, address, code) => {
+    expect(await get(address)).toEqual({
+      status: 400,
+      body: expect.objectContaining({ code }),
+    });
+  });
+
+  it.each([
+    ['a folder', '/api/raw/docs'],
+    ['a link to a folder that stays inside', '/api/raw/in-dir'],
+    ['the route with no slash', '/api/raw'],
+  ])('/api/raw/ answers %s with 404', async (_what, address) => {
+    expect((await get(address)).status).toBe(404);
+  });
+
+  it('the old raw address, with the path in its query, is gone', async () => {
+    expect(await get('/api/raw?path=a.md')).toEqual({
+      status: 404,
+      body: expect.objectContaining({ code: 'HOST_NO_ROUTE' }),
+    });
   });
 
   it('PUT /api/files refuses a write through a link out', async () => {
@@ -268,9 +339,11 @@ describe('the routes', () => {
 
   it('serves a missing path under a real folder as not found, not outside', async () => {
     mkdirSync(join(root, 'empty'));
-    expect(await get('empty/none.md')).toEqual({
-      status: 404,
-      body: expect.objectContaining({ code: 'HOST_FILE_NOT_FOUND' }),
-    });
+    for (const address of ['/api/file?path=empty/none.md', '/api/raw/empty/none.md']) {
+      expect(await get(address)).toEqual({
+        status: 404,
+        body: expect.objectContaining({ code: 'HOST_FILE_NOT_FOUND' }),
+      });
+    }
   });
 });

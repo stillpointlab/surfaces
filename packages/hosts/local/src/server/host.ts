@@ -129,7 +129,10 @@ export interface LocalHost extends Host {
   ready(): Promise<PortStart>;
 }
 
-/** The type `/api/raw` sends for an extension; anything else is bytes. */
+/** The raw route: a file's bytes at `/api/raw/<path>`, each segment of the path encoded. */
+const RAW_PREFIX = '/api/raw/';
+
+/** The type the raw route sends for an extension; anything else is bytes. */
 const TYPES: Record<string, string> = {
   '.apng': 'image/apng',
   '.avif': 'image/avif',
@@ -404,6 +407,24 @@ export function createHost(options: HostOptions): LocalHost {
     return url.searchParams.get('path') ?? '';
   }
 
+  /**
+   * The path a raw address names: the rest of the address's path after
+   * `/api/raw/`, decoded once, whole (`null` when it does not decode). The URL
+   * parser has already taken out every `.` and `..` segment, in any spelling
+   * (`%2e%2e`), and read a backslash as `/`, so neither reaches here: an address
+   * that climbs out of `/api/raw/` is another route's, or none. What it leaves
+   * encoded (`%2F`, `%5C`, `%2E` inside a name) is decoded into the path, which
+   * meets the checks every path meets, so `..%2F` is refused as it always was.
+   * An empty segment or a trailing slash stays one, and is refused as one.
+   */
+  function rawPath(url: URL): string | null {
+    try {
+      return decodeURIComponent(url.pathname.slice(RAW_PREFIX.length));
+    } catch {
+      return null;
+    }
+  }
+
   const routes: Record<string, Partial<Record<string, Handler>>> = {
     '/api/list': {
       GET: async () => {
@@ -419,19 +440,6 @@ export function createHost(options: HostOptions): LocalHost {
       GET: async (_request, url) => {
         const answer = await port.get(pathParam(url));
         return answer.ok ? json(answer) : refusal(answer);
-      },
-    },
-    '/api/raw': {
-      GET: async (request, url) => {
-        const dest = request.headers.get('sec-fetch-dest');
-        if (dest !== null && RUN_DESTINATIONS.has(dest)) {
-          return refuse(
-            'HOST_FORBIDDEN',
-            `A file of the folder is served to be shown, not run (Sec-Fetch-Dest: ${dest}).`,
-            403
-          );
-        }
-        return raw(pathParam(url));
       },
     },
     '/api/files': {
@@ -523,6 +531,45 @@ export function createHost(options: HostOptions): LocalHost {
     },
     ...apps.routes,
   };
+
+  /**
+   * The routes that read the rest of the address as a path, by their prefix:
+   * asked when no route above matches the whole path.
+   */
+  const prefixed: Record<string, Partial<Record<string, Handler>>> = {
+    // The file's path is in the address's path, not its query, so an address
+    // relative to it (a playlist's segment) resolves to the file's neighbour.
+    [RAW_PREFIX]: {
+      GET: async (request, url) => {
+        const dest = request.headers.get('sec-fetch-dest');
+        if (dest !== null && RUN_DESTINATIONS.has(dest)) {
+          return refuse(
+            'HOST_FORBIDDEN',
+            `A file of the folder is served to be shown, not run (Sec-Fetch-Dest: ${dest}).`,
+            403
+          );
+        }
+        const path = rawPath(url);
+        if (path === null) {
+          return refuse(
+            'HOST_PATH_INVALID',
+            `${JSON.stringify(url.pathname)} is not a usable path: its encoding does not decode.`,
+            400
+          );
+        }
+        return raw(path);
+      },
+    },
+  };
+
+  function routeFor(pathname: string): Partial<Record<string, Handler>> | undefined {
+    const route = routes[pathname];
+    if (route) return route;
+    for (const [prefix, found] of Object.entries(prefixed)) {
+      if (pathname.startsWith(prefix)) return found;
+    }
+    return undefined;
+  }
 
   /**
    * `PUT /api/files` once the lock has passed it: the explorer's creates, moves
@@ -621,7 +668,7 @@ export function createHost(options: HostOptions): LocalHost {
     // A refusal, or the exchange's redirect: either is the whole answer.
     const checked = check(request);
     if (checked) return checked;
-    const route = routes[url.pathname];
+    const route = routeFor(url.pathname);
     if (!route && options.page && !url.pathname.startsWith('/api/')) {
       if (request.method !== 'GET' && request.method !== 'HEAD') {
         return refuse('HOST_METHOD_NOT_ALLOWED', 'The page answers GET, HEAD.', 405, {

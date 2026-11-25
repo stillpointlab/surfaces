@@ -63,7 +63,10 @@ export interface HostClient {
    * reads text, and refuses an image. A refusal is the server's, as `get`'s is.
    */
   probe(path: string): Promise<Result>;
-  /** A URL an element can load the file from. */
+  /**
+   * A URL an element can load the file from, in ranges; an address relative to
+   * it resolves to the file's neighbour.
+   */
   urlFor(path: string): string;
   /**
    * Write all the changes or none. The explorer's creates, moves and deletes are
@@ -122,6 +125,15 @@ export interface HostClient {
   /** Lock an instance's files, or unlock them; locking answers the manifest's problems now. */
   setAppLock(manifestPath: string, locked: boolean): Promise<Result<AppLockAnswer>>;
   watch(listener: (event: WatchedEvent) => void): () => void;
+}
+
+/**
+ * The raw route's address for a file: its path in the address's path, each
+ * segment percent-encoded, so an address relative to it (a playlist's segment, an
+ * image beside a page) resolves to the file's neighbour. Without the page's base.
+ */
+export function rawAddress(path: string): string {
+  return `/api/raw/${path.split('/').map(encodeURIComponent).join('/')}`;
 }
 
 /** The code a client answers with when the server could not be reached or answered nonsense. */
@@ -187,7 +199,8 @@ export function createHttpClient(base = ''): HostClient {
   }
   // How often each path has changed while this client watched: `urlFor` names the
   // revision, so an element given the URL again after a change loads the new
-  // bytes rather than the browser's copy of the old (the server reads `path` alone).
+  // bytes rather than the browser's copy of the old (the server reads the address's
+  // path alone, and no query).
   // A reconnection counts for every path: a change may have gone unheard.
   const revisions = new Map<string, number>();
   let reconnections = 0;
@@ -243,15 +256,14 @@ export function createHttpClient(base = ''): HostClient {
     // The raw route sends the file's bytes: a success is taken from the status,
     // and the body let go unread. A refusal is JSON, as everywhere.
     probe: (path) =>
-      result(`/api/raw?path=${encodeURIComponent(path)}`, undefined, (response) => {
+      result(rawAddress(path), undefined, (response) => {
         if (!response.ok) return null;
         void response.body?.cancel().catch(() => undefined);
         return { ok: true };
       }),
     urlFor(path) {
       const revision = (revisions.get(path) ?? 0) + reconnections;
-      const query = `path=${encodeURIComponent(path)}${revision ? `&rev=${revision}` : ''}`;
-      return url(`/api/raw?${query}`);
+      return url(`${rawAddress(path)}${revision ? `?rev=${revision}` : ''}`);
     },
     commit: (request) => result('/api/commit', post(request)),
     apps: async () => (await read<AppsAnswer>('/api/apps')).apps,

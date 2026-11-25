@@ -156,6 +156,36 @@ describe('surfaces', () => {
     expect(absolute).toBe(400);
   });
 
+  it('reaches no file outside the folder by a raw address sent as written', async () => {
+    const { url, auth } = await serve(['site', '--port', '0']);
+    const port = new URL(url).port;
+    // The request line exactly as given (curl's --path-as-is): the adapter's URL
+    // parser resolves the dots, so the host never sees them.
+    const asWritten = (path: string) =>
+      new Promise<{ status: number; body: string }>((resolve, reject) => {
+        const req = httpRequest({ host: '127.0.0.1', port, path, headers: auth }, (res) => {
+          let body = '';
+          res.setEncoding('utf8');
+          res.on('data', (chunk: string) => (body += chunk));
+          res.on('end', () => resolve({ status: res.statusCode ?? 0, body }));
+        });
+        req.on('error', reject);
+        req.end();
+      });
+    for (const path of [
+      '/api/raw/../../file.txt',
+      '/api/raw/%2e%2e/%2E%2E/file.txt',
+      '/api/raw/..%2F..%2Ffile.txt',
+      '/api/raw/..\\..\\file.txt',
+      '/api/raw/a.md/../../../file.txt',
+    ]) {
+      const { status, body } = await asWritten(path);
+      expect({ path, refused: status >= 400 }).toEqual({ path, refused: true });
+      expect(body).not.toContain('not a folder');
+    }
+    expect(await asWritten('/api/raw/a.md')).toEqual({ status: 200, body: 'a' });
+  });
+
   it('streams events over HTTP', async () => {
     const { url, auth } = await serve(['site', '--port', '0']);
     const response = await fetch(`${url}api/events`, { headers: auth });
@@ -189,7 +219,7 @@ describe('surfaces', () => {
       ['assets/index-abc.js', 'GET'],
       ['api/list', 'GET'],
       ['api/file?path=a.md', 'GET'],
-      ['api/raw?path=a.md', 'GET'],
+      ['api/raw/a.md', 'GET'],
       ['api/events', 'GET'],
       ['api/files', 'PUT'],
       ['api/commit', 'POST'],

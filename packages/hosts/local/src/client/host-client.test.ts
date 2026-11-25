@@ -290,19 +290,30 @@ describe('createHttpClient', () => {
     spy.mockRestore();
   });
 
+  it('gives a file’s address by its path, each segment encoded, its neighbours beside it', () => {
+    const client = createHttpClient();
+    expect(client.urlFor('deep/er/nested.txt')).toBe('/api/raw/deep/er/nested.txt');
+    expect(client.urlFor('with space/a#1?%.png')).toBe('/api/raw/with%20space/a%231%3F%25.png');
+    expect(createHttpClient('http://127.0.0.1:5190').urlFor('a.png')).toBe(
+      'http://127.0.0.1:5190/api/raw/a.png'
+    );
+    const playlist = new URL(client.urlFor('hls/a b/list.m3u8'), 'http://127.0.0.1:5190');
+    expect(new URL('seg%200.m4s', playlist).pathname).toBe('/api/raw/hls/a%20b/seg%200.m4s');
+  });
+
   it('names a revision in a URL once its file has changed, so an element loads it again', () => {
     vi.stubGlobal('EventSource', FakeSource);
     const client = createHttpClient();
-    expect(client.urlFor('img/a b.png')).toBe('/api/raw?path=img%2Fa%20b.png');
+    expect(client.urlFor('img/a b.png')).toBe('/api/raw/img/a%20b.png');
     client.watch(() => undefined);
     FakeSource.last.send('{"type":"changed","paths":["img/a b.png"]}');
-    expect(client.urlFor('img/a b.png')).toBe('/api/raw?path=img%2Fa%20b.png&rev=1');
-    expect(client.urlFor('other.png')).toBe('/api/raw?path=other.png');
+    expect(client.urlFor('img/a b.png')).toBe('/api/raw/img/a%20b.png?rev=1');
+    expect(client.urlFor('other.png')).toBe('/api/raw/other.png');
     // A reconnection counts as a change to every path: one may have gone unheard.
     FakeSource.last.onerror?.();
     FakeSource.last.onopen?.();
-    expect(client.urlFor('img/a b.png')).toBe('/api/raw?path=img%2Fa%20b.png&rev=2');
-    expect(client.urlFor('other.png')).toBe('/api/raw?path=other.png&rev=1');
+    expect(client.urlFor('img/a b.png')).toBe('/api/raw/img/a%20b.png?rev=2');
+    expect(client.urlFor('other.png')).toBe('/api/raw/other.png?rev=1');
   });
 
   describe('a page left open across a restart', () => {
@@ -399,7 +410,7 @@ describe('createHttpClient', () => {
     vi.stubGlobal('fetch', fetch);
     const client = createHttpClient();
     expect(await client.probe('img/a b.png')).toEqual({ ok: true });
-    expect(fetch.mock.calls[0][0]).toBe('/api/raw?path=img%2Fa%20b.png');
+    expect(fetch.mock.calls[0][0]).toBe('/api/raw/img/a%20b.png');
     expect(cancelled).toBe(true);
     answering({ ok: false, code: 'HOST_FILE_NOT_FOUND', message: 'none' }, 404);
     expect(await client.probe('gone.png')).toEqual({
