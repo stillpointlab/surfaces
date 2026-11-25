@@ -16,7 +16,7 @@ says where it went. Nothing was dropped.
   the export and its stub, splitting with `./dist/chunks/*` in `sideEffects`, the two tests and
   the fixtures switched to `format:`.
   - Moved 2026-11-14 to the seed [one scaffold for formats and
-    apps](../../tasks/unassigned/seeds/one-scaffold-for-formats-and-apps.md).
+    apps](../../tasks/stage6/phase1/seeds/one-scaffold-for-formats-and-apps.md).
 - 2026-11-14 (format-descriptors): the splitting setup (`splitting: true` and `chunkNames`) is
   repeated in five `tsup.config.ts` files. `tooling/tsup.ts` could carry it.
   - Carried 2026-11-14 to the [stage 5 log](../stage5/followups.md).

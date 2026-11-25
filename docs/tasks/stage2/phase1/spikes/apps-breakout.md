@@ -178,7 +178,7 @@ Applying the August split to today's files:
 - **The package shape.** Formats already ship DOM-free subpaths that the host server imports
   (`sheet-format/csv`, `./presentation`) beside element entries. An app is the same: a core entry
   and an element entry. The template and `npm run new-format` are format-shaped; the
-  [one scaffold](../../../unassigned/seeds/one-scaffold-for-formats-and-apps.md) seed is the place
+  [one scaffold](../../../stage6/phase1/seeds/one-scaffold-for-formats-and-apps.md) seed is the place
   to generalise, better after two apps exist by hand than before.
 - **The harness as the slim harness.** `tooling/harness/` mounts every format from its
   `dev/fixtures.ts`. An app's fixtures are folders (a `tasks.yaml` plus cards; an `inventory.yaml`

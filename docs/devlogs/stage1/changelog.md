@@ -37,7 +37,7 @@ Range: `354c8b6..c0c50d5`, 2026-11-01 — two merges, 100 files, +950/−186.
 
 - Image stays a format; the placement test lives in `packages/apps/README.md`.
 - The scaffold is shaped so the same template can later produce an app (the
-  [one scaffold](../../tasks/unassigned/seeds/one-scaffold-for-formats-and-apps.md) seed).
+  [one scaffold](../../tasks/stage6/phase1/seeds/one-scaffold-for-formats-and-apps.md) seed).
 
 ### Testing & review
 

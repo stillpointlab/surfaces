@@ -572,7 +572,7 @@ line first said 50 and 13; a recount from the log corrected it.)
   card's task list and rulings, the walk kept as a
   [test card](../../tasks/unassigned/tests/local-host-release-walk.test.md) with a line in the
   [milestones](../README.md#milestones), and a seed for
-  [a token for the run](../../tasks/unassigned/seeds/a-token-for-the-run.md).
+  [a token for the run](../../tasks/stage6/phase1/seeds/a-token-for-the-run.md).
 - **What the review deferred, built at the close** (Jamie, 2026-11-23: as much as possible at a
   stage's end, with the start of the next one kept for setting up). Thirteen entries the review
   and its fixes had added to the log; twelve were fixed and one went to a seed:
@@ -684,7 +684,7 @@ The agent's, in each pull request's description: the contract additions (`HOST_P
 
 - **The token for the run** (the review's H3): any program on the machine can read the served
   folder, and write to it with one header. Jamie's ruling is to build it in phase 1 of the
-  next stage; its [seed](../../tasks/unassigned/seeds/a-token-for-the-run.md) lists what the
+  next stage; its [seed](../../tasks/stage6/phase1/seeds/a-token-for-the-run.md) lists what the
   spec settles.
 - One log entry is open, from the close: a typed `[d]` beside a definition inside a kept list
   or quote. One more went to the seed for what a save keeps: how a link was spelled.

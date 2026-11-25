@@ -28,7 +28,7 @@ for free.
   [ADR-0009](https://github.com/stillpointlab/context-manager/blob/main/docs/adr/0009-pluggable-editor-types.md)
   (the contract; takes an amendment line for `whenReady`),
   [ADR-0035](https://github.com/stillpointlab/context-manager/blob/main/docs/adr/0035-surfaces-monorepo.md).
-- Seeds this advances: [one scaffold for formats and apps](../../../unassigned/seeds/one-scaffold-for-formats-and-apps.md)
+- Seeds this advances: [one scaffold for formats and apps](../../../stage6/phase1/seeds/one-scaffold-for-formats-and-apps.md)
   (the harness is where a fake `get` / `list` / `put` host will go when apps arrive).
 - Main files/areas: `packages/common/src/contracts.ts` (+ a ready gate and the conformance suite),
   every element under `packages/formats/*/src/{editor,preview,diff,grid}/`, `packages/formats/*/dev/`

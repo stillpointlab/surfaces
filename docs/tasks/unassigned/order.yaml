@@ -1,10 +1,10 @@
 # Backlog pool priority order: top = highest priority. One flat ranking;
 # comments are grouping hints only.
 
-# Ruled for phase 1 of the next stage (Jamie, 2026-11-22).
-- docs/tasks/unassigned/seeds/a-token-for-the-run.md
-- docs/tasks/unassigned/seeds/one-scaffold-for-formats-and-apps.md
-- docs/tasks/unassigned/seeds/media-formats-preview-first.md
+# Candidates for stage 7 (Jamie, 2026-11-25, at stage 6's opening), to be looked at
+# again when stage 6 closes: a media manager, or very basic media editors first.
+- docs/tasks/unassigned/seeds/basic-media-editors.md
+- docs/tasks/unassigned/seeds/media-manager.md
 
 # From Jamie's stage 5 validation, published from Context Manager (2026-11-23).
 - docs/tasks/unassigned/seeds/a-format-step-for-published-pull-requests.md
@@ -72,7 +72,6 @@
 - docs/tasks/unassigned/seeds/icons-that-are-not-buttons.md
 - docs/tasks/unassigned/seeds/task-board-on-html.md
 - docs/tasks/unassigned/seeds/formats-under-the-markup-rule.md
-- docs/tasks/unassigned/seeds/browser-tests.md
 - docs/tasks/unassigned/seeds/raw-view-toolbar.md
 
 # Moved from Context Manager's pool (2026-11-10), in its ranking. The apps:
@@ -102,7 +101,6 @@
 - docs/tasks/unassigned/seeds/captions-editor.md
 - docs/tasks/unassigned/seeds/image-editor-basic.md
 - docs/tasks/unassigned/seeds/image-editor-intermediate.md
-- docs/tasks/unassigned/seeds/pdf-preview.md
 - docs/tasks/unassigned/seeds/mermaid-editor.md
 - docs/tasks/unassigned/seeds/slide-editor.md
 - docs/tasks/unassigned/seeds/spritesheet-editor.md

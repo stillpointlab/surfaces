@@ -1,4 +1,5 @@
 ---
+column: todo
 created: 2026-11-22T20:20:00-07:00
 tags: [local-host, security]
 ---
@@ -7,8 +8,8 @@ tags: [local-host, security]
 
 The local host's request checks stop a browser on another origin, which is what they were written
 for: a `GET` needs nothing, and a write needs an `Origin` header. A program can set that header.
-The [stage 5 release review](../../stage5/phase7/reviews/stage-5-release-review.md) (H3) read the
-ruling behind this, in the [host-server spec](../../stage4/phase2/specs/host-server.md): "a
+The [stage 5 release review](../../../stage5/phase7/reviews/stage-5-release-review.md) (H3) read the
+ruling behind this, in the [host-server spec](../../../stage4/phase2/specs/host-server.md): "a
 program on the same machine can already write the files".
 
 That holds for a program running as the same person with no sandbox. It does not hold for
