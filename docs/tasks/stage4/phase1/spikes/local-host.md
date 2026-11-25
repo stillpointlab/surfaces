@@ -304,5 +304,5 @@ what is still open.
   element contracts), `tooling/harness/memory-host.ts`, `packages/apps/*/dev/host.ts`,
   [`packages/apps/README.md`](../../../../../packages/apps/README.md).
 - Seeds this touches: [check-in shared core](../../../unassigned/seeds/checkin-shared-core.md),
-  [one scaffold for formats and apps](../../../unassigned/seeds/one-scaffold-for-formats-and-apps.md),
+  [one scaffold for formats and apps](../../../stage6/phase1/seeds/one-scaffold-for-formats-and-apps.md),
   [typed inventory element ops](../../../unassigned/seeds/inventory-element-op-types.md).

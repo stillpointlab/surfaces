@@ -150,7 +150,7 @@ see no change, apart from the one fix named in requirement 3.
 - Formats or apps adopting the components, including `md-icon`.
 - Any change to the elements' attributes, slots, events or focus behaviour, or new dialog features.
 - App elements or the contract (phases 5 and 6).
-- A component scaffold: the [one scaffold](../../../unassigned/seeds/one-scaffold-for-formats-and-apps.md)
+- A component scaffold: the [one scaffold](../../../stage6/phase1/seeds/one-scaffold-for-formats-and-apps.md)
   seed covers it.
 
 ## Acceptance / completion checklist

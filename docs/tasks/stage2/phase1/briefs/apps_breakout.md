@@ -103,7 +103,7 @@ The phases are a sketch: each opens with its specs, and may split or merge as th
   page-level options menu. An element raises an event for anything the host owns.
 - **Out of scope:** melting `board.service.ts` into snapshot → `apply` → changeset, MCP app
   vocabularies, a standalone folder host beyond the harness, and generalising the scaffold (the
-  [one scaffold](../../../unassigned/seeds/one-scaffold-for-formats-and-apps.md) seed is better
+  [one scaffold](../../../stage6/phase1/seeds/one-scaffold-for-formats-and-apps.md) seed is better
   after two apps and the components exist by hand).
 
 ## Open questions

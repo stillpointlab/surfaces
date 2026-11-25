@@ -346,7 +346,7 @@ Triaged with Jamie on 2026-11-22; the [outcome](#outcome) below says what was bu
 ### P1 — hardening, and one ruling
 
 - [x] **H3:** Jamie's ruling on a token per run: build it, in phase 1 of the next stage. The seed
-      is [a token for the run](../../../unassigned/seeds/a-token-for-the-run.md).
+      is [a token for the run](../../../stage6/phase1/seeds/a-token-for-the-run.md).
 - [x] **H4:** the watcher follows a folder that was made again. [#167](https://github.com/stillpointlab/surfaces/pull/167)
 - [x] **M3:** a move whose old path is taken is two changes. [#165](https://github.com/stillpointlab/surfaces/pull/165)
 - [x] **M4:** a commit answers when git exits. Deferred to the

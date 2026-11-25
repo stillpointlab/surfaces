@@ -8,6 +8,11 @@ Opened 2026-11-14 at stage 5's setup. The [stage 4 WAL](../stage4/followups.md) 
 first: what a stage 5 spec covers is in that spec, five entries went to four seeds, and the rest
 are carried here as they were written.
 
+Reviewed 2026-11-25 at stage 6's setup. The log was drained at stage 5's close, so the review
+found two entries without an end: one held for Jamie's ruling and one written during the close.
+He ruled on both that day: one is closed and one moved to a seed. Nothing is carried to the
+[stage 6 log](../stage6/followups.md).
+
 ## Carried from stage 4
 
 - 2026-11-14 (format-descriptors): the splitting setup (`splitting: true` and `chunkNames`) is
@@ -246,6 +251,7 @@ are carried here as they were written.
     to the next stage's review of this log. What was found for it: a fixture is the dev page's
     sample data only. No walk and no unit test loads one, so the two ways can mislead only
     someone looking at the dev page.
+  - Closed 2026-11-25 (Jamie: "let's keep the harness two way for now"): kept by design.
 - 2026-11-14 (host-runner): a pending move keeps the path a card started at and not the paths
   it passed through, in the harness now as in `fromChanges`, so fixing references cannot find a
   link to a path a card only passed through.
@@ -510,3 +516,5 @@ are carried here as they were written.
   definitions between blocks alone (`prosemirror-markdown.ts`, the bracket writer). Where `d` is
   defined inside a list item or a quote that is kept, the typed text is written with its brackets
   bare and reads back as a link. Seen while fixing M10; rare, since such definitions are.
+  - Moved 2026-11-25 (Jamie) into the seed [a changed block comes back with its brackets
+    escaped](../../tasks/unassigned/seeds/brackets-escaped-in-a-changed-block.md).

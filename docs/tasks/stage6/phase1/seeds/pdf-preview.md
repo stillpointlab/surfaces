@@ -1,4 +1,5 @@
 ---
+column: todo
 title: 'PDF preview'
 tags: [feature, formats]
 created: 2026-09-08T15:58:42-07:00

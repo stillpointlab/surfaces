@@ -26,7 +26,7 @@ the convention instead of reading each package.
   (previews are the progressive-enhancement layer),
   [ADR-0035](https://github.com/stillpointlab/context-manager/blob/main/docs/adr/0035-surfaces-monorepo.md)
   (this repository).
-- Seeds this spec partly covers: [one scaffold for formats and apps](../../../unassigned/seeds/one-scaffold-for-formats-and-apps.md)
+- Seeds this spec partly covers: [one scaffold for formats and apps](../../../stage6/phase1/seeds/one-scaffold-for-formats-and-apps.md)
   (the format half; the app half waits for the apps breakout).
 - Main files/areas: `packages/common` (new), each format's `src/index.ts`, `tsup.config.ts` and
   `package.json` exports, `tooling/`, the root README.

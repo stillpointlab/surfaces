@@ -33,7 +33,7 @@ full takeover), ADR-0035 (the surfaces monorepo), and `docs/product/platform-arc
 - The cut line: which code moves (client pages, components, the pure manifest and pool logic) and
   which stays host-side (GitHub, persistence, jobs), with the seams that need cutting first.
 - How Context Manager mounts an app from the submodule, the way it defines a format's elements.
-- Whether [one scaffold for formats and apps](../../../unassigned/seeds/one-scaffold-for-formats-and-apps.md)
+- Whether [one scaffold for formats and apps](../../../stage6/phase1/seeds/one-scaffold-for-formats-and-apps.md)
   comes first, alongside, or after.
 - Testing: what the apps' tests become here, and what stays in Context Manager's walks.
 - An order: tasks first or inventory first, and the phases that follow.
