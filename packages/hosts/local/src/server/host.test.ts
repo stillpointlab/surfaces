@@ -211,6 +211,25 @@ describe('the routes', () => {
     }
   });
 
+  it.each([
+    ['list.m3u8', 'application/vnd.apple.mpegurl'],
+    ['seg0.m4s', 'video/iso.segment'],
+    ['a.flac', 'audio/flac'],
+    ['a.m4a', 'audio/mp4'],
+    ['a.aac', 'audio/aac'],
+    ['a.opus', 'audio/ogg'],
+    ['v.m4v', 'video/mp4'],
+    ['v.mov', 'video/quicktime'],
+    ['v.mkv', 'video/x-matroska'],
+    ['V.MKV', 'video/x-matroska'],
+    ['seg0.ts', 'text/plain; charset=utf-8'],
+  ])('GET /api/raw/%s sends it as %s', async (path, type) => {
+    writeFiles(root, { [path]: 'x' });
+    const response = await request(`/api/raw/${path}`);
+    expect(response.headers.get('content-type')).toBe(type);
+    await response.arrayBuffer();
+  });
+
   describe('GET /api/raw/<path> in ranges', () => {
     const ranged = (path: string, range: string) => request(path, { headers: { range } });
 

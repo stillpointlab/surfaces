@@ -133,13 +133,19 @@ export interface LocalHost extends Host {
 /** The raw route: a file's bytes at `/api/raw/<path>`, each segment of the path encoded. */
 const RAW_PREFIX = '/api/raw/';
 
-/** The type the raw route sends for an extension; anything else is bytes. */
+/**
+ * The type the raw route sends for an extension; anything else is bytes. `.ts`
+ * is text: here it is TypeScript first, and a streaming library reads an MPEG-TS
+ * segment as bytes whatever its type.
+ */
 const TYPES: Record<string, string> = {
   '.apng': 'image/apng',
   '.avif': 'image/avif',
   '.bmp': 'image/bmp',
+  '.aac': 'audio/aac',
   '.css': 'text/css; charset=utf-8',
   '.csv': 'text/csv; charset=utf-8',
+  '.flac': 'audio/flac',
   '.gif': 'image/gif',
   '.htm': 'text/html; charset=utf-8',
   '.html': 'text/html; charset=utf-8',
@@ -148,12 +154,19 @@ const TYPES: Record<string, string> = {
   '.jpg': 'image/jpeg',
   '.js': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
+  '.m3u8': 'application/vnd.apple.mpegurl',
+  '.m4a': 'audio/mp4',
+  '.m4s': 'video/iso.segment',
+  '.m4v': 'video/mp4',
   '.md': 'text/markdown; charset=utf-8',
+  '.mkv': 'video/x-matroska',
+  '.mov': 'video/quicktime',
   '.mp3': 'audio/mpeg',
   '.mp4': 'video/mp4',
   '.oga': 'audio/ogg',
   '.ogg': 'audio/ogg',
   '.ogv': 'video/ogg',
+  '.opus': 'audio/ogg',
   '.pdf': 'application/pdf',
   '.png': 'image/png',
   '.svg': 'image/svg+xml',
