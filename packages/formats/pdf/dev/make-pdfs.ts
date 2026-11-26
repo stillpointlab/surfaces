@@ -3,9 +3,10 @@
 // object written as text, the page contents compressed with zlib. Nothing is
 // downloaded. Run in the package's folder:
 //
-//   node dev/make-pdfs.ts                 dev/media/: text, pages, cjk, jpx, not-a-pdf
+//   node dev/make-pdfs.ts                 dev/media/: text, pages, cjk, jpx, dense, not-a-pdf
 //   node dev/make-pdfs.ts --pages 200 <folder>   a long PDF, <folder>/pages-200.pdf, made
 //                                         outside the package (it is too large for it)
+//   node dev/make-pdfs.ts --dense 200 <folder>   a long PDF of dense text, <folder>/dense-200.pdf
 //
 // jpx.pdf wraps dev/media/jpx.jp2, which ImageMagick makes; the README has that
 // command, and those for the PDFs made by other tools (a password, fonts embedded).
@@ -188,6 +189,43 @@ function cjkPdf(): Buffer {
   );
 }
 
+// The words of dense.pdf, drawn in an order fixed by a seed.
+const WORDS = (
+  'the of and to in is that for it as with was on be by at this are from or an which ' +
+  'page text line pdf read find select copy screen reader canvas layer column worker ' +
+  'river stone window garden morning letter number paper simple quiet light evening'
+).split(' ');
+
+// Lines of body text on a page of dense.pdf, under its heading.
+const DENSE_LINES = 66;
+
+/** A page of dense.pdf: `DENSE_LINES` lines of 9-point Helvetica, each a run of words to the margin. */
+function densePage(pdf: Pdf, font: number, number: number): PageSpec {
+  // A small linear congruential generator: the same words for the same page, every run.
+  let seed = number * 7919;
+  const next = () => {
+    seed = (Math.imul(seed, 1103515245) + 12345) >>> 0;
+    return seed >>> 16;
+  };
+  const lines: [string, number, number, number, string][] = [
+    ['F1', 12, 72, 750, `(Dense text, page ${number})`],
+  ];
+  for (let at = 0; at < DENSE_LINES; at += 1) {
+    let line = '';
+    while (line.length < 96) line += `${WORDS[next() % WORDS.length]} `;
+    lines.push(['F1', 9, 72, 730 - at * 10.5, `(${line.trimEnd()})`]);
+  }
+  return { content: text(lines), resources: `<< /Font << /F1 ${font} 0 R >> >>` };
+}
+
+/** dense.pdf (and the long dense PDF): `count` pages of dense text, for measuring. */
+function densePdf(count: number): Buffer {
+  const pdf = new Pdf();
+  const font = helvetica(pdf);
+  const pages = Array.from({ length: count }, (_, at) => densePage(pdf, font, at + 1));
+  return pdf.bytes(catalog(pdf, pages));
+}
+
 /** jpx.pdf: one JPEG 2000 image (JPXDecode), dev/media/jpx.jp2, 200×150, drawn 400×300. */
 function jpxPdf(): Buffer {
   const pdf = new Pdf();
@@ -212,18 +250,20 @@ function write(folder: string, name: string, bytes: Buffer | string): void {
 }
 
 const args = process.argv.slice(2);
-if (args[0] === '--pages') {
+if (args[0] === '--pages' || args[0] === '--dense') {
   const count = Number(args[1]);
   const folder = args[2];
   if (!Number.isInteger(count) || count < 1 || !folder) {
-    console.error('usage: node dev/make-pdfs.ts --pages <count> <folder>');
+    console.error(`usage: node dev/make-pdfs.ts ${args[0]} <count> <folder>`);
     process.exit(1);
   }
-  write(folder, `pages-${count}.pdf`, pagesPdf(count));
+  if (args[0] === '--pages') write(folder, `pages-${count}.pdf`, pagesPdf(count));
+  else write(folder, `dense-${count}.pdf`, densePdf(count));
 } else {
   write(media, 'text.pdf', textPdf());
   write(media, 'pages.pdf', pagesPdf(12));
   write(media, 'cjk.pdf', cjkPdf());
   write(media, 'jpx.pdf', jpxPdf());
+  write(media, 'dense.pdf', densePdf(1));
   write(media, 'not-a-pdf.pdf', 'This is a plain text file with a .pdf name.\n');
 }
