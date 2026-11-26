@@ -28,6 +28,26 @@ export function appTest(options: FormatTestOptions = {}) {
 }
 
 /**
+ * Stop the run when Playwright's Chromium is not on this machine: the words
+ * that say so and the command that installs it, once, on their own (no stack),
+ * and a non-zero exit. The root's browser config calls it before it starts any
+ * package's; `browserTest` calls it too, for a package's config run alone.
+ * Playwright is loaded here, inside a browser config, so a jsdom or Node config
+ * never loads it.
+ */
+export async function requireChromium(): Promise<void> {
+  const { chromium } = await import('playwright');
+  const executable = chromium.executablePath();
+  if (existsSync(executable)) return;
+  process.stderr.write(
+    `Playwright's Chromium is not installed (no ${executable}).\n` +
+      'Install it with: npx playwright install chromium\n' +
+      "(on a Linux machine without the browser's system libraries: npx playwright install --with-deps chromium)\n"
+  );
+  process.exit(1);
+}
+
+/**
  * A package's browser tests: its `src/**\/*.browser.test.ts`, in headless
  * Chromium through vitest's browser mode, for what jsdom cannot do (play a clip,
  * seek in it, draw a page). A package that has them keeps this in
@@ -37,23 +57,13 @@ export function appTest(options: FormatTestOptions = {}) {
  *
  * Media plays without a gesture, since a test cannot click first. Without
  * Playwright's Chromium on the machine the run stops at once and names the
- * command that installs it.
+ * command that installs it (`requireChromium`).
  */
 export function browserTest(options: FormatTestOptions = {}) {
   return defineConfig(async () => {
+    await requireChromium();
     // Loaded here, so the jsdom configs beside it never load Playwright.
-    const [{ playwright }, { chromium }] = await Promise.all([
-      import('@vitest/browser-playwright'),
-      import('playwright'),
-    ]);
-    const executable = chromium.executablePath();
-    if (!existsSync(executable)) {
-      throw new Error(
-        `Playwright's Chromium is not installed (no ${executable}).\n` +
-          'Install it with: npx playwright install chromium\n' +
-          "(on a Linux machine without the browser's system libraries: npx playwright install --with-deps chromium)"
-      );
-    }
+    const { playwright } = await import('@vitest/browser-playwright');
     return {
       test: {
         include: browserInclude,

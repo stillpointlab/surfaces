@@ -1,14 +1,14 @@
-# @stillpointlab/code-editor
+# @stillpointlab/code-format
 
 A CodeMirror-based code editor web component — `<code-editor>` — with syntax
 highlighting for popular languages and line numbers. It is the code-file sibling of
-[`@stillpointlab/md-editor`](../md-editor) and honors the same host contract, so the
+[`@stillpointlab/md-format`](../md) and honors the same host contract, so the
 two are interchangeable behind a shared `EditorElement` interface.
 
 ## Usage
 
 ```ts
-import '@stillpointlab/code-editor'; // registers the <code-editor> element
+import '@stillpointlab/code-format'; // registers the <code-editor> element
 
 const editor = document.querySelector('code-editor');
 editor.setContent('print("hello")');

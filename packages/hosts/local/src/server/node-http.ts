@@ -64,5 +64,18 @@ async function answer(
   const body = Readable.fromWeb(response.body as import('node:stream/web').ReadableStream);
   body.on('error', () => res.destroy());
   res.on('close', () => body.destroy());
-  body.pipe(res);
+  // A body that ends short of its declared length (a file that shrank while it was
+  // read) would end the response as if whole, and a client on a kept-alive
+  // connection would wait for the rest. Closing the connection fails it at once.
+  // (Node's `strictContentLength` throws from the `end()` a pipe calls, uncaught.)
+  const length = response.headers.get('content-length');
+  let sent = 0;
+  body.on('data', (chunk: Uint8Array) => {
+    sent += chunk.byteLength;
+  });
+  body.on('end', () => {
+    if (length !== null && sent !== Number(length)) res.destroy();
+    else res.end();
+  });
+  body.pipe(res, { end: false });
 }

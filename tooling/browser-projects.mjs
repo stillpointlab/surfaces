@@ -29,6 +29,7 @@ const BROWSER_CONFIG = 'vitest.browser.config.ts';
  * @returns {{ dir: string, name: string }[]}
  */
 export function browserPackages(root = repoRoot) {
+  /** @type {{ workspaces?: string[] }} */
   const { workspaces = [] } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
   const dirs = workspaces.flatMap((pattern) => {
     if (!pattern.endsWith('/*')) return [pattern];
@@ -109,12 +110,19 @@ export function projectsFor(selection, root = repoRoot) {
   return changedProjects(changedFiles(selection.base, root), packages);
 }
 
-/** The arguments `npm run test:browser --` takes to run just these projects. */
+/**
+ * The arguments `npm run test:browser --` takes to run just these projects.
+ *
+ * @param {string[]} projects
+ * @returns {string}
+ */
 export function projectArgs(projects) {
   return projects.map((name) => `--project ${name}`).join(' ');
 }
 
+/** @param {string[]} args */
 function main(args) {
+  /** @type {'all' | { base: string } | null} */
   let selection;
   if (args.length === 1 && args[0] === '--all') selection = 'all';
   else if (args.length === 1 && !args[0].startsWith('-')) selection = { base: args[0] };

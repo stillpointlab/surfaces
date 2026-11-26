@@ -1,20 +1,20 @@
-# @stillpointlab/sheet-editor
+# @stillpointlab/sheet-format
 
 Spreadsheet-style CSV grid web components and side-effect-free sheet codecs for Stillpoint Lab
 editor surfaces.
 
 ## Entrypoints
 
-- `@stillpointlab/sheet-editor/csv` — isomorphic bounded CSV parser and serializer
-- `@stillpointlab/sheet-editor/grid` — registers `<sheet-grid>`, a gutterless data table
-- `@stillpointlab/sheet-editor/preview` — registers `<sheet-preview>`, an A1-style cells pane
-- `@stillpointlab/sheet-editor/presentation` — side-effect-free merge, cell-style, and value-format
+- `@stillpointlab/sheet-format/csv` — isomorphic bounded CSV parser and serializer
+- `@stillpointlab/sheet-format/grid` — registers `<sheet-grid>`, a gutterless data table
+- `@stillpointlab/sheet-format/preview` — registers `<sheet-preview>`, an A1-style cells pane
+- `@stillpointlab/sheet-format/presentation` — side-effect-free merge, cell-style, and value-format
   validation
-- `@stillpointlab/sheet-editor/document` — side-effect-free strict `.sheet` parsing and serialization
-- `@stillpointlab/sheet-editor/interaction` — side-effect-free selection and merged-cell geometry
-- `@stillpointlab/sheet-editor/editor` — registers `<sheet-editor>`, an interactive CSV and `.sheet`
+- `@stillpointlab/sheet-format/document` — side-effect-free strict `.sheet` parsing and serialization
+- `@stillpointlab/sheet-format/interaction` — side-effect-free selection and merged-cell geometry
+- `@stillpointlab/sheet-format/editor` — registers `<sheet-editor>`, an interactive CSV and `.sheet`
   grid
-- `@stillpointlab/sheet-editor` — registers and exports the grid, preview, and editor elements
+- `@stillpointlab/sheet-format` — registers and exports the grid, preview, and editor elements
 - `@stillpointlab/sheet-format/format` — the format descriptor, `sheetFormat`; registers nothing
 
 ## The format descriptor
@@ -32,7 +32,7 @@ never defined twice. The build splits so that it can: `format.js` imports `previ
 ## Usage
 
 ```ts
-import '@stillpointlab/sheet-editor/preview';
+import '@stillpointlab/sheet-format/preview';
 
 const preview = document.createElement('sheet-preview');
 preview.setContent('Name,Value\r\nCoffee,12');
@@ -42,7 +42,7 @@ document.body.append(preview);
 Structured consumers can bypass CSV:
 
 ```ts
-import '@stillpointlab/sheet-editor/grid';
+import '@stillpointlab/sheet-format/grid';
 
 const grid = document.createElement('sheet-grid');
 grid.setData(
@@ -58,11 +58,11 @@ document.body.append(grid);
 Presentation formatting and CSV safety are also available as side-effect-free public helpers:
 
 ```ts
-import { escapeCsvFormulaValue, serializeCsv } from '@stillpointlab/sheet-editor/csv';
+import { escapeCsvFormulaValue, serializeCsv } from '@stillpointlab/sheet-format/csv';
 import {
   formatSheetCellValue,
   type EffectiveSheetValueFormat,
-} from '@stillpointlab/sheet-editor/presentation';
+} from '@stillpointlab/sheet-format/presentation';
 
 const format: EffectiveSheetValueFormat = {
   kind: 'currency',
@@ -128,7 +128,7 @@ keys move the active cell, Shift+Arrow extends the range, and pointer dragging s
 Merged ranges are always entered, crossed, and selected as complete units.
 
 ```ts
-import '@stillpointlab/sheet-editor/editor';
+import '@stillpointlab/sheet-format/editor';
 
 const editor = document.createElement('sheet-editor');
 editor.setContent('Name,Value\nCoffee,12', {

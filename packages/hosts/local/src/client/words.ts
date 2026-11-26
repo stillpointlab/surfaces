@@ -240,6 +240,9 @@ export const words = {
     redoTitle: (label: string) => `Redo: ${label}`,
     nothingToUndo: 'Nothing to undo',
     nothingToRedo: 'Nothing to redo',
+    /** Disabled once the server was started again, whatever step was last read. */
+    offAfterRestart: (which: 'undo' | 'redo') =>
+      `${which === 'undo' ? 'Undo' : 'Redo'} is off: this page’s server was started again`,
     /** The notice after one lands. */
     done: (which: 'undo' | 'redo', label: string) =>
       `${which === 'undo' ? 'Undone' : 'Redone'}: ${label}`,

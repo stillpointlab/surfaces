@@ -29,7 +29,12 @@ const NAME = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 
 const utf8 = new TextDecoder('utf-8', { fatal: true });
 
-/** The file's text, or null when its bytes are not UTF-8 (media under dev/media). */
+/**
+ * The file's text, or null when its bytes are not UTF-8 (media under dev/media).
+ *
+ * @param {Uint8Array} bytes
+ * @returns {string | null}
+ */
 function asText(bytes) {
   try {
     return utf8.decode(bytes);
@@ -60,6 +65,7 @@ export function scaffold(name, { url = false, into = formatsDir } = {}) {
   // The URL template's kebab names (its package, tag, id and extension) are
   // `sample-url`, so the two templates share the workspace and the harness; they
   // fold into the one name first. Then camelCase, kebab-case and PascalCase.
+  /** @param {string} text */
   const rename = (text) =>
     text
       .replaceAll('sample-url', 'sample')
@@ -67,6 +73,10 @@ export function scaffold(name, { url = false, into = formatsDir } = {}) {
       .replaceAll('sample', name)
       .replaceAll('Sample', pascal);
 
+  /**
+   * @param {string} from
+   * @param {string} to
+   */
   const copy = (from, to) => {
     mkdirSync(to, { recursive: true });
     for (const entry of readdirSync(from, { withFileTypes: true })) {
@@ -117,7 +127,11 @@ export async function formatScaffold(dest) {
   return changed;
 }
 
-/** `npm run new-format -- <name> [--url]` */
+/**
+ * `npm run new-format -- <name> [--url]`
+ *
+ * @param {string[]} args
+ */
 async function main(args) {
   const flags = args.filter((arg) => arg.startsWith('-'));
   const names = args.filter((arg) => !arg.startsWith('-'));

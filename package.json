@@ -19,7 +19,7 @@
     "gen:styles": "node tooling/gen-styles.mjs",
     "dev": "npm run gen:styles && vite --config tooling/harness/vite.config.ts",
     "build": "npm run gen:styles && npm run build --workspaces",
-    "typecheck": "npm run gen:styles && npm run build:deps && npm run typecheck --workspaces && tsc -p tooling/harness",
+    "typecheck": "npm run gen:styles && npm run build:deps && npm run typecheck --workspaces && tsc -p tooling/harness && tsc -p tooling",
     "test": "npm run gen:styles && npm run build:deps && vitest run",
     "watch:test": "npm run gen:styles && npm run build:deps && vitest watch",
     "test:browser": "npm run gen:styles && npm run build:deps && vitest run --config vitest.browser.config.ts",

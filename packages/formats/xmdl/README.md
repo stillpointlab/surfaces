@@ -1,4 +1,4 @@
-# @stillpointlab/xmdl-editor
+# @stillpointlab/xmdl-format
 
 XMDL parser and web component package for typed template documents.
 

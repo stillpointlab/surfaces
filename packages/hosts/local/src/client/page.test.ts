@@ -478,11 +478,18 @@ describe('a server started again', () => {
     host.emit({ type: 'restarted' });
     await settle();
     expect([undo.disabled, redo.disabled, commit.disabled]).toEqual([true, true, true]);
+    // Their titles say why, not the steps they would take.
+    expect([undo.title, redo.title]).toEqual([
+      'Undo is off: this page’s server was started again',
+      'Redo is off: this page’s server was started again',
+    ]);
+    expect(undo.getAttribute('aria-label')).toBe(undo.title);
     // The fake still answers the journal and the statuses: read again, they leave the buttons so.
     host.emit({ type: 'journal' });
     host.emit({ type: 'status' });
     await settle();
     expect([undo.disabled, redo.disabled, commit.disabled]).toEqual([true, true, true]);
+    expect(undo.title).toBe('Undo is off: this page’s server was started again');
     // Nothing reaches the host: not a click, the key, or the page's own calls.
     const steps = [host.steps.length, host.undone.length];
     undo.click();
@@ -514,12 +521,35 @@ describe('a server started again', () => {
     expect(notice.getAttribute('role')).toBe('status');
     expect(notice.querySelector('.page-notice-close')).toBeNull();
     page.notify({ text: 'Undone: Delete a.md', tone: 'info' });
+    page.notify({ text: 'Locked.', tone: 'success' });
     page.notify(null);
     host.emit({ type: 'restarted' });
     await settle();
     expect(notice.textContent).toBe(
       'This page’s server was started again. Open the address its terminal printed.'
     );
+  });
+
+  it('shows an error since under its words, the newest in place of the last', async () => {
+    host.emit({ type: 'restarted' });
+    await settle();
+    const notice = $('.page-notice');
+    // An app's op the server refused: the board shows nothing of its own.
+    page.notify({ text: 'Could not move the card.', tone: 'error' });
+    expect(notice.querySelector('.page-notice-text > span')?.textContent).toBe(
+      'This page’s server was started again. Open the address its terminal printed.'
+    );
+    expect([...notice.querySelectorAll('li')].map((li) => li.textContent)).toEqual([
+      'Could not move the card.',
+    ]);
+    page.notify({ text: 'Could not set the title.', tone: 'error' });
+    page.notify({ text: 'Moved.', tone: 'success' });
+    page.notify(null);
+    expect([...notice.querySelectorAll('li')].map((li) => li.textContent)).toEqual([
+      'Could not set the title.',
+    ]);
+    expect(notice.dataset.tone).toBe('error');
+    expect(notice.querySelector('.page-notice-close')).toBeNull();
   });
 });
 

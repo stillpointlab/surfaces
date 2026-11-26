@@ -660,8 +660,14 @@ export function createHost(options: HostOptions): LocalHost {
       ...SECURITY_HEADERS,
     };
     if (asked !== null) headers['content-range'] = `bytes ${asked.start}-${asked.end}/${size}`;
-    // The stream closes the handle when it ends or is cancelled.
-    const stream = handle.createReadStream(asked ?? {});
+    if (size === 0) {
+      await handle.close();
+      return new Response(null, { status: 200, headers });
+    }
+    // The stream closes the handle when it ends or is cancelled. It ends at the
+    // size the headers were given, so a file that grew meanwhile sends no more
+    // than they say.
+    const stream = handle.createReadStream(asked ?? { start: 0, end: size - 1 });
     return new Response(Readable.toWeb(stream) as ReadableStream<Uint8Array>, {
       status: asked === null ? 200 : 206,
       headers,
