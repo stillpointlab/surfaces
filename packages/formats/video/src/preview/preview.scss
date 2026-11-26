@@ -29,8 +29,7 @@
   overflow: hidden;
 }
 
-// The ground is dark in either scheme: the host's text colour in a light one,
-// its background in a dark one. Both are tokens, so a host's theme still rules.
+// The ground is dark in a light theme and in a dark one.
 .video-preview__player {
   position: relative;
   box-sizing: border-box;
@@ -39,7 +38,7 @@
   place-self: stretch;
   min-width: 0;
   min-height: 0;
-  background: light-dark(#{$text-primary}, #{$background-primary});
+  background: $media-backdrop;
 }
 
 .video-preview__note {

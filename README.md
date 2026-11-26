@@ -436,6 +436,7 @@ ship light defaults only and carry no `prefers-color-scheme` rules of their own.
 | `--spl-chip-hover-bg`        | `rgba(139, 92, 246, 0.1)`  | hovered outlined chips                   |
 | `--spl-code-active-line-bg`  | `rgba(88, 166, 255, 0.12)` | CodeMirror's active line                 |
 | `--spl-code-selection-bg`    | `rgba(88, 166, 255, 0.38)` | CodeMirror's selection                   |
+| `--spl-media-backdrop`       | `#0d1117`                  | the ground under a video, dark in both   |
 | `--spl-shadow-color`         | `rgba(0, 0, 0, 0.18)`      | popover and menu shadows                 |
 | `--spl-overlay-scrim`        | `rgba(0, 0, 0, 0.5)`       | the backdrop behind a modal dialog       |
 | `--spl-drag-shadow`          | one soft black layer       | a dragged card's ghost                   |
