@@ -101,30 +101,36 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
   so image's and the URL template's "Missing" fixtures show a file that will not decode, not one
   that is missing. Audio's uses a revoked object URL
   (`packages/formats/image/dev/fixtures.ts`, `tooling/template/url-format/dev/fixtures.ts`).
-  - Jamie, 2026-11-26: fix. The harness's server answers 404 for a file that is not there.
+  - Built 2026-11-26 (Jamie: fix; [#201](https://github.com/stillpointlab/surfaces/pull/201)): the harness's server answers 404 for a file that is
+    not there.
 - 2026-11-26 (audio): `common`'s README lists the order to register formats in as
   `md, xmdl, sheet, image, code`. It is Context Manager's order, and phase 5's to bring up to
   date (`packages/common/README.md`).
-  - Jamie, 2026-11-26: fix, now and not in phase 5.
+  - Built 2026-11-26 (Jamie: fix; [#201](https://github.com/stillpointlab/surfaces/pull/201)).
 - 2026-11-26 (audio): the scaffold's renamed prose reads oddly for a real name ("the audio shows
   what it is given as an image", "a `<audio-preview>`"), in the package's README and comments.
-  - Jamie, 2026-11-26: fix. The template is worded so that it reads true under a new name.
+  - Built 2026-11-26 (Jamie: fix; [#201](https://github.com/stillpointlab/surfaces/pull/201)): the templates are worded so that they read true
+    under a new name.
 - 2026-11-26 (video): the root README's format convention still says "image, and video, audio
   or PDF to come", and the local host's README names "(an image, audio)" as what takes a URL.
-  - Jamie, 2026-11-26: fix.
+  - Built 2026-11-26 (Jamie: fix; [#201](https://github.com/stillpointlab/surfaces/pull/201)).
 - 2026-11-26 (video): the harness's event log shows an element's `ready` twice for each fixture.
   Not looked into (`tooling/harness/main.ts`).
   - Jamie, 2026-11-26: fix. If the harness listens twice it is mended there; if an element
     says `ready` twice, that is told to Jamie before anything is changed.
+  - Looked into ([#201](https://github.com/stillpointlab/surfaces/pull/201)) and not changed: the element says it twice, as the ready gate's contract
+    has it. A preview given a URL is put in the page with no source and settles as empty, then
+    is given its source and settles again when that has loaded. md and code show one. Told to
+    Jamie; his to rule.
 - 2026-11-26 (video): the scaffold's contract test suggests `canplay` in a comment, and both
   media formats settle on `loadedmetadata` (`tooling/template/url-format`). With the entry
   above on the scaffold's prose.
-  - Jamie, 2026-11-26: fix, with that entry.
+  - Built 2026-11-26 (Jamie: fix; [#201](https://github.com/stillpointlab/surfaces/pull/201)).
 - 2026-11-26 (HLS): a playlist that names another server says the first sentence only after
   31.6 s and 14 policy reports: hls.js asks again after an answer with no status. The build's
   rule for failing at once covers a 4xx alone (`packages/formats/video/src/preview/hls-engine.ts`).
-  - Jamie, 2026-11-26: fix, "cap makes sense". hls.js's retries are capped, so the sentence
-    comes in seconds. Playlists from other servers "one day" are in the seed
+  - Built 2026-11-26 (Jamie: fix, "cap makes sense"; [#201](https://github.com/stillpointlab/surfaces/pull/201)): hls.js asks again at most twice,
+    and the sentence comes in 3.4 s. Playlists from other servers "one day" are in the seed
     [streams from beyond the folder](../../tasks/unassigned/seeds/streams-from-beyond-the-folder.md),
     with his note that it may wait for Context Manager in the desktop app.
 - 2026-11-26 (HLS): the pane asks after a playlist alone, so a segment changed on disk does not

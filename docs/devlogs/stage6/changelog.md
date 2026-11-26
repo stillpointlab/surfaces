@@ -266,6 +266,10 @@ Jamie's, all on 2026-11-26:
   keep the extra request to keep the errors distinct".
 - **The faults the runner spike noticed in Context Manager are filed there:** "let's add them
   there" ([context-manager#1315](https://github.com/stillpointlab/context-manager/pull/1315)).
+- **Byte detection where two formats share an ending is seeded,** from his question on a `.ts`
+  segment: [a format told by a file's bytes](../../tasks/unassigned/seeds/a-format-told-by-a-files-bytes.md).
+- **Playlists from other servers "one day",** perhaps with Context Manager in the desktop app:
+  his note is in the seed that was there.
 
 Jamie has not ruled on these, which are the agents' calls in each spec's "As built", merged by
 him:
@@ -307,8 +311,19 @@ him:
 
 ### Deferred
 
-See the [log](followups.md#phase-3): thirteen entries from the three builds, ruled by Jamie at
-the phase's close.
+Fourteen entries in the [log](followups.md#phase-3), thirteen from the three builds and one
+from a question of Jamie's, each ruled by him on 2026-11-26, three at a time:
+
+- **Carried, one:** an audio or video preview is never ready in a browser that loads nothing of
+  a file before a person presses play. It waits for his walk on a Mac and an iPhone.
+- **Built, six** ([#201](https://github.com/stillpointlab/surfaces/pull/201)): the harness answers 404 for a missing file; `common`'s README registers
+  audio and video; the scaffold's prose and its `canplay` comment; two READMEs; hls.js's retries
+  capped.
+- **Looked into, one:** the harness shows an element's `ready` twice because the element says it
+  twice, by the ready gate's contract. Not changed; Jamie's to rule.
+- **Closed, six:** a file renamed, or written again with the same bytes, restarts what plays; a
+  disk with a coarse clock; a changed segment; a `.ts` segment in the tree; the browser tests'
+  port.
 
 ### At the phase's close
 
@@ -316,4 +331,5 @@ the phase's close.
   and the [PDF preview's spec](../../tasks/stage6/phase4/specs/pdf-preview.md)
   ([#199](https://github.com/stillpointlab/surfaces/pull/199)), with Jamie's rulings on its five
   questions and two spikes he asked for (unlocking a PDF with a password; signing a PDF).
+- The tag is on the merge of [#201](https://github.com/stillpointlab/surfaces/pull/201), the phase's last.
 - Phase 2's transcript was backed up after its close; phase 3's follows this one.
