@@ -513,11 +513,14 @@ describe('createHttpClient', () => {
     const client = createHttpClient();
     expect(await client.probe('img/a b.png')).toEqual({ ok: true, validator: '"4-1"' });
     expect(fetch.mock.calls[0][0]).toBe('/api/raw/img/a%20b.png');
-    // A GET, past the browser's cache: it answers for the disk now.
-    expect(fetch.mock.calls[0][1]).toEqual({ cache: 'no-store' });
+    // A GET for the first byte, past the browser's cache: it answers for the disk now.
+    expect(fetch.mock.calls[0][1]).toEqual({ cache: 'no-store', headers: { range: 'bytes=0-0' } });
     expect(cancelled).toBe(true);
-    fetch.mockImplementationOnce(async () => new Response('', { status: 200 }));
+    fetch.mockImplementationOnce(async () => new Response('', { status: 206 }));
     expect(await client.probe('no-tag.png')).toEqual({ ok: true, validator: null });
+    // An empty file has no first byte: it is there, with no validator.
+    answering({ ok: false, code: 'HOST_RANGE_NOT_SATISFIABLE', message: 'empty' }, 416);
+    expect(await client.probe('empty.mp3')).toEqual({ ok: true, validator: null });
     answering({ ok: false, code: 'HOST_FILE_NOT_FOUND', message: 'none' }, 404);
     expect(await client.probe('gone.png')).toEqual({
       ok: false,

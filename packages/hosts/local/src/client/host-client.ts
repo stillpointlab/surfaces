@@ -258,16 +258,27 @@ export function createHttpClient(base = ''): HostClient {
     get: (path) => result(`/api/file?path=${encodeURIComponent(path)}`),
     // The raw route sends the file's bytes: a success is taken from the status and
     // the validator, and the body let go unread. A refusal is JSON, as everywhere.
-    // Asked past the browser's cache, which it neither reads (the answer is about
-    // the disk now) nor fills with a body cut short. By `GET`: the request checks
-    // ask any other method for the page's `Origin`, which a browser does not send
-    // with a `HEAD` to its own origin.
+    // By `GET`: the request checks ask any other method for the page's `Origin`,
+    // which a browser does not send with a `HEAD` to its own origin. For its first
+    // byte alone: a whole file let go is still sent in part before the cancel
+    // lands (half a megabyte of a long one, measured). An empty file has no first
+    // byte and is answered 416, which is a file there all the same, with no
+    // validator. Asked past the browser's cache, which it neither reads (the
+    // answer is about the disk now) nor fills.
     probe: (path) =>
-      result(rawAddress(path), { cache: 'no-store' }, (response) => {
-        if (!response.ok) return null;
-        void response.body?.cancel().catch(() => undefined);
-        return { ok: true, validator: response.headers.get('etag') };
-      }),
+      result(
+        rawAddress(path),
+        { cache: 'no-store', headers: { range: 'bytes=0-0' } },
+        (response) => {
+          if (response.status === 416) {
+            void response.body?.cancel().catch(() => undefined);
+            return { ok: true, validator: null };
+          }
+          if (!response.ok) return null;
+          void response.body?.cancel().catch(() => undefined);
+          return { ok: true, validator: response.headers.get('etag') };
+        }
+      ),
     // The server reads the address's path alone, and no query: `rev` is for the
     // browser's caches, which key a copy by the whole address.
     urlFor: (path, validator) =>

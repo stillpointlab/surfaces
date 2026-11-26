@@ -97,7 +97,7 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
   asks before it writes over the newer file. Leaving unsaved edits asks first.
 - **A file in a format that takes a URL** (an image, audio) is not read by the page: its element
   loads it from the raw route. As it opens, the pane asks for the file's validator
-  (`HostClient.probe`, a `GET` whose body is let go), and the address it hands the element names
+  (`HostClient.probe`, a `GET` of its first byte), and the address it hands the element names
   it (`/api/raw/<path>?rev=<validator>`). A change event for the file, and the event stream's
   return, ask again: the same validator changes nothing, so a track that plays plays on through a
   hidden tab or a dropped stream; another one makes a new element at the new address, which the
