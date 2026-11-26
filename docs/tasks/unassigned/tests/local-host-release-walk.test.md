@@ -24,7 +24,10 @@ above for what each part once found.
 - [ ] `<folder>` is a scratch git repository holding: three markdown notes; a CRLF file; a file
       with no final newline; a markdown file with links whose text is code, a table, a bare URL
       and an autolink; a code file; a `.csv`; an image; a `755` script; two inventories; a tasks
-      board with a pool (a copy of this repository's `docs/tasks` at `docs/tasks` serves).
+      board with a pool (a copy of this repository's `docs/tasks` at `docs/tasks` serves); one
+      audio file of each ending the audio format opens (`.mp3`, `.wav`, `.flac`, `.ogg`, `.oga`,
+      `.opus`, `.m4a`, `.aac`, `.weba`: `packages/formats/audio/dev/media/` has them), a long one
+      (a few minutes), and a file of noise under an audio ending.
 - [ ] Chromium, by hand or driven by Playwright. Driver scripts stay in scratch: the repository
       keeps no walk of the host (its browser tests are packages' unit tests, section 0).
 - [ ] Nothing here touches a remote but section 0's run: no push, no pull request.
@@ -138,6 +141,22 @@ above for what each part once found.
       started again. Open the address its terminal printed." stays, with no close button;
       Undo, Redo and Commit are disabled; the event stream is not tried again (the network
       panel); the new printed address opens.
+
+## 11. Audio
+
+- [ ] Each audio file opened from the tree → its name over the browser's player, which does not
+      start by itself; each plays. In the long one, a seek forward and back plays from there.
+- [ ] A track playing, then another file opened → the first falls silent.
+- [ ] A track playing, then the tab hidden (another tab in front) and shown again, then the
+      server's event stream cut (the network off and on) → it plays on, where it was, through
+      both.
+- [ ] In the long one, a seek back into a part already played → the network panel shows no
+      bytes downloaded again for it (a `304`, or nothing asked). Then the file replaced on disk
+      → the player is new, and plays the new file from its start.
+- [ ] The file of noise → "This browser can't play this audio." A file deleted in a terminal
+      while its row still shows, then clicked → "Couldn't load this audio.", or the page's "This
+      file was deleted on disk."
+- [ ] The same files played in the harness (`npm run dev`, format audio) in Firefox.
 
 ---
 
