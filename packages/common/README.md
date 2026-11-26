@@ -14,6 +14,13 @@ What every surface shares. No elements of its own.
   token before asynchronous work, `settle(token)` marks the element ready when that cycle lands
   (ignored if a newer cycle began), `settle()` with no token is for synchronous work, and `begin()`
   on disconnect makes the element pending until it is connected and rendered again.
+- **Media.** For a preview over an `<audio>` or a `<video>`. `mediaFailureOf(media)`, after its
+  `error` event: `'load'` when the file did not arrive, `'decode'` when it arrived and the browser
+  has no decoder for it. `MediaError.code` decides it when it can; for
+  `MEDIA_ERR_SRC_NOT_SUPPORTED`, which Chromium and Firefox give a 404 and a file of noise alike,
+  it asks the address once (`fetch`, the body let go, no cache). `releaseMedia(media)` lets a
+  media element go: paused, its `src` taken away, then `load()`, so it stops sounding and its
+  download ends.
 - **The format descriptor** (`@stillpointlab/common-format/format`), a light entry that touches no
   DOM, for hosts and for each format's own `./format` entry:
   - `FormatDescriptor`: which paths a format opens (`opens`, lower-case extensions with the dot),
