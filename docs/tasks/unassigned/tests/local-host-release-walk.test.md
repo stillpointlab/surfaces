@@ -127,8 +127,9 @@ above for what each part once found.
 - [ ] A second tab opened at the address without the token → it loads, lists its rows and opens
       a file.
 - [ ] A page left open while the server is stopped and started again → "This page’s server was
-      started again. Open the address its terminal printed." stays, with no close button, and
-      the event stream is not tried again (the network panel); the new printed address opens.
+      started again. Open the address its terminal printed." stays, with no close button;
+      Undo, Redo and Commit are disabled; the event stream is not tried again (the network
+      panel); the new printed address opens.
 
 ---
 
