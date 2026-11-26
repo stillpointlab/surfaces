@@ -118,3 +118,21 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
   folder of segments shows as a list of such files.
 - 2026-11-26 (HLS): the port of the browser tests' server cannot be set from the command line
   (`tooling/vitest.ts`).
+
+## Phase 4
+
+- 2026-11-26 (PDF): every page's size is read before any is drawn, one request to the worker a
+  page. 200 pages took 46 ms; a PDF of thousands was not measured
+  (`packages/formats/pdf/src/preview/pdf-preview.ts`).
+- 2026-11-26 (PDF): a change of the screen's pixel ratio (a window moved to another screen)
+  does not draw the pages again (`packages/formats/pdf/src/preview/pages.ts`).
+- 2026-11-26 (PDF): Firefox says "The execution of microtasks on this page was reordered to
+  avoid unsafe execution." once for each PDF opened. It comes with pdf.js; why was not looked
+  into.
+- 2026-11-26 (PDF): `gen-styles.ts` now also runs `gen-pdfjs.ts` for a package that depends on
+  `pdfjs-dist`, so the script's name says less than it does (`tooling/gen-styles.ts`).
+- 2026-11-26 (PDF): `prettier --write` run from inside a package's folder does not read the
+  root's `.prettierignore`, and formatted the generated copies once. The generating step saw
+  the sizes differ and wrote them again.
+- 2026-11-26 (PDF): the package's CommonJS worker (`dist/worker.cjs`) requires an `.mjs`. No
+  host loads it; the README's "Workers" already says the CJS worker is not the worker.

@@ -1,5 +1,5 @@
 ---
-column: todo
+column: in-progress
 created: 2026-11-26T15:40:00-07:00
 tags: [formats, feature, code]
 ---
@@ -198,24 +198,28 @@ Jamie, 2026-11-26, on the spike's questions and the agent's leans:
 
 ## Acceptance / completion checklist
 
-- [ ] In the built local host, in Chromium: a PDF chosen in the tree draws; a 200-page PDF
+- [x] In the built local host, in Chromium: a PDF chosen in the tree draws; a 200-page PDF
       scrolls to its last page and draws it, with only the pages near view holding a canvas.
-- [ ] No policy report on the page or in the worker, for a text PDF, one needing a character
-      map, and one with a JPEG 2000 image.
-- [ ] Opening a file that is not a PDF fetches nothing of pdf.js (counted at a proxy, and the
+      (Two canvases at the top, five in the middle, three at the end.)
+- [x] No policy report on the page or in the worker, for a text PDF, one needing a character
+      map, and one with a JPEG 2000 image. (Chromium and Firefox; each listener was shown to
+      hear, by a request the policy refuses.)
+- [x] Opening a file that is not a PDF fetches nothing of pdf.js (counted at a proxy, and the
       test on the build).
-- [ ] The worker is a file of its own in the package's build and in the built host, and a
-      worker that fails to load says the first sentence.
-- [ ] A PDF changed on disk is drawn anew; one that is unchanged keeps its place through the
+- [x] The worker is a file of its own in the package's build and in the built host, and a
+      worker that fails to load says the first sentence. (In 56 ms; the next PDF starts
+      another.)
+- [x] A PDF changed on disk is drawn anew; one that is unchanged keeps its place through the
       event stream's reconnection.
-- [ ] A PDF with a password, a file that is not a PDF and a missing file each say their
+- [x] A PDF with a password, a file that is not a PDF and a missing file each say their
       sentence.
-- [ ] Firefox: the harness's fixtures draw.
+- [x] Firefox: the harness's fixtures draw. (Driven by Playwright's Firefox 159, not by a
+      person's hand.)
 - [ ] The browser tests pass in the PR's job, and their time is in the PR.
-- [ ] The root README has the convention for files fetched by name, and its table, the
+- [x] The root README has the convention for files fetched by name, and its table, the
       package's README and the release walk name the format.
-- [ ] `npm run check` passes, and its time before and after is in the PR: the generating step
-      runs wherever `gen:styles` does.
+- [x] `npm run check` passes, and its time before and after is in the PR: the generating step
+      runs wherever `gen:styles` does. (2 min 2 s before, 1 min 51 s after: no slower.)
 
 ### Work package
 
@@ -223,3 +227,111 @@ Jamie, 2026-11-26, on the spike's questions and the agent's leans:
   convention; one entry in the local host's `registry.ts`.
 - **Must not change:** either host's policy, `common`, the descriptor's contract, the template.
 - **Runs after:** phase 3.
+
+## As built
+
+Built by an Opus 5.5 sub-agent, read and checked by the orchestrating agent, which changed no
+code, ran the package's tests again and looked at one fixture drawn in the harness.
+
+### Two things that differ from the spec and the spike
+
+- **pdf.js is given the worker as a `PDFWorker` made from its port, handed to each document,**
+  not through `GlobalWorkerOptions.workerPort` (section 3). With the global, destroying one
+  document destroys the worker pdf.js made for it, and that is the page's one worker: a second
+  document loading at that moment would hang. The README's "Workers" says so now.
+- **The package's worker imports the generated copy beside it,** so `dist/worker.js` holds no
+  bare import of pdf.js's worker (the brief for the build said it would). The copy is in
+  `dist/pdfjs/`, for a host's bundler to build into its worker.
+
+### The generating step
+
+`tooling/gen-pdfjs.ts`, which `tooling/gen-styles.ts` runs for a package that depends on
+`pdfjs-dist`. So it runs wherever `gen:styles` does, with no line in any package's scripts and
+none in the local host's.
+
+- **It writes 193 files** into the package, ignored by git, lint and prettier: 168 character
+  maps and 14 fonts under `src/preview/pdfjs/`, with their licences, and under
+  `src/worker/pdfjs/` the two fallbacks and the copy of pdf.js's worker with its one line
+  changed. No `.wasm`.
+- **It knows it is current** by the copy's first line, which names the installed version and a
+  hash of the change, and by each copy being there at its source's size. Current, it takes
+  about 25 ms; from nothing, 88 ms.
+- **If the line has moved it fails before it removes anything,** so the last good copy stays.
+- **Measured:** `npm run check` took 2 min 2 s before (4,047 tests) and 1 min 51 s after
+  (4,120); an unrelated package's `npm test` took 1.4 to 1.8 s before and 1.35 to 1.44 s after.
+
+### The files
+
+| In the built local host    | Bytes     | Gzipped |
+| -------------------------- | --------- | ------- |
+| pdf.js, loaded on demand   | 443,140   | 131,288 |
+| The worker                 | 1,201,135 | 370,570 |
+| The PDF preview's own file | 29,012    | 7,945   |
+| The JPEG 2000 fallback     | 338,458   | 89,416  |
+| The JBIG2 and fax fallback | 132,439   | 41,641  |
+
+The character maps and fonts are 182 files of their own, fetched one at a time as a PDF needs
+them. The package's `dist/` carries 4.7 MB of copies.
+
+- **Three addresses name them,** one for each ending (`.bcmap`, `.pfb`, `.ttf`), where the spike
+  had one: a host then emits those files and not the licences beside them.
+- **In the stand-in for Context Manager's build** the preview's file is 144 kB (54 kB gzipped),
+  with the small character maps written into it. A vertical Japanese PDF, whose map is one of
+  them, drew with no fetch and no report.
+
+### The element
+
+- **Pages in view and two either side are drawn.** A canvas holds at most 2^24 pixels and
+  16,384 a side. A change of width draws again after 200 ms of quiet. 100% is 96/72 of a CSS
+  pixel to a PDF unit.
+- **Every page's size is read before any is drawn** (46 ms for 200 pages), so the scroll bar is
+  true from the start. A page pdf.js cannot read takes its neighbour's size.
+- **The three failures are told by the name of pdf.js's error:** `PasswordException`;
+  `InvalidPDFException`, an empty file among them, and an unknown error that is not a failed
+  fetch, for the second sentence; a refused answer, a failed fetch and anything that is not
+  pdf.js's for the first.
+- **A worker that fails to load** is heard by its `error` before its first message. It is
+  ended, the document fails with the first sentence, and the next PDF starts another.
+- **Ready settles on the first page drawn,** or on any page if the column was scrolled away
+  first.
+- **Leaving the page's tree** cancels what is being drawn and keeps the document and its
+  canvases. A failed document is destroyed at once.
+- **A page that fails to draw** says so in its place and is not told to the error handler.
+- The frame is a group labelled with the file's name; each page is a picture labelled "Page 3
+  of 12".
+
+### What was run, and what was not
+
+- **In the built host, Chromium 158,** by a script with a proxy before the host: every line of
+  the checklist. A 200-page PDF made outside the repository was ready in 46 ms.
+- **Policy reports:** none, in the page or in the worker, in Chromium and Firefox 159, for five
+  PDFs (text, a character map, JPEG 2000, a fax scan, embedded fonts). Each case ended with a
+  request the policy refuses, from the page and from inside the worker, and both listeners
+  heard it.
+- **In the harness, Chromium 158 and Firefox 159,** by Playwright: the nine fixtures.
+- **A stand-in for Context Manager's client,** its build options and its policy: the same PDFs
+  in both browsers, clean.
+- **Tests:** 82 and 8 in a browser (2.4 s); `npm run check` whole, 4,120.
+- **In Firefox, once for each PDF opened,** the console says "The execution of microtasks on
+  this page was reordered to avoid unsafe execution." The spike's trial saw it too. Not looked
+  into.
+- **Never run:** Safari; Context Manager itself; the local host in development mode; a slow
+  network or a large file; a screen with a pixel ratio above 1, a change of width and a failing
+  page in a real browser (jsdom alone); a PDF of thousands of pages.
+
+### The issue offered to pdf.js
+
+Written and not sent; sending it is Jamie's to do or not.
+
+> **Let an embedder give the address of a decoder's JavaScript fallback**
+>
+> In pdf.js 6.5.438, with `useWasm: false` (or WebAssembly refused by a page's content security
+> policy), the worker loads `openjpeg_nowasm_fallback.js` (JPEG 2000) and
+> `jbig2_nowasm_fallback.js` (JBIG2, CCITT fax) by importing an address built from `wasmUrl` and
+> a fixed name, in `WasmImage#getJsInstance`. Character maps, standard fonts and `.wasm` files
+> can come from anywhere through `BinaryDataFactory` with `useWorkerFetch: false`, which suits a
+> bundler that gives every file a hashed name. The fallbacks have no such hook: they must sit in
+> one folder under their published names, and without them a scanned page draws with its image
+> blank. Could pdf.js take a function, an option or a factory method, that returns the
+> fallback's address (or the module itself)? We ship a copy of `pdf.worker.mjs` with that one
+> line changed to ask `globalThis.pdfjsFallbackUrl?.(name)` first, and would like to drop it.
