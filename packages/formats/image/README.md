@@ -1,4 +1,4 @@
-# @stillpointlab/image-editor
+# @stillpointlab/image-format
 
 Preview-only image web components for Stillpoint Lab editor surfaces.
 
@@ -10,7 +10,7 @@ Preview-only image web components for Stillpoint Lab editor surfaces.
   once, for the source on screen.
 
 ```ts
-import '@stillpointlab/image-editor/preview';
+import '@stillpointlab/image-format/preview';
 
 const preview = document.createElement('image-preview');
 preview.setSource('/image.png', 'Screenshot');
