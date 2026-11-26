@@ -93,7 +93,10 @@ behind. It has one engine now, and is given no member that engine does not use.
 - **A `.ts` segment is sent as text.** The ending is TypeScript's too, and the raw route gives
   it `text/plain`. hls.js asks for a segment's bytes whatever their type, and the spike's server
   sent every file as `application/octet-stream` with no harm; `text/plain` itself is first
-  tried by this build's MPEG-TS stream in the host. In the tree a segment shows as a code file.
+  tried by this build, with an MPEG-TS stream of `.ts` segments in the host. The package's own
+  MPEG-TS stream names its segments `.m2t`: a `.ts` file in the package is read as TypeScript by
+  its tools, and Vite compiles it. Opened from the tree, a `.ts` segment is matched by the code
+  format, and the host says "This file is not text, so it cannot open here."
 - **A playlist that names another server** is refused by the policy and fails with the first
   sentence. Streams from beyond the folder are
   [a seed](../../../unassigned/seeds/streams-from-beyond-the-folder.md).
