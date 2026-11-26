@@ -10,11 +10,10 @@ import type { FormatDescriptor } from '@stillpointlab/common-format/format';
 
 export const pdfFormat: FormatDescriptor = {
   id: 'pdf',
-  // Replace with the real extensions: lower case, with the dot.
   opens: ['.pdf'],
   needs: 'url',
   preview: { tag: 'pdf-preview', load: () => import('./preview/index') },
-  /** The URL is the source; the file's name is what it is called. */
+  /** The URL is the source; the file's name labels the pages. */
   apply(element, file) {
     (element as PdfPreviewElement).setSource(file.url ?? '', fileNameOf(file.path));
   },

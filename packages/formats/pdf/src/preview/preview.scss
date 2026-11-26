@@ -1,6 +1,9 @@
-// Styles for the <pdf-preview> shadow root: the media centred and
-// contained, with common's status placeholders for the empty, loading and failed
-// states (the loading one over the media while it loads).
+// Styles for the <pdf-preview> shadow root: the pages one under another in a
+// column that scrolls, on a quiet ground, each page as wide as the column allows
+// up to its size at 100% (set on the page itself) and its canvas filling it;
+// with common's status placeholders for the empty, loading and failed states
+// (the loading one over the pages until the first is drawn) and for a page that
+// cannot be drawn, in its own place.
 
 @use 'common/src/styles/tokens' as *;
 @use 'common/src/styles/status';
@@ -17,20 +20,46 @@
   position: relative;
   box-sizing: border-box;
   display: grid;
-  place-items: center;
   grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   width: 100%;
   height: 100%;
   min-height: 220px;
-  padding: $spacing-lg;
   overflow: hidden;
 }
 
-.pdf-preview__media {
-  display: block;
+.pdf-preview__pages {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-md;
+  min-width: 0;
+  min-height: 0;
+  padding: $spacing-md;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: $background-secondary;
+}
+
+.pdf-preview__page {
+  position: relative;
+  box-sizing: border-box;
+  flex: none;
   max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
+  overflow: hidden;
+  background: $background-primary;
+  box-shadow: 0 1px 3px $shadow-color;
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .spl-status {
+    position: absolute;
+    inset: 0;
+  }
 }
 
 .pdf-preview__loading {

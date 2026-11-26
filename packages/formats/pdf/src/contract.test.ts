@@ -1,24 +1,39 @@
 // The host-contract conformance suite for the element this format ships. jsdom
-// loads no media, so the hooks tell the pdf's `<img>` that it loaded or
-// failed; a format with other media tells its own element (`canplay` or `error`
-// on a `<video>`), and says how to see what it shows.
+// has no worker and no canvas that draws, so pdf.js and the worker are stood in
+// for (`testing/fake-pdfjs.ts`): the hooks say the document opened (and its
+// page is drawn at once) or failed to load.
 import { describeUrlPreviewContract } from '@stillpointlab/common-format/testing';
-import { expect } from 'vitest';
+import { afterEach, expect, vi } from 'vitest';
+
+import { answer, FakeDocument, pdfjsError, resetEngine, taskFor } from './testing/fake-pdfjs';
 
 import './preview';
 
 import type { PdfPreview } from './preview/pdf-preview';
 
-const mediaOf = (el: PdfPreview) => el.shadowRoot?.querySelector('img');
+vi.mock('./preview/engine', async () => (await import('./testing/fake-pdfjs')).fakeEngine);
+vi.mock('./worker/start', async () => ({
+  startWorker: (await import('./testing/fake-pdfjs')).startFakeWorker,
+}));
+
+afterEach(() => resetEngine());
+
+const src = '/files/report.pdf';
+const frameOf = (el: PdfPreview) => el.shadowRoot?.querySelector('.pdf-preview');
 
 describeUrlPreviewContract<PdfPreview>('pdf-preview', {
-  src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 2'%3E%3Crect width='2' height='2' fill='%234f8cff'/%3E%3C/svg%3E",
-  name: 'square.svg',
-  load: (el) => mediaOf(el)?.dispatchEvent(new Event('load')),
-  fail: (el) => mediaOf(el)?.dispatchEvent(new Event('error')),
-  shows: (el, src, name) => {
-    expect(mediaOf(el)?.getAttribute('src')).toBe(src);
-    expect(mediaOf(el)?.getAttribute('alt')).toBe(name);
+  src,
+  name: 'report.pdf',
+  load: () => answer(src, new FakeDocument(2)),
+  fail: () => answer(src, pdfjsError('ResponseException', 'Unexpected server response (404)')),
+  shows: (el, shown, name) => {
+    expect(frameOf(el)?.getAttribute('aria-label')).toBe(name);
+    // Once the engine has it, it is the source the element was given.
+    const task = taskFor(shown);
+    if (task) expect(task.destroyed).toBe(false);
   },
-  empty: (el) => expect(mediaOf(el)).toBeNull(),
+  empty: (el) => {
+    expect(frameOf(el)?.textContent).toBe('No PDF selected.');
+    expect(el.shadowRoot?.querySelector('canvas')).toBeNull();
+  },
 });
