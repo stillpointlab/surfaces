@@ -1,0 +1,43 @@
+// Styles for the <audio-preview> shadow root: the media centred and
+// contained, with common's status placeholders for the empty, loading and failed
+// states (the loading one over the media while it loads).
+
+@use 'common/src/styles/tokens' as *;
+@use 'common/src/styles/status';
+
+:host {
+  display: block;
+  min-height: 0;
+  height: 100%;
+  color: $text-primary;
+  background: $background-primary;
+}
+
+.audio-preview {
+  position: relative;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+  padding: $spacing-lg;
+  overflow: hidden;
+}
+
+.audio-preview__media {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.audio-preview__loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background: color-mix(in srgb, #{$background-primary} 78%, transparent);
+}
