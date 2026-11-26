@@ -45,6 +45,7 @@
     "test:browser": "npm run gen:styles && vitest run --config vitest.browser.config.ts"
   },
   "dependencies": {
-    "@stillpointlab/common-format": "*"
+    "@stillpointlab/common-format": "*",
+    "pdfjs-dist": "^6.5.438"
   }
 }
