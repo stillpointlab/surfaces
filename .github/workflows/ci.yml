@@ -5,6 +5,9 @@ on:
     branches: [main]
   push:
     branches: [main]
+  # By hand (Actions → CI → Run workflow, or `gh workflow run CI --ref main`):
+  # every package's browser tests, as at a stage's close.
+  workflow_dispatch:
 
 jobs:
   check:
@@ -21,3 +24,53 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  # Which packages' browser tests this run starts, decided by
+  # tooling/browser-projects.mjs: those a pull request changes, every one by
+  # hand, none on a push to main (the pull request ran them).
+  browser-projects:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      projects: ${{ steps.select.outputs.projects }}
+      args: ${{ steps.select.outputs.args }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The diff from where the pull request left main.
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - id: select
+        run: node tooling/browser-projects.mjs
+
+  # Skipped when no project was chosen, so such a run installs no browser.
+  browser:
+    needs: browser-projects
+    if: needs.browser-projects.outputs.projects != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - id: playwright
+        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+      # Chromium is cached by Playwright's version; its system packages are not,
+      # so a cache hit installs only those.
+      - id: browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - if: steps.browsers.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - if: steps.browsers.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      - run: npm run test:browser -- $PROJECT_ARGS
+        env:
+          PROJECT_ARGS: ${{ needs.browser-projects.outputs.args }}
