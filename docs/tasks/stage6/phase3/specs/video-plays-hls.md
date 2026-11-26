@@ -121,7 +121,9 @@ behind. It has one engine now, and is given no member that engine does not use.
       browser tests. In the harness it says the second: see As built.)
 - [x] Firefox: both streams play in the harness. (Driven by Playwright's Firefox 159, not by a
       person's hand.)
-- [ ] The browser tests pass in the PR's job, and their time is in the PR.
+- [x] The browser tests pass in the PR's job, and their time is in the PR. (A PR on another
+      PR starts no job, so the run was started by hand on the branch: 70 s for the job, which
+      ran every package's browser tests.)
 - [x] The package's README says what a stream needs of a host: an address by path, ranges, and
       `blob:` for media. The release walk gains a stream.
 - [x] `npm run check` passes. (4,025 tests, on the build's machine.)
