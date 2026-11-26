@@ -1,7 +1,9 @@
 // The host-contract conformance suite for the element this format ships. jsdom
 // loads no media, so the hooks tell the element's `<img>` that it loaded or
-// failed; a format with other media tells its own element (`canplay` or `error`
-// on a `<video>`), and says how to see what it shows.
+// failed; a format with other media tells its own element the event it settles
+// on, and says how to see what it shows. A player settles on `loadedmetadata`
+// (or `error`), as audio and video do: with `preload="metadata"` a browser may
+// never reach `canplay` before a person presses play.
 import { describeUrlPreviewContract } from '@stillpointlab/common-format/testing';
 import { expect } from 'vitest';
 
