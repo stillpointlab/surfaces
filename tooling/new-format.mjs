@@ -27,6 +27,17 @@ const SKIPPED_FILES = /\.styles\.ts$|\.tsbuildinfo$/;
 
 const NAME = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 
+const utf8 = new TextDecoder('utf-8', { fatal: true });
+
+/** The file's text, or null when its bytes are not UTF-8 (media under dev/media). */
+function asText(bytes) {
+  try {
+    return utf8.decode(bytes);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Write the template (the URL one with `url`) to `<into>/<name>` and return that
  * folder. `into` is packages/formats unless a test says otherwise. Throws on a
@@ -64,7 +75,10 @@ export function scaffold(name, { url = false, into = formatsDir } = {}) {
       if (entry.isDirectory()) {
         if (!SKIPPED_DIRS.has(entry.name)) copy(source, target);
       } else if (!SKIPPED_FILES.test(entry.name)) {
-        writeFileSync(target, rename(readFileSync(source, 'utf8')));
+        // Text is renamed; anything else (a test's image or clip) is copied as it is.
+        const bytes = readFileSync(source);
+        const text = asText(bytes);
+        writeFileSync(target, text === null ? bytes : rename(text));
       }
     }
   };
@@ -122,6 +136,11 @@ async function main(args) {
   await formatScaffold(dest);
   console.log(`created ${relative(root, dest)} (@stillpointlab/${name}-format)`);
   console.log('next: npm install, then add the row to the root README table and run npm run check');
+  if (flags.includes('--url')) {
+    console.log(
+      `and its browser tests: npm run test:browser -- --project @stillpointlab/${name}-format`
+    );
+  }
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

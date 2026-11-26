@@ -26,8 +26,16 @@ above for what each part once found.
       and an autolink; a code file; a `.csv`; an image; a `755` script; two inventories; a tasks
       board with a pool (a copy of this repository's `docs/tasks` at `docs/tasks` serves).
 - [ ] Chromium, by hand or driven by Playwright. Driver scripts stay in scratch: the repository
-      keeps no browser suite.
-- [ ] Nothing here touches a remote: no push, no pull request.
+      keeps no walk of the host (its browser tests are packages' unit tests, section 0).
+- [ ] Nothing here touches a remote but section 0's run: no push, no pull request.
+
+## 0. Every package's browser tests
+
+- [ ] CI run by hand on `main` at the stage's last commit (`gh workflow run CI --ref main`, or
+      Actions → CI → Run workflow; it starts a run on GitHub, so Jamie starts it or says to) →
+      the `browser` job ran every package's browser tests and passed. A pull request runs only
+      those of the packages it changes; this is where a change to `common` or the tooling meets
+      them all. Run: `<link>`; `browser` job: `<time>`.
 
 ---
 

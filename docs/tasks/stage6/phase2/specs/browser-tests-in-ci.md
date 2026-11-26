@@ -1,5 +1,5 @@
 ---
-column: todo
+column: in-progress
 created: 2026-11-25T18:00:00-07:00
 tags: [dev-tooling, formats, code]
 ---
@@ -134,3 +134,77 @@ install the browser, and when the tests run.
   and vitest configs, `tooling/template/url-format/`, `docs/devlogs/README.md`.
 - **Must not change:** any package's existing tests.
 - **Runs after:** [the scaffold](scaffold-registrable-formats.md).
+
+## As built
+
+Built by an Opus 5.5 sub-agent, read and checked by the orchestrating agent, which mended the
+README's conformance paragraph and ran what needs a push.
+
+How it is put together, which the spec left to the build:
+
+- **`browserTest()`** in `tooling/vitest.ts` replaces the unused flag. `formatTest` and `appTest`
+  leave `src/**/*.browser.test.ts` out. Playwright is loaded inside `browserTest`'s own config,
+  so a jsdom config never loads it.
+- **The root's `vitest.browser.config.ts`** collects each package's `vitest.browser.config.ts`.
+- **Which packages a run starts** is decided by `tooling/browser-projects.mjs`, which needs only
+  Node and git: the workspaces that keep a browser config, and of those the ones a file of the
+  diff from the pull request's base lies under. A pull request gives those, a run by hand gives
+  all, a push gives none. The workflow only calls it; its 12 tests build small repositories of
+  their own.
+- **Three jobs:** `check`, as it was; `browser-projects`, skipped on a push; `browser`, skipped
+  when no package was chosen, so such a run installs no browser.
+
+Where it differs from the spec:
+
+- **`playwright` is a root dev dependency too,** at the version whose Chromium vitest's provider
+  starts, and the `vitest` range moved to the version already locked.
+- **The scaffold copies a file that is not text byte for byte.** It read every file as UTF-8,
+  which broke the template's image.
+- **The template's image is a 149-byte PNG made by `ffmpeg`,** under `dev/media/`, with its line
+  in the README.
+- **The release walk's card** is the pool's, which each stage's walk is copied from. It gains a
+  section 0 for the run by hand.
+
+Checked:
+
+- `npm run check` from a clean tree: 3,885 tests.
+- `npm test` three times before and three after, on one machine under other load: 40.7 to
+  45.8 s before, 40.8 to 48.8 s after. No difference beyond the noise.
+- `npm test` twice with no browser installed, while every process under it was sampled five
+  times a second: no browser process was seen.
+- `npm run test:browser`: 15.3 s, of which the two tests are half a second and the build of
+  what they depend on is most of the rest.
+- Without the browser, `npm run test:browser` stops with the command that installs it.
+- A trial made with `--url` passed its browser test with no edit, and was removed.
+- The filter against this repository's history: #183 gives the URL template, and ten merges
+  that touch no template give nothing.
+
+In CI, on this pull request (#188) and a throwaway beside it (#189, closed unmerged):
+
+- **The browser job ran the template's two tests and passed in 1 min 7 s,** with Chromium and
+  its system packages installed from nothing. It runs beside `check` (2 min 18 s in the same
+  run), so the pull request waited no longer for it.
+- **The proof:** with one test added that plays a 1 s WebM (VP9 and Opus, 160×90) with its
+  sound on and no gesture, the job printed `played clip.webm: 160×90, 1.008 s` and passed in
+  53 s. Without the autoplay switch the same test fails locally with `NotAllowedError`.
+
+Left to show after the merge, since a workflow runs by hand only from `main` and a docs-only
+pull request needs this workflow in `main` first:
+
+- the run by hand runs every package's;
+- a docs-only pull request starts no browser job. Locally the filter gives nothing for six of
+  them.
+
+One thing the first runs showed: both missed the cache of Chromium. A cache saved by a pull
+request's run serves that pull request alone; one saved from `main` serves all, and only the
+run by hand saves there. The first such run seeds it. Until then each pull request's first
+browser job installs Chromium, which is the minute measured above.
+
+Noticed, for phase 2's log:
+
+- The root's browser config names its folders as globs, and `browser-projects.mjs` reads the
+  workspaces. The two can drift apart.
+- `npm run test:browser` builds everything `build:deps` does, for one package too.
+- The words for a missing browser print once for each package, inside vitest's own error.
+- `tooling/vitest.ts` and `tooling/*.test.ts` are read by no type check (the log has
+  `new-format.test.ts` already).

@@ -40,11 +40,13 @@ tsconfig.base.json   compiler options every package extends
 eslint.config.mjs    one lint config; packages add none of their own
 .prettierrc          one format config
 vitest.config.ts     runs every package as a vitest project
+vitest.browser.config.ts  runs the packages' browser tests (see Testing)
 tooling/
   gen-styles.mjs     SCSS -> `*.styles.ts` string modules for shadow roots (all packages, or one)
   tsup.ts            the shared build: ESM + CJS + d.ts per entry
   vitest.ts          the shared test preset
   new-format.mjs     scaffolds packages/formats/<name> from a template (`--url` for the URL one)
+  browser-projects.mjs  which packages' browser tests a CI run starts
   template/format/   a complete text format with an editor: what a new one starts from
   template/url-format/ a complete preview given a URL, no editor: what `--url` starts from
   harness/           the one playground: mounts any format from its dev/fixtures.ts
@@ -70,6 +72,7 @@ npm install        # once, at the root
 npm run check      # lint, format, typecheck, test, build: what CI runs
 npm run build      # every package
 npm test           # every package
+npm run test:browser  # the browser tests, in headless Chromium; not part of check
 npm run dev        # the harness, every format, at http://localhost:5180
 
 cd packages/formats/sheet   # or any package
@@ -80,6 +83,56 @@ npm run new-format -- notes        # a text format with an editor, from tooling/
 npm run new-format -- video --url  # a preview given a URL, from tooling/template/url-format
                                    # then npm install, and add its row above
 ```
+
+## Testing
+
+A package has two kinds of test file:
+
+- **`src/**/*.test.ts`** run in jsdom (in Node for `common`, the apps and the local host), in
+  `npm test` and so in `npm run check`. Nearly everything is tested here: a format's descriptor,
+  its entries, its states and its words, and the conformance suites.
+- **`src/**/*.browser.test.ts`** run in headless Chromium through vitest's browser mode, and only
+  in `npm run test:browser`. They hold what jsdom cannot do and nothing else: a clip that plays or
+  seeks, a page that draws, a file the browser really loads or really fails. A package that has
+  them keeps a `vitest.browser.config.ts` (`browserTest()` from `tooling/vitest.ts`) beside its
+  `vitest.config.ts`, and the root's `vitest.browser.config.ts` collects them. The URL template
+  has one, so a format made with `new-format --url` starts with it.
+
+What does not go in a browser test: anything jsdom can show, a screenshot as an assertion, and a
+wait for a time (a test waits for an event, or the element's ready signal). One package's browser
+tests take under 30 seconds on a laptop; a pull request that adds some says how long the CI job
+took, and if one package's job passes two minutes, the answer is fewer tests.
+
+Media for a test lives in the package's `dev/media/`, each file under 50 kB and made by a command,
+with the `ffmpeg` line that made it in the package's README. A test reaches it by URL
+(`new URL('../../dev/media/clip.webm', import.meta.url)`), and media plays there without a gesture
+(Chromium's autoplay switch, in `browserTest()`).
+
+The browser is Playwright's Chromium, at the version the root's `playwright` names. Install it once:
+
+```sh
+npx playwright install chromium               # into ~/.cache/ms-playwright
+npx playwright install --with-deps chromium   # on Linux, with its system packages (sudo)
+```
+
+`npm test` and `npm run check` need no browser installed. Without one, `npm run test:browser`
+stops at once and names the command above.
+
+```sh
+npm run test:browser                                                  # every package's
+npm run test:browser -- --project @stillpointlab/sample-url-format    # one package's
+cd tooling/template/url-format && npm run test:browser                # the same, from the package
+```
+
+When they run:
+
+| When                     | What runs                                                                                                                                                                                                                                                 |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A pull request           | The browser tests of each package it changes, in CI's `browser` job beside `check` (`tooling/browser-projects.mjs` chooses them). A pull request that changes no such package starts no browser; one that changes only `common` or the tooling runs none. |
+| A push to `main`         | None: the pull request ran them.                                                                                                                                                                                                                          |
+| By hand                  | All of them: Actions → CI → Run workflow, or `gh workflow run CI --ref main`.                                                                                                                                                                             |
+| A stage's close          | All of them, by hand, beside the release walk ([milestones](docs/devlogs/README.md#milestones)).                                                                                                                                                          |
+| An agent building a spec | Its own package's, locally, before it reports.                                                                                                                                                                                                            |
 
 ## The harness
 
@@ -348,10 +401,9 @@ element it ships. They prove readiness, set and read back, `content-change` on u
 on `setContent`, `readonly`, keymap modes and focus, settling after a DOM move and after a
 reconnect, and take hooks for what only the format knows (how to tell content reached the DOM, how
 to perform one edit, how its media is told it loaded or failed). They use no fake timers, private fields or jsdom-specific stubs, so they run
-unchanged under vitest browser mode: a package that needs a real browser (media editors, clipboard)
-sets `formatTest({ browser: true })` in its `vitest.config.ts` and the root adds `@vitest/browser`,
-`@vitest/browser-playwright` and Playwright's Chromium at that point. Until then everything runs on
-jsdom.
+unchanged under vitest browser mode. What needs a real browser (a clip that plays, a page that is
+drawn) is a package's `*.browser.test.ts`, run by `browserTest()` and not by `npm test`: see
+[Testing](#testing).
 
 Styles: write SCSS next to the component. `gen:styles` compiles every non-partial
 `src/**/<name>.scss` into a sibling `<name>.styles.ts` exporting `<name>Styles`; the generated files

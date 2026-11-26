@@ -37,7 +37,23 @@ reconnect keeps it.
 To make it a real format, put the format's own media element where the `<img>` is, listen to that
 element's events, and change the hooks in `src/contract.test.ts` to match.
 
+## Tests
+
+`src/**/*.test.ts` run in jsdom, which loads no media: each test says when the `<img>` loaded or
+failed. `src/**/*.browser.test.ts` run in headless Chromium (`vitest.browser.config.ts`); the
+sample's loads a file of this package and fails a missing one, with nothing dispatched by hand. A
+real format tests there only what needs a real browser: that its clip plays, that its page draws.
+
+Test media lives in `dev/media/`, each file under 50 kB and made by a command:
+
+```sh
+# dev/media/swatch.png: a 64×36 blue frame
+ffmpeg -f lavfi -i color=c=0x4f8cff:s=64x36 -frames:v 1 dev/media/swatch.png
+```
+
 ## Development
 
-From the repository root, `npm run check` runs everything. In this package, `npm run dev` opens the
-harness on this format, and `npm test` runs this package's tests.
+From the repository root, `npm run check` runs everything but the browser tests, and
+`npm run test:browser -- --project @stillpointlab/sample-url-format` runs this package's. In this
+package, `npm run dev` opens the harness on this format, `npm test` runs its jsdom tests and
+`npm run test:browser` its browser tests.
