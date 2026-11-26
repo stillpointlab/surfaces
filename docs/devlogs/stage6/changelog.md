@@ -220,3 +220,100 @@ him:
 - A seed for [the older formats' root entries](../../tasks/unassigned/seeds/root-entries-register-nothing.md),
   from Jamie's question on image's.
 - Phase 1's transcript was backed up at its close; phase 2's follows this one.
+
+## Phase 3: The audio preview, the video preview, and HLS in it (`stage6-phase3-complete`)
+
+Range: `stage6-phase2-complete..stage6-phase3-complete`, 2026-11-26. As the range stood at the
+merge of [#196](https://github.com/stillpointlab/surfaces/pull/196): 38 commits and four merges,
+126 files, +4,403/−245. [#195](https://github.com/stillpointlab/surfaces/pull/195) reached main
+inside [#197](https://github.com/stillpointlab/surfaces/pull/197)'s merge, which was stacked on
+it.
+
+### Shipped
+
+- The tooling's scripts and the lint config are TypeScript
+  ([#193](https://github.com/stillpointlab/surfaces/pull/193)), the last of phase 2's
+  follow-ups: Node runs the four scripts under `tooling/` as they are, the type check reads
+  them, and `tooling/tsconfig.json` holds them to syntax Node can run.
+- The audio preview ([#194](https://github.com/stillpointlab/surfaces/pull/194);
+  [spec](../../tasks/stage6/phase3/specs/audio-preview.md)): `<audio-preview>` in
+  `packages/formats/audio`, the first format made with the URL template, opening nine endings
+  with the browser's own controls; two functions in `common` that audio and video share.
+- A playing file is left alone by the local host (the same PR): the raw route sends a validator
+  (`ETag`) and lets the browser keep a file and ask whether it changed; the pane replaces an
+  open URL file's element only when its validator changes; `probe` asks for one byte.
+- The video preview ([#195](https://github.com/stillpointlab/surfaces/pull/195);
+  [spec](../../tasks/stage6/phase3/specs/video-preview.md)): `<video-preview>` in
+  `packages/formats/video`, opening five endings, filling the pane on a dark ground, with a note
+  for a picture the browser cannot show; a token for that ground in `common`; the pane hands a
+  player it puts aside an empty source, so its file stops arriving.
+- HLS in the video preview ([#197](https://github.com/stillpointlab/surfaces/pull/197);
+  [spec](../../tasks/stage6/phase3/specs/video-plays-hls.md)): the format opens `.m3u8`; hls.js
+  behind an engine interface inside the package, loaded for a playlist and at no other time.
+- A spike on Context Manager adopting the runner
+  ([#196](https://github.com/stillpointlab/surfaces/pull/196);
+  [spike](../../tasks/stage6/phase3/spikes/context-manager-on-the-runner.md)), the paper item
+  from the stage's brief.
+
+### Decisions
+
+Jamie's, all on 2026-11-26:
+
+- **Everything is TypeScript:** "let's consolidate on .ts for all files, even tooling".
+- **The request check keeps asking a `HEAD` for an `Origin`:** "we'll leave Origin on HEAD for
+  now and wait until it is something a feature requires".
+- **Audio's two failures stay two sentences,** at the cost of one request of one byte: "we can
+  keep the extra request to keep the errors distinct".
+- **The faults the runner spike noticed in Context Manager are filed there:** "let's add them
+  there" ([context-manager#1315](https://github.com/stillpointlab/context-manager/pull/1315)).
+
+Jamie has not ruled on these, which are the agents' calls in each spec's "As built", merged by
+him:
+
+- ESLint loads its TypeScript config through `jiti`, a new dev dependency; the one JavaScript
+  file left is the local host's `bin/surfaces.js`.
+- The raw route's validator is the file's size and time, sent with `Cache-Control: no-cache`;
+  the validator is the `?rev=` of a file's address.
+- `MediaError.code` does not tell a file that did not arrive from one that cannot be decoded,
+  so `mediaFailureOf` asks the address.
+- `--spl-media-backdrop` is a new token in `common`.
+- The package's MPEG-TS test stream names its segments `.m2t`; hls.js is left as an import in
+  the package's build; a file the server refuses fails a stream at once.
+- The audio spec's three leans (the two functions in `common`; a track stops when another file
+  opens; section 4 in that spec) stand, never ruled.
+
+### Testing & review
+
+- `npm run check` at each build's tip: in CI for the tooling and audio (another repository's CI
+  held the build's machine), 3,999 for video and 4,025 for HLS on the build's machine. The HLS
+  build ran its check while that other CI was running, against its instructions.
+- Each build was read by the orchestrating agent, which changed: for audio, the failure's
+  question to one byte; for video, the ground's colour to a token and the pane's letting go of
+  a player.
+- By script, in the built local host, Chromium 158, with a proxy before the host: every ending
+  of each format plays from the tree; seeks (a 60 s video to its last ten seconds in under
+  0.3 s; 0.64 s at 300 kB/s); a seek back in a 115 MB audio file asks for nothing again, where
+  the old headers sent 6 to 8 MB in three runs of four; a track and a stream play on through
+  the event stream cut and come back; another file opened stops what played; four streams
+  (fMP4, MPEG-TS as `.m2t` and as `.ts`, byte ranges) with no policy report.
+- In the harness, Chromium 158 and Firefox 159, by Playwright: every fixture of the three
+  builds.
+- Browser tests in CI: audio 5, video 8; the job took 37 to 70 s. A PR on another PR starts no
+  CI, so two of the three stacked builds were run by hand on their branches.
+- The runner spike was done by reading; its five leading findings and one fault were read
+  again in the code by the orchestrating agent.
+- Imitated: the hidden tab (headless Chromium hides none). Never run: Safari; a browser with
+  no Media Source Extensions; a person's eyes and ears.
+
+### Deferred
+
+See the [log](followups.md#phase-3): thirteen entries from the three builds, ruled by Jamie at
+the phase's close.
+
+### At the phase's close
+
+- Phase 4 was opened beside it: the [pdf.js spike](../../tasks/stage6/phase4/spikes/pdfjs-in-a-format-package.md)
+  and the [PDF preview's spec](../../tasks/stage6/phase4/specs/pdf-preview.md)
+  ([#199](https://github.com/stillpointlab/surfaces/pull/199)), with Jamie's rulings on its five
+  questions and two spikes he asked for (unlocking a PDF with a password; signing a PDF).
+- Phase 2's transcript was backed up after its close; phase 3's follows this one.

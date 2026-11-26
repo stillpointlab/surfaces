@@ -1,5 +1,7 @@
 ---
-column: review
+column: done
+pr: 196
+completed: 2026-11-26
 created: 2026-11-26T12:33:00-07:00
 tags: [common, hosts, context-manager, spike]
 ---
