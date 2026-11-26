@@ -1,5 +1,5 @@
 ---
-column: todo
+column: in-progress
 created: 2026-11-26T15:45:00-07:00
 tags: [formats, feature, code]
 ---
@@ -113,21 +113,104 @@ For Jamie, with the agent's lean:
 
 ## Acceptance / completion checklist
 
-- [ ] In the built local host, in Chromium and Firefox: a line of a PDF is selected by a drag
+- [x] In the built local host, in Chromium and Firefox: a line of a PDF is selected by a drag
       and copied as its text; a selection runs across two pages.
-- [ ] The browser's find finds a word on a page near view, by hand.
-- [ ] A screen reader's view of a page (the accessibility tree) holds the page's label and its
+- [ ] The browser's find finds a word on a page near view, by hand. (Not done: no script can
+      press the find bar. `window.find` finds it in both browsers; the bar is Jamie's to try.)
+- [x] A screen reader's view of a page (the accessibility tree) holds the page's label and its
       text, and not a picture.
-- [ ] No policy report on the page or in the worker.
-- [ ] The two measures of section 5 are in the PR.
-- [ ] A page scrolled far away holds no text and no canvas.
+- [x] No policy report on the page or in the worker.
+- [x] The two measures of section 5 are in the PR.
+- [x] A page scrolled far away holds no text and no canvas.
 - [ ] The browser tests pass in the PR's job, and their time is in the PR.
-- [ ] The package's README says what the text gives and what it does not (find reaches the
+- [x] The package's README says what the text gives and what it does not (find reaches the
       pages near view), and the release walk gains its steps.
-- [ ] `npm run check` passes.
+- [x] `npm run check` passes. (4,132 tests, on the build's machine.)
 
 ### Work package
 
 - **Owns:** `packages/formats/pdf`.
 - **Must not change:** `common`, the local host, either host's policy.
 - **Runs after:** the [PDF preview](pdf-preview.md).
+
+## As built
+
+Built by an Opus 5.5 sub-agent, read and checked by the orchestrating agent, which changed no
+code, ran the package's tests again and looked at the selection drawn in the built host.
+
+### How the text is laid
+
+- **pdf.js's `TextLayer`,** given the page's text as a stream, a box over the canvas and the
+  page's viewport at the box's width; `update` on a change of width; `cancel` with a drawing
+  that is cancelled. The class comes to the page column from the engine's module, so pdf.js
+  still loads behind the one `import()`.
+- **After the canvas, one page at a time.** Ready settles on the canvas, as it did.
+- **The rules** are the package's own, taken from pdf.js's `.textLayer` rules: the layer's
+  place and size from `--total-scale-factor`, each piece transparent and placed by its inline
+  style, the selection's colour, and the rules for a page turned by its `/Rotate`. pdf.js's
+  viewer stylesheet is not shipped.
+- **The selection's colour** is `--spl-code-selection-bg`, the code editor's. `common` has no
+  token for a selection over a picture, and none was added.
+- **Text only near view** is one line, where a page gives its canvas back
+  ([Clarification 1](#clarifications), built to its lean and not yet ruled).
+
+### The selection
+
+A bare `TextLayer` misbehaved as the spec feared: in Chromium a drag from the middle of a line
+to the right margin took the rest of the page. The build does what pdf.js's viewer does: an
+element after each page's text that cannot be selected, which covers the page while the mouse
+is down. The class that says "a selection is being made" is on the column and not on a page,
+since pdf.js's viewer finds the next page through the document's selection, which does not see
+into a shadow root.
+
+**One rule of the PDF preview changed:** a page's box clips with `overflow: clip` where it had
+`overflow: hidden`. With `hidden`, in Firefox, a drag from one page into the next took the rest
+of that page.
+
+### What a screen reader is given
+
+Read from the browsers' accessibility trees (Chromium 158 and Firefox 159), not heard:
+
+- **A page with text:** a group named for the file, holding a group "Page 1 of 1" with the
+  page's lines as text. Chromium's whole tree holds no canvas.
+- **A page with none** (a fax scan): a picture, "Page 1 of 1".
+- A page far from view holds no text, and is a picture with its label until it is drawn.
+
+### The measures
+
+Medians of eight runs, on a page of 6,457 characters in 67 lines:
+
+| First page drawn | With its text | Without |
+| ---------------- | ------------- | ------- |
+| Chromium, warm   | 36 ms         | 36.5 ms |
+| Firefox, warm    | 39.5 ms       | 40.5 ms |
+| Chromium, cold   | 156.5 ms      | 151 ms  |
+| Firefox, cold    | 192 ms        | 191 ms  |
+
+The cost is later: each page's text is laid before the next page's canvas, so the third page of
+a dense PDF is drawn at 115 ms where it was at 84 ms (Chromium; 142 against 113 ms in Firefox).
+
+| Elements in the shadow root, top / middle / end | With text       | Without         |
+| ----------------------------------------------- | --------------- | --------------- |
+| 200 pages, a line each                          | 215 / 223 / 215 | 206 / 208 / 206 |
+| 200 pages of dense text                         | 611 / 883 / 611 | 206 / 208 / 206 |
+
+### What was run, and what was not
+
+- **In the built host, Chromium 158 and Firefox 159,** by a script: a drag of the mouse across
+  a line, with the selection, the clipboard and a paste each holding that line; a drag from
+  page 1's last line into page 2's first, holding both in order; `window.find` finding a phrase
+  on a page near view, not finding one on page 150 from the top, and finding it there once
+  scrolled to; a page far off holding no text and no canvas.
+- **No policy report,** in the page or the worker, for seven PDFs, in the built host and in the
+  stand-in for Context Manager's client, with each listener shown to hear.
+- **Tests:** 94 and 13 in a browser (2.6 s). No test of the PDF preview's was changed.
+- **A change of width, and a page turned by `/Rotate`,** were looked at once by script in both
+  browsers. No test holds them.
+- **Never run:** the browser's own find bar; a real screen reader; Safari; a touch or a
+  keyboard selection; a screen with a pixel ratio above 1; Context Manager itself.
+
+### Where the brief for the build was wrong
+
+It named the JPEG 2000 fixture as the page with no text. That PDF has a caption, so the fax scan
+stood in.

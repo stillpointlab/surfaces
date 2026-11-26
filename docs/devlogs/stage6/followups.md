@@ -136,3 +136,16 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
   the sizes differ and wrote them again.
 - 2026-11-26 (PDF): the package's CommonJS worker (`dist/worker.cjs`) requires an `.mjs`. No
   host loads it; the README's "Workers" already says the CJS worker is not the worker.
+- 2026-11-26 (PDF text): the browser's own find bar was not tried on a PDF's text, since no
+  script can press it. `window.find` finds a phrase in both browsers; in Chromium it selects the
+  text and does not scroll the column to it, in Firefox it does.
+- 2026-11-26 (PDF text): pdf.js leaves a hidden canvas, for measuring text, in the host's
+  `document.body`, one for each language, and nothing takes it away (`TextLayer.cleanup()` is
+  never called).
+- 2026-11-26 (PDF text): a page's text is laid before the next page's canvas, so later pages of
+  a dense PDF are drawn about 30 ms later each (`packages/formats/pdf/src/preview/pages.ts`).
+- 2026-11-26 (PDF text): pdf.js reads the test PDF's ZapfDingbats line as "3456789:;<=>", and
+  a vertical Japanese comma as its vertical form. That is what is copied and what a reader
+  hears.
+- 2026-11-26 (PDF text): in Chromium the selection is empty for a moment while a drag crosses
+  the blank between two pages, and comes back.
