@@ -155,8 +155,7 @@ before.
   the file of noise.
 - **The seek,** in a 60 s, 16 MB H.264 file: 34 ms to 50 s and 18 ms to 55 s on loopback, one
   range request each. With Chromium's network slowed: 0.41 s at 1 MB/s, 0.64 s at 300 kB/s.
-- **In the harness, Chromium 158 and Firefox 159,** by Playwright, before the ground's colour
-  and the pane changed: each ending loads at 64×36, plays and is labelled; the clip with no
+- **In the harness, Chromium 158 and Firefox 159,** by Playwright, at the branch's last code: each ending loads at 64×36, plays and is labelled; the clip with no
   picture shows the note and plays; the missing file, the noise and no source say their words.
 - **Tests:** video 33 and 5 in a browser (1.7 s), the local host 1,031, `npm run check` whole
   (3,999).
