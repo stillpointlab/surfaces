@@ -1,14 +1,19 @@
 {
   "name": "@stillpointlab/pdf-format",
   "version": "0.1.0",
-  "description": "A Stillpoint Lab format given a URL: a <pdf-preview> of the media a host hands it, with no editor.",
+  "description": "A Stillpoint Lab format given a URL: a <pdf-preview> that draws the PDF a host hands it with pdf.js, page by page as they come into view, with no editor.",
   "license": "MIT",
   "type": "module",
   "sideEffects": [
     "./src/preview/index.ts",
     "./src/preview/pdf-preview.ts",
+    "./src/worker/worker.ts",
+    "./src/worker/fallbacks.ts",
+    "./src/worker/pdfjs/pdf.worker.mjs",
     "./dist/preview.js",
     "./dist/preview.cjs",
+    "./dist/worker.js",
+    "./dist/pdfjs/pdf.worker.mjs",
     "./dist/chunks/*"
   ],
   "main": "./dist/index.js",
@@ -29,6 +34,9 @@
       "types": "./dist/format.d.ts",
       "import": "./dist/format.js",
       "require": "./dist/format.cjs"
+    },
+    "./worker": {
+      "import": "./dist/worker.js"
     }
   },
   "files": [
