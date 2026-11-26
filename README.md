@@ -121,6 +121,7 @@ instead of reading each package:
 | `./preview` | the read-only element, implementing `PreviewElement` (`UrlPreviewElement` given a URL) |
 | `./editor`  | the interactive element, implementing `EditorElement`; only if it has one              |
 | `./format`  | the descriptor: which paths the format opens, and how a host loads and fills it        |
+| `./worker`  | the web worker, `dist/worker.js`; only if it has one (see [Workers](#workers))         |
 
 `./format` is light: importing it defines no element and loads no editor. Its `load()` functions
 import `./preview` and `./editor`, which the build keeps as files of their own. A host gives the
@@ -253,6 +254,49 @@ elements) composes three functions from `common` instead of hand-writing the lif
 
 The element keeps everything else: its fields, `render()`, the code that builds its view, and its
 teardown in `disconnectedCallback`. There is deliberately no base class.
+
+### Workers
+
+A format whose library works in a web worker (pdf.js) ships the worker as a file of its own, which
+each host loads from its own origin: neither host's policy lets a worker be a `blob:` URL, and
+neither needs a line of its own for a format's worker. Where it is named (its `name`, a log line),
+it is `<format>-worker`.
+
+| Part    | Entry      | Source                 | Built file       |
+| ------- | ---------- | ---------------------- | ---------------- |
+| Worker  | `./worker` | `src/worker/worker.ts` | `dist/worker.js` |
+| Starter |            | `src/worker/start.ts`  | in the entry     |
+
+- The package's `tsup.config.ts` adds `worker: 'src/worker/worker.ts'` to its entries, and its
+  `package.json` exports `"./worker": { "import": "./dist/worker.js" }`.
+- One module beside it starts it, by this expression and no other: a host's Vite build follows
+  only `new Worker(new URL('<literal>', import.meta.url), <static options>)`.
+
+  ```ts
+  // src/worker/start.ts
+  export function startWorker(): Worker {
+    return new Worker(new URL('./worker.js', import.meta.url), {
+      type: 'module',
+      name: '<format>-worker',
+    });
+  }
+  ```
+
+  The package's build leaves the address as it is, beside `dist/worker.js`; a host's Vite build
+  (Context Manager's, the local host's) follows it to the file and emits the worker as one of its
+  own assets; the local host, which reads a package's source in its build and in development mode,
+  finds `src/worker/worker.ts` as the `worker.js` beside `start.ts`. Named any other way
+  (`src/worker/index.ts`, a starter in another folder), the local host does not find it.
+
+- The starter is one entry's alone, imported statically: the preview's element imports
+  `startWorker`. Imported by two entries, or loaded with `import()`, it is built into
+  `dist/chunks/`, where `./worker.js` names nothing, and `splitPackage` fails the build. A library
+  loaded on demand is handed the started worker (pdf.js: `GlobalWorkerOptions.workerPort`).
+- jsdom has no `Worker`: an element that starts one on connect keeps the throw from escaping, or
+  its tests mock `startWorker`.
+
+No worker is a way too: where a library runs without its worker, the format ships without one and
+says so in its README (hls.js does).
 
 ### Toolbars
 
