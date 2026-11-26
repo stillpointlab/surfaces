@@ -11,12 +11,12 @@ import { defineConfig, type Options, type Plugin } from 'tsup';
 // it to the file and builds the worker as one of its own; and the local host,
 // which maps a package to its source, finds `src/worker/worker.ts` beside the
 // module that names it. See "Workers" in the root README.
-const WORKER_ADDRESS = /new URL\(\s*["'`]\.\/worker\.js["'`]\s*,\s*import\.meta\.url/;
+export const WORKER_ADDRESS = /new URL\(\s*["'`]\.\/worker\.js["'`]\s*,\s*import\.meta\.url/;
 
 // A split file sits in `dist/chunks/`, where `./worker.js` names a file that does
 // not exist, so the build fails rather than ship it: the module that starts the
 // worker must be one entry's alone, imported statically.
-const workerAddressInEntries: Plugin = {
+export const workerAddressInEntries: Plugin = {
   name: 'worker-address-in-entries',
   renderChunk(code, chunk) {
     if (/(^|[\\/])chunks[\\/]/.test(chunk.path) && WORKER_ADDRESS.test(code)) {
