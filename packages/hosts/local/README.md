@@ -203,7 +203,18 @@ is no route's. A trailing slash is an empty segment, and refused. Every answer c
 `Accept-Ranges: bytes`. One range (`bytes=a-b`, `bytes=a-`, `bytes=-n`) is answered `206` with
 its `Content-Range`, and only that part of the file is read; one with no byte of the file in it,
 `416` with `Content-Range: bytes */<size>`. Several ranges, or a header that does not parse, are
-answered with the whole file. `HEAD`, `If-Range` and entity tags are not answered.
+answered with the whole file. `HEAD` is not answered.
+
+**The browser may keep a raw file.** Each answer of the file, whole or in a range, carries its
+validator, `ETag` (its size and the time it was last written, from the `stat` that reads its
+size), and `Cache-Control: no-cache`: the browser keeps what it was sent and asks the route
+before it uses any of it again. An `If-None-Match` that names the file's tag is answered `304`
+with no body, so a seek back into a part a player has already played is not downloaded again; a
+file changed on disk has another tag, and is sent again. A range under an `If-Range` that is not
+the file's tag (another file's, a weak tag, a date) is answered with the whole file, so no part
+of one file is laid beside parts of another. A refusal, a `416` included, stays `no-store`, as
+every other route's answer does: nothing but a file's bytes is kept, and each use of them is
+still asked of the route, its checks and the token.
 
 **Refusals** are `{ ok: false, code, message }`:
 
