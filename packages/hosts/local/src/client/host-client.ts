@@ -142,6 +142,9 @@ export const UNREACHABLE = 'HOST_UNREACHABLE';
 /** The host's refusal of a request without its run's token. */
 export const TOKEN_REQUIRED = 'HOST_TOKEN_REQUIRED';
 
+/** How long a stream the browser gave up on waits to be opened again: the server's `retry`. */
+const REOPEN_MS = 1000;
+
 /**
  * A `HostClient` over the local server's routes, at `base` (`''` for the page's
  * own origin). `get` and `put` answer a refusal as a `Result` failure, with the
@@ -154,7 +157,9 @@ export const TOKEN_REQUIRED = 'HOST_TOKEN_REQUIRED';
  * the old run's cookie, and the new run refuses every request with
  * `HOST_TOKEN_REQUIRED`. The client tells its watchers `restarted` the first
  * time a call is refused so, or the stream fails and `GET /api/root` is, and
- * closes the stream for good: retrying it would be refused every time.
+ * closes the stream for good: retrying it would be refused every time. A stream
+ * the browser gave up on for any other answer (the 503 of a server still
+ * starting) is opened again each second until one of the two is known.
  */
 export function createHttpClient(base = ''): HostClient {
   const url = (route: string) => `${base}${route}`;
@@ -297,7 +302,14 @@ export function createHttpClient(base = ''): HostClient {
       let source: EventSource | null = null;
       // Whether the next stream to open follows a gap in which changes went unheard.
       let stale = document.hidden;
+      /** A stream the browser gave up on, waiting to be opened again. */
+      let reopen: ReturnType<typeof setTimeout> | null = null;
+      const cancelReopen = () => {
+        if (reopen !== null) clearTimeout(reopen);
+        reopen = null;
+      };
       const open = () => {
+        cancelReopen();
         if (restarted) return;
         const opened = new EventSource(url('/api/events'));
         source = opened;
@@ -320,10 +332,19 @@ export function createHttpClient(base = ''): HostClient {
         // is open.
         // A page of an earlier run is refused the stream; the browser gives up on a
         // refusal, and keeps trying while the server is away. `checkRun` tells the two
-        // apart.
+        // apart. The browser gives up on any answer but the stream's, though: the 503
+        // "Starting." of a server on its way up too, whose check meets the same 503.
+        // So a stream given up on is opened again a second later, as the browser does
+        // after a dropped connection, until the server answers it or the run is over.
         opened.onerror = () => {
           stale = true;
           void checkRun();
+          if (opened.readyState === EventSource.CLOSED && source === opened && reopen === null) {
+            reopen = setTimeout(() => {
+              reopen = null;
+              if (source === opened) open();
+            }, REOPEN_MS);
+          }
         };
         opened.onopen = () => {
           if (!stale) return;
@@ -336,6 +357,7 @@ export function createHttpClient(base = ''): HostClient {
       };
       const onVisibility = () => {
         if (document.hidden) {
+          cancelReopen();
           source?.close();
           source = null;
           stale = true;
@@ -344,6 +366,7 @@ export function createHttpClient(base = ''): HostClient {
         }
       };
       const halt = () => {
+        cancelReopen();
         source?.close();
         source = null;
       };

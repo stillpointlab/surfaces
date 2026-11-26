@@ -12,7 +12,8 @@ let host: FakeHost;
 let page: HostPage;
 let prepared: string[];
 
-function start(hash = ''): void {
+/** Start the page at `hash`, over a host `setUp` may change first. */
+function start(hash = '', setUp?: (host: FakeHost) => void): void {
   history.replaceState(null, '', `/${hash}`);
   host = fakeHost({
     'a.md': '# A\n',
@@ -22,6 +23,7 @@ function start(hash = ''): void {
     'blob.bin': BINARY,
     Makefile: 'all:\n',
   });
+  setUp?.(host);
   prepared = [];
   page = startPage({
     client: host,
@@ -454,8 +456,50 @@ describe('a change on disk', () => {
 
 describe('a server started again', () => {
   beforeEach(async () => {
-    start();
+    start('', (made) => {
+      made.gitInfo = { state: 'repository', branch: 'main' };
+      made.statuses = { 'a.md': 'changed' };
+    });
     await page.ready;
+  });
+
+  it('leaves Undo, Redo and Commit disabled, and Ctrl+Z doing nothing', async () => {
+    const undo = $<HTMLButtonElement>('.explorer-undo');
+    const redo = $<HTMLButtonElement>('.explorer-redo');
+    const commit = $<HTMLButtonElement>('.explorer-commit');
+    // A step to undo and one to redo, and a changed file to commit.
+    for (const path of ['new.md', 'other.md']) {
+      expect((await host.put([{ kind: 'create', path, content: '' }])).ok).toBe(true);
+    }
+    expect(await page.undo()).toBe(true);
+    await settle();
+    expect([undo.disabled, redo.disabled, commit.disabled]).toEqual([false, false, false]);
+
+    host.emit({ type: 'restarted' });
+    await settle();
+    expect([undo.disabled, redo.disabled, commit.disabled]).toEqual([true, true, true]);
+    // The fake still answers the journal and the statuses: read again, they leave the buttons so.
+    host.emit({ type: 'journal' });
+    host.emit({ type: 'status' });
+    await settle();
+    expect([undo.disabled, redo.disabled, commit.disabled]).toEqual([true, true, true]);
+    // Nothing reaches the host: not a click, the key, or the page's own calls.
+    const steps = [host.steps.length, host.undone.length];
+    undo.click();
+    redo.click();
+    commit.click();
+    document.body.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true, cancelable: true })
+    );
+    expect(await page.undo()).toBe(false);
+    expect(await page.redo()).toBe(false);
+    expect(await page.openCommit()).toBeNull();
+    await settle();
+    expect([host.steps.length, host.undone.length]).toEqual(steps);
+    expect(host.gitCalls).not.toContain('changes');
+    expect($('.page-notice').textContent).toBe(
+      'This page’s server was started again. Open the address its terminal printed.'
+    );
   });
 
   it('shows the notice that stays: no close button, and nothing replaces it', async () => {

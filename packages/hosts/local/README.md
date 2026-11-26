@@ -240,11 +240,14 @@ every 25 seconds. The server's own writes are reported too.
 
 When the stream drops and comes back, the page's client says `listed`, `journal` and then
 `reconnected`, its own word and not the server's: the page lists again, and reads the open file
-again, since a change made meanwhile was sent to nobody.
+again, since a change made meanwhile was sent to nobody. The browser reconnects by itself only
+after a dropped connection: a stream answered with anything else (the command's `503`
+"Starting." while it starts) it gives up, and the client opens it again a second later.
 
 A page of an earlier run (its server was started again) is refused every request. The client
 says `restarted`, once, when a call is refused with `HOST_TOKEN_REQUIRED` or the stream fails and
-`GET /api/root` is, and then closes the stream for good; the page says so in its notice.
+`GET /api/root` is, and then closes the stream for good; the page says so in its notice, and
+disables Undo, Redo and Commit, which the server would refuse.
 
 The client holds its stream only while the tab shows. A browser allows six connections to one
 host over HTTP/1.1 across all its tabs, and a stream holds one for good, so a stream in every

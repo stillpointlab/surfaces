@@ -4,10 +4,11 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { createHost } from './host';
+import { createHost, statusFor } from './host';
 import { LIST_LIMIT } from './limits';
 import { createStaticPage } from './page';
 import { versionOf } from './port';
+import { refusal } from './respond';
 import { eventReader, git, gitEnv, makeRepository, tempFolder, writeFiles } from './test-support';
 
 import type { LocalHost } from './host';
@@ -486,6 +487,14 @@ describe('the request checks', () => {
     expect((await fetchFrom('same-origin', 'cors')).status).toBe(200);
     expect((await fetchFrom('none', 'navigate')).status).toBe(200);
     expect((await fetchFrom('cross-site', 'navigate')).status).toBe(200);
+  });
+
+  it('gives their refusals 403 by their codes, as a refusal without a status is given', () => {
+    expect(statusFor('HOST_FORBIDDEN')).toBe(403);
+    expect(statusFor('HOST_TOKEN_REQUIRED')).toBe(403);
+    expect(refusal({ ok: false, code: 'HOST_FORBIDDEN', message: 'Not from here.' }).status).toBe(
+      403
+    );
   });
 });
 

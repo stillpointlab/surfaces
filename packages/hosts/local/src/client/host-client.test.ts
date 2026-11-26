@@ -16,12 +16,14 @@ function answering(body: unknown, status = 200) {
 }
 
 class FakeSource {
+  static readonly CLOSED = 2;
   static last: FakeSource;
   static all: FakeSource[] = [];
   onmessage: ((event: MessageEvent<string>) => void) | null = null;
   onerror: (() => void) | null = null;
   onopen: (() => void) | null = null;
   closed = false;
+  readyState = 0;
   constructor(readonly url: string) {
     FakeSource.last = this;
     FakeSource.all.push(this);
@@ -31,6 +33,15 @@ class FakeSource {
   }
   close(): void {
     this.closed = true;
+    this.readyState = FakeSource.CLOSED;
+  }
+  /**
+   * The browser gives the stream up, as it does on any answer but its events (a
+   * 503, a 403): closed, and one `error`, with no reconnection of its own.
+   */
+  giveUp(): void {
+    this.readyState = FakeSource.CLOSED;
+    this.onerror?.();
   }
 }
 
@@ -400,6 +411,89 @@ describe('createHttpClient', () => {
       expect(source.closed).toBe(false);
       source.onopen?.();
       expect(events).toEqual([{ type: 'listed' }, { type: 'journal' }, { type: 'reconnected' }]);
+    });
+
+    describe('a stream the browser gave up on', () => {
+      const starting = () =>
+        vi.stubGlobal(
+          'fetch',
+          vi.fn(async () => new Response('Starting.\n', { status: 503 }))
+        );
+
+      afterEach(() => vi.useRealTimers());
+
+      it('is opened again each second while the server is starting, until the new run refuses it', async () => {
+        vi.useFakeTimers();
+        vi.stubGlobal('EventSource', FakeSource);
+        const client = createHttpClient('http://starting');
+        const streams = () =>
+          FakeSource.all.filter((made) => made.url.startsWith('http://starting'));
+        const events: WatchedEvent[] = [];
+        client.watch((event) => events.push(event));
+        streams()[0].onopen?.();
+        // The server is on its way up: the stream and the check both meet its 503.
+        starting();
+        streams()[0].giveUp();
+        await vi.advanceTimersByTimeAsync(999);
+        expect(streams()).toHaveLength(1);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(streams()).toHaveLength(2);
+        streams()[1].giveUp();
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(streams()).toHaveLength(3);
+        expect(events).toEqual([]);
+        // Up, and a new run: the stream is refused for the token, and so is the check.
+        answering(refused, 403);
+        streams()[2].giveUp();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(events).toEqual([{ type: 'restarted' }]);
+        await vi.advanceTimersByTimeAsync(5000);
+        expect(streams()).toHaveLength(3);
+      });
+
+      it('is opened again, and says what went unheard, when the server answers for this run', async () => {
+        vi.useFakeTimers();
+        vi.stubGlobal('EventSource', FakeSource);
+        const client = createHttpClient();
+        const events: WatchedEvent[] = [];
+        client.watch((event) => events.push(event));
+        const first = FakeSource.last;
+        first.onopen?.();
+        starting();
+        first.giveUp();
+        answering({ name: 'served', id: 'abc' });
+        await vi.advanceTimersByTimeAsync(1000);
+        const second = FakeSource.last;
+        expect(second).not.toBe(first);
+        second.onopen?.();
+        expect(events).toEqual([{ type: 'listed' }, { type: 'journal' }, { type: 'reconnected' }]);
+      });
+
+      it('is not opened again once the watch stops, or while the tab is hidden', async () => {
+        vi.useFakeTimers();
+        vi.stubGlobal('EventSource', FakeSource);
+        let hidden = false;
+        const spy = vi.spyOn(document, 'hidden', 'get').mockImplementation(() => hidden);
+        const client = createHttpClient('http://stopping');
+        const streams = () =>
+          FakeSource.all.filter((made) => made.url.startsWith('http://stopping'));
+        const stop = client.watch(() => undefined);
+        starting();
+        streams()[0].giveUp();
+        hidden = true;
+        document.dispatchEvent(new Event('visibilitychange'));
+        await vi.advanceTimersByTimeAsync(2000);
+        expect(streams()).toHaveLength(1);
+        // Shown again, it opens one stream, at once.
+        hidden = false;
+        document.dispatchEvent(new Event('visibilitychange'));
+        expect(streams()).toHaveLength(2);
+        streams()[1].giveUp();
+        stop();
+        await vi.advanceTimersByTimeAsync(2000);
+        expect(streams()).toHaveLength(2);
+        spy.mockRestore();
+      });
     });
   });
 
