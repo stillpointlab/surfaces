@@ -137,6 +137,7 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
     (Jamie: "happy to defer for now - but if it is possible we should seed it for later").
 - 2026-11-26 (HLS): the port of the browser tests' server cannot be set from the command line
   (`tooling/vitest.ts`).
+  - Closed 2026-11-26 (Jamie: "close is fine").
 - 2026-11-26 (the phase's follow-ups, from Jamie's question on `canplay` and `loadedmetadata`):
   an audio or video preview is ready, and takes its loading cover away, on `loadedmetadata`. A
   browser that loads nothing of a file before a person presses play never sends it. Tried with
