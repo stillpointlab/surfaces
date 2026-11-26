@@ -32,14 +32,46 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
 
 - 2026-11-25 (the raw route serves media): the raw route answers `cache-control: no-store`, so a
   browser keeps no media on disk and a seek back in a long file is downloaded again.
+  - Carried 2026-11-26 (Jamie: "carry with the intent to address during audio spec impl"), into
+    the [audio spec](../../tasks/stage6/phase3/specs/audio-preview.md)'s section 4.
 - 2026-11-25 (the raw route serves media): a file is sent after its size is read, so one that
   shrinks while it is sent ends short of its `Content-Length`. Older than the ranges, which it
   now holds for too.
+  - Built 2026-11-26 (Jamie: fix; [#192](https://github.com/stillpointlab/surfaces/pull/192)): a body that ends short of its length closes the
+    connection, so the client fails at once where it waited five seconds. The drain also found
+    the other side, a file that grows, and reads no further than the size the headers gave.
 - 2026-11-25 (the scaffold makes a registrable format): `tooling/new-format.test.ts` is linted
   and run, and no type check reads it.
+  - Built 2026-11-26 (Jamie: fix; [#192](https://github.com/stillpointlab/surfaces/pull/192)): `npm run typecheck` reads `tooling/*.ts`, its
+    tests and the root's two vitest configs.
 - 2026-11-25 (the scaffold makes a registrable format): image's root entry registers its
   element, where the templates' register nothing, and its README's heading still names
   `@stillpointlab/image-editor`.
+  - 2026-11-26 (Jamie: the heading for now; "presumably we want to convert to the convention
+    eventually?"): the README is fixed, with code's, sheet's and xmdl's, which said the same
+    ([#192](https://github.com/stillpointlab/surfaces/pull/192)). The root entry is
+    [a seed](../../tasks/unassigned/seeds/root-entries-register-nothing.md) for all five older
+    formats.
 - 2026-11-25 (the token's follow-ups): after a restart, the explorer's create, rename and
   delete, an app's op, a save, and a commit review already open still call the server. Whether
   each failure shows was not checked. A disabled Undo keeps the title of its step.
+  - Built 2026-11-26 (Jamie: "showing the error+disable and not going overboard trying to fix";
+    [#192](https://github.com/stillpointlab/surfaces/pull/192)): walked in the built host. A save, the explorer's three and an open commit
+    review each showed the refusal already. An app's op showed nothing, and now shows as a line
+    under the notice. Undo and Redo say why they are off.
+- 2026-11-25 (browser tests): the root's browser config names its folders as globs, and CI's
+  filter reads the workspaces. The two can drift apart.
+  - Built 2026-11-26 (Jamie: fix; [#192](https://github.com/stillpointlab/surfaces/pull/192)): the config takes its list from the filter's
+    function.
+- 2026-11-25 (browser tests): `npm run test:browser` builds everything `build:deps` does, for
+  one package too.
+  - Closed 2026-11-26 (Jamie: close). `npm test` does the same, and the job runs beside `check`.
+- 2026-11-25 (browser tests): the words for a missing browser print once for each package,
+  inside vitest's own error.
+  - Built 2026-11-26 (Jamie: fix; [#192](https://github.com/stillpointlab/surfaces/pull/192)): three lines, once, before any package's config
+    loads.
+- 2026-11-26 (the phase's follow-ups): the raw route refuses a `HEAD` that carries no `Origin`.
+  Nothing in the page sends one. Not ruled; the agent's lean is to close.
+- 2026-11-26 (the phase's follow-ups): `tooling/check-tokens.mjs` and `gen-styles.mjs` carry no
+  types, so the type check that now reads `tooling/` does not read them. Not ruled; the agent's
+  lean is to close.
