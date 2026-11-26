@@ -34,7 +34,10 @@ above for what each part once found.
       ending; the four streams in `packages/formats/video/dev/media/hls-*/`, each its folder
       (fMP4, MPEG-TS, byte ranges of one file, and a playlist whose segments are missing), and
       the MPEG-TS stream again with `.ts` segments, and a long one (two minutes) of them (the
-      package's README has the line; `-t 120` for the long one).
+      package's README has the line; `-t 120` for the long one); the PDFs in
+      `packages/formats/pdf/dev/media/` (text, twelve pages, Japanese text through a character
+      map, a JPEG 2000 image, fonts embedded, a password, a file that is not a PDF), a 200-page
+      one and a fax scan (the PDF package's README has the two lines).
 - [ ] Chromium, by hand or driven by Playwright. Driver scripts stay in scratch: the repository
       keeps no walk of the host (its browser tests are packages' unit tests, section 0).
 - [ ] Nothing here touches a remote but section 0's run: no push, no pull request.
@@ -189,6 +192,29 @@ above for what each part once found.
 - [ ] The same files and streams played in the harness (`npm run dev`, format video) in Firefox.
       There the stream whose segments are missing says "This browser can't play this video.":
       the harness answers a missing file with its own page.
+
+## 13. PDF
+
+- [ ] Each PDF opened from the tree → its pages one under another on a quiet ground, each as wide
+      as the pane allows up to its size at 100%, sharp; the Japanese line, the JPEG 2000 image
+      and the fax scan drawn, not blank (the scans take a second or two).
+- [ ] The 200-page PDF scrolled from its first page to its last → each page drawn as it comes into
+      view, the scroll bar's length the same from the start. The elements panel: a few `<canvas>`
+      in its shadow root, never 200.
+- [ ] The window made narrower and wider → the pages follow, and are drawn sharp again once it
+      stops.
+- [ ] The password → "This PDF needs a password, and this preview can't ask for one yet." The
+      file that is not a PDF → "This file can't be read as a PDF." A PDF deleted in a terminal
+      while its row still shows, then clicked → "Couldn't load this PDF.", or the page's "This
+      file was deleted on disk."
+- [ ] A PDF replaced on disk → drawn anew. The 200-page PDF scrolled to its middle, then the
+      server's event stream cut (the network off and on) → it stays where it was.
+- [ ] The network panel: a text file and an image opened first ask for nothing of pdf.js; the
+      first PDF asks for the PDF preview, pdf.js's file and its worker; no `.wasm`, ever. No
+      policy report in the console, the worker's included (its own context in the console).
+- [ ] The same files in the harness (`npm run dev`, format pdf) in Firefox, and on a Mac in
+      Safari, where it is decided whether pdf.js's `legacy/` build ships (the PDF spec's
+      "Known and left").
 
 ---
 
