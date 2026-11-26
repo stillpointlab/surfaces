@@ -215,7 +215,7 @@ Jamie, 2026-11-26, on the spike's questions and the agent's leans:
       sentence.
 - [x] Firefox: the harness's fixtures draw. (Driven by Playwright's Firefox 159, not by a
       person's hand.)
-- [ ] The browser tests pass in the PR's job, and their time is in the PR.
+- [x] The browser tests pass in the PR's job, and their time is in the PR. (43 s for the job.)
 - [x] The root README has the convention for files fetched by name, and its table, the
       package's README and the release walk name the format.
 - [x] `npm run check` passes, and its time before and after is in the PR: the generating step
