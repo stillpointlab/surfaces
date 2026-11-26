@@ -1,5 +1,7 @@
 ---
-column: todo
+column: done
+pr: 188
+completed: 2026-11-25
 created: 2026-11-10T12:47:26-07:00
 tags: [dev-tooling, formats]
 ---
