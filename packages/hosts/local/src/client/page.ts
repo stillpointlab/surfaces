@@ -34,7 +34,8 @@
 //   is a live region, so a screen reader says it. Once the client says the
 //   server was started again (`restarted`), the notice says so for good: no
 //   close button, and nothing replaces it, since nothing else here works until
-//   the person opens the new address.
+//   the person opens the new address. Undo, Redo and Commit are disabled then:
+//   the server would refuse them, and the notice would not say so.
 // - apps (`apps/`): the page reads the instances with the listing. A locked
 //   instance's files are left out of the tree, and its folder is the app's row;
 //   an instance at the served root has a row above the tree. The row's menu
@@ -135,7 +136,8 @@ export interface HostPage {
   /**
    * Open the commit, as the Commit button does: read the changes, then open the
    * review on them. Settles when the review closes, with the commit made, or
-   * null (none made, nothing changed, the read failed, or not a repository).
+   * null (none made, nothing changed, the read failed, not a repository, or the
+   * server was started again).
    */
   openCommit(): Promise<HostCommit | null>;
   /** Show a notice in the page's one notice; `null` clears it. */
@@ -155,6 +157,7 @@ export interface HostPage {
   /**
    * Take back the host's last step, or do the last one undone again, as the
    * buttons and the keys do. True when it landed; a refusal shows in the notice.
+   * False, with nothing asked, once the server was started again.
    */
   undo(): Promise<boolean>;
   redo(): Promise<boolean>;
@@ -298,21 +301,27 @@ export function startPage(options: PageOptions): HostPage {
   const instanceAt = (manifestPath: string | null): FoundInstance | null =>
     instances.find((instance) => instance.manifestPath === manifestPath) ?? null;
 
-  /** The Commit button: in a repository, with the number of changed files; disabled with none. */
+  /**
+   * The Commit button: in a repository, with the number of changed files; disabled
+   * with none, and once the server was started again.
+   */
   function showCommit(): void {
     commitButton.hidden = git?.state !== 'repository';
     const count = Object.keys(statuses).length;
-    commitButton.disabled = count === 0;
+    commitButton.disabled = count === 0 || restarted;
     commitCount.textContent = count === 0 ? '' : String(count);
     commitButton.setAttribute('aria-label', words.commit.buttonLabel(count));
   }
 
-  /** The Undo and Redo buttons: each titled with its step's label, disabled with none. */
+  /**
+   * The Undo and Redo buttons: each titled with its step's label, disabled with
+   * none, and once the server was started again.
+   */
   function showJournal(): void {
     // Not disabled while one runs: a button with focus would lose it, and the
     // next waits for the one before anyway.
     const show = (button: HTMLButtonElement, label: string | null, which: 'undo' | 'redo') => {
-      button.disabled = label === null;
+      button.disabled = label === null || restarted;
       const title =
         label === null
           ? words.journal[which === 'undo' ? 'nothingToUndo' : 'nothingToRedo']
@@ -339,9 +348,11 @@ export function startPage(options: PageOptions): HostPage {
    * Undo or redo the host's last step. The open file follows what it moved and
    * deleted; one with unsaved edits that it deleted keeps them, and the banner
    * says the file is gone. A refusal (a file changed since, nothing to do) shows
-   * in the notice.
+   * in the notice. Once the server was started again, nothing is asked: it would
+   * be refused, and the notice that stays already says why.
    */
   function step(which: 'undo' | 'redo'): Promise<boolean> {
+    if (restarted) return Promise.resolve(false);
     if (stepping) return stepping.then(() => step(which));
     stepping = (async () => {
       const before = pane.current;
@@ -433,12 +444,18 @@ export function startPage(options: PageOptions): HostPage {
     );
   }
 
-  /** The server was started again: the notice that stays, with no way to dismiss it. */
+  /**
+   * The server was started again: the notice that stays, with no way to dismiss
+   * it, and Undo, Redo and Commit disabled, since the server would refuse them
+   * and their failures would not show.
+   */
   function showRestarted(): void {
     if (restarted) return;
     restarted = true;
     notice.dataset.tone = 'error';
     render(notice, html`<div class="page-notice-text"><span>${words.restarted}</span></div>`);
+    showJournal();
+    showCommit();
   }
 
   function showNote(): void {
@@ -777,7 +794,7 @@ export function startPage(options: PageOptions): HostPage {
   });
 
   async function openCommit(): Promise<HostCommit | null> {
-    if (git?.state !== 'repository') return null;
+    if (git?.state !== 'repository' || restarted) return null;
     return commit.open();
   }
 
