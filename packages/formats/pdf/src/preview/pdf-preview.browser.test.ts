@@ -1,10 +1,12 @@
 // What jsdom cannot show: pdf.js, in its worker, really draws a page, a later
 // page once it is scrolled to, text through a character map and a JPEG 2000
 // image through its JavaScript fallback; and a password, a file that is not a
-// PDF and a missing file each fail as themselves. Nothing is dispatched by
-// hand, and each test waits for the element's ready signal or for a canvas to
-// arrive, never for a time. The PDFs are files of this package; the README has
-// the command that made each.
+// PDF and a missing file each fail as themselves. A page's text is laid over it
+// as the PDF has it, a selection gives its lines, `window.find` finds it near
+// view and not far off, and a page scrolled away gives it back. Nothing is
+// dispatched by hand, and each test waits for the element's ready signal or for
+// a canvas or text to arrive, never for a time. The PDFs are files of this
+// package; the README has the command that made each.
 import { setErrorHandler } from '@stillpointlab/common-format';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -76,6 +78,29 @@ function drawn(page: HTMLElement): Promise<HTMLCanvasElement> {
     if (!found()) observer.observe(page, { childList: true });
   });
 }
+
+/** Resolves once `page`'s text is laid over it: the page has text, and pdf.js gave it. */
+function laid(page: HTMLElement): Promise<HTMLElement> {
+  return new Promise((done) => {
+    const found = () => {
+      const layer = page.querySelector<HTMLElement>('.pdf-preview__text');
+      if (!layer) return false;
+      observer.disconnect();
+      done(layer);
+      return true;
+    };
+    const observer = new MutationObserver(found);
+    if (!found()) observer.observe(page, { childList: true });
+  });
+}
+
+/** The browser's `window.find`, which no standard names: what its find in page would find. */
+const find = (words: string): boolean =>
+  (window as unknown as { find(words: string): boolean }).find(words);
+
+/** The strings of `page`'s text, one a span, in pdf.js's order. */
+const spansOf = (page: HTMLElement) =>
+  [...page.querySelectorAll('.pdf-preview__text span')].map((span) => span.textContent);
 
 /** What pdf.js asked the package for, by kind and name. */
 function asked(): { calls: string[] } & { restore: () => void } {
@@ -164,6 +189,77 @@ describe('pdf-preview in a browser', () => {
       .getEntriesByType('resource')
       .filter((entry) => entry.name.includes('.wasm'));
     expect(wasm).toEqual([]);
+  });
+
+  it('lays the page’s text over its canvas, the PDF’s own, and makes the page a group', async () => {
+    const el = await shown(text, 'text.pdf');
+    const [page] = pagesOf(el);
+    const layer = await laid(page);
+
+    expect(spansOf(page).slice(0, 4)).toEqual([
+      'A text PDF, its fonts not embedded',
+      'Times-Bold',
+      'Courier',
+      // Symbol's letters, read by pdf.js as the Greek they draw.
+      'αβγδπθρσ',
+    ]);
+    expect(page.getAttribute('role')).toBe('group');
+    expect(canvasOf(page)!.getAttribute('aria-hidden')).toBe('true');
+    // Over the canvas, at its size, and not seen.
+    const over = layer.getBoundingClientRect();
+    const under = canvasOf(page)!.getBoundingClientRect();
+    expect(Math.abs(over.width - under.width)).toBeLessThanOrEqual(1);
+    expect(Math.abs(over.height - under.height)).toBeLessThanOrEqual(1);
+    expect(getComputedStyle(layer.querySelector('span')!).color).toBe('rgba(0, 0, 0, 0)');
+  });
+
+  it('gives the two lines a selection runs across, in order', async () => {
+    const el = await shown(text, 'text.pdf');
+    const layer = await laid(pagesOf(el)[0]);
+    const [first, second] = layer.querySelectorAll('span');
+
+    getSelection()!.setBaseAndExtent(first.firstChild!, 0, second.firstChild!, 10);
+
+    expect(getSelection()!.toString()).toBe('A text PDF, its fonts not embedded\nTimes-Bold');
+  });
+
+  it('is found by window.find on a page near view, and not on a page far off', async () => {
+    const el = await shown(pages, 'pages.pdf', 400);
+    await laid(pagesOf(el)[1]);
+
+    expect(find('Page 2 of 12')).toBe(true);
+    const [range] = (
+      getSelection() as Selection & {
+        getComposedRanges(options: { shadowRoots: ShadowRoot[] }): StaticRange[];
+      }
+    ).getComposedRanges({ shadowRoots: [el.shadowRoot!] });
+    const page = range.startContainer.parentElement!.closest<HTMLElement>('.pdf-preview__page');
+    expect(page?.dataset.page).toBe('2');
+
+    getSelection()!.removeAllRanges();
+    expect(find('Page 12 of 12')).toBe(false);
+  });
+
+  it('gives Japanese text drawn through a character map as its characters', async () => {
+    const el = await shown(cjk, 'cjk.pdf');
+    await laid(pagesOf(el)[0]);
+
+    expect(spansOf(pagesOf(el)[0])[0]).toBe('日本語のテキスト、文字の地図');
+  });
+
+  it('gives back the text of a page scrolled far away, with its canvas', async () => {
+    const el = await shown(pages, 'pages.pdf', 400);
+    const all = pagesOf(el);
+    await laid(all[0]);
+
+    const column = el.shadowRoot!.querySelector<HTMLElement>('.pdf-preview__pages')!;
+    column.scrollTop = column.scrollHeight;
+    await laid(all[11]);
+
+    expect(spansOf(all[11])).toEqual(['Page 12 of 12']);
+    expect(all[0].querySelector('.pdf-preview__text')).toBeNull();
+    expect(canvasOf(all[0])).toBeNull();
+    expect(all[0].getAttribute('role')).toBe('img');
   });
 
   it.each([
