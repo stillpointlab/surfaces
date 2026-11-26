@@ -2,7 +2,7 @@
 // keeps its connection open: what the client sees when a body ends short of the
 // length its headers declared.
 
-import { truncateSync } from 'node:fs';
+import { appendFileSync, truncateSync } from 'node:fs';
 import { Agent, createServer, request as httpRequest } from 'node:http';
 import { join } from 'node:path';
 
@@ -187,5 +187,40 @@ describe('a raw file that shrinks after its size is read', () => {
     });
     expect(seen).toMatchObject({ kind: 'failed', status: 206, length: String(SIZE - 6) });
     expect(seen.received).toBeLessThan(SIZE - 6);
+  });
+});
+
+describe('a raw file that grows after its size is read', () => {
+  const SIZE = 64 * 1024;
+  // What the host's own answer held, read before the adapter sends it: a client
+  // stops at the declared length whatever follows, so it cannot tell.
+  let read = -1;
+
+  /** A host over the folder whose file gains as much again once the host has answered. */
+  async function growing(size: number) {
+    const root = join(folder.path, 'served');
+    writeFiles(root, { 'log.bin': new Uint8Array(size) });
+    return listen(async (request, base) => {
+      host ??= createHost({ root, origin: base, token: null, warn: () => undefined });
+      const response = await host.fetch(request);
+      appendFileSync(join(root, 'log.bin'), new Uint8Array(SIZE));
+      const body = new Uint8Array(await response.arrayBuffer());
+      read = body.byteLength;
+      return new Response(body, { status: response.status, headers: response.headers });
+    });
+  }
+
+  it('reads and sends the length it declared, and no more', async () => {
+    const base = await growing(SIZE);
+    const seen = await outcome(`${base}/api/raw/log.bin`);
+    expect(seen).toEqual({ kind: 'complete', status: 200, length: String(SIZE), received: SIZE });
+    expect(read).toBe(SIZE);
+  });
+
+  it('reads nothing of a file that was empty', async () => {
+    const base = await growing(0);
+    const seen = await outcome(`${base}/api/raw/log.bin`);
+    expect(seen).toEqual({ kind: 'complete', status: 200, length: '0', received: 0 });
+    expect(read).toBe(0);
   });
 });
