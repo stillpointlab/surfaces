@@ -1,4 +1,4 @@
-// The page's entry: the host's own client over its routes, the six formats, the
+// The page's entry: the host's own client over its routes, the seven formats, the
 // apps (each loaded when one opens), and md's sanitizing renderer, started before anything opens (a deep link to a
 // markdown file included; the pane waits for it before it mounts an md element).
 

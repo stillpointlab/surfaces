@@ -5,13 +5,14 @@ import { createHostRegistry } from './registry';
 describe('the host registry', () => {
   const registry = createHostRegistry();
 
-  it('registers the six formats in order, with code as the fallback', () => {
+  it('registers the seven formats in order, with code as the fallback', () => {
     expect(registry.formats.map((format) => format.id)).toEqual([
       'md',
       'xmdl',
       'sheet',
       'image',
       'audio',
+      'video',
       'code',
     ]);
     expect(registry.fallback?.id).toBe('code');
@@ -28,6 +29,9 @@ describe('the host registry', () => {
     ['music/track.mp3', 'audio'],
     ['music/Track.FLAC', 'audio'],
     ['music/take.weba', 'audio'],
+    ['film/clip.mp4', 'video'],
+    ['film/Clip.MKV', 'video'],
+    ['film/take.webm', 'video'],
     ['src/app.ts', 'code'],
     ['types.d.ts', 'code'],
   ])('opens %s with %s', (path, id) => {

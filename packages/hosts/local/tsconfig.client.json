@@ -36,6 +36,10 @@
         "../../formats/sheet/src/*/index.ts",
         "../../formats/sheet/src/*.ts"
       ],
+      "@stillpointlab/video-format/*": [
+        "../../formats/video/src/*/index.ts",
+        "../../formats/video/src/*.ts"
+      ],
       "@stillpointlab/xmdl-format/*": [
         "../../formats/xmdl/src/*/index.ts",
         "../../formats/xmdl/src/*.ts"
