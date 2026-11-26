@@ -13,6 +13,8 @@ export { describePreviewContract } from './preview';
 export type { PreviewContractOptions } from './preview';
 export { describeEditorContract } from './editor';
 export type { EditorContractOptions } from './editor';
+export { describeUrlPreviewContract } from './url-preview';
+export type { UrlPreviewContractOptions } from './url-preview';
 export { describeImagePreviewContract } from './image-preview';
 export type { ImagePreviewContractOptions } from './image-preview';
 export { describeDiffContract } from './diff';

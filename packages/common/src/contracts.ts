@@ -30,10 +30,24 @@ export interface PreviewElement extends ReadyElement {
   setContent(content: string): void;
 }
 
-/** A preview-only element for binary media addressed by URL (`<image-preview>`). */
-export interface ImagePreviewElement extends ReadyElement {
-  setSource(src: string, alt?: string): void;
+/**
+ * A preview-only element for media the host gives a URL to, not text. It is a
+ * role, as `PreviewElement` is: `<image-preview>` answers to it, and so does any
+ * format whose descriptor `needs: 'url'`. Each such format keeps its own element
+ * and exports its own type extending this one (`VideoPreviewElement`), which adds
+ * whatever is that format's alone once a host asks for it. `name` is what the
+ * source is called, the file's name as a host gives it: an image's alternative
+ * text, a player's label.
+ */
+export interface UrlPreviewElement extends ReadyElement {
+  setSource(src: string, name?: string): void;
 }
+
+/**
+ * `<image-preview>`'s contract: `UrlPreviewElement` under the name it had while
+ * image was its only member, kept so image and its importers change nothing.
+ */
+export type ImagePreviewElement = UrlPreviewElement;
 
 export type EditorKeymapMode = 'normal' | 'vim';
 

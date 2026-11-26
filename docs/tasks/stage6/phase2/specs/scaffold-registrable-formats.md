@@ -1,5 +1,5 @@
 ---
-column: todo
+column: in-progress
 created: 2026-11-25T18:00:00-07:00
 tags: [scaffold, formats, dev-tooling, code]
 ---
@@ -124,3 +124,54 @@ descriptor goes.
   above, `packages/common/src/contracts.ts` and `src/testing/`.
 - **Must not change:** the five formats' behaviour, the hosts.
 - **Runs beside:** [the raw route serves media](raw-route-serves-media.md).
+
+## As built
+
+Built by an Opus 5.5 sub-agent, read and checked by the orchestrating agent, which added the
+formatting step and the lines in `common`'s README.
+
+Where the build differs from the spec:
+
+- **The URL template's own names are `sample-url`** where they are written with a dash: its
+  package, its tag (`<sample-url-preview>`), its descriptor's id and its file ending. Both
+  templates show in one harness page, and two packages cannot define one tag. Its TypeScript
+  names stay `Sample…`. The scaffold folds `sample-url` into the new name first, so `--url`
+  gives `<name>-preview`, `<Name>PreviewElement` and `<name>Format` as the text template does.
+- **`setSource`'s second argument is `name`,** not `alt`: what the source is called, which is
+  an image's alternative text and a player's label. `ImagePreviewElement` is a type alias of
+  `UrlPreviewElement`.
+- **The suite's hooks.** `describeUrlPreviewContract` requires `load` and `fail`, and takes two
+  more with no default: `shows(el, src, name)` and `empty(el)`, which hold what the old suite
+  asserted of an `<img>`. `describeImagePreviewContract` keeps its options and calls it with
+  image's. Image's test files are unchanged; the suite's title in their output is now "URL
+  preview contract".
+- **The URL template's element is not a copy of image's.** It builds its DOM without
+  `innerHTML`, keeps its media across a reconnect, takes a new name without loading again, and
+  has no SVG sizing. Its root entry registers nothing.
+- **The scaffold renames camelCase too** (`sampleFormat` to `trialClipFormat`), skips what a
+  build, a test run or an install left in a template, and refuses a flag it does not know.
+- **The scaffold formats what it wrote.** A name longer than `sample` pushed lines past the
+  width, and `npm run format` failed on a package nobody had touched.
+- **Files beyond those the spec named:** `tooling/gen-styles.mjs` (a run with no argument takes
+  in the templates, which the root's tests need), `tooling/harness/tsconfig.json`, one export in
+  `packages/common/src/index.ts`, and the READMEs of `common` and the text template.
+- **No lint glob changed:** `tooling/**/*.ts` already took the templates in.
+- **The text template opens `.sample`.**
+
+Checked:
+
+- `npm run check` from a clean tree: 3,754 tests, before the formatting step; the scaffold's own
+  12 tests, lint and the format check after it, and the PR's CI for the whole.
+- The trials (`trial`, and `trial2 --url`), then `npm install` and `npm run check`: passed with
+  no edit, 3,830 tests. Both showed in the harness beside the two templates and mounted through
+  their descriptors, in Chromium: the editor and preview with a fixture's content, an invalid
+  one opening raw, the URL trial's image loading, its failed and empty states.
+- The text trial in the local host: one import and one array entry in its registry, and a
+  `.trial` file opened in the preview, the editor, and raw when it did not parse.
+- The trials and every trace of them were removed; the lockfile is the committed one.
+
+Noticed, for phase 2's log once the token's and the raw route's entries are in it:
+
+- `tooling/new-format.test.ts` is linted and run, and no type check reads it.
+- Image's root entry registers its element, where the templates' register nothing, and its
+  README's heading still names `@stillpointlab/image-editor`.

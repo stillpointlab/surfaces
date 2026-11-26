@@ -1,6 +1,6 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { expect } from 'vitest';
 
-import { create, mount, pending, settled, settledBy } from './support';
+import { describeUrlPreviewContract } from './url-preview';
 
 import type { ImagePreviewElement } from '../contracts';
 
@@ -20,100 +20,32 @@ export interface ImagePreviewContractOptions<T extends ImagePreviewElement = Ima
   prepare?: (el: T) => void;
 }
 
+const imageOf = (el: ImagePreviewElement) => el.shadowRoot?.querySelector('img');
+
 const dispatchOnImage = (type: string) => (el: ImagePreviewElement) => {
-  el.shadowRoot?.querySelector('img')?.dispatchEvent(new Event(type));
+  imageOf(el)?.dispatchEvent(new Event(type));
 };
 
-/** The `ImagePreviewElement` conformance suite for one tag. */
+/**
+ * `<image-preview>`'s suite under the name it had while image was the only
+ * preview given a URL: `describeUrlPreviewContract` with the hooks of an element
+ * that shows its source in an `<img>` and its name as the alternative text.
+ */
 export function describeImagePreviewContract<T extends ImagePreviewElement = ImagePreviewElement>(
   tag: string,
   options: ImagePreviewContractOptions<T>
 ): void {
   const { src, alt, prepare } = options;
-  const load = options.load ?? dispatchOnImage('load');
-  const fail = options.fail ?? dispatchOnImage('error');
-
-  describe(`<${tag}> image preview contract`, () => {
-    afterEach(() => document.body.replaceChildren());
-
-    it('is pending until connected and settles with nothing to show', async () => {
-      const el = create<T>(tag);
-      prepare?.(el);
-      const events = settledBy(el);
-      pending(el);
-
-      document.body.append(el);
-      await settled(el, events);
-      expect(el.shadowRoot?.querySelector('img')).toBeNull();
-    });
-
-    it('is pending while a source loads and settles once it has', async () => {
-      const el = mount<T>(tag, prepare);
-      await settled(el);
-
-      el.setSource(src, alt);
-      pending(el);
-      const img = el.shadowRoot?.querySelector('img');
-      expect(img?.getAttribute('src')).toBe(src);
-      expect(img?.getAttribute('alt')).toBe(alt);
-
-      const events = settledBy(el);
-      load(el);
-      await settled(el, events);
-      expect(el.shadowRoot?.querySelector('img')?.getAttribute('src')).toBe(src);
-    });
-
-    it('settles when the source fails to load', async () => {
-      const el = mount<T>(tag, prepare);
-      await settled(el);
-
-      el.setSource(src, alt);
-      pending(el);
-      fail(el);
-      await settled(el);
-    });
-
-    it('shows a source set before connect once loaded', async () => {
-      const el = create<T>(tag);
-      prepare?.(el);
-      el.setSource(src, alt);
-      pending(el);
-
-      document.body.append(el);
-      pending(el);
-      load(el);
-      await settled(el);
-      expect(el.shadowRoot?.querySelector('img')?.getAttribute('alt')).toBe(alt);
-    });
-
-    it('settles after a synchronous move right after mount', async () => {
-      // Appending a connected element elsewhere disconnects and reconnects it in
-      // one tick; work started for the first connection must not strand the second.
-      const el = create<T>(tag);
-      prepare?.(el);
-      el.setSource(src, alt);
-      const first = document.createElement('div');
-      const second = document.createElement('div');
-      document.body.append(first, second);
-      first.append(el);
-      second.append(el);
-      load(el);
-      await settled(el);
-      expect(el.shadowRoot?.querySelector('img')?.getAttribute('src')).toBe(src);
-    });
-
-    it('is pending while disconnected and settles again on reconnect', async () => {
-      const el = mount<T>(tag, prepare);
-      el.setSource(src, alt);
-      load(el);
-      await settled(el);
-
-      el.remove();
-      pending(el);
-
-      document.body.append(el);
-      load(el);
-      await settled(el);
-    });
+  describeUrlPreviewContract<T>(tag, {
+    src,
+    name: alt,
+    load: options.load ?? dispatchOnImage('load'),
+    fail: options.fail ?? dispatchOnImage('error'),
+    shows: (el, shownSrc, shownAlt) => {
+      expect(imageOf(el)?.getAttribute('src')).toBe(shownSrc);
+      expect(imageOf(el)?.getAttribute('alt')).toBe(shownAlt);
+    },
+    empty: (el) => expect(imageOf(el)).toBeNull(),
+    prepare,
   });
 }
