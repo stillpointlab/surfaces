@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createHttpClient, UNREACHABLE } from './host-client';
+import { createHttpClient, TOKEN_REQUIRED, UNREACHABLE } from './host-client';
 
 import type { WatchedEvent } from './host-client';
 
@@ -17,12 +17,14 @@ function answering(body: unknown, status = 200) {
 
 class FakeSource {
   static last: FakeSource;
+  static all: FakeSource[] = [];
   onmessage: ((event: MessageEvent<string>) => void) | null = null;
   onerror: (() => void) | null = null;
   onopen: (() => void) | null = null;
   closed = false;
   constructor(readonly url: string) {
     FakeSource.last = this;
+    FakeSource.all.push(this);
   }
   send(data: string): void {
     this.onmessage?.(new MessageEvent('message', { data }));
@@ -288,19 +290,117 @@ describe('createHttpClient', () => {
     spy.mockRestore();
   });
 
+  it('gives a file’s address by its path, each segment encoded, its neighbours beside it', () => {
+    const client = createHttpClient();
+    expect(client.urlFor('deep/er/nested.txt')).toBe('/api/raw/deep/er/nested.txt');
+    expect(client.urlFor('with space/a#1?%.png')).toBe('/api/raw/with%20space/a%231%3F%25.png');
+    expect(createHttpClient('http://127.0.0.1:5190').urlFor('a.png')).toBe(
+      'http://127.0.0.1:5190/api/raw/a.png'
+    );
+    const playlist = new URL(client.urlFor('hls/a b/list.m3u8'), 'http://127.0.0.1:5190');
+    expect(new URL('seg%200.m4s', playlist).pathname).toBe('/api/raw/hls/a%20b/seg%200.m4s');
+  });
+
   it('names a revision in a URL once its file has changed, so an element loads it again', () => {
     vi.stubGlobal('EventSource', FakeSource);
     const client = createHttpClient();
-    expect(client.urlFor('img/a b.png')).toBe('/api/raw?path=img%2Fa%20b.png');
+    expect(client.urlFor('img/a b.png')).toBe('/api/raw/img/a%20b.png');
     client.watch(() => undefined);
     FakeSource.last.send('{"type":"changed","paths":["img/a b.png"]}');
-    expect(client.urlFor('img/a b.png')).toBe('/api/raw?path=img%2Fa%20b.png&rev=1');
-    expect(client.urlFor('other.png')).toBe('/api/raw?path=other.png');
+    expect(client.urlFor('img/a b.png')).toBe('/api/raw/img/a%20b.png?rev=1');
+    expect(client.urlFor('other.png')).toBe('/api/raw/other.png');
     // A reconnection counts as a change to every path: one may have gone unheard.
     FakeSource.last.onerror?.();
     FakeSource.last.onopen?.();
-    expect(client.urlFor('img/a b.png')).toBe('/api/raw?path=img%2Fa%20b.png&rev=2');
-    expect(client.urlFor('other.png')).toBe('/api/raw?path=other.png&rev=1');
+    expect(client.urlFor('img/a b.png')).toBe('/api/raw/img/a%20b.png?rev=2');
+    expect(client.urlFor('other.png')).toBe('/api/raw/other.png?rev=1');
+  });
+
+  describe('a page left open across a restart', () => {
+    const refused = { ok: false, code: TOKEN_REQUIRED, message: 'Open the address…' };
+
+    it('says restarted once when a call is refused for the token, and closes the stream for good', async () => {
+      vi.stubGlobal('EventSource', FakeSource);
+      let hidden = false;
+      const spy = vi.spyOn(document, 'hidden', 'get').mockImplementation(() => hidden);
+      // Its own base, so its streams are told from other tests' clients'.
+      const client = createHttpClient('http://restarted');
+      const streams = () =>
+        FakeSource.all.filter((made) => made.url.startsWith('http://restarted'));
+      const events: WatchedEvent[] = [];
+      const stop = client.watch((event) => events.push(event));
+      const [source] = streams();
+      answering(refused, 403);
+      // The refusal is still the call's answer, as the server sent it.
+      expect(await client.get('a.md')).toEqual(refused);
+      await expect(client.list()).rejects.toThrow('Open the address…');
+      expect(await client.commit({ paths: ['a.md'], message: 'm' })).toEqual(refused);
+      expect(events).toEqual([{ type: 'restarted' }]);
+      expect(source.closed).toBe(true);
+      // Hidden and shown again, the tab opens no stream: it would be refused.
+      hidden = true;
+      document.dispatchEvent(new Event('visibilitychange'));
+      hidden = false;
+      document.dispatchEvent(new Event('visibilitychange'));
+      // A watch begun after it opens none either.
+      client.watch(() => undefined)();
+      expect(streams()).toEqual([source]);
+      stop();
+      spy.mockRestore();
+    });
+
+    it('takes another 403 as it was: no restart', async () => {
+      vi.stubGlobal('EventSource', FakeSource);
+      const client = createHttpClient();
+      const events: WatchedEvent[] = [];
+      client.watch((event) => events.push(event));
+      answering({ ok: false, code: 'HOST_FORBIDDEN', message: 'Not from here.' }, 403);
+      await client.get('a.md');
+      expect(events).toEqual([]);
+      expect(FakeSource.last.closed).toBe(false);
+    });
+
+    it('asks GET /api/root when the stream fails, and says restarted when it is refused so', async () => {
+      vi.stubGlobal('EventSource', FakeSource);
+      const client = createHttpClient();
+      const events: WatchedEvent[] = [];
+      client.watch((event) => events.push(event));
+      const source = FakeSource.last;
+      source.onopen?.();
+      const fetch = answering(refused, 403);
+      source.onerror?.();
+      await vi.waitFor(() => expect(events).toEqual([{ type: 'restarted' }]));
+      expect(fetch.mock.calls.map((call) => call[0])).toEqual(['/api/root']);
+      expect(source.closed).toBe(true);
+      // Once said, a later failure asks nothing more.
+      source.onerror?.();
+      await new Promise((done) => setTimeout(done, 0));
+      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(events).toEqual([{ type: 'restarted' }]);
+    });
+
+    it('keeps the stream when the server is only away, or answers', async () => {
+      vi.stubGlobal('EventSource', FakeSource);
+      const client = createHttpClient();
+      const events: WatchedEvent[] = [];
+      client.watch((event) => events.push(event));
+      const source = FakeSource.last;
+      source.onopen?.();
+      const away = vi.fn(async () => {
+        throw new TypeError('Failed to fetch');
+      });
+      vi.stubGlobal('fetch', away);
+      source.onerror?.();
+      await vi.waitFor(() => expect(away).toHaveBeenCalledTimes(1));
+      await new Promise((done) => setTimeout(done, 0));
+      const back = answering({ name: 'served', id: 'abc' });
+      source.onerror?.();
+      await vi.waitFor(() => expect(back).toHaveBeenCalledTimes(1));
+      await new Promise((done) => setTimeout(done, 0));
+      expect(source.closed).toBe(false);
+      source.onopen?.();
+      expect(events).toEqual([{ type: 'listed' }, { type: 'journal' }, { type: 'reconnected' }]);
+    });
   });
 
   it('probes a file on the raw route, lets its bytes go, and answers a refusal as sent', async () => {
@@ -310,7 +410,7 @@ describe('createHttpClient', () => {
     vi.stubGlobal('fetch', fetch);
     const client = createHttpClient();
     expect(await client.probe('img/a b.png')).toEqual({ ok: true });
-    expect(fetch.mock.calls[0][0]).toBe('/api/raw?path=img%2Fa%20b.png');
+    expect(fetch.mock.calls[0][0]).toBe('/api/raw/img/a%20b.png');
     expect(cancelled).toBe(true);
     answering({ ok: false, code: 'HOST_FILE_NOT_FOUND', message: 'none' }, 404);
     expect(await client.probe('gone.png')).toEqual({

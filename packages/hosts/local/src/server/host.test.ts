@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createHost } from './host';
 import { LIST_LIMIT } from './limits';
+import { createStaticPage } from './page';
 import { versionOf } from './port';
 import { eventReader, git, gitEnv, makeRepository, tempFolder, writeFiles } from './test-support';
 
@@ -32,7 +33,7 @@ afterEach(async () => {
 });
 
 function start(at = root, env?: NodeJS.ProcessEnv): LocalHost {
-  host = createHost({ root: at, origin, env, warn: () => undefined });
+  host = createHost({ root: at, origin, token: null, env, warn: () => undefined });
   return host;
 }
 
@@ -104,7 +105,7 @@ describe('the routes', () => {
   });
 
   it('GET /api/raw sends the bytes, the type for the extension, nosniff and a sandbox', async () => {
-    const response = await request('/api/raw?path=img/dot.png');
+    const response = await request('/api/raw/img/dot.png');
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toBe('image/png');
     expect(response.headers.get('x-content-type-options')).toBe('nosniff');
@@ -116,11 +117,11 @@ describe('the routes', () => {
 
   it('GET /api/raw sends an HTML file sandboxed, and an unknown extension as bytes', async () => {
     writeFiles(root, { 'page.html': '<script>alert(1)</script>', 'blob.xyz': 'x' });
-    const html = await request('/api/raw?path=page.html');
+    const html = await request('/api/raw/page.html');
     expect(html.headers.get('content-type')).toBe('text/html; charset=utf-8');
     expect(html.headers.get('content-security-policy')).toBe('sandbox');
     await html.arrayBuffer();
-    const other = await request('/api/raw?path=blob.xyz');
+    const other = await request('/api/raw/blob.xyz');
     expect(other.headers.get('content-type')).toBe('application/octet-stream');
     await other.arrayBuffer();
   });
@@ -140,7 +141,7 @@ describe('the routes', () => {
     'GET /api/raw refuses a request to run or apply the file (Sec-Fetch-Dest: %s)',
     async (dest) => {
       writeFiles(root, { 'tool.js': 'alert(1)\n' });
-      const response = await request('/api/raw?path=tool.js', {
+      const response = await request('/api/raw/tool.js', {
         headers: {
           'sec-fetch-dest': dest,
           'sec-fetch-site': 'same-origin',
@@ -156,32 +157,184 @@ describe('the routes', () => {
     }
   );
 
-  it.each(['image', 'document', 'iframe', 'embed', 'object', 'empty', 'video', 'audio', 'font'])(
-    'GET /api/raw serves a request to show the file (Sec-Fetch-Dest: %s)',
-    async (dest) => {
-      const response = await request('/api/raw?path=img/dot.png', {
-        headers: { 'sec-fetch-dest': dest, 'sec-fetch-site': 'same-origin' },
-      });
-      expect(response.status).toBe(200);
-      expect(response.headers.get('content-security-policy')).toBe('sandbox');
-      await response.arrayBuffer();
-    }
-  );
+  it.each([
+    'image',
+    'document',
+    'iframe',
+    'embed',
+    'object',
+    'empty',
+    'video',
+    'audio',
+    'track',
+    'font',
+  ])('GET /api/raw serves a request to show the file (Sec-Fetch-Dest: %s)', async (dest) => {
+    const response = await request('/api/raw/img/dot.png', {
+      headers: { 'sec-fetch-dest': dest, 'sec-fetch-site': 'same-origin' },
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-security-policy')).toBe('sandbox');
+    await response.arrayBuffer();
+  });
 
   it('GET /api/raw serves a request with no Sec-Fetch-Dest (curl, an older browser) as before', async () => {
     writeFiles(root, { 'tool.js': 'alert(1)\n' });
-    const response = await request('/api/raw?path=tool.js');
+    const response = await request('/api/raw/tool.js');
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toBe('text/javascript; charset=utf-8');
     expect(await response.text()).toBe('alert(1)\n');
   });
 
+  it.each([
+    'deep/er/nested.txt',
+    'with space/a b.txt',
+    'hash#1.txt',
+    'what?.txt',
+    '100%.txt',
+    '%41.txt',
+    'all # ? % & = + ;/at once.txt',
+    'ünï/çødé.txt',
+  ])('GET /api/raw/<path> serves %s, each segment encoded as urlFor encodes it', async (path) => {
+    writeFiles(root, { [path]: `the bytes of ${path}` });
+    // As `rawAddress` in the client makes it: the separators as they are.
+    const address = `/api/raw/${path.split('/').map(encodeURIComponent).join('/')}?rev=3`;
+    const response = await request(address);
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe(`the bytes of ${path}`);
+  });
+
+  it('GET /api/raw/<path> resolves a relative address to the file’s neighbour', async () => {
+    writeFiles(root, { 'hls/a b/list.m3u8': '#EXTM3U\n', 'hls/a b/seg 0.m4s': 'segment' });
+    const playlist = new URL(`${origin}/api/raw/hls/a%20b/list.m3u8`);
+    const segment = new URL('seg%200.m4s', playlist);
+    expect(segment.pathname).toBe('/api/raw/hls/a%20b/seg%200.m4s');
+    expect(await (await request(segment.pathname)).text()).toBe('segment');
+  });
+
   it('GET /api/raw refuses a missing file and a folder with 404', async () => {
     for (const path of ['none.png', 'img']) {
-      const response = await request(`/api/raw?path=${path}`);
+      const response = await request(`/api/raw/${path}`);
       expect(response.status).toBe(404);
       expect(await response.json()).toMatchObject({ code: 'HOST_FILE_NOT_FOUND' });
     }
+  });
+
+  it.each([
+    ['list.m3u8', 'application/vnd.apple.mpegurl'],
+    ['seg0.m4s', 'video/iso.segment'],
+    ['a.flac', 'audio/flac'],
+    ['a.m4a', 'audio/mp4'],
+    ['a.aac', 'audio/aac'],
+    ['a.opus', 'audio/ogg'],
+    ['v.m4v', 'video/mp4'],
+    ['v.mov', 'video/quicktime'],
+    ['v.mkv', 'video/x-matroska'],
+    ['V.MKV', 'video/x-matroska'],
+    ['seg0.ts', 'text/plain; charset=utf-8'],
+  ])('GET /api/raw/%s sends it as %s', async (path, type) => {
+    writeFiles(root, { [path]: 'x' });
+    const response = await request(`/api/raw/${path}`);
+    expect(response.headers.get('content-type')).toBe(type);
+    await response.arrayBuffer();
+  });
+
+  describe('GET /api/raw/<path> in ranges', () => {
+    const ranged = (path: string, range: string) => request(path, { headers: { range } });
+
+    it('says it takes ranges on every answer, a refusal’s too', async () => {
+      const answers = [
+        await request('/api/raw/img/dot.png'),
+        await ranged('/api/raw/img/dot.png', 'bytes=0-1'),
+        await ranged('/api/raw/img/dot.png', 'bytes=9-'),
+        await request('/api/raw/none.png'),
+        await request('/api/raw/'),
+        await request('/api/raw/a.md', { headers: { 'sec-fetch-dest': 'script' } }),
+      ];
+      expect(answers.map((answer) => answer.status)).toEqual([200, 206, 416, 404, 400, 403]);
+      for (const answer of answers) {
+        expect(answer.headers.get('accept-ranges')).toBe('bytes');
+        await answer.arrayBuffer();
+      }
+    });
+
+    it.each([
+      ['bytes=0-1', [0x89, 0x50], 'bytes 0-1/4'],
+      ['bytes=1-', [0x50, 0, 7], 'bytes 1-3/4'],
+      ['bytes=-2', [0, 7], 'bytes 2-3/4'],
+      ['bytes=2-99', [0, 7], 'bytes 2-3/4'],
+    ])('answers %s with 206 and that part', async (range, bytes, contentRange) => {
+      const response = await ranged('/api/raw/img/dot.png', range);
+      expect(response.status).toBe(206);
+      expect(response.headers.get('content-range')).toBe(contentRange);
+      expect(response.headers.get('content-length')).toBe(String(bytes.length));
+      expect(response.headers.get('content-type')).toBe('image/png');
+      expect(response.headers.get('content-security-policy')).toBe('sandbox');
+      expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+      expect(new Uint8Array(await response.arrayBuffer())).toEqual(new Uint8Array(bytes));
+    });
+
+    it('answers a media element’s first ask, bytes=0-, with 206 and the whole file', async () => {
+      const response = await request('/api/raw/img/dot.png', {
+        headers: { range: 'bytes=0-', 'sec-fetch-dest': 'video', 'sec-fetch-site': 'same-origin' },
+      });
+      expect(response.status).toBe(206);
+      expect(response.headers.get('content-range')).toBe('bytes 0-3/4');
+      expect((await response.arrayBuffer()).byteLength).toBe(4);
+    });
+
+    it.each(['bytes=4-', 'bytes=4-10', 'bytes=-0'])(
+      'answers %s, past the end, with 416 and the size',
+      async (range) => {
+        const response = await ranged('/api/raw/img/dot.png', range);
+        expect(response.status).toBe(416);
+        expect(response.headers.get('content-range')).toBe('bytes */4');
+        expect(await response.json()).toEqual({
+          ok: false,
+          code: 'HOST_RANGE_NOT_SATISFIABLE',
+          message: expect.any(String),
+        });
+      }
+    );
+
+    it('answers any range of an empty file with 416', async () => {
+      writeFiles(root, { 'empty.txt': '' });
+      const response = await ranged('/api/raw/empty.txt', 'bytes=0-');
+      expect(response.status).toBe(416);
+      expect(response.headers.get('content-range')).toBe('bytes */0');
+      await response.arrayBuffer();
+    });
+
+    it.each(['bytes=0-0,2-3', 'bytes=0-0, 2-3', 'bytes=3-1', 'bytes=x-y', 'lines=1-2', 'bytes='])(
+      'answers %s with the whole file, as if no range were asked',
+      async (range) => {
+        const response = await ranged('/api/raw/img/dot.png', range);
+        expect(response.status).toBe(200);
+        expect(response.headers.get('content-range')).toBeNull();
+        expect(response.headers.get('content-length')).toBe('4');
+        expect(new Uint8Array(await response.arrayBuffer())).toEqual(
+          new Uint8Array([0x89, 0x50, 0, 7])
+        );
+      }
+    );
+
+    it('reads a range of a file larger than one read, across the reads', async () => {
+      // A stream reads 64 KiB at a time: this file is several reads long.
+      const bytes = new Uint8Array(300 * 1024);
+      for (let i = 0; i < bytes.length; i += 1) bytes[i] = (i * 7919 + (i >> 8)) % 251;
+      writeFiles(root, { 'big.webm': bytes });
+      for (const [range, start, end] of [
+        ['bytes=65000-200000', 65000, 200000],
+        ['bytes=131072-', 131072, bytes.length - 1],
+        ['bytes=-70000', bytes.length - 70000, bytes.length - 1],
+      ] as const) {
+        const response = await ranged('/api/raw/big.webm', range);
+        expect(response.status).toBe(206);
+        expect(response.headers.get('content-type')).toBe('video/webm');
+        expect(response.headers.get('content-range')).toBe(`bytes ${start}-${end}/${bytes.length}`);
+        expect(response.headers.get('content-length')).toBe(String(end - start + 1));
+        expect(new Uint8Array(await response.arrayBuffer())).toEqual(bytes.slice(start, end + 1));
+      }
+    });
   });
 
   it('PUT /api/files writes and answers the versions', async () => {
@@ -325,7 +478,7 @@ describe('the request checks', () => {
 
   it('refuses what another site started by Sec-Fetch-Site, except a navigation', async () => {
     const fetchFrom = (site: string, mode: string) =>
-      request('/api/raw?path=img/dot.png', {
+      request('/api/raw/img/dot.png', {
         headers: { 'sec-fetch-site': site, 'sec-fetch-mode': mode },
       });
     expect((await fetchFrom('cross-site', 'no-cors')).status).toBe(403);
@@ -628,5 +781,183 @@ describe('git', () => {
     expect(git(tree, env, 'diff', '--cached', '--name-status')).toBe('D\tdocs/b.md\n');
     expect(await json('/api/git')).toEqual({ state: 'repository', branch: 'side' });
     await events.close();
+  });
+});
+
+describe('the token', () => {
+  // As `runCli` makes it: 32 random bytes, base64url.
+  const token = 'Zm9yIHRoZSBydW4sIGFuZCBmb3Igbm90aGluZyBlbHNl';
+  const words = 'Open the address the `surfaces` command printed in its terminal.';
+  const cookie = `surfaces-5199=${token}`;
+  let repo: string;
+  let env: NodeJS.ProcessEnv;
+
+  beforeEach(() => {
+    env = gitEnv(folder.path);
+    repo = join(folder.path, 'repo');
+    makeRepository(repo, env, { 'a.md': '# A\n', 'img/dot.png': 'png' });
+    writeFiles(folder.path, {
+      'client/index.html': '<!doctype html><title>the page</title>',
+      'client/assets/index-abc.js': 'console.log(1)',
+    });
+    host = createHost({
+      root: repo,
+      origin,
+      token,
+      env,
+      warn: () => undefined,
+      page: createStaticPage(join(folder.path, 'client')),
+    });
+  });
+
+  /** Every route the checklist names, as the page would send it but for the token. */
+  const everyRoute = (headers: Record<string, string> = {}, content = 'over') =>
+    [
+      ['GET /', () => request('/', { headers })],
+      ['GET a page asset', () => request('/assets/index-abc.js', { headers })],
+      ['GET /api/list', () => request('/api/list', { headers })],
+      ['GET /api/file', () => request('/api/file?path=a.md', { headers })],
+      ['GET /api/raw', () => request('/api/raw/img/dot.png', { headers })],
+      ['GET /api/events', () => request('/api/events', { headers })],
+      [
+        'PUT /api/files',
+        () => put([{ kind: 'write', path: 'a.md', content }], { origin, ...headers }),
+      ],
+      [
+        'POST /api/commit',
+        () =>
+          request('/api/commit', {
+            method: 'POST',
+            headers: { origin, 'content-type': 'application/json', ...headers },
+            body: JSON.stringify({ paths: ['a.md'], message: 'm' }),
+          }),
+      ],
+    ] as const;
+
+  it('refuses a request with no token on every route: JSON under /api/, a plain page else', async () => {
+    writeFileSync(join(repo, 'a.md'), 'edited\n');
+    for (const [what, send] of everyRoute()) {
+      const response = await send();
+      expect({ what, status: response.status }).toEqual({ what, status: 403 });
+      if (what.includes('/api/')) {
+        expect(await response.json()).toEqual({
+          ok: false,
+          code: 'HOST_TOKEN_REQUIRED',
+          message: words,
+        });
+      } else {
+        expect(response.headers.get('content-type')).toBe('text/plain; charset=utf-8');
+        const body = await response.text();
+        expect(body).toBe(`${words}\n`);
+        expect(body).not.toContain('repo');
+      }
+    }
+    expect(readFileSync(join(repo, 'a.md'), 'utf8')).toBe('edited\n');
+    expect(git(repo, env, 'rev-list', '--count', '--all')).toBe('1\n');
+  });
+
+  it('answers every route with the cookie, or with Authorization: Bearer', async () => {
+    const carried: Record<string, string>[] = [
+      { cookie },
+      { cookie: `theme=dark; ${cookie}; other=1` },
+      { authorization: `Bearer ${token}` },
+    ];
+    for (const [i, headers] of carried.entries()) {
+      // Each round writes and commits something new.
+      for (const [what, send] of everyRoute(headers, `round ${i}\n`)) {
+        const response = await send();
+        expect({ what, status: response.status }).toEqual({ what, status: 200 });
+        await response.body?.cancel();
+      }
+    }
+  });
+
+  it.each([
+    ['a wrong cookie', { cookie: 'surfaces-5199=not-the-token' }],
+    ['the token under another port’s cookie', { cookie: `surfaces-5200=${token}` }],
+    ['a wrong Bearer', { authorization: 'Bearer not-the-token' }],
+    ['the token in another scheme', { authorization: `Basic ${token}` }],
+    ['the token with a character more', { authorization: `Bearer ${token}x` }],
+    ['the token with a character less', { cookie: `surfaces-5199=${token.slice(0, -1)}` }],
+  ])('refuses %s', async (_what, headers: Record<string, string>) => {
+    const response = await request('/api/list', { headers });
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ code: 'HOST_TOKEN_REQUIRED' });
+  });
+
+  it('exchanges the printed address for the cookie, and redirects to it without the token', async () => {
+    const response = await request(`/?token=${token}`);
+    expect(response.status).toBe(303);
+    expect(response.headers.get('location')).toBe('/');
+    expect(response.headers.get('set-cookie')).toBe(
+      `surfaces-5199=${token}; HttpOnly; SameSite=Strict; Path=/`
+    );
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('referrer-policy')).toBe('no-referrer');
+    // The cookie it set opens the page.
+    const page = await request('/', { headers: { cookie } });
+    expect(await page.text()).toContain('<title>the page</title>');
+  });
+
+  it('keeps the rest of the address, as sent, and takes a HEAD too', async () => {
+    const response = await request(`/assets/index-abc.js?a=1&token=${token}&b=x%20y+z&token=2`);
+    expect(response.status).toBe(303);
+    expect(response.headers.get('location')).toBe('/assets/index-abc.js?a=1&b=x%20y+z');
+    const head = await request(`/?token=${token}`, { method: 'HEAD', headers: { origin } });
+    expect(head.status).toBe(303);
+    expect(head.headers.get('set-cookie')).toContain(`surfaces-5199=${token};`);
+  });
+
+  it('redirects to a path of this host, however many slashes the address began with', async () => {
+    const response = await request(`//elsewhere.example/?token=${token}`);
+    expect(response.status).toBe(303);
+    expect(response.headers.get('location')).toBe('/elsewhere.example/');
+  });
+
+  it('refuses a wrong token in the address and sets nothing, a cookie or not', async () => {
+    const carried: Record<string, string>[] = [{}, { cookie }];
+    for (const headers of carried) {
+      const response = await request('/?token=wrong', { headers });
+      expect(response.status).toBe(403);
+      expect(response.headers.get('set-cookie')).toBeNull();
+      expect(await response.text()).toBe(`${words}\n`);
+    }
+  });
+
+  it('takes the token in the address only for the page: the API is not an exchange', async () => {
+    const response = await request(`/api/list?token=${token}`);
+    expect(response.status).toBe(403);
+    expect(response.headers.get('set-cookie')).toBeNull();
+    expect(await response.json()).toMatchObject({ code: 'HOST_TOKEN_REQUIRED' });
+  });
+
+  it('runs the Host, Origin and Sec-Fetch-Site checks first, with the token or without', async () => {
+    const tokens: Record<string, string>[] = [{}, { cookie }, { authorization: `Bearer ${token}` }];
+    for (const carried of tokens) {
+      for (const response of [
+        await request('/api/file?path=a.md', { headers: { ...carried, host: 'evil.example' } }),
+        await request('/api/file?path=a.md', {
+          headers: { ...carried, origin: 'https://evil.example' },
+        }),
+        await request('/api/raw/img/dot.png', {
+          headers: { ...carried, 'sec-fetch-site': 'cross-site', 'sec-fetch-mode': 'no-cors' },
+        }),
+        await put([{ kind: 'write', path: 'a.md', content: 'x' }], carried),
+        await request(`/?token=${token}`, { headers: { ...carried, host: 'evil.example' } }),
+      ]) {
+        expect(response.status).toBe(403);
+        expect(await response.json()).toMatchObject({ code: 'HOST_FORBIDDEN' });
+      }
+    }
+    expect(readFileSync(join(repo, 'a.md'), 'utf8')).toBe('# A\n');
+  });
+
+  it('createHost({ token: null }) answers with no token, and has no exchange', async () => {
+    await host.close();
+    host = createHost({ root: repo, origin, token: null, env, warn: () => undefined });
+    expect((await request('/api/list')).status).toBe(200);
+    const page = await request(`/?token=${token}`);
+    expect(page.status).toBe(404);
+    expect(page.headers.get('set-cookie')).toBeNull();
   });
 });

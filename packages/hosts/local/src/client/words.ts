@@ -69,6 +69,12 @@ export const words = {
       `Line endings differ: ${endingWord(file)} in the file, ${endingWord(head)} in the last commit. No line is marked for that alone.`,
   },
 
+  /**
+   * The token-for-the-run spec's words, in the page's one notice, which they keep:
+   * a page left open while its server started again holds the old run's cookie.
+   */
+  restarted: 'This page’s server was started again. Open the address its terminal printed.',
+
   /** The open file went from disk while it had no unsaved edits. */
   deletedOnDisk: 'This file was deleted on disk.',
 

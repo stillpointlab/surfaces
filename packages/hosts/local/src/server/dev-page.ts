@@ -4,12 +4,16 @@
 // by a dynamic import when it runs: the `surfaces` command never loads it.
 //
 // Every request outside `/api/` passes the host's own checks (`Host`, `Origin`,
-// `Sec-Fetch-Site`) before Vite sees it, and gets the page's headers, the content
-// security policy among them. Vite's HMR socket is an upgrade, which a request
-// listener never sees: Vite is given a stand-in for the server to listen on, and
-// an upgrade reaches it only once it has passed the same checks and carries the
-// page's `Origin` (a browser always sends one with a WebSocket). Vite's own token
-// check on the socket stays on as well.
+// `Sec-Fetch-Site`, the run's token) before Vite sees it, and gets the page's
+// headers, the content security policy among them; the printed address's
+// exchange for the cookie happens here as it does for the built page. Vite's HMR
+// socket is an upgrade, which a request listener never sees: Vite is given a
+// stand-in for the server to listen on, and an upgrade reaches it only once it
+// has passed the same checks (the cookie with it: a browser sends it with a
+// WebSocket to its own host) and carries the page's `Origin` (a browser always
+// sends one with a WebSocket). Vite's own token check on the socket stays on as
+// well. Its token is in the socket's query as `token` too, so an upgrade is
+// checked without its query: a socket is never the exchange.
 
 import { EventEmitter } from 'node:events';
 
@@ -30,6 +34,8 @@ export interface DevPageOptions {
   server: Server;
   /** The page's origin, `http://127.0.0.1:<port>`. */
   origin: string;
+  /** The run's token, as the host is given it (`null`: none asked). */
+  token: string | null;
   /** The host's own listener, for `/api/`. */
   api: RequestListener;
 }
@@ -44,18 +50,19 @@ function headersOf(incoming: IncomingHttpHeaders): Headers {
 }
 
 export async function createDevPage(options: DevPageOptions): Promise<DevPage> {
-  const check = createRequestCheck(options.origin);
-  const refusal = (req: IncomingMessage): Response | null =>
+  const check = createRequestCheck(options.origin, options.token);
+  const refusal = (req: IncomingMessage, target = req.url ?? '/'): Response | null =>
     check({
       method: req.method ?? 'GET',
-      url: options.origin + (req.url ?? '/'),
+      url: options.origin + target,
       headers: headersOf(req.headers),
     });
 
   // What Vite listens on for upgrades, in place of the server itself.
   const upgrades = new EventEmitter();
   options.server.on('upgrade', (req, socket, head) => {
-    if (refusal(req) !== null || req.headers.origin === undefined) {
+    const path = (req.url ?? '/').split('?')[0];
+    if (refusal(req, path) !== null || req.headers.origin === undefined) {
       socket.destroy();
       return;
     }
@@ -83,14 +90,14 @@ export async function createDevPage(options: DevPageOptions): Promise<DevPage> {
         options.api(req, res);
         return;
       }
-      const refused = target.startsWith('/') ? refusal(req) : null;
-      if (!target.startsWith('/') || refused) {
+      // A refusal, or the exchange's redirect with its cookie: sent as it is.
+      const checked = target.startsWith('/') ? refusal(req) : null;
+      if (!target.startsWith('/') || checked) {
         void (async () => {
-          const status = refused?.status ?? 400;
-          const body = refused ? await refused.text() : 'Bad request.\n';
-          res.writeHead(status, {
-            'content-type': refused?.headers.get('content-type') ?? 'text/plain; charset=utf-8',
-          });
+          const body = checked ? await checked.text() : 'Bad request.\n';
+          const headers: Record<string, string> = { 'content-type': 'text/plain; charset=utf-8' };
+          checked?.headers.forEach((value, name) => (headers[name] = value));
+          res.writeHead(checked?.status ?? 400, headers);
           res.end(body);
         })();
         return;

@@ -31,7 +31,10 @@
 // - the notice under the header is the page's one: the commit's message, an
 //   app's `notification` and the problems a lock reports all show there, a line
 //   and a short list, the newest in place of the last, until it is dismissed. It
-//   is a live region, so a screen reader says it.
+//   is a live region, so a screen reader says it. Once the client says the
+//   server was started again (`restarted`), the notice says so for good: no
+//   close button, and nothing replaces it, since nothing else here works until
+//   the person opens the new address.
 // - apps (`apps/`): the page reads the instances with the listing. A locked
 //   instance's files are left out of the tree, and its folder is the app's row;
 //   an instance at the served root has a row above the tree. The row's menu
@@ -240,6 +243,8 @@ export function startPage(options: PageOptions): HostPage {
   let journal: JournalLabels = { undo: null, redo: null };
   /** An undo or a redo on its way: the next waits for it to land. */
   let stepping: Promise<boolean> | null = null;
+  /** Whether the server was started again since this page loaded: its notice stays. */
+  let restarted = false;
 
   const pane: FilePane = new FilePane(filePaneElement, {
     client,
@@ -414,6 +419,7 @@ export function startPage(options: PageOptions): HostPage {
 
   /** The page's one notice: a line and a short list, or nothing. */
   function showNotice(shown: Notice | null): void {
+    if (restarted) return;
     notice.dataset.tone = shown?.tone ?? 'info';
     render(
       notice,
@@ -425,6 +431,14 @@ export function startPage(options: PageOptions): HostPage {
               : ''
           }</div><button type="button" class="page-notice-close" aria-label="${words.commit.dismiss}" title="${words.commit.dismiss}">×</button>`
     );
+  }
+
+  /** The server was started again: the notice that stays, with no way to dismiss it. */
+  function showRestarted(): void {
+    if (restarted) return;
+    restarted = true;
+    notice.dataset.tone = 'error';
+    render(notice, html`<div class="page-notice-text"><span>${words.restarted}</span></div>`);
   }
 
   function showNote(): void {
@@ -684,6 +698,10 @@ export function startPage(options: PageOptions): HostPage {
   }
 
   function onHostEvent(event: WatchedEvent): void {
+    if (event.type === 'restarted') {
+      showRestarted();
+      return;
+    }
     if (event.type === 'journal') {
       void readJournal();
       return;

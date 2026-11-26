@@ -8,6 +8,8 @@ import { createFormatRegistry, extensionOf } from '@stillpointlab/common-format/
 
 import { inRegion } from '../shared/apps';
 
+import { rawAddress } from './host-client';
+
 import type {
   AppLockAnswer,
   AppOpAnswer,
@@ -252,7 +254,7 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
         ? { ok: true }
         : { ok: false, code: 'HOST_FILE_NOT_FOUND', message: 'none' };
     },
-    urlFor: (path) => `/api/raw?path=${encodeURIComponent(path)}`,
+    urlFor: (path) => rawAddress(path),
     async put(changes, options) {
       host.puts.push([...changes]);
       host.putOptions.push(options);

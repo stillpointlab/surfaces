@@ -90,7 +90,7 @@ describe('opening', () => {
     await page.navigate({ path: 'pic.png', view: 'edit' });
     await settle();
     expect(shown().localName).toBe('fake-image');
-    expect(shown().getAttribute('src')).toBe('/api/raw?path=pic.png');
+    expect(shown().getAttribute('src')).toBe('/api/raw/pic.png');
     expect(location.hash).toBe('#/file/pic.png');
     expect($('.pane-views').hidden).toBe(true);
   });
@@ -449,6 +449,33 @@ describe('a change on disk', () => {
     await settle();
     expect(banner()).not.toBeNull();
     expect(unsaved()).toBe(true);
+  });
+});
+
+describe('a server started again', () => {
+  beforeEach(async () => {
+    start();
+    await page.ready;
+  });
+
+  it('shows the notice that stays: no close button, and nothing replaces it', async () => {
+    page.notify({ text: 'Committed abc1234 on main.', tone: 'success' });
+    host.emit({ type: 'restarted' });
+    await settle();
+    const notice = $('.page-notice');
+    expect(notice.textContent).toBe(
+      'This page’s server was started again. Open the address its terminal printed.'
+    );
+    expect(notice.dataset.tone).toBe('error');
+    expect(notice.getAttribute('role')).toBe('status');
+    expect(notice.querySelector('.page-notice-close')).toBeNull();
+    page.notify({ text: 'Undone: Delete a.md', tone: 'info' });
+    page.notify(null);
+    host.emit({ type: 'restarted' });
+    await settle();
+    expect(notice.textContent).toBe(
+      'This page’s server was started again. Open the address its terminal printed.'
+    );
   });
 });
 

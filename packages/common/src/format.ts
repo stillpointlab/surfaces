@@ -10,7 +10,11 @@ export interface FormatFile {
   path: string;
   /** The file's text, for a format that needs text. */
   text?: string;
-  /** A URL the element can load, for a format that needs a URL. */
+  /**
+   * A URL the element can load, for a format that needs a URL. An address
+   * relative to the file (a playlist's segment, an image beside a page) resolves,
+   * against this URL, to the file's neighbour, where the host can serve one.
+   */
   url?: string;
 }
 

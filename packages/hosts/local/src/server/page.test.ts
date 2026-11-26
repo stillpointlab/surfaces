@@ -30,6 +30,7 @@ beforeEach(() => {
   host = createHost({
     root: join(folder.path, 'served'),
     origin,
+    token: null,
     warn: () => undefined,
     page: createStaticPage(client),
   });
@@ -125,6 +126,10 @@ describe('the policy', () => {
     const meta = /http-equiv="Content-Security-Policy"\s+content="([^"]+)"/.exec(html)?.[1];
     expect(meta).toBe(PAGE_POLICY);
     expect(PAGE_HEADERS['content-security-policy']).toBe(`${PAGE_POLICY}; frame-ancestors 'none'`);
+  });
+
+  it('lets media be a blob: URL, which a streaming library feeds a <video> through', () => {
+    expect(PAGE_POLICY).toContain("media-src 'self' blob:;");
   });
 
   it('lets scripts come from the page alone', () => {

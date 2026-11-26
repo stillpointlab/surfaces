@@ -19,7 +19,8 @@ above for what each part once found.
 ## Setup (once)
 
 - [ ] `npm ci && npm run build`, then `node packages/hosts/local/bin/surfaces.js <folder>`: the
-      built page with its content security policy, not the dev mode.
+      built page with its content security policy, not the dev mode. Open the address it
+      prints, with its `?token=`.
 - [ ] `<folder>` is a scratch git repository holding: three markdown notes; a CRLF file; a file
       with no final newline; a markdown file with links whose text is code, a table, a bare URL
       and an autolink; a code file; a `.csv`; an image; a `755` script; two inventories; a tasks
@@ -115,6 +116,19 @@ above for what each part once found.
       no check-in bar; the rest works.
 - [ ] A folder its repository ignores, served by itself → its files are listed, the server said
       at its start that it is served without git, and the page shows nothing of git.
+
+## 10. Who the host answers
+
+- [ ] The address without the token, in a browser that has no cookie for it (a private window)
+      → refused (403) with "Open the address the `surfaces` command printed in its terminal.",
+      and nothing about the folder.
+- [ ] `curl -i http://127.0.0.1:<port>/api/list` without the token → 403
+      `HOST_TOKEN_REQUIRED`; with `-H "Authorization: Bearer <token>"` → the list.
+- [ ] A second tab opened at the address without the token → it loads, lists its rows and opens
+      a file.
+- [ ] A page left open while the server is stopped and started again → "This page’s server was
+      started again. Open the address its terminal printed." stays, with no close button, and
+      the event stream is not tried again (the network panel); the new printed address opens.
 
 ---
 

@@ -70,7 +70,7 @@ afterEach(async () => {
 async function start(files: Record<string, string> = FILES, repository = true): Promise<void> {
   if (repository) makeRepository(root, env, files);
   else writeFiles(root, files);
-  host = createHost({ root, origin, env, warn: () => undefined });
+  host = createHost({ root, origin, token: null, env, warn: () => undefined });
   await host.ready();
 }
 
