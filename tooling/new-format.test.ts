@@ -91,3 +91,23 @@ describe.each([
     expect(() => scaffold('Trial', { url, into })).toThrow(/kebab-case/);
   });
 });
+
+describe('new-format --url', () => {
+  it('carries the browser test, its config and its media, the media byte for byte', () => {
+    const dest = scaffold(name, { url: true, into });
+    const template = join(import.meta.dirname, 'template', 'url-format');
+
+    expect(filesUnder(dest)).toEqual(
+      expect.arrayContaining([
+        'dev/media/swatch.png',
+        'src/preview/trial-clip-preview.browser.test.ts',
+        'vitest.browser.config.ts',
+      ])
+    );
+    expect(readFileSync(join(dest, 'dev/media/swatch.png'))).toEqual(
+      readFileSync(join(template, 'dev/media/swatch.png'))
+    );
+    const test = readFileSync(join(dest, 'src/preview/trial-clip-preview.browser.test.ts'), 'utf8');
+    expect(test).toContain("document.createElement('trial-clip-preview')");
+  });
+});
