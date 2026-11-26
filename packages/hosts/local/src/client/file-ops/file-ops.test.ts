@@ -413,7 +413,9 @@ describe('Rename', () => {
     type('docs/c.png');
     await enter();
     expect(shown().localName).toBe('fake-image');
-    expect(shown().getAttribute('src')).toBe('/api/raw/docs/c.png');
+    expect(shown().getAttribute('src')).toBe(
+      `/api/raw/docs/c.png?rev=${host.versions.get('docs/c.png')}`
+    );
     expect($('.pane-path').textContent).toBe('docs/c.png');
     expect(location.hash).toBe('#/file/docs/c.png');
   });

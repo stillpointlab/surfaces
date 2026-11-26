@@ -1,5 +1,13 @@
 import { createHash } from 'node:crypto';
-import { chmodSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -334,6 +342,98 @@ describe('the routes', () => {
         expect(response.headers.get('content-range')).toBe(`bytes ${start}-${end}/${bytes.length}`);
         expect(response.headers.get('content-length')).toBe(String(end - start + 1));
         expect(new Uint8Array(await response.arrayBuffer())).toEqual(bytes.slice(start, end + 1));
+      }
+    });
+  });
+
+  describe('GET /api/raw/<path> kept by the browser', () => {
+    const etagOf = async (path: string): Promise<string> => {
+      const response = await request(path);
+      await response.arrayBuffer();
+      return response.headers.get('etag')!;
+    };
+    /** The file's time moved on, as any write moves it, by a second so no clock can miss it. */
+    const touched = (path: string) => {
+      const later = new Date(Date.now() + 1000);
+      utimesSync(join(root, path), later, later);
+    };
+
+    it('sends a validator and lets the browser keep the file if it asks first, whole or in a range', async () => {
+      for (const response of [
+        await request('/api/raw/img/dot.png'),
+        await request('/api/raw/img/dot.png', { headers: { range: 'bytes=1-2' } }),
+      ]) {
+        expect(response.headers.get('etag')).toMatch(/^"[0-9a-f]+-[0-9a-f]+"$/);
+        expect(response.headers.get('cache-control')).toBe('no-cache');
+        await response.arrayBuffer();
+      }
+    });
+
+    it('keeps every refusal, and every other route, from being kept', async () => {
+      const refusals = [
+        await request('/api/raw/none.png'),
+        await request('/api/raw/img/dot.png', { headers: { range: 'bytes=9-' } }),
+        await request('/api/raw/a.md', { headers: { 'sec-fetch-dest': 'script' } }),
+        await request('/api/raw/%ZZ'),
+      ];
+      expect(refusals.map((response) => response.status)).toEqual([404, 416, 403, 400]);
+      for (const response of [...refusals, await request('/api/file?path=a.md')]) {
+        expect(response.headers.get('cache-control')).toBe('no-store');
+        expect(response.headers.get('etag')).toBeNull();
+        await response.arrayBuffer();
+      }
+    });
+
+    it('answers 304, with no body, while the file is the one the browser kept', async () => {
+      const etag = await etagOf('/api/raw/img/dot.png');
+      for (const asked of [etag, `W/${etag}`, `"other", ${etag}`, '*']) {
+        const response = await request('/api/raw/img/dot.png', {
+          headers: { 'if-none-match': asked, range: 'bytes=0-1' },
+        });
+        expect(response.status).toBe(304);
+        expect(response.headers.get('etag')).toBe(etag);
+        expect(response.headers.get('cache-control')).toBe('no-cache');
+        expect(response.headers.get('accept-ranges')).toBe('bytes');
+        expect(response.headers.get('content-security-policy')).toBe('sandbox');
+        expect((await response.arrayBuffer()).byteLength).toBe(0);
+      }
+    });
+
+    it('sends the file again, under a new validator, once it has changed on disk', async () => {
+      const etag = await etagOf('/api/raw/img/dot.png');
+      writeFiles(root, { 'img/dot.png': new Uint8Array([1, 2, 3, 4, 5]) });
+      const changed = await request('/api/raw/img/dot.png', { headers: { 'if-none-match': etag } });
+      expect(changed.status).toBe(200);
+      expect(changed.headers.get('etag')).not.toBe(etag);
+      expect(new Uint8Array(await changed.arrayBuffer())).toEqual(new Uint8Array([1, 2, 3, 4, 5]));
+
+      // The same bytes, their time moved on: another file to the browser, and sent again.
+      const before = changed.headers.get('etag')!;
+      touched('img/dot.png');
+      const again = await request('/api/raw/img/dot.png', { headers: { 'if-none-match': before } });
+      expect(again.status).toBe(200);
+      expect(again.headers.get('etag')).not.toBe(before);
+      await again.arrayBuffer();
+    });
+
+    it('answers a range under If-Range only for the file it names, and the whole file otherwise', async () => {
+      const etag = await etagOf('/api/raw/img/dot.png');
+      const same = await request('/api/raw/img/dot.png', {
+        headers: { range: 'bytes=1-2', 'if-range': etag },
+      });
+      expect(same.status).toBe(206);
+      expect(new Uint8Array(await same.arrayBuffer())).toEqual(new Uint8Array([0x50, 0]));
+
+      touched('img/dot.png');
+      for (const ifRange of [etag, `W/${etag}`, 'Wed, 21 Oct 2026 07:28:00 GMT']) {
+        const other = await request('/api/raw/img/dot.png', {
+          headers: { range: 'bytes=1-2', 'if-range': ifRange },
+        });
+        expect(other.status).toBe(200);
+        expect(other.headers.get('content-range')).toBeNull();
+        expect(new Uint8Array(await other.arrayBuffer())).toEqual(
+          new Uint8Array([0x89, 0x50, 0, 7])
+        );
       }
     });
   });

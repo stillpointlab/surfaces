@@ -61,13 +61,19 @@ export interface HostClient {
   /**
    * Whether a file is at `path`, whatever its bytes, with none of it read: `get`
    * reads text, and refuses an image. A refusal is the server's, as `get`'s is.
+   * A success carries the file's `validator` (the raw route's `ETag`, its size
+   * and time), which changes when the file does; `null` from a host that sends
+   * none.
    */
-  probe(path: string): Promise<Result>;
+  probe(path: string): Promise<Result<{ validator: string | null }>>;
   /**
    * A URL an element can load the file from, in ranges; an address relative to
-   * it resolves to the file's neighbour.
+   * it resolves to the file's neighbour. Given the `validator` `probe` answered,
+   * the address names it, so it changes when the file does and only then: the
+   * browser's copy of the file it has serves an address it has seen, and a
+   * changed file, at a new address, is loaded anew by every cache on the way.
    */
-  urlFor(path: string): string;
+  urlFor(path: string, validator?: string | null): string;
   /**
    * Write all the changes or none. The explorer's creates, moves and deletes are
    * a step undo takes back; one the host cannot keep is refused with
@@ -202,14 +208,6 @@ export function createHttpClient(base = ''): HostClient {
       checking = false;
     }
   }
-  // How often each path has changed while this client watched: `urlFor` names the
-  // revision, so an element given the URL again after a change loads the new
-  // bytes rather than the browser's copy of the old (the server reads the address's
-  // path alone, and no query).
-  // A reconnection counts for every path: a change may have gone unheard.
-  const revisions = new Map<string, number>();
-  let reconnections = 0;
-
   async function read<T>(route: string): Promise<T> {
     const response = await call(route, { headers: { accept: 'application/json' } });
     if (!response.ok) {
@@ -258,18 +256,35 @@ export function createHttpClient(base = ''): HostClient {
     changes: () => result('/api/changes'),
     base: (path) => result(`/api/base?path=${encodeURIComponent(path)}`),
     get: (path) => result(`/api/file?path=${encodeURIComponent(path)}`),
-    // The raw route sends the file's bytes: a success is taken from the status,
-    // and the body let go unread. A refusal is JSON, as everywhere.
+    // The raw route sends the file's bytes: a success is taken from the status and
+    // the validator, and the body let go unread. A refusal is JSON, as everywhere.
+    // By `GET`: the request checks ask any other method for the page's `Origin`,
+    // which a browser does not send with a `HEAD` to its own origin. For its first
+    // byte alone: a whole file let go is still sent in part before the cancel
+    // lands (half a megabyte of a long one, measured). An empty file has no first
+    // byte and is answered 416, which is a file there all the same, with no
+    // validator. Asked past the browser's cache, which it neither reads (the
+    // answer is about the disk now) nor fills.
     probe: (path) =>
-      result(rawAddress(path), undefined, (response) => {
-        if (!response.ok) return null;
-        void response.body?.cancel().catch(() => undefined);
-        return { ok: true };
-      }),
-    urlFor(path) {
-      const revision = (revisions.get(path) ?? 0) + reconnections;
-      return url(`${rawAddress(path)}${revision ? `?rev=${revision}` : ''}`);
-    },
+      result(
+        rawAddress(path),
+        { cache: 'no-store', headers: { range: 'bytes=0-0' } },
+        (response) => {
+          if (response.status === 416) {
+            void response.body?.cancel().catch(() => undefined);
+            return { ok: true, validator: null };
+          }
+          if (!response.ok) return null;
+          void response.body?.cancel().catch(() => undefined);
+          return { ok: true, validator: response.headers.get('etag') };
+        }
+      ),
+    // The server reads the address's path alone, and no query: `rev` is for the
+    // browser's caches, which key a copy by the whole address.
+    urlFor: (path, validator) =>
+      url(
+        `${rawAddress(path)}${validator ? `?rev=${encodeURIComponent(validator.replace(/^W\/|"/g, ''))}` : ''}`
+      ),
     commit: (request) => result('/api/commit', post(request)),
     apps: async () => (await read<AppsAnswer>('/api/apps')).apps,
     appPage: (manifestPath, path, query) =>
@@ -320,9 +335,6 @@ export function createHttpClient(base = ''): HostClient {
           } catch {
             return;
           }
-          if (event.type === 'changed') {
-            for (const path of event.paths) revisions.set(path, (revisions.get(path) ?? 0) + 1);
-          }
           listener(event);
         };
         // The browser reconnects by itself. Whatever changed while the stream was
@@ -349,7 +361,6 @@ export function createHttpClient(base = ''): HostClient {
         opened.onopen = () => {
           if (!stale) return;
           stale = false;
-          reconnections += 1;
           listener({ type: 'listed' });
           listener({ type: 'journal' });
           listener({ type: 'reconnected' });

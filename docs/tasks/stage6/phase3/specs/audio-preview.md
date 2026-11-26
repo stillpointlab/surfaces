@@ -1,5 +1,5 @@
 ---
-column: todo
+column: in-progress
 created: 2026-11-25T23:30:00-07:00
 tags: [formats, feature, code]
 ---
@@ -54,7 +54,9 @@ name and is tried here.
   - _loading:_ until the browser knows the file's length (`loadedmetadata`);
   - _loaded:_ the player;
   - _failed:_ words in place of the player, said once to the error handler.
-- **Two failures, two sentences.** The browser tells them apart (`MediaError.code`):
+- **Two failures, two sentences.** `MediaError.code` alone does not tell them apart: a 404 and a
+  file of noise are both `MEDIA_ERR_SRC_NOT_SUPPORTED` in Chromium 158 and Firefox 159, so for
+  that code the address is asked once:
   - the file did not arrive: "Couldn't load this audio.";
   - it arrived and the browser has no decoder for it: "This browser can't play this audio."
 - **Ready** settles when the length is known or the load has failed, never on a time.
@@ -142,18 +144,23 @@ For Jamie, with the agent's lean in each:
 
 ## Acceptance / completion checklist
 
-- [ ] In the built local host, in Chromium: one file of each ending plays from the tree; a seek
+- [x] In the built local host, in Chromium: one file of each ending plays from the tree; a seek
       works in a long one; another file opened stops the first.
-- [ ] A track that is playing carries on through a tab hidden and shown again, and through the
-      event stream's reconnection.
-- [ ] A seek back into a part of a long file already played asks for no byte again (the
-      network panel), and a file changed on disk is still loaded anew.
-- [ ] A file that is not audio under an audio ending says the second sentence; a file removed
+- [x] A track that is playing carries on through a tab hidden and shown again, and through the
+      event stream's reconnection. (The hidden tab was imitated: see As built.)
+- [x] A seek back into a part of a long file already played asks for no byte again (counted
+      at a proxy before the route, not in the network panel), and a file changed on disk is
+      still loaded anew.
+- [x] A file that is not audio under an audio ending says the second sentence; a file removed
       while its row shows says the first, or the host's own words for a file that is gone.
-- [ ] The browser tests pass in the PR's job, and their time is in the PR.
-- [ ] Firefox, by hand: the same files play in the harness.
-- [ ] The root README's table, the package's README and the release walk name the format.
-- [ ] `npm run check` passes.
+      (It said the host's.)
+- [x] The browser tests pass in the PR's job, and their time is in the PR. (A PR on another
+      PR starts no job, so the run was started by hand on the branch: 49 s for the job.)
+- [x] Firefox: the same files play in the harness. (Driven by Playwright's Firefox 159, not by
+      a person's hand.)
+- [x] The root README's table, the package's README and the release walk name the format.
+- [x] `npm run check` passes. (In CI, in that run; not run whole on the build's machine: see
+      As built.)
 
 ### Work package
 
@@ -162,3 +169,114 @@ For Jamie, with the agent's lean in each:
   that is the way.
 - **Must not change:** the descriptor's contract, image, or the template.
 - **Runs after:** phase 2's browser tests.
+
+## As built
+
+Built by an Opus 5.5 sub-agent, read and checked by the orchestrating agent, which put the branch
+on [the tooling's move to TypeScript](https://github.com/stillpointlab/surfaces/pull/193), made
+the failure's question ask one byte (below), and ran the harness in both browsers again at the
+end.
+
+### The fault was there, as section 4 read it
+
+Seen first, in the development host in Chromium 158, with a trial `<audio>` and a proxy before
+the host so the event stream could be cut as a dropped network cuts it. A track three seconds in
+was replaced by a new element, at 0:00 and paused, each time:
+
+- a `changed` event for the file, the same bytes written again (`?rev=1`);
+- the tab hidden and shown (`?rev=2`);
+- the stream cut and come back (`?rev=3`).
+
+Each replacement also asked for the whole file once, to learn whether it was there.
+
+### How section 4 is built
+
+One value, the file's **validator**, mends the reconnection and the caching together.
+
+- **The raw route** reads its `stat` to the nanosecond and sends `ETag: "<size>-<time>"` (both
+  in hex) and `Cache-Control: no-cache` with every answer of a file (200, 206, 304). A request
+  with `If-None-Match` naming the tag is answered 304 with no body. A `Range` under an `If-Range`
+  that is not exactly the tag is answered with the whole file.
+- **`no-cache`, not a time to live:** the browser may keep what it was sent, and asks the route
+  before it uses any of it. So every use still passes the request checks and the token.
+- **What stays `no-store`:** every refusal, the 416 among them, and every other route.
+- **`probe`** answers `{ ok, validator }`. It is a `GET` for the file's first byte, past the
+  browser's cache. It was a `GET` for the whole file with the body let go, and that was measured
+  to send 450 kB to 1.1 MB of a long file before the cancel landed. An empty file has no first
+  byte (416): it is there, with no validator.
+- **`urlFor(path, validator)`** puts the validator in the address as `?rev=`. The client's own
+  count of changes and reconnections is gone. So an address changes when its file does and only
+  then, and between changes the browser's copy serves it.
+- **The pane** asks for the validator as a URL file opens, and again on a change or when the
+  stream comes back:
+  - the same validator: nothing happens, and a track plays on;
+  - another: a new element at the new address;
+  - the file gone: "This file was deleted on disk.";
+  - any other refusal (the host away): the element keeps what it has.
+- **The request check is as it was.** Chromium sends no `Origin` with a `HEAD` to its own
+  origin, and the host refuses it (seen: `HEAD /api/raw/tone.mp3 Origin=(none) -> 403`). `probe`
+  is a `GET`, so nothing needed the check changed, as Jamie ruled on 2026-11-26.
+
+### A seek back, measured
+
+A ten-minute, 115 MB file, counted at the proxy (what the raw route was asked and what it sent),
+against the same proxy rewriting the route's answers to what it sent before (`no-store`, no
+`ETag`):
+
+| Run | As built          | As it was    |
+| --- | ----------------- | ------------ |
+| 1   | one 304, no bytes | 8.2 MB again |
+| 2   | one 304, no bytes | 8.4 MB again |
+| 3   | nothing asked     | 6.4 MB again |
+| 4   | nothing asked     | nothing      |
+
+In the fourth run of the old headers Chromium's own buffer still held the part played. The same
+file opened again in a new player was not steady either way: about 5.5 MB as built, most of what
+it needed coming from the kept copy through a 304, and 1 byte or 8.6 MB as it was.
+
+### `MediaError.code` does not tell the two failures apart
+
+The spec said it did, and its sentence is corrected. Measured in Chromium 158 and Firefox 159: a
+404, a 403, a connection dropped part way, an empty file and a file of noise all end as
+`MEDIA_ERR_SRC_NOT_SUPPORTED`. So:
+
+- `mediaFailureOf(media)` in `common` takes the element, not the error, and answers in time
+  (it is `async`). A decode error is the second sentence; a network error or an abort is the
+  first; for "not supported" it asks the address once, and an answer that arrived is the second
+  sentence.
+- **It asks for one byte** (`Range: bytes=0-0`), past the browser's cache. The build asked for
+  the whole file and let the body go, which is what `probe` was measured not to do well. An
+  empty file (416) is the second sentence, as it was.
+- `releaseMedia(media)` is the other shared function: pause, take the source away, load nothing.
+
+### Where the spec was silent
+
+- **Failed:** the name stays and the words take the player's place. A failure after the length
+  was known (the network lost part way) shows the words too, reported once.
+- **Leaving the page pauses in a microtask,** so an element moved (out and back in one task)
+  plays on, as a browser's own media element does.
+- **In the registry** audio is after image and before code.
+- **`.oga`** is the `.ogg` clip under the other name.
+- **The pane asks for the validator of every URL file it opens,** an image too: one request of
+  one byte more.
+- **The scaffold's output was kept as it came** but its prose, which read oddly under the new
+  name, and the template's sample picture, which is gone.
+- **The local host names audio in two more places** than section 5 says: its `package.json` and
+  its client's `tsconfig`, as for every format.
+
+### What was run, and what was not
+
+- **In the built host, Chromium 158,** by a script and not a person: every line of the
+  checklist's first four. The removed file said the host's words ("This file was deleted on
+  disk."); the element's first sentence is shown by the browser tests and the harness. This run
+  was before the one-byte change to the failure's question.
+- **The hidden tab was imitated.** Headless Chromium does not hide a tab that is behind
+  another, so the script set `document.hidden` and sent a real `visibilitychange`. The stream's
+  cut was real. A tab really hidden, in a browser with a window, is in the release walk.
+- **In the harness, Chromium 158 and Firefox 159,** by Playwright, at the branch's last commit:
+  each of the nine endings loads, plays and is labelled with its name; the missing file says the
+  first sentence, the noise the second, no source "No audio selected.".
+- **Tests on the build's machine:** audio 35 and 5 in a browser (1.1 s), the local host 1,027,
+  `common` 425. `npm run check` whole was not run there: another repository's CI held the
+  machine for the length of the build. This PR's CI is the whole check.
+- **Not tried:** Safari; a person's ear.

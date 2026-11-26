@@ -312,19 +312,24 @@ describe('createHttpClient', () => {
     expect(new URL('seg%200.m4s', playlist).pathname).toBe('/api/raw/hls/a%20b/seg%200.m4s');
   });
 
-  it('names a revision in a URL once its file has changed, so an element loads it again', () => {
+  it('names the file’s validator in its address, so the address changes when the file does and only then', () => {
     vi.stubGlobal('EventSource', FakeSource);
     const client = createHttpClient();
-    expect(client.urlFor('img/a b.png')).toBe('/api/raw/img/a%20b.png');
+    expect(client.urlFor('img/a b.png', '"1f4-18bd5c3a2e"')).toBe(
+      '/api/raw/img/a%20b.png?rev=1f4-18bd5c3a2e'
+    );
+    expect(client.urlFor('img/a b.png', 'W/"x y"')).toBe('/api/raw/img/a%20b.png?rev=x%20y');
+    expect(client.urlFor('img/a b.png', null)).toBe('/api/raw/img/a%20b.png');
+    // Neither a change event nor the stream's return moves an address by itself:
+    // only another validator, which the pane learns by asking.
     client.watch(() => undefined);
     FakeSource.last.send('{"type":"changed","paths":["img/a b.png"]}');
-    expect(client.urlFor('img/a b.png')).toBe('/api/raw/img/a%20b.png?rev=1');
-    expect(client.urlFor('other.png')).toBe('/api/raw/other.png');
-    // A reconnection counts as a change to every path: one may have gone unheard.
     FakeSource.last.onerror?.();
     FakeSource.last.onopen?.();
-    expect(client.urlFor('img/a b.png')).toBe('/api/raw/img/a%20b.png?rev=2');
-    expect(client.urlFor('other.png')).toBe('/api/raw/other.png?rev=1');
+    expect(client.urlFor('img/a b.png', '"1f4-18bd5c3a2e"')).toBe(
+      '/api/raw/img/a%20b.png?rev=1f4-18bd5c3a2e'
+    );
+    expect(client.urlFor('other.png')).toBe('/api/raw/other.png');
   });
 
   describe('a page left open across a restart', () => {
@@ -497,15 +502,25 @@ describe('createHttpClient', () => {
     });
   });
 
-  it('probes a file on the raw route, lets its bytes go, and answers a refusal as sent', async () => {
+  it('probes a file on the raw route for its validator, lets its bytes go, and answers a refusal as sent', async () => {
     let cancelled = false;
     const bytes = new ReadableStream<Uint8Array>({ cancel: () => void (cancelled = true) });
-    const fetch = vi.fn(async (_url: string) => new Response(bytes, { status: 200 }));
+    const fetch = vi.fn(
+      async (_url: string, _init?: RequestInit) =>
+        new Response(bytes, { status: 200, headers: { etag: '"4-1"' } })
+    );
     vi.stubGlobal('fetch', fetch);
     const client = createHttpClient();
-    expect(await client.probe('img/a b.png')).toEqual({ ok: true });
+    expect(await client.probe('img/a b.png')).toEqual({ ok: true, validator: '"4-1"' });
     expect(fetch.mock.calls[0][0]).toBe('/api/raw/img/a%20b.png');
+    // A GET for the first byte, past the browser's cache: it answers for the disk now.
+    expect(fetch.mock.calls[0][1]).toEqual({ cache: 'no-store', headers: { range: 'bytes=0-0' } });
     expect(cancelled).toBe(true);
+    fetch.mockImplementationOnce(async () => new Response('', { status: 206 }));
+    expect(await client.probe('no-tag.png')).toEqual({ ok: true, validator: null });
+    // An empty file has no first byte: it is there, with no validator.
+    answering({ ok: false, code: 'HOST_RANGE_NOT_SATISFIABLE', message: 'empty' }, 416);
+    expect(await client.probe('empty.mp3')).toEqual({ ok: true, validator: null });
     answering({ ok: false, code: 'HOST_FILE_NOT_FOUND', message: 'none' }, 404);
     expect(await client.probe('gone.png')).toEqual({
       ok: false,

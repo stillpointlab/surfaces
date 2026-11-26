@@ -6,6 +6,10 @@
   "compilerOptions": {
     "types": ["vite/client"],
     "paths": {
+      "@stillpointlab/audio-format/*": [
+        "../../formats/audio/src/*/index.ts",
+        "../../formats/audio/src/*.ts"
+      ],
       "@stillpointlab/code-format/*": [
         "../../formats/code/src/*/index.ts",
         "../../formats/code/src/*.ts"

@@ -92,7 +92,10 @@ describe('opening', () => {
     await page.navigate({ path: 'pic.png', view: 'edit' });
     await settle();
     expect(shown().localName).toBe('fake-image');
-    expect(shown().getAttribute('src')).toBe('/api/raw/pic.png');
+    // Its address names the file's validator (the fake's version), asked before it mounted.
+    expect(shown().getAttribute('src')).toBe(
+      `/api/raw/pic.png?rev=${host.versions.get('pic.png')}`
+    );
     expect(location.hash).toBe('#/file/pic.png');
     expect($('.pane-views').hidden).toBe(true);
   });
@@ -425,8 +428,51 @@ describe('a change on disk', () => {
     host.writeOutside('pic.png', 'still binary');
     host.disk.set('pic.png', BINARY);
     await settle();
-    expect(host.probes).toEqual(['pic.png']);
+    // Once as it opened, for its validator, and once for the change.
+    expect(host.probes).toEqual(['pic.png', 'pic.png']);
     expect(host.gets.length).toBe(gets);
+  });
+
+  it('leaves the open file’s element alone on a change event and a reconnection that find the same file', async () => {
+    await page.navigate({ path: 'pic.png', view: 'preview' });
+    await settle();
+    const before = shown();
+    const src = before.getAttribute('src');
+    // An event for a file that is as it was (a change the page already took, or
+    // one the host reports twice), and the stream back after a hidden tab.
+    host.emit({ type: 'changed', paths: ['pic.png'] });
+    await settle();
+    host.emit({ type: 'listed' });
+    host.emit({ type: 'journal' });
+    host.emit({ type: 'reconnected' });
+    await settle();
+    expect(host.probes).toEqual(['pic.png', 'pic.png', 'pic.png']);
+    expect(shown()).toBe(before);
+    expect(shown().getAttribute('src')).toBe(src);
+  });
+
+  it('replaces the open file’s element when the stream comes back to a file changed while away, at its new address', async () => {
+    await page.navigate({ path: 'pic.png', view: 'preview' });
+    await settle();
+    const before = shown();
+    // Written while the stream was down: no event said so.
+    host.versions.set('pic.png', 'v-away');
+    host.emit({ type: 'reconnected' });
+    await settle();
+    expect(shown()).not.toBe(before);
+    expect(shown().getAttribute('src')).toBe('/api/raw/pic.png?rev=v-away');
+  });
+
+  it('keeps the open file’s element when the probe learns nothing (the host is away)', async () => {
+    await page.navigate({ path: 'pic.png', view: 'preview' });
+    await settle();
+    const before = shown();
+    const probe = host.probe.bind(host);
+    host.probe = async () => ({ ok: false, code: 'HOST_UNREACHABLE', message: 'away' });
+    host.emit({ type: 'reconnected' });
+    await settle();
+    host.probe = probe;
+    expect(shown()).toBe(before);
   });
 
   it('reads the open file again when the event stream comes back', async () => {

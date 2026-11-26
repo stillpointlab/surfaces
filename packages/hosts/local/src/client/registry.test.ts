@@ -5,12 +5,13 @@ import { createHostRegistry } from './registry';
 describe('the host registry', () => {
   const registry = createHostRegistry();
 
-  it('registers the five formats in order, with code as the fallback', () => {
+  it('registers the six formats in order, with code as the fallback', () => {
     expect(registry.formats.map((format) => format.id)).toEqual([
       'md',
       'xmdl',
       'sheet',
       'image',
+      'audio',
       'code',
     ]);
     expect(registry.fallback?.id).toBe('code');
@@ -24,6 +25,9 @@ describe('the host registry', () => {
     ['data/merged.sheet', 'sheet'],
     ['img/dot.PNG', 'image'],
     ['img/shape.svg', 'image'],
+    ['music/track.mp3', 'audio'],
+    ['music/Track.FLAC', 'audio'],
+    ['music/take.weba', 'audio'],
     ['src/app.ts', 'code'],
     ['types.d.ts', 'code'],
   ])('opens %s with %s', (path, id) => {

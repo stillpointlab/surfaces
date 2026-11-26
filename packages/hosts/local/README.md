@@ -35,11 +35,11 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
 
 | Module           | What it is                                                                               |
 | ---------------- | ---------------------------------------------------------------------------------------- |
-| `main.ts`        | The entry: the HTTP client, the five formats, md's sanitizing renderer                   |
+| `main.ts`        | The entry: the HTTP client, the six formats, md's sanitizing renderer                    |
 | `host-client.ts` | `HostClient` and `createHttpClient`: the only module that calls `fetch` or `EventSource` |
 | `page.ts`        | `startPage`: the layout, the tree's events, the address, the host's events, undo, redo   |
 | `pane.ts`        | `FilePane`: what is open, opening, saving, a change on disk, and the Changes view        |
-| `registry.ts`    | md, xmdl, sheet, image and code, in that order, with code as the fallback                |
+| `registry.ts`    | md, xmdl, sheet, image, audio and code, in that order, with code as the fallback         |
 | `markdown.ts`    | The renderer `<md-preview>` is given: markdown-it, then DOMPurify                        |
 | `confirm.ts`     | One confirmation helper over `<modal-dialog>`                                            |
 | `address.ts`     | `#/file/<path>`, `#/edit/<path>`, `#/diff/<path>` and `#/app/<manifestPath>…`            |
@@ -95,6 +95,14 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
   opened or last saved at. A change on disk to the open file is read again and compared by
   version: with no unsaved edits it shows in place; with edits a banner offers Reload, and Save
   asks before it writes over the newer file. Leaving unsaved edits asks first.
+- **A file in a format that takes a URL** (an image, audio) is not read by the page: its element
+  loads it from the raw route. As it opens, the pane asks for the file's validator
+  (`HostClient.probe`, a `GET` of its first byte), and the address it hands the element names
+  it (`/api/raw/<path>?rev=<validator>`). A change event for the file, and the event stream's
+  return, ask again: the same validator changes nothing, so a track that plays plays on through a
+  hidden tab or a dropped stream; another one makes a new element at the new address, which the
+  browser loads anew (a track that played starts again at its start); a file gone says so. A
+  probe that learns nothing (the host away) leaves the element as it is.
 - **Files are created, renamed and deleted** from a row's menu (right click, the row's `⋯`
   button, the ContextMenu key or Shift+F10): New file… on a folder and on the space under the
   rows, Rename… and Delete… on a file or a folder. Each write is one `put`, so renaming or
@@ -195,7 +203,7 @@ query value). A version is a SHA-256 of the file's bytes, as hex; only equality 
 
 **The raw route** takes the path in the address's own path, each segment percent-encoded
 (`/api/raw/docs/a%20b.png`), so an address relative to a file resolves to its neighbour: a
-playlist's `seg0.m4s` is `/api/raw/docs/seg0.m4s`. Any query (the page's `?rev=`) is ignored.
+playlist's `seg0.m4s` is `/api/raw/docs/seg0.m4s`. Any query (the page's `?rev=<validator>`, which only the browser's caches read) is ignored.
 The rest of the address after `/api/raw/` is decoded once, whole, and checked as any path is,
 so an encoded `..%2F` is refused. The URL parser has already resolved `.` and `..` segments, in
 any spelling (`%2e%2e`), and read a backslash as `/`: an address that climbs out of `/api/raw/`
@@ -203,7 +211,18 @@ is no route's. A trailing slash is an empty segment, and refused. Every answer c
 `Accept-Ranges: bytes`. One range (`bytes=a-b`, `bytes=a-`, `bytes=-n`) is answered `206` with
 its `Content-Range`, and only that part of the file is read; one with no byte of the file in it,
 `416` with `Content-Range: bytes */<size>`. Several ranges, or a header that does not parse, are
-answered with the whole file. `HEAD`, `If-Range` and entity tags are not answered.
+answered with the whole file. `HEAD` is not answered.
+
+**The browser may keep a raw file.** Each answer of the file, whole or in a range, carries its
+validator, `ETag` (its size and the time it was last written, from the `stat` that reads its
+size), and `Cache-Control: no-cache`: the browser keeps what it was sent and asks the route
+before it uses any of it again. An `If-None-Match` that names the file's tag is answered `304`
+with no body, so a seek back into a part a player has already played is not downloaded again; a
+file changed on disk has another tag, and is sent again. A range under an `If-Range` that is not
+the file's tag (another file's, a weak tag, a date) is answered with the whole file, so no part
+of one file is laid beside parts of another. A refusal, a `416` included, stays `no-store`, as
+every other route's answer does: nothing but a file's bytes is kept, and each use of them is
+still asked of the route, its checks and the token.
 
 **Refusals** are `{ ok: false, code, message }`:
 

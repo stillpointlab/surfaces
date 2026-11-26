@@ -54,6 +54,7 @@ import { Readable } from 'node:stream';
 
 import { createAppHost } from './apps/app-host';
 import { DEFAULT_APPS, DEFAULT_HOST_OPS } from './apps/registry';
+import { noneMatch, rangeStillValid, validatorOf } from './conditional';
 import { createJournal } from './journal/journal';
 import { labelFor } from './journal/labels';
 import { LIST_LIMIT } from './limits';
@@ -581,7 +582,7 @@ export function createHost(options: HostOptions): LocalHost {
         400
       );
     }
-    return raw(path, request.headers.get('range'));
+    return raw(path, request.headers);
   }
 
   function routeFor(pathname: string): Partial<Record<string, Handler>> | undefined {
@@ -616,11 +617,19 @@ export function createHost(options: HostOptions): LocalHost {
   }
 
   /**
-   * A file's bytes: all of them, or the one range `range` asks for (`206`), read
+   * A file's bytes: all of them, or the one range `Range` asks for (`206`), read
    * from the file and no more. A range with no byte of the file in it (one that
    * starts past its end) is `416`.
+   *
+   * Each answer of the file carries its validator (`ETag`, from the same `stat`
+   * as its size) and `Cache-Control: no-cache`: the browser may keep what it was
+   * sent, and asks this route whether the file changed before it uses any of it
+   * (`If-None-Match`, answered `304` with no body while it has not). So a seek
+   * back into a part already played is not downloaded again, a file changed on
+   * disk is, and every use still passes the request checks and the token. A
+   * refusal, a `416` included, stays `no-store`, as every other route's answer.
    */
-  async function raw(path: string, range: string | null): Promise<Response> {
+  async function raw(path: string, asking: Headers): Promise<Response> {
     const refused = pathRefusal(path);
     if (refused !== null) return refusal(refused);
     const at = await locate(root, path);
@@ -633,16 +642,27 @@ export function createHost(options: HostOptions): LocalHost {
     if (at.kind !== 'file' || !isInside(root, at.real)) return missing();
     let handle: FileHandle | undefined;
     let size: number;
+    let etag: string;
     try {
       // Non-blocking, so a pipe swapped in after the check cannot hang the read.
       handle = await open(at.real, constants.O_RDONLY | constants.O_NONBLOCK);
-      const info = await handle.stat();
+      const info = await handle.stat({ bigint: true });
       if (!info.isFile()) throw new Error('not a file');
-      size = info.size;
+      size = Number(info.size);
+      etag = validatorOf(info);
     } catch {
       await handle?.close();
       return missing();
     }
+    const kept = { etag, 'cache-control': 'no-cache' };
+    if (noneMatch(asking.get('if-none-match'), etag)) {
+      await handle.close();
+      return new Response(null, {
+        status: 304,
+        headers: { 'content-security-policy': 'sandbox', ...SECURITY_HEADERS, ...kept },
+      });
+    }
+    const range = rangeStillValid(asking.get('if-range'), etag) ? asking.get('range') : null;
     const asked = rangeOf(range, size);
     if (asked === 'unsatisfiable') {
       await handle.close();
@@ -658,6 +678,7 @@ export function createHost(options: HostOptions): LocalHost {
       'content-length': String(asked === null ? size : asked.end - asked.start + 1),
       'content-security-policy': 'sandbox',
       ...SECURITY_HEADERS,
+      ...kept,
     };
     if (asked !== null) headers['content-range'] = `bytes ${asked.start}-${asked.end}/${size}`;
     if (size === 0) {

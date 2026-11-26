@@ -99,6 +99,12 @@ interface Session {
   version: string | null;
   /** The text at that version. */
   text: string | null;
+  /**
+   * For a format that takes a URL, the file's validator when its element was
+   * given it (`probe`'s): a change event, or the stream's return, replaces the
+   * element only when the file's is another, so a track that plays plays on.
+   */
+  validator?: string | null;
   /** In the Changes view, the text at `HEAD`. */
   base?: string;
   /** In the Changes view, what to say about whitespace the view does not mark. */
@@ -446,7 +452,7 @@ export class FilePane {
       // The same format: the element stays. With no edits it is handed the new
       // path, which a format may read (code's language, an image's URL). With
       // edits it keeps them, and takes what the path alone implies.
-      if (!s.dirty) this.apply(s.format, s.element, to, s.text);
+      if (!s.dirty) this.apply(s.format, s.element, to, s.text, s.validator);
       else s.format.applyPath?.(s.element, to);
     } else if (!s.dirty) {
       // Another format, or a message: open the file again where it is now.
@@ -491,8 +497,14 @@ export class FilePane {
     let format = matched;
     let text: string | null = null;
     let version: string | null = null;
+    let validator: string | null = null;
     // A format that takes a URL loads the file itself, and says so if it cannot.
-    if (matched?.needs !== 'url') {
+    // Its validator is asked first, unread: what a later change is compared to.
+    if (matched?.needs === 'url') {
+      const there = await client.probe(path);
+      if (this.stale(request)) return;
+      if (there.ok) validator = there.validator;
+    } else {
       const got = await client.get(path);
       if (this.stale(request)) return;
       if (!got.ok) {
@@ -531,12 +543,13 @@ export class FilePane {
       element,
       version,
       text,
+      validator,
       dirty: false,
       banner: null,
       saveError: null,
       listeners: new AbortController(),
     });
-    this.apply(format, element, path, text);
+    this.apply(format, element, path, text, validator);
     if (request.focus && view === 'edit') {
       const editor = element as EditorElement;
       void editor.whenReady?.().then(() => {
@@ -620,17 +633,18 @@ export class FilePane {
     this.renderChrome();
   }
 
-  /** Hand the element its content: the text, or a URL the element loads. */
+  /** Hand the element its content: the text, or a URL the element loads, naming the file's validator. */
   private apply(
     format: FormatDescriptor,
     element: HTMLElement,
     path: string,
-    text: string | null
+    text: string | null,
+    validator: string | null = null
   ): void {
     format.apply(
       element,
       format.needs === 'url'
-        ? { path, url: this.options.client.urlFor(path) }
+        ? { path, url: this.options.client.urlFor(path, validator) }
         : { path, text: text ?? '' }
     );
   }
@@ -703,14 +717,21 @@ export class FilePane {
       // Asked without a read: the bytes are the element's to load, and not text.
       const there = await this.options.client.probe(s.path);
       if (this.session !== s) return;
-      if (!there.ok && GONE.has(there.code)) {
-        this.showMessage(s.path, s.view, words.deletedOnDisk);
+      if (!there.ok) {
+        if (GONE.has(there.code)) this.showMessage(s.path, s.view, words.deletedOnDisk);
+        // Otherwise nothing is known of the file (the host is away, or refused):
+        // the element keeps what it has.
         return;
       }
-      // A new element, so the image is loaded again rather than kept.
+      // The same validator: the file is the one the element has (the stream came
+      // back to it unchanged, or this event is for a change already applied).
+      // The element, and a track playing in it, are left alone.
+      if (there.validator !== null && there.validator === s.validator) return;
+      // Another file: a new element at the new file's address, so it is loaded
+      // again rather than kept (a playing track starts again at its start).
       const element = document.createElement(s.element.localName);
-      this.begin({ ...s, element, listeners: new AbortController() });
-      this.apply(s.format, element, s.path, null);
+      this.begin({ ...s, element, validator: there.validator, listeners: new AbortController() });
+      this.apply(s.format, element, s.path, null, there.validator);
       return;
     }
 

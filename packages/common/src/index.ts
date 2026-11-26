@@ -27,6 +27,8 @@ export {
 export type { KeymapState } from './keymap';
 export type { HydrateSteps } from './engine';
 export { createStatus, STATUS_MESSAGES } from './status';
+export { mediaFailureOf, releaseMedia } from './media';
+export type { MediaFailure } from './media';
 export {
   createNotice,
   createRawSource,
