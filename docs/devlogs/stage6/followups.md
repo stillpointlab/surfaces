@@ -111,11 +111,15 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
   - Jamie, 2026-11-26: fix. The template is worded so that it reads true under a new name.
 - 2026-11-26 (video): the root README's format convention still says "image, and video, audio
   or PDF to come", and the local host's README names "(an image, audio)" as what takes a URL.
+  - Jamie, 2026-11-26: fix.
 - 2026-11-26 (video): the harness's event log shows an element's `ready` twice for each fixture.
   Not looked into (`tooling/harness/main.ts`).
+  - Jamie, 2026-11-26: fix. If the harness listens twice it is mended there; if an element
+    says `ready` twice, that is told to Jamie before anything is changed.
 - 2026-11-26 (video): the scaffold's contract test suggests `canplay` in a comment, and both
   media formats settle on `loadedmetadata` (`tooling/template/url-format`). With the entry
   above on the scaffold's prose.
+  - Jamie, 2026-11-26: fix, with that entry.
 - 2026-11-26 (HLS): a playlist that names another server says the first sentence only after
   31.6 s and 14 policy reports: hls.js asks again after an answer with no status. The build's
   rule for failing at once covers a 4xx alone (`packages/formats/video/src/preview/hls-engine.ts`).
@@ -125,3 +129,10 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
   folder of segments shows as a list of such files.
 - 2026-11-26 (HLS): the port of the browser tests' server cannot be set from the command line
   (`tooling/vitest.ts`).
+- 2026-11-26 (the phase's follow-ups, from Jamie's question on `canplay` and `loadedmetadata`):
+  an audio or video preview is ready, and takes its loading cover away, on `loadedmetadata`. A
+  browser that loads nothing of a file before a person presses play never sends it. Tried with
+  `preload="none"` standing in for such a browser, in Chromium 158 and Firefox 159: `loadstart`
+  and `suspend` come and nothing more, so the element would stay at "Loading" and never be
+  ready. Safari on an iPhone is said to behave so in some modes and was not run. `suspend` is no
+  sign to go by: Chromium sends it before the metadata of a file it goes on to load.
