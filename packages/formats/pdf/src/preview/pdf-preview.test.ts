@@ -1,0 +1,128 @@
+// What the contract leaves to the format: the words for each state, the one
+// report of a failure, and which media is heard. jsdom loads no media, so each
+// test says when the `<img>` loaded or failed.
+import { setErrorHandler } from '@stillpointlab/common-format';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { PdfPreview } from './pdf-preview';
+
+const create = (): PdfPreview => document.createElement('pdf-preview') as PdfPreview;
+const mediaOf = (el: PdfPreview) => el.shadowRoot!.querySelector('img');
+const statusOf = (el: PdfPreview) => el.shadowRoot!.querySelector('.spl-status');
+
+describe('pdf-preview', () => {
+  afterEach(() => {
+    document.body.replaceChildren();
+    setErrorHandler(null);
+  });
+
+  it('is defined by its module', () => {
+    expect(customElements.get('pdf-preview')).toBe(PdfPreview);
+  });
+
+  it('says there is nothing to show without a source', () => {
+    const el = create();
+    document.body.append(el);
+
+    expect(statusOf(el)?.textContent).toBe('No pdf selected.');
+    expect(mediaOf(el)).toBeNull();
+  });
+
+  it('shows the source under its name, covered while it loads', async () => {
+    const el = create();
+    el.setSource('/files/clip', 'clip.pdf');
+    document.body.append(el);
+
+    expect(mediaOf(el)?.getAttribute('src')).toBe('/files/clip');
+    expect(mediaOf(el)?.getAttribute('alt')).toBe('clip.pdf');
+    expect(el.shadowRoot!.querySelector('.pdf-preview__loading')).not.toBeNull();
+
+    mediaOf(el)!.dispatchEvent(new Event('load'));
+    await el.whenReady();
+    expect(el.shadowRoot!.querySelector('.pdf-preview__loading')).toBeNull();
+    expect(mediaOf(el)?.getAttribute('src')).toBe('/files/clip');
+  });
+
+  it('says a failure in words and reports it once', async () => {
+    const handler = vi.fn();
+    setErrorHandler(handler);
+    const el = create();
+    el.setSource('/files/missing', 'missing.pdf');
+    document.body.append(el);
+
+    mediaOf(el)!.dispatchEvent(new Event('error'));
+    await el.whenReady();
+
+    expect(statusOf(el)?.textContent).toBe("Couldn't load this pdf.");
+    expect(statusOf(el)?.getAttribute('role')).toBe('alert');
+    expect(mediaOf(el)).toBeNull();
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledWith('Pdf preview failed to load', {
+      src: '/files/missing',
+    });
+  });
+
+  it('hears only the media it shows: a late failure of the one it replaced says nothing', async () => {
+    const handler = vi.fn();
+    setErrorHandler(handler);
+    const el = create();
+    el.setSource('/files/first', 'first');
+    document.body.append(el);
+    const first = mediaOf(el)!;
+
+    el.setSource('/files/second', 'second');
+    const second = mediaOf(el)!;
+    expect(second).not.toBe(first);
+
+    first.dispatchEvent(new Event('error'));
+    expect(handler).not.toHaveBeenCalled();
+    expect(el.hasAttribute('ready')).toBe(false);
+
+    second.dispatchEvent(new Event('load'));
+    await el.whenReady();
+    expect(mediaOf(el)?.getAttribute('src')).toBe('/files/second');
+  });
+
+  it('relabels the media it shows for a new name, without loading again', async () => {
+    const el = create();
+    el.setSource('/files/clip', 'old name');
+    document.body.append(el);
+    mediaOf(el)!.dispatchEvent(new Event('load'));
+    await el.whenReady();
+    const media = mediaOf(el);
+
+    el.setSource('/files/clip', 'new name');
+
+    expect(mediaOf(el)).toBe(media);
+    expect(media?.getAttribute('alt')).toBe('new name');
+    expect(el.hasAttribute('ready')).toBe(true);
+  });
+
+  it('keeps loaded media across a reconnect, and settles without loading again', async () => {
+    const el = create();
+    el.setSource('/files/clip', 'clip');
+    document.body.append(el);
+    mediaOf(el)!.dispatchEvent(new Event('load'));
+    await el.whenReady();
+    const media = mediaOf(el);
+
+    el.remove();
+    expect(el.hasAttribute('ready')).toBe(false);
+    document.body.append(el);
+
+    await el.whenReady();
+    expect(mediaOf(el)).toBe(media);
+  });
+
+  it('clears the media when the source is taken away', async () => {
+    const el = create();
+    el.setSource('/files/clip', 'clip');
+    document.body.append(el);
+
+    el.setSource('');
+    await el.whenReady();
+
+    expect(mediaOf(el)).toBeNull();
+    expect(statusOf(el)?.textContent).toBe('No pdf selected.');
+  });
+});
