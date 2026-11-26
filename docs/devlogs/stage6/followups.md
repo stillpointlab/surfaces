@@ -101,11 +101,14 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
   so image's and the URL template's "Missing" fixtures show a file that will not decode, not one
   that is missing. Audio's uses a revoked object URL
   (`packages/formats/image/dev/fixtures.ts`, `tooling/template/url-format/dev/fixtures.ts`).
+  - Jamie, 2026-11-26: fix. The harness's server answers 404 for a file that is not there.
 - 2026-11-26 (audio): `common`'s README lists the order to register formats in as
   `md, xmdl, sheet, image, code`. It is Context Manager's order, and phase 5's to bring up to
   date (`packages/common/README.md`).
+  - Jamie, 2026-11-26: fix, now and not in phase 5.
 - 2026-11-26 (audio): the scaffold's renamed prose reads oddly for a real name ("the audio shows
   what it is given as an image", "a `<audio-preview>`"), in the package's README and comments.
+  - Jamie, 2026-11-26: fix. The template is worded so that it reads true under a new name.
 - 2026-11-26 (video): the root README's format convention still says "image, and video, audio
   or PDF to come", and the local host's README names "(an image, audio)" as what takes a URL.
 - 2026-11-26 (video): the harness's event log shows an element's `ready` twice for each fixture.
