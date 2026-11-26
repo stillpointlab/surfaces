@@ -490,7 +490,7 @@ describe('pdf-preview as its width changes', () => {
     const page = pagesOf(el)[0];
     let width = 600;
     Object.defineProperty(column, 'clientWidth', { get: () => width + 32 });
-    Object.defineProperty(page, 'clientWidth', { get: () => width });
+    page.getBoundingClientRect = () => ({ width }) as DOMRect;
     vi.useFakeTimers();
 
     for (const next of [500, 450, 400]) {

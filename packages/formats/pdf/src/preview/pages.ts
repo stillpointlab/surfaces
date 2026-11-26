@@ -216,17 +216,18 @@ export class PageColumn {
     const natural = page.getViewport({ scale: 1 });
     // Laid out, the box is as wide as the column allows; not laid out (hidden,
     // or jsdom), it is drawn at its size at 100%.
-    const width = slot.box.clientWidth || natural.width * CSS_PER_PDF_UNIT;
+    const width = slot.box.getBoundingClientRect().width || natural.width * CSS_PER_PDF_UNIT;
     if (slot.canvas && slot.drawnAt === width) {
       slot.drawnFor = forWidth;
       return;
     }
     const height = (width * natural.height) / natural.width;
-    const scale = (width / natural.width) * pixelRatioFor(width, height, window.devicePixelRatio);
-    const viewport = page.getViewport({ scale });
+    // A whole number of canvas pixels across the box, and the page scaled to it.
+    const across = Math.max(1, Math.round(width * pixelRatioFor(width, height, devicePixelRatio)));
+    const viewport = page.getViewport({ scale: across / natural.width });
     const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.floor(viewport.width));
-    canvas.height = Math.max(1, Math.floor(viewport.height));
+    canvas.width = across;
+    canvas.height = Math.max(1, Math.round(viewport.height));
     const task = page.render({ canvas, viewport });
     slot.task = task;
     try {

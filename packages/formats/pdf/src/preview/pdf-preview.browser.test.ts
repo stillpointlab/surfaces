@@ -106,7 +106,7 @@ describe('pdf-preview in a browser', () => {
     const canvas = canvasOf(first)!;
     expect(first.getAttribute('aria-label')).toBe('Page 1 of 1');
     expect(inkOf(canvas).ink).toBeGreaterThan(0.005);
-    expect(canvas.width).toBe(Math.floor(first.clientWidth * devicePixelRatio));
+    expect(canvas.width).toBe(Math.round(first.getBoundingClientRect().width * devicePixelRatio));
     expect(el.shadowRoot!.querySelector('.pdf-preview__loading')).toBeNull();
     // Symbol and ZapfDingbats; Helvetica, Times and Courier are the browser's own.
     expect(files.calls.sort()).toEqual([
