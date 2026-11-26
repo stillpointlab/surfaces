@@ -294,6 +294,8 @@ it is `<format>-worker`.
   loaded on demand is handed the started worker (pdf.js: `GlobalWorkerOptions.workerPort`).
 - jsdom has no `Worker`: an element that starts one on connect keeps the throw from escaping, or
   its tests mock `startWorker`.
+- The CJS build parses, but the worker's address there is not the worker's; both hosts load the
+  ESM build.
 
 No worker is a way too: where a library runs without its worker, the format ships without one and
 says so in its README (hls.js does).
