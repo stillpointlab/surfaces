@@ -30,9 +30,10 @@ asks for something of PDF's alone (a page to show).
 ## The element
 
 The pages one under another in a column that scrolls, on a quiet ground, each as wide as the
-element allows up to its size at 100% (a PDF unit is 1/72 inch, a CSS pixel 1/96). The file's
-name labels the whole (`role="group"`); each page is a picture labelled for a screen reader
-"Page 3 of 12" (`role="img"`). `setSource(src, name)` sets the `src` and `name` attributes.
+element allows up to its size at 100% (a PDF unit is 1/72 inch, a CSS pixel 1/96), each with its
+text laid over it. The file's name labels the whole (`role="group"`); each page is labelled for a
+screen reader "Page 3 of 12": a group holding its text (`role="group"`), or a picture
+(`role="img"`) while it has none. `setSource(src, name)` sets the `src` and `name` attributes.
 
 | State   | Shows                                                                     |
 | ------- | ------------------------------------------------------------------------- |
@@ -53,6 +54,8 @@ name labels the whole (`role="group"`); each page is a picture labelled for a sc
   ratio, softer.
 - **A change of width draws again** the drawn pages, once the column's width has stayed the same
   for 200 ms (a `ResizeObserver`). Until then the browser scales the canvases.
+- **Each drawn page carries its text,** laid over its canvas once the canvas is shown (see "Its
+  text" below). Ready does not wait for it.
 - **Three failures, three sentences,** each reported once through `reportError`, told apart by
   the error pdf.js gives (`src/preview/failure.ts`):
   - "Couldn't load this PDF.": the file did not arrive (pdf.js's `ResponseException`, an answer
@@ -100,7 +103,44 @@ makes it files of its own, as with any dependency.
   and no `.wasm` is shipped. Its JavaScript fallbacks draw the same pictures, slower: a scanned
   page in JPEG 2000 takes about two seconds. An image with an ICC profile is drawn in its
   alternate colours: there is no colour management without WebAssembly.
-- **No text layer** yet: a page is a picture, which cannot be selected, searched or read aloud.
+- **Its text layer** is pdf.js's `TextLayer`, handed to the page column from the engine module,
+  so it loads on demand with the rest of pdf.js.
+
+### Its text
+
+A drawn page's text is laid over its canvas by pdf.js's `TextLayer`: transparent spans, each
+placed by an inline style, in a box of its own over the canvas (`.pdf-preview__text`). The canvas
+is what a person sees; the text is there to be selected, found and read.
+
+- **What it gives:** a drag across a page selects its text, and a copy is that text, in pdf.js's
+  reading order; a selection may run from one page into the next. The selection shows in
+  `--spl-code-selection-bg`, the nearest of `common`'s tokens (CodeMirror's selection; there is
+  none for a selection over a picture). The browser's own find (Ctrl+F) finds words on the pages
+  that hold text. A screen reader is given each page as a group labelled "Page 3 of 12" holding
+  its text, the canvas hidden from it (`aria-hidden`).
+- **Only the pages near view hold text,** the pages that hold a canvas: the text lives as long as
+  the canvas, given back with it, cancelled with its drawing, and brought to a new width with it.
+  So **the browser's find reaches only the pages near view:** a word on a page far off is not
+  found until that page is scrolled near. Holding every page's text would undo the bound on what a
+  long PDF holds (the text spec's Clarification 1); the choice is one line, in `PageColumn`'s
+  `release`.
+- **A page with no text** (a scan) has none, and stays a picture labelled with its page. A page
+  whose text pdf.js cannot read is the same, and nothing is said of it.
+- **A drag past a line's end** does what pdf.js's viewer does: while the mouse is down in the
+  column, an element at the end of each page's text covers the page under the text, and cannot be
+  selected, so the drag keeps to the text it crossed rather than taking the rest of the page. It
+  is the column's class (`pdf-preview__pages--selecting`), not a page's, so a drag into the next
+  page finds that page covered too. A page's box clips with `overflow: clip`, not `hidden`, which
+  makes it a scroll container: in Firefox a drag from one page into the next then took the rest of
+  that page.
+- **The rules** are the fewest of pdf.js's `.textLayer` rules (`web/pdf_viewer.css`) that place
+  the text, in this package's stylesheet; pdf.js's viewer stylesheet is not shipped. Turned pages
+  (`/Rotate`) have pdf.js's three rules for a turn.
+- **What it does not give:** a find of its own, a count of matches or every match marked; links,
+  the outline, annotations and forms; text for a scan (reading the letters off a picture); a
+  mended reading order, or a tagged PDF's headings and tables. The order a reader hears is pdf.js's.
+- **pdf.js measures text** with a hidden canvas it adds to the document's `<body>` (outside the
+  element) the first time it lays text, and keeps it there.
 
 ### The files pdf.js fetches by name
 
@@ -149,17 +189,21 @@ build holds it. Jamie accepted it on 2026-11-26.
 
 `src/**/*.test.ts` run in jsdom, which has no worker and no canvas that draws: pdf.js and the
 worker are stood in for (`src/testing/fake-pdfjs.ts`), and each test says when a document opens
-or fails and when a page is drawn. They cover the states and their words, the three failures from
-pdf.js's errors, the worker that fails to load, the pages laid out and labelled, the pages near
-view drawn and those far off given back, a width that settles, a page that cannot be drawn, the
-old source let go, and leaving the page. `src/build.test.ts` builds the package and reads the
+or fails, when a page is drawn and when its text is laid. They cover the states and their words,
+the three failures from pdf.js's errors, the worker that fails to load, the pages laid out and
+labelled, the pages near view drawn and those far off given back, a width that settles, a page
+that cannot be drawn, the old source let go, and leaving the page; and a page's text
+(`pdf-preview-text.test.ts`): laid after ready, given back and cancelled with its canvas, brought
+to a new width, none for a page with none. `src/build.test.ts` builds the package and reads the
 files: pdf.js's main module reached from no entry but by `import()`, the worker importing pdf.js's
 changed copy, every file where the built modules name it, and no `.wasm`.
 `src/**/*.browser.test.ts` run in headless Chromium (`vitest.browser.config.ts`): a page drawn
 with ink at the screen's pixel ratio, fetching the two standard fonts it needs and none for
 embedded fonts; the last of twelve pages drawn only once it is scrolled to; Japanese text drawn
 through its character map; a JPEG 2000 image drawn with no WebAssembly and no `.wasm` asked for;
-and the password, the file that is not a PDF and the missing file in their sentences.
+the password, the file that is not a PDF and the missing file in their sentences; and a page's
+text: the PDF's own over its canvas, two lines selected, `window.find` finding a word near view
+and not one far off, the Japanese as its characters, and a page scrolled far away holding none.
 
 The harness (`npm run dev`) has each of the test PDFs, a missing file and no source. Its missing
 file is a revoked object URL: the harness's Vite answers a path it has no file for with its own
@@ -172,7 +216,8 @@ a small PDF writer run by Node with nothing downloaded. In this package's folder
 # dev/media/jpx.jp2: a 200×150 image of colour, for the JPEG 2000 PDF
 magick -size 200x150 -seed 7 plasma:red-blue -blur 0x2 -depth 8 -define jp2:rate=20 dev/media/jpx.jp2
 # text.pdf (five standard fonts, none embedded), pages.pdf (twelve pages), cjk.pdf (Japanese text,
-# UniJIS-UCS2-H), jpx.pdf (the image above, JPXDecode) and not-a-pdf.pdf (text under a .pdf name)
+# UniJIS-UCS2-H), jpx.pdf (the image above, JPXDecode), dense.pdf (a page of dense text, 6,457
+# characters in 67 lines, for measuring the text) and not-a-pdf.pdf (text under a .pdf name)
 node dev/make-pdfs.ts
 # dev/media/password.pdf: text.pdf with the password "secret" to open it
 gs -q -dNOPAUSE -dBATCH -sDEVICE=pdfwrite -sOwnerPassword=owner -sUserPassword=secret -dEncryptionR=3 -dKeyLength=128 -o dev/media/password.pdf dev/media/text.pdf
@@ -185,6 +230,8 @@ For the release walk, outside the package (too large, or not this package's to k
 ```sh
 # a long PDF: 200 pages, each its number and a band of colour (69 kB)
 node dev/make-pdfs.ts --pages 200 <folder>
+# a long PDF of dense text: 200 pages like dense.pdf (531 kB)
+node dev/make-pdfs.ts --dense 200 <folder>
 # a fax scan: CCITT Group 4, decoded by the JBIG2 decoder's fallback
 magick -size 1275x1650 xc:white -fill black -pointsize 60 -annotate +100+200 'CCITT Group 4 scan' -draw 'rectangle 100,300 1175,1500' -fill white -draw 'rectangle 200,400 1075,1400' -monochrome -compress Group4 <folder>/fax.pdf
 ```

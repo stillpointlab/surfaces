@@ -36,8 +36,9 @@ above for what each part once found.
       the MPEG-TS stream again with `.ts` segments, and a long one (two minutes) of them (the
       package's README has the line; `-t 120` for the long one); the PDFs in
       `packages/formats/pdf/dev/media/` (text, twelve pages, Japanese text through a character
-      map, a JPEG 2000 image, fonts embedded, a password, a file that is not a PDF), a 200-page
-      one and a fax scan (the PDF package's README has the two lines).
+      map, a JPEG 2000 image, fonts embedded, dense text, a password, a file that is not a PDF), a
+      200-page one, a 200-page one of dense text and a fax scan (the PDF package's README has the
+      three lines).
 - [ ] Chromium, by hand or driven by Playwright. Driver scripts stay in scratch: the repository
       keeps no walk of the host (its browser tests are packages' unit tests, section 0).
 - [ ] Nothing here touches a remote but section 0's run: no push, no pull request.
@@ -203,6 +204,16 @@ above for what each part once found.
       in its shadow root, never 200.
 - [ ] The window made narrower and wider → the pages follow, and are drawn sharp again once it
       stops.
+- [ ] A line of `text.pdf` dragged across → it shows selected, in a light blue over the page's
+      white; copied and pasted into a text file → its words, nothing more. On the 200-page dense
+      PDF, a drag from a page's last lines into the next page's first → pasted, both, in order. A
+      drag on past a line's end → the selection keeps to that line, and does not take the rest of
+      the page.
+- [ ] The browser's find (Ctrl+F) for a word on the page in view → found, and shown; for "page
+      150" on the dense PDF at its top → not found (only the pages near view hold their text);
+      scrolled to page 150 → found.
+- [ ] A page heard read aloud (Jamie, on a Mac, with VoiceOver): "Page 1 of 1", a group, then its
+      lines, and no picture; the fax scan → "Page 1 of 1", an image.
 - [ ] The password → "This PDF needs a password, and this preview can't ask for one yet." The
       file that is not a PDF → "This file can't be read as a PDF." A PDF deleted in a terminal
       while its row still shows, then clicked → "Couldn't load this PDF.", or the page's "This
