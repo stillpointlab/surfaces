@@ -122,7 +122,8 @@ For Jamie, with the agent's lean:
 - [x] No policy report on the page or in the worker.
 - [x] The two measures of section 5 are in the PR.
 - [x] A page scrolled far away holds no text and no canvas.
-- [ ] The browser tests pass in the PR's job, and their time is in the PR.
+- [x] The browser tests pass in the PR's job, and their time is in the PR. (A PR on another
+      PR starts no job, so the run was started by hand on the branch: 59 s for the job.)
 - [x] The package's README says what the text gives and what it does not (find reaches the
       pages near view), and the release walk gains its steps.
 - [x] `npm run check` passes. (4,132 tests, on the build's machine.)
