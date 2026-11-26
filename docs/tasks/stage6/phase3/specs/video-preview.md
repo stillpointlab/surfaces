@@ -90,7 +90,7 @@ missing file, a file of noise, and no source.
 - [x] A video that is playing carries on through a tab hidden and shown again. (The hidden tab
       was imitated, as audio's.)
 - [x] A clip whose picture cannot be shown says so, and its sound plays.
-- [ ] The browser tests pass in the PR's job, and their time is in the PR.
+- [x] The browser tests pass in the PR's job, and their time is in the PR. (37 s for the job.)
 - [x] Firefox: the same files play in the harness. (Driven by Playwright's Firefox 159, not by
       a person's hand.)
 - [x] The root README's table, the package's README and the release walk name the format.
