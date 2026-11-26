@@ -3,7 +3,8 @@
 // up to its size at 100% (set on the page itself) and its canvas filling it;
 // with common's status placeholders for the empty, loading and failed states
 // (the loading one over the pages until the first is drawn) and for a page that
-// cannot be drawn, in its own place.
+// cannot be drawn, in its own place; and a page's text over its canvas, unseen
+// but for its selection.
 
 @use 'common/src/styles/tokens' as *;
 @use 'common/src/styles/status';
@@ -46,7 +47,9 @@
   box-sizing: border-box;
   flex: none;
   max-width: 100%;
-  overflow: hidden;
+  // Clipped, and not a scroll container as `hidden` makes it: in Firefox a drag
+  // from one page into the next took the rest of that page at the first blank.
+  overflow: clip;
   background: $background-primary;
   box-shadow: 0 1px 3px $shadow-color;
 
@@ -60,6 +63,93 @@
     position: absolute;
     inset: 0;
   }
+}
+
+// A page's text, laid by pdf.js's TextLayer over the canvas and not seen: the
+// fewest of pdf.js's `.textLayer` rules (web/pdf_viewer.css, pdf.js 6.5) that
+// place it. pdf.js sets each span's place, `--font-height`, and where needed
+// `--scale-x` and `--rotate`, inline; the layer's own size, from
+// `--total-scale-factor` (CSS pixels to a PDF unit, set by the column) and the
+// two rounding steps (pdf.js's viewer's, from `.pdfViewer .page`); and
+// `--min-font-size`, the smallest the browser draws.
+.pdf-preview__text {
+  --scale-round-x: 1px;
+  --scale-round-y: 1px;
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: clip;
+  line-height: 1;
+  text-align: initial;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+
+  span,
+  br {
+    position: absolute;
+    color: transparent;
+    white-space: pre;
+    cursor: text;
+    transform-origin: 0% 0%;
+  }
+
+  > * {
+    --font-height: 0;
+    --scale-x: 1;
+    --rotate: 0deg;
+
+    z-index: 1;
+    font-size: calc(var(--text-scale-factor) * var(--font-height));
+    transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+  }
+
+  // The selection, seen on a page's white; common has no token for a selection
+  // over a picture, and CodeMirror's is the nearest, a translucent blue.
+  ::selection {
+    color: transparent;
+    background: $code-selection-bg;
+  }
+
+  br::selection {
+    background: transparent;
+  }
+
+  // pdf.js's viewer's `endOfContent`: below the page's text, and over the whole
+  // page while a selection is being made, so a drag past a line's end does not
+  // take the rest of the page.
+  .pdf-preview__text-end {
+    position: absolute;
+    inset: 100% 0 0;
+    z-index: 0;
+    display: block;
+    cursor: default;
+    transform: none;
+    user-select: none;
+  }
+
+  // A page turned by its /Rotate: pdf.js lays the text unturned and names the turn.
+  &[data-main-rotation='90'] {
+    transform: rotate(90deg) translateY(-100%);
+  }
+
+  &[data-main-rotation='180'] {
+    transform: rotate(180deg) translate(-100%, -100%);
+  }
+
+  &[data-main-rotation='270'] {
+    transform: rotate(270deg) translateX(-100%);
+  }
+}
+
+.pdf-preview__pages--selecting .pdf-preview__text-end {
+  top: 0;
 }
 
 .pdf-preview__loading {

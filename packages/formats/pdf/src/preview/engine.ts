@@ -1,11 +1,19 @@
 // pdf.js's document API: the element imports this module with `import()` (through
 // `createLazyLoader`) when a PDF opens, so pdf.js's main module is a file of its
-// own in every build and a file that is not a PDF never loads it.
+// own in every build and a file that is not a PDF never loads it. What the
+// element and its page column use of pdf.js's classes comes from here too.
 
 import { getDocument, PDFWorker } from 'pdfjs-dist';
 
 import type { PackageFiles } from './files';
 import type { PDFDocumentLoadingTask } from 'pdfjs-dist';
+
+/**
+ * pdf.js's text layer: a page's text as transparent spans over its canvas, each
+ * placed by an inline style. The page column is handed it from here, so pdf.js's
+ * main module stays behind this module's `import()`.
+ */
+export { TextLayer } from 'pdfjs-dist';
 
 /**
  * Open the PDF at `url` in the page's worker, as pdf.js loads a file by default

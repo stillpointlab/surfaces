@@ -1,7 +1,8 @@
 // Stand-ins for pdf.js and the page's worker in jsdom, which has neither a
 // `Worker` nor a canvas that draws. The element's tests mock `../preview/engine`
 // with `fakeEngine` and `../worker/start` with `startFakeWorker`, and say from
-// here when a document opens or fails, and when a page has been drawn.
+// here when a document opens or fails, when a page has been drawn, and when its
+// text has been laid.
 
 /** An error as pdf.js passes one from its worker: by its name. */
 export function pdfjsError(name: string, message = name, details?: string): Error {
@@ -40,9 +41,15 @@ export interface FakeRender {
 /** A page of a fake document, `width` by `height` PDF units at 100%. */
 export class FakePage {
   readonly renders: FakeRender[] = [];
+  /** Each text layer made for the page, in order. */
+  readonly texts: FakeTextLayer[] = [];
   cleanups = 0;
   /** Draw every render at once, as it is asked for. */
   drawAtOnce = true;
+  /** Its text, one string a span; none, as a scan has none, unless a test gives it some. */
+  text: string[] = [];
+  /** Lay every text layer at once, as it is asked for. */
+  textAtOnce = true;
 
   constructor(
     readonly number: number,
@@ -51,7 +58,12 @@ export class FakePage {
   ) {}
 
   getViewport({ scale }: { scale: number }) {
-    return { width: this.width * scale, height: this.height * scale, scale };
+    return { width: this.width * scale, height: this.height * scale, scale, userUnit: 1 };
+  }
+
+  /** What the text layer is given: here, the page it reads its text from. */
+  streamTextContent(): { page: FakePage } {
+    return { page: this };
   }
 
   render({ canvas, viewport }: { canvas: HTMLCanvasElement; viewport: { scale: number } }) {
@@ -78,6 +90,67 @@ export class FakePage {
   cleanup(): boolean {
     this.cleanups += 1;
     return true;
+  }
+}
+
+/**
+ * pdf.js's `TextLayer`, as the page column uses it: made with a page's text
+ * content, its container and a viewport; `render` lays a span for each of the
+ * page's strings (at once, or when the test says), `cancel` rejects it as
+ * pdf.js does, and `update` is heard.
+ */
+export class FakeTextLayer {
+  readonly page: FakePage;
+  readonly container: HTMLElement;
+  readonly viewports: { scale: number }[] = [];
+  cancelled = false;
+  private readonly done = deferred<void>();
+
+  constructor({
+    textContentSource,
+    container,
+    viewport,
+  }: {
+    textContentSource: { page: FakePage };
+    container: HTMLElement;
+    viewport: { scale: number };
+  }) {
+    this.page = textContentSource.page;
+    this.container = container;
+    this.viewports.push(viewport);
+    this.page.texts.push(this);
+    this.done.promise.catch(() => undefined);
+  }
+
+  render(): Promise<void> {
+    if (this.page.textAtOnce) queueMicrotask(() => this.lay());
+    return this.done.promise;
+  }
+
+  /** Lay the page's text: what pdf.js does as its text content arrives. */
+  lay(): void {
+    if (this.cancelled) return;
+    for (const string of this.page.text) {
+      const span = document.createElement('span');
+      span.setAttribute('role', 'presentation');
+      span.textContent = string;
+      this.container.append(span);
+    }
+    this.done.resolve();
+  }
+
+  /** pdf.js could not read the page's text. */
+  fail(error: unknown = new Error('bad text')): void {
+    this.done.reject(error);
+  }
+
+  update({ viewport }: { viewport: { scale: number } }): void {
+    this.viewports.push(viewport);
+  }
+
+  cancel(): void {
+    this.cancelled = true;
+    this.done.reject(pdfjsError('AbortException', 'TextLayer task cancelled.'));
   }
 }
 
@@ -139,8 +212,9 @@ export function resetEngine(): void {
   answers.clear();
 }
 
-/** The engine module's stand-in: `openPdf` as the element calls it. */
+/** The engine module's stand-in: `openPdf` as the element calls it, and `TextLayer`. */
 export const fakeEngine = {
+  TextLayer: FakeTextLayer,
   openPdf(url: string, worker: Worker, files: unknown): FakeTask {
     const done = deferred<FakeDocument>();
     // Raced by the element; a test that never answers leaves it unheard.

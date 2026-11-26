@@ -51,16 +51,18 @@ interface Opened {
 /**
  * Read-only view of the PDF at a URL the host gives it: its pages one under
  * another in a column that scrolls, each as wide as the element allows up to its
- * size at 100%, on a quiet ground, drawn by pdf.js in the page's one worker.
- * The file's name labels the whole; each page is a picture labelled "Page 3 of
- * 12". The source and its name are the `src` and `name` attributes, which
- * `setSource` sets.
+ * size at 100%, on a quiet ground, drawn by pdf.js in the page's one worker,
+ * with its text laid over it to be selected, found and read aloud. The file's
+ * name labels the whole; each page is labelled "Page 3 of 12", a group holding
+ * its text, or a picture when it has none (a scan). The source and its name are
+ * the `src` and `name` attributes, which `setSource` sets.
  *
  * Pages are drawn as they come near view (see `PageColumn`), at the screen's
- * pixel ratio within a bound on a canvas's size. Ready is pending until the
- * first page is drawn or the load has failed, and settles at once when there is
- * nothing to show. A failure is said in one of three sentences in place of the
- * pages and reported once; a page that cannot be drawn says so in its own place.
+ * pixel ratio within a bound on a canvas's size, and only those near view hold
+ * their text. Ready is pending until the first page is drawn (not its text) or
+ * the load has failed, and settles at once when there is nothing to show. A
+ * failure is said in one of three sentences in place of the pages and reported
+ * once; a page that cannot be drawn says so in its own place.
  *
  * A new source lets the old one go: its document is destroyed and its download
  * ended. Leaving the page's tree stops drawing and keeps the document, so put
@@ -181,7 +183,7 @@ export class PdfPreview extends HTMLElement implements PdfPreviewElement {
       return;
     }
     if (!live()) return;
-    const column = new PageColumn(pages);
+    const column = new PageColumn(pages, engine.TextLayer);
     opened.column = column;
     this.render();
     if (this.isConnected) column.start();
