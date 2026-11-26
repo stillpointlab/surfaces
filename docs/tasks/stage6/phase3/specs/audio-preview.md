@@ -54,7 +54,9 @@ name and is tried here.
   - _loading:_ until the browser knows the file's length (`loadedmetadata`);
   - _loaded:_ the player;
   - _failed:_ words in place of the player, said once to the error handler.
-- **Two failures, two sentences.** The browser tells them apart (`MediaError.code`):
+- **Two failures, two sentences.** `MediaError.code` alone does not tell them apart: a 404 and a
+  file of noise are both `MEDIA_ERR_SRC_NOT_SUPPORTED` in Chromium 158 and Firefox 159, so for
+  that code the address is asked once:
   - the file did not arrive: "Couldn't load this audio.";
   - it arrived and the browser has no decoder for it: "This browser can't play this audio."
 - **Ready** settles when the length is known or the load has failed, never on a time.
