@@ -159,7 +159,7 @@ A package's `dev/fixtures.ts` default-exports a `HarnessFormat` (`tooling/harnes
 
 - `format`: the format's descriptor, from its `./format` entry. The harness takes the editor and
   preview tags from it, loads them through it, and applies a fixture with its `apply`, as a host
-  does. The seven formats and the two templates mount this way.
+  does. Every format and both templates mount this way.
 - `elements` (`editor`, `preview`, `extra` tags): what to mount without a descriptor, for which the
   module imports its own entries so the elements register. Components and apps name theirs
   here. With `format`, only `extra` is read (`<code-diff>`).
@@ -189,13 +189,14 @@ instead of reading each package:
 `./format` is light: importing it defines no element and loads no editor. Its `load()` functions
 import `./preview` and `./editor`, which the build keeps as files of their own. A host gives the
 descriptors to `createFormatRegistry` (`@stillpointlab/common-format/format`; see
-[`packages/common/README.md`](packages/common/README.md)). The seven formats and both templates
-ship one, so a host registers a new format with one import of its `./format` and one entry in its
+[`packages/common/README.md`](packages/common/README.md)). Every format and both templates ship
+one, so a host registers a new format with one import of its `./format` and one entry in its
 list.
 
-A format given a URL (image, and video, audio or PDF to come) has a preview and no editor, and its
-descriptor `needs: 'url'`. Its element answers to `UrlPreviewElement`, the role's contract in
-`common` (`setSource(src, name)` and the ready signal), and keeps its own tag and its own exported
+A format given a URL (one whose file the browser loads itself, such as an image or a video) has a
+preview and no editor, and its descriptor `needs: 'url'`. Its element answers to
+`UrlPreviewElement`, the role's contract in `common` (`setSource(src, name)` and the ready signal),
+and keeps its own tag and its own exported
 type extending that contract (`VideoPreviewElement`), to which it adds what is its alone once a host
 asks for it. `ImagePreviewElement` is the same contract under image's name. The URL template
 (`npm run new-format -- <name> --url`) starts one: `<name>PreviewElement`, the empty, loading,
