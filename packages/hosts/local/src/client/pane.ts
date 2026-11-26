@@ -723,9 +723,9 @@ export class FilePane {
         // the element keeps what it has.
         return;
       }
-      // The same file: a change event for bytes written again with nothing new is
-      // still another time, so this is a reconnection, or a change the page has
-      // already applied. The element, and a track playing in it, are left alone.
+      // The same validator: the file is the one the element has (the stream came
+      // back to it unchanged, or this event is for a change already applied).
+      // The element, and a track playing in it, are left alone.
       if (there.validator !== null && there.validator === s.validator) return;
       // Another file: a new element at the new file's address, so it is loaded
       // again rather than kept (a playing track starts again at its start).
