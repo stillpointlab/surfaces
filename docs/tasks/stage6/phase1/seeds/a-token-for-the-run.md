@@ -1,5 +1,7 @@
 ---
-column: todo
+column: done
+pr: 181
+completed: 2026-11-25
 created: 2026-11-22T20:20:00-07:00
 tags: [local-host, security]
 ---

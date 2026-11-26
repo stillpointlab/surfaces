@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 183
+completed: 2026-11-25
 created: 2026-11-25T18:00:00-07:00
 tags: [scaffold, formats, dev-tooling, code]
 ---
@@ -101,14 +103,14 @@ descriptor goes.
 
 ## Acceptance / completion checklist
 
-- [ ] `npm run new-format -- trial` and `npm run new-format -- trial2 --url`, then `npm install`
+- [x] `npm run new-format -- trial` and `npm run new-format -- trial2 --url`, then `npm install`
       and `npm run check`, pass with no edit; both appear in the harness and mount through their
       descriptors. The trials are removed before the PR.
-- [ ] Each template passes the descriptor suite and its element's contract suite in place.
-- [ ] A scaffolded text format is registered by the local host's registry with one import and
+- [x] Each template passes the descriptor suite and its element's contract suite in place.
+- [x] A scaffolded text format is registered by the local host's registry with one import and
       one array entry, and opens a file (checked by hand on a trial, not committed).
-- [ ] Image's tests and Context Manager's imports are unchanged.
-- [ ] `npm run check` passes.
+- [x] Image's tests and Context Manager's imports are unchanged.
+- [x] `npm run check` passes.
 
 ## Implementation plan
 
@@ -170,7 +172,7 @@ Checked:
   `.trial` file opened in the preview, the editor, and raw when it did not parse.
 - The trials and every trace of them were removed; the lockfile is the committed one.
 
-Noticed, for phase 2's log once the token's and the raw route's entries are in it:
+Noticed, and in [phase 2's log](../../../../devlogs/stage6/followups.md#phase-2):
 
 - `tooling/new-format.test.ts` is linted and run, and no type check reads it.
 - Image's root entry registers its element, where the templates' register nothing, and its

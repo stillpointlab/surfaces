@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 181
+completed: 2026-11-25
 created: 2026-11-25T17:00:00-07:00
 tags: [local-host, security, code]
 ---
@@ -137,21 +139,21 @@ Jamie, 2026-11-25, on the three rulings this spec asked for:
 
 ## Acceptance / completion checklist
 
-- [ ] A request with no token is refused with `HOST_TOKEN_REQUIRED` on `/`, a page asset,
+- [x] A request with no token is refused with `HOST_TOKEN_REQUIRED` on `/`, a page asset,
       `/api/list`, `/api/file`, `/api/raw`, `/api/events`, a `PUT /api/files` and
       `POST /api/commit`.
-- [ ] The printed address loads the page, and the address the browser then shows has no token.
-- [ ] A wrong token in the address is refused and sets no cookie.
-- [ ] The cookie is `HttpOnly`, `SameSite=Strict`, `Path=/`, and named for the port.
-- [ ] `Authorization: Bearer` with the token is accepted, and with a wrong one refused.
-- [ ] A request another origin starts is still refused by the checks before the token's, with
+- [x] The printed address loads the page, and the address the browser then shows has no token.
+- [x] A wrong token in the address is refused and sets no cookie.
+- [x] The cookie is `HttpOnly`, `SameSite=Strict`, `Path=/`, and named for the port.
+- [x] `Authorization: Bearer` with the token is accepted, and with a wrong one refused.
+- [x] A request another origin starts is still refused by the checks before the token's, with
       the token or without.
-- [ ] `createHost({ token: null })` answers with no token.
-- [ ] Development mode: the same refusals for what Vite serves.
-- [ ] A page left across a restart shows the notice and stops retrying.
-- [ ] By hand, on the built server, in Chromium: an image, a markdown file, a tasks board, a
+- [x] `createHost({ token: null })` answers with no token.
+- [x] Development mode: the same refusals for what Vite serves.
+- [x] A page left across a restart shows the notice and stops retrying.
+- [x] By hand, on the built server, in Chromium: an image, a markdown file, a tasks board, a
       commit and an undo all work from the printed address; a second tab works.
-- [ ] README and the release walk card updated; `npm run check` passes.
+- [x] README and the release walk card updated; `npm run check` passes.
 
 ## Implementation plan
 
