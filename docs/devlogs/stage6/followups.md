@@ -109,3 +109,12 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
 - 2026-11-26 (video): the scaffold's contract test suggests `canplay` in a comment, and both
   media formats settle on `loadedmetadata` (`tooling/template/url-format`). With the entry
   above on the scaffold's prose.
+- 2026-11-26 (HLS): a playlist that names another server says the first sentence only after
+  31.6 s and 14 policy reports: hls.js asks again after an answer with no status. The build's
+  rule for failing at once covers a 4xx alone (`packages/formats/video/src/preview/hls-engine.ts`).
+- 2026-11-26 (HLS): the pane asks after a playlist alone, so a segment changed on disk does not
+  load the stream again (`packages/hosts/local/src/client/pane.ts`).
+- 2026-11-26 (HLS): a `.ts` segment in the tree opens as code and is refused as not text. A
+  folder of segments shows as a list of such files.
+- 2026-11-26 (HLS): the port of the browser tests' server cannot be set from the command line
+  (`tooling/vitest.ts`).
