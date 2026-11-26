@@ -1,9 +1,13 @@
-// Styles for the <video-preview> shadow root: the media centred and
-// contained, with common's status placeholders for the empty, loading and failed
-// states (the loading one over the media while it loads).
+// Styles for the <video-preview> shadow root: the browser's own player filling
+// the element on a dark ground, its picture contained (as large as the element
+// allows, its proportions kept), with common's status placeholders for the
+// empty, loading and failed states (the loading one over the player while the
+// file's length is not yet known) and common's notice for a picture the browser
+// cannot show.
 
 @use 'common/src/styles/tokens' as *;
 @use 'common/src/styles/status';
+@use 'common/src/styles/notice';
 
 :host {
   display: block;
@@ -22,14 +26,32 @@
   width: 100%;
   height: 100%;
   min-height: 220px;
-  padding: $spacing-lg;
   overflow: hidden;
+}
+
+// The ground is dark in either scheme: the host's text colour in a light one,
+// its background in a dark one. Both are tokens, so a host's theme still rules.
+.video-preview__player {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  place-self: stretch;
+  min-width: 0;
+  min-height: 0;
+  background: light-dark(#{$text-primary}, #{$background-primary});
+}
+
+.video-preview__note {
+  flex: none;
+  margin: $spacing-sm;
 }
 
 .video-preview__media {
   display: block;
-  max-width: 100%;
-  max-height: 100%;
+  flex: 1 1 0;
+  width: 100%;
+  min-height: 0;
   object-fit: contain;
 }
 

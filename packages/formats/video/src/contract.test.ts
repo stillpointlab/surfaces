@@ -1,24 +1,30 @@
 // The host-contract conformance suite for the element this format ships. jsdom
-// loads no media, so the hooks tell the video's `<img>` that it loaded or
-// failed; a format with other media tells its own element (`canplay` or `error`
-// on a `<video>`), and says how to see what it shows.
+// loads no media, so the hooks tell the `<video>` that its length is known
+// (`loadedmetadata`) or that it failed (`error`; jsdom gives no `MediaError`, so
+// the element takes it as a file that did not arrive). jsdom plays nothing
+// either: pausing and loading are stood in for.
 import { describeUrlPreviewContract } from '@stillpointlab/common-format/testing';
-import { expect } from 'vitest';
+import { beforeAll, expect, vi } from 'vitest';
 
 import './preview';
 
 import type { VideoPreview } from './preview/video-preview';
 
-const mediaOf = (el: VideoPreview) => el.shadowRoot?.querySelector('img');
+beforeAll(() => {
+  vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
+  vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => undefined);
+});
+
+const mediaOf = (el: VideoPreview) => el.shadowRoot?.querySelector('video');
 
 describeUrlPreviewContract<VideoPreview>('video-preview', {
-  src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 2'%3E%3Crect width='2' height='2' fill='%234f8cff'/%3E%3C/svg%3E",
-  name: 'square.svg',
-  load: (el) => mediaOf(el)?.dispatchEvent(new Event('load')),
+  src: '/files/clip.webm',
+  name: 'clip.webm',
+  load: (el) => mediaOf(el)?.dispatchEvent(new Event('loadedmetadata')),
   fail: (el) => mediaOf(el)?.dispatchEvent(new Event('error')),
   shows: (el, src, name) => {
     expect(mediaOf(el)?.getAttribute('src')).toBe(src);
-    expect(mediaOf(el)?.getAttribute('alt')).toBe(name);
+    expect(mediaOf(el)?.getAttribute('aria-label')).toBe(name);
   },
   empty: (el) => expect(mediaOf(el)).toBeNull(),
 });

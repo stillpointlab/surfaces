@@ -1,10 +1,14 @@
 /// <reference lib="dom" />
 
 import {
+  createNotice,
   createReadyGate,
   createStatus,
   defineElement,
+  type MediaFailure,
+  mediaFailureOf,
   type ReadyGate,
+  releaseMedia,
   reportError,
   STATUS_MESSAGES,
 } from '@stillpointlab/common-format';
@@ -16,28 +20,52 @@ import type { UrlPreviewElement } from '@stillpointlab/common-format';
 /**
  * What a host may ask of `<video-preview>`: the contract of every preview
  * given a URL, under this format's own name. Add here what is this format's alone
- * (a video's position, a PDF's page) once a host asks for it, and not before.
+ * (a position in the video) once a host asks for it, and not before.
  */
 export interface VideoPreviewElement extends UrlPreviewElement {}
 
 type VideoState = 'empty' | 'loading' | 'loaded' | 'failed';
 
+/** What the element says in place of the player, for each of the two failures. */
+const FAILED: Record<MediaFailure, string> = {
+  load: "Couldn't load this video.",
+  decode: "This browser can't play this video.",
+};
+
+/** What it says above a player whose picture the browser cannot show. */
+const NO_PICTURE = "This browser can't show this video's picture. Its sound plays.";
+
 /**
- * Read-only view of the media at a URL the host gives it, with no editor. The
+ * Read-only player for the video file at a URL the host gives it: the
+ * browser's own `<video controls>`, as large as the element with its own
+ * proportions kept, on a dark ground, and labelled with the file's name. The
  * source and its name are the `src` and `name` attributes, which `setSource`
- * sets. Ready is pending while the source loads and settles once it has loaded
- * or failed, or when there is nothing to show; a failure is said in words and
- * reported once. The video shows its source as an image: a real format puts its
- * own media element where the `<img>` is and listens to that element's events.
+ * sets. It never starts by itself. Ready is pending until the browser knows the
+ * file's length (`loadedmetadata`) or the load has failed, and settles at once
+ * when there is nothing to show; a failure is said in one of two sentences and
+ * reported once.
+ *
+ * A file whose sound the browser plays and whose picture it has no decoder for
+ * fails nothing: the browser gives it a picture of no size. Once its length is
+ * known, the element says so above the player.
+ *
+ * A new source lets the old one go (paused, its download ended), so a file
+ * switched away from stops sounding and stops arriving. Leaving the page's tree
+ * pauses it and keeps the media, so put back it is where it stopped.
  */
 export class VideoPreview extends HTMLElement implements VideoPreviewElement {
   private readonly root: ShadowRoot;
   private readonly frame: HTMLDivElement;
+  // The dark ground: the media, and above it the note when there is one.
+  private readonly player: HTMLDivElement;
+  private readonly note: HTMLElement;
+  private readonly cover: HTMLDivElement;
   // Settled whenever connected with nothing left to load.
   private readonly ready: ReadyGate = createReadyGate(this);
   private state: VideoState = 'empty';
-  // The media showing `shown`; null while there is no source.
-  private media: HTMLImageElement | null = null;
+  private failure: MediaFailure = 'load';
+  // The media playing `shown`; null while there is no source.
+  private media: HTMLVideoElement | null = null;
   private shown = '';
 
   static get observedAttributes(): string[] {
@@ -52,6 +80,13 @@ export class VideoPreview extends HTMLElement implements VideoPreviewElement {
     this.frame = document.createElement('div');
     this.frame.className = 'video-preview';
     this.frame.setAttribute('part', 'container');
+    this.player = document.createElement('div');
+    this.player.className = 'video-preview__player';
+    this.note = createNotice({ tone: 'warning', title: NO_PICTURE });
+    this.note.classList.add('video-preview__note');
+    this.cover = document.createElement('div');
+    this.cover.className = 'video-preview__loading';
+    this.cover.append(createStatus('loading', STATUS_MESSAGES.loading));
     this.root.append(style, this.frame);
   }
 
@@ -61,12 +96,18 @@ export class VideoPreview extends HTMLElement implements VideoPreviewElement {
 
   disconnectedCallback(): void {
     this.ready.begin();
+    // Out of the page it falls silent, as a browser does with a media element
+    // taken out of its document; a move, out and back in one task, does not.
+    const media = this.media;
+    queueMicrotask(() => {
+      if (!this.isConnected) media?.pause();
+    });
   }
 
   attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
     if (oldValue === newValue) return;
-    // A new name for the same source labels the media it shows; nothing reloads.
-    if (name === 'name') this.media?.setAttribute('alt', this.sourceName);
+    // A new name for the same source relabels the player; nothing reloads.
+    if (name === 'name') this.label();
     else if (this.isConnected) this.update();
   }
 
@@ -92,6 +133,7 @@ export class VideoPreview extends HTMLElement implements VideoPreviewElement {
   private update(): void {
     const src = this.src;
     if (src !== this.shown || (src && !this.media)) {
+      if (this.media) releaseMedia(this.media);
       this.shown = src;
       this.media = src ? this.createMedia(src) : null;
       this.state = src ? 'loading' : 'empty';
@@ -102,20 +144,34 @@ export class VideoPreview extends HTMLElement implements VideoPreviewElement {
     else this.ready.settle();
   }
 
-  private createMedia(src: string): HTMLImageElement {
-    const media = document.createElement('img');
+  private createMedia(src: string): HTMLVideoElement {
+    const media = document.createElement('video');
     media.className = 'video-preview__media';
+    media.setAttribute('controls', '');
+    media.setAttribute('preload', 'metadata');
+    media.setAttribute('playsinline', '');
     media.setAttribute('src', src);
-    media.setAttribute('alt', this.sourceName);
-    // Only the media in the element is heard: one it replaced may still finish
-    // late, and that is about a source no longer shown.
-    media.addEventListener('load', () => this.media === media && this.settle('loaded'), {
-      once: true,
+    // Only the media in the element is heard: one it let go may still say
+    // something late, and that is about a source no longer shown.
+    media.addEventListener('loadedmetadata', () => {
+      if (this.media === media && this.state === 'loading') this.settle('loaded');
     });
-    media.addEventListener('error', () => this.media === media && this.settle('failed'), {
-      once: true,
+    // A picture's size that changes after the length is known moves the note with it.
+    media.addEventListener('resize', () => {
+      if (this.media === media && this.state === 'loaded') this.render();
+    });
+    media.addEventListener('error', () => {
+      if (this.media === media && this.state !== 'failed') void this.fail(media);
     });
     return media;
+  }
+
+  /** Which failure it was takes a moment to learn (see `mediaFailureOf`); ready waits for it. */
+  private async fail(media: HTMLVideoElement): Promise<void> {
+    const failure = await mediaFailureOf(media);
+    if (this.media !== media || this.state === 'failed') return;
+    this.failure = failure;
+    this.settle('failed');
   }
 
   private settle(state: 'loaded' | 'failed'): void {
@@ -126,20 +182,45 @@ export class VideoPreview extends HTMLElement implements VideoPreviewElement {
     if (this.isConnected) this.ready.settle();
   }
 
-  /** The empty or failed words, or the media with a loading cover until it has loaded. */
+  /** The player's label for a screen reader: the file's name. */
+  private label(): void {
+    const name = this.sourceName;
+    if (name) this.media?.setAttribute('aria-label', name);
+    else this.media?.removeAttribute('aria-label');
+  }
+
+  /**
+   * The empty words, the failed words, or the player: covered while it loads,
+   * and under the note once its length is known with a picture of no size.
+   */
   private render(): void {
     if (!this.media) {
       this.frame.replaceChildren(createStatus('empty', 'No video selected.'));
-    } else if (this.state === 'failed') {
-      this.frame.replaceChildren(createStatus('error', "Couldn't load this video."));
-    } else if (this.state === 'loading') {
-      const cover = document.createElement('div');
-      cover.className = 'video-preview__loading';
-      cover.append(createStatus('loading', STATUS_MESSAGES.loading));
-      this.frame.replaceChildren(this.media, cover);
-    } else {
-      this.frame.replaceChildren(this.media);
+      return;
     }
+    if (this.state === 'failed') {
+      this.frame.replaceChildren(createStatus('error', FAILED[this.failure]));
+      return;
+    }
+    this.label();
+    if (this.player.parentNode !== this.frame) this.frame.replaceChildren(this.player);
+    if (this.state === 'loading') this.show(this.media, this.cover);
+    else if (this.media.videoWidth === 0) this.show(this.note, this.media);
+    else this.show(this.media);
+  }
+
+  /**
+   * Make the player's children `nodes`, changing only what differs: the media
+   * stays where it is from loading to loaded, never taken out and put back.
+   */
+  private show(...nodes: Node[]): void {
+    for (const child of [...this.player.childNodes]) {
+      if (!nodes.includes(child)) child.remove();
+    }
+    nodes.forEach((node, at) => {
+      const there = this.player.childNodes[at] ?? null;
+      if (there !== node) this.player.insertBefore(node, there);
+    });
   }
 }
 

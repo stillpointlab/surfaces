@@ -10,11 +10,12 @@ import type { FormatDescriptor } from '@stillpointlab/common-format/format';
 
 export const videoFormat: FormatDescriptor = {
   id: 'video',
-  // Replace with the real extensions: lower case, with the dot.
-  opens: ['.video'],
+  // Every ending the stage 6 spike saw play in both Chromium and Firefox. `.ogv`
+  // is not one: both have dropped Theora, and play its sound with no picture.
+  opens: ['.mp4', '.m4v', '.webm', '.mov', '.mkv'],
   needs: 'url',
   preview: { tag: 'video-preview', load: () => import('./preview/index') },
-  /** The URL is the source; the file's name is what it is called. */
+  /** The URL is the source; the file's name labels the player. */
   apply(element, file) {
     (element as VideoPreviewElement).setSource(file.url ?? '', fileNameOf(file.path));
   },

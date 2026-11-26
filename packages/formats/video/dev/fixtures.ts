@@ -1,24 +1,35 @@
 // This format in the surfaces harness (`npm run dev`), mounted through its
 // descriptor as a host would. Preview only: a fixture's content is the URL the
-// host hands the element, and its path's file name the source's name.
+// host hands the element, and its path's file name the source's name. One clip
+// for each ending the format opens, so each can be seen and heard by hand in any
+// browser; the README has the command that made each.
 import { videoFormat } from '../src/format';
 
-import type { HarnessFormat } from '../../../../tooling/harness/types';
+import type { HarnessFormat, HarnessFixture } from '../../../../tooling/harness/types';
 
-// The video shows its source as an image, so its fixtures are SVG data URIs.
-const svg = (body: string) =>
-  `data:image/svg+xml,${encodeURIComponent(
-    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 360'>${body}</svg>`
-  )}`;
+const clip = (name: string): HarnessFixture => ({
+  path: name,
+  content: new URL(`./media/${name}`, import.meta.url).href,
+});
 
-const scene =
-  "<rect width='640' height='360' fill='#f4f7fb'/><circle cx='220' cy='160' r='72' fill='#4f8cff'/><path d='M80 300h480L410 145 300 245l-60-64z' fill='#234'/>";
+// An address that answers nothing. A missing path will not do here: the harness's
+// Vite answers any path it has no file for with its own page, 200, which the
+// browser then fails to decode. A revoked object URL fails as a file that never
+// arrived does, at once, and asks nothing of the network.
+const gone = URL.createObjectURL(new Blob([]));
+URL.revokeObjectURL(gone);
 
 export default {
   format: videoFormat,
   fixtures: {
-    'A scene (data URI)': { path: 'scene.video', content: svg(scene) },
-    'Missing source': { path: 'missing.video', content: '/no-such-file.video' },
-    'No source': { path: 'empty.video', content: '' },
+    'WebM, VP9 and Opus, 4 s': clip('clip.webm'),
+    'MP4, H.264 and AAC': clip('clip.mp4'),
+    'MP4, H.264 and AAC (.m4v)': clip('clip.m4v'),
+    'QuickTime, H.264 and AAC (.mov)': clip('clip.mov'),
+    'Matroska, H.264 and Opus (.mkv)': clip('clip.mkv'),
+    'Sound and no picture (Theora in .mkv)': clip('no-picture.mkv'),
+    'Missing file': { path: 'no-such-file.mp4', content: gone },
+    'Noise the browser cannot decode': clip('noise.mp4'),
+    'No source': { path: 'empty.mp4', content: '' },
   },
 } satisfies HarnessFormat;

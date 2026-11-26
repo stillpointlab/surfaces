@@ -1,7 +1,7 @@
 {
   "name": "@stillpointlab/video-format",
   "version": "0.1.0",
-  "description": "A Stillpoint Lab format given a URL: a <video-preview> of the media a host hands it, with no editor.",
+  "description": "A Stillpoint Lab format given a URL: a <video-preview> that plays the video file a host hands it, with no editor.",
   "license": "MIT",
   "type": "module",
   "sideEffects": [
