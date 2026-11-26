@@ -1,5 +1,5 @@
 // The host-contract conformance suite for the element this format ships. jsdom
-// loads no media, so the hooks tell the sample's `<img>` that it loaded or
+// loads no media, so the hooks tell the element's `<img>` that it loaded or
 // failed; a format with other media tells its own element (`canplay` or `error`
 // on a `<video>`), and says how to see what it shows.
 import { describeUrlPreviewContract } from '@stillpointlab/common-format/testing';

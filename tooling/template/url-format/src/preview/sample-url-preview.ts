@@ -27,8 +27,9 @@ type SampleState = 'empty' | 'loading' | 'loaded' | 'failed';
  * source and its name are the `src` and `name` attributes, which `setSource`
  * sets. Ready is pending while the source loads and settles once it has loaded
  * or failed, or when there is nothing to show; a failure is said in words and
- * reported once. The sample shows its source as an image: a real format puts its
- * own media element where the `<img>` is and listens to that element's events.
+ * reported once. As the template left it, it shows its source as an image:
+ * put this format's own media element where the `<img>` is and listen to that
+ * element's events.
  */
 export class SamplePreview extends HTMLElement implements SamplePreviewElement {
   private readonly root: ShadowRoot;

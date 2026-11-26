@@ -5,7 +5,8 @@ import { sampleFormat } from '../src/format';
 
 import type { HarnessFormat } from '../../../../tooling/harness/types';
 
-// The sample shows its source as an image, so its fixtures are SVG data URIs.
+// As the template left it, this format shows its source as an image, so these
+// fixtures are SVG data URIs. Replace them with media of the kind it opens.
 const svg = (body: string) =>
   `data:image/svg+xml,${encodeURIComponent(
     `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 360'>${body}</svg>`
