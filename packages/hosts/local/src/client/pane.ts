@@ -649,8 +649,21 @@ export class FilePane {
     );
   }
 
+  /**
+   * Hand the element that is leaving an empty source, when its format takes a
+   * URL. Out of the page a player is paused and no more: what it was fetching
+   * still arrives. Given no source, it lets its media go.
+   */
+  private letGo(next: HTMLElement | null): void {
+    const leaving = this.session;
+    if (!leaving?.element || leaving.element === next) return;
+    if (leaving.format?.needs !== 'url') return;
+    leaving.format.apply(leaving.element, { path: leaving.path, url: '' });
+  }
+
   /** Make `session` what is open, in place of whatever was. */
   private begin(session: Session): void {
+    this.letGo(session.element);
     this.session?.listeners.abort();
     this.session = session;
     if (session.element) {
@@ -695,6 +708,7 @@ export class FilePane {
   }
 
   private showNothing(): void {
+    this.letGo(null);
     this.session?.listeners.abort();
     this.session = null;
     render(this.body, html`<p class="pane-message">${words.nothingOpen}</p>`);

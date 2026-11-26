@@ -451,6 +451,25 @@ describe('a change on disk', () => {
     expect(shown().getAttribute('src')).toBe(src);
   });
 
+  it('gives an element that takes a URL no source as it leaves, so what it was loading stops arriving', async () => {
+    await page.navigate({ path: 'pic.png', view: 'preview' });
+    await settle();
+    const first = shown();
+    expect(first.getAttribute('src')).toContain('/api/raw/pic.png');
+    // Replaced by a new element for the changed file: the old one is let go.
+    host.versions.set('pic.png', 'v-next');
+    host.emit({ type: 'changed', paths: ['pic.png'] });
+    await settle();
+    const second = shown();
+    expect(second).not.toBe(first);
+    expect(first.getAttribute('src')).toBe('');
+    // Another file opened: the same.
+    await page.navigate({ path: 'a.md', view: 'preview' });
+    await settle();
+    expect(second.getAttribute('src')).toBe('');
+    expect(shown().localName).toBe('fake-preview');
+  });
+
   it('replaces the open file’s element when the stream comes back to a file changed while away, at its new address', async () => {
     await page.navigate({ path: 'pic.png', view: 'preview' });
     await settle();
