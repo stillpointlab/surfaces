@@ -5,6 +5,12 @@ tags: [common, hosts, context-manager, spike]
 
 # Context Manager on the runner
 
+> **Read the spike first:**
+> [Context Manager on the runner](../../stage6/phase3/spikes/context-manager-on-the-runner.md)
+> (2026-11-26) checked this seed against both codebases. It found the seed wrong or out of date
+> in eight places, which its table lists, and it ends with three shapes adoption could take and
+> the questions that are Jamie's. What follows is left as it was written on 2026-11-22.
+
 `common-format/host` has one runner for an app's op (`runOp`, `projectView`, `createInstance`,
 `loadInstance` in `packages/common/src/host/runner.ts`), written against the storage port and
 nothing else. The harness and the local host run on it. Context Manager does not: it runs its
