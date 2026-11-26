@@ -8,9 +8,8 @@ tags: [formats, feature, code]
 
 _From the [media previews brief](../../phase1/briefs/media_previews.md), phase 4, and the
 [pdf.js spike](../spikes/pdfjs-in-a-format-package.md), which ran pdf.js in a trial format under
-both hosts' policies. One PR. The spike's four questions for Jamie are under
-[Clarifications](#clarifications), each with a lean this spec is written to; an answer the other
-way changes the section it names and nothing else._
+both hosts' policies. One PR. The spike's questions for Jamie were ruled on 2026-11-26, and are
+under [Decided](#decided)._
 
 ## High-level goal
 
@@ -130,7 +129,7 @@ JavaScript fallback from a folder's address too, and has no function a package c
 - The copy's first line says what it is generated from and what was changed (pdf.js is
   Apache-2.0).
 
-This is [Clarification 1](#clarifications), written to its lean.
+Jamie allowed this on 2026-11-26 ([Decided](#decided), 1).
 
 ### 6. Registered in the local host
 
@@ -160,39 +159,39 @@ image, one with a password, a file that is not a PDF, a missing file, and no sou
 ## Known and left
 
 - **A scanned page in JPEG 2000 takes about two seconds** to draw, where WebAssembly would take
-  a third of one ([Clarification 2](#clarifications)).
+  a third of one ([Decided](#decided), 2).
 - **No colour management.** An image with an ICC profile is drawn in its alternate colours. The
   spike measured the share of inked pixels moving from 0.268 to 0.269 on its sample.
 - **Safari is not run here.** pdf.js's modern build uses features an older Safari lacks, and its
   `legacy/` build is the answer if the walk on a Mac finds one. Which build ships is decided
   there.
-- **npm installs `@napi-rs/canvas` with pdf.js,** 35 MB of native code used only in Node
-  ([Clarification 3](#clarifications)).
+- **npm installs `@napi-rs/canvas` with pdf.js,** 35 MB of native code
+  ([Decided](#decided), 3). It is a canvas for Node, which has none: pdf.js uses it to draw a
+  page where there is no browser (a server making pictures of pages), and nowhere else (read:
+  `NodeCanvasFactory` in `build/pdf.mjs`). No browser is sent it, and neither host's build
+  holds it.
 
-## Clarifications
+## Decided
 
-For Jamie, with the agent's lean in each:
+Jamie, 2026-11-26, on the spike's questions and the agent's leans:
 
-1. **How the scans' decoders ship** (section 5). The generated worker with one line changed needs
-   no host configuration, and has to be kept true at each pdf.js upgrade, which the build checks.
-   The other ways: a folder each host copies and serves, which is configuration in both hosts;
-   or no decoders at first, and blank scans. Lean: the generated worker, and an issue offered to
-   pdf.js asking for a function so the change can go.
-2. **`'wasm-unsafe-eval'` stays out of both policies.** Allowing it would make scans draw in a
-   third of a second and bring colour management, and would loosen `script-src` for every page
-   of both hosts. Lean: stay out; look again if scans prove common.
-3. **`@napi-rs/canvas`** comes with pdf.js as an optional dependency. Lean: accept it, and not
-   fight npm over it.
-4. **The text layer is the next spec, not this one.** Without it a PDF's text cannot be
-   selected, searched or read aloud: a canvas is a picture. The spike found it works in a shadow
-   root under both policies. Lean: this spec draws; the next, in the same phase and before
-   Context Manager adopts, adds the text.
-5. **A PDF with a password is told so in words,** with no field to type one. Lean: yes, for now.
+1. **The scans' decoders ship by the generated worker with one line changed** (section 5):
+   "one-line change is fine with build fail". An issue is offered to pdf.js asking for a
+   function, so the change can go.
+2. **`'wasm-unsafe-eval'` stays out of both policies:** "sounds fine". Scans draw slower and
+   there is no colour management.
+3. **`@napi-rs/canvas` is accepted:** "should be fine". What it is for is under
+   [Known and left](#known-and-left).
+4. **The text layer is the next spec, not this one:** "text layer next is fine".
+5. **A PDF with a password is told so in words for now,** with no field to type one. A field is
+   deferred, with [a spike](../spikes/unlocking-a-pdf-with-a-password.md) to say what it takes.
+6. **Signing a PDF** has [a spike](../spikes/signing-a-pdf.md) too, which Jamie asked for the
+   same day. It is no part of this spec.
 
 ## Non-goals
 
 - The text layer, links, the outline, annotations and forms.
-- A field for a password. Zoom, rotation, printing, a page number to jump to.
+- A field for a password, and signing. Zoom, rotation, printing, a page number to jump to.
 - WebAssembly, and pdf.js's renderer worker.
 - An editor, or any write.
 - Context Manager, which adopts all three formats in phase 5.
