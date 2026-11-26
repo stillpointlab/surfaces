@@ -7,7 +7,8 @@ import { MAX_BODY_BYTES } from './limits';
 import type { Failure } from '@stillpointlab/common-format/app';
 
 /**
- * The HTTP status for a refusal's code: not found, a conflict, or anything else.
+ * The HTTP status for a refusal's code: not found, a conflict, forbidden, or
+ * anything else.
  *
  * A git failure is 422 and not 500. The repository is the person's, not the
  * server's: a hook that refuses, an identity not set, a signing key that fails
@@ -39,6 +40,7 @@ export function statusFor(code: string): number {
     case 'HOST_UNDO_CONFLICT':
     case 'HOST_CANNOT_UNDO':
       return 409;
+    case 'HOST_FORBIDDEN':
     case 'HOST_TOKEN_REQUIRED':
       return 403;
     case 'HOST_GIT_FAILED':
