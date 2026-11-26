@@ -2,10 +2,36 @@
 // with `import()` the first time it is given a playlist, so hls.js is a file of
 // its own in every build and loads for a playlist alone, never for a file.
 
-import Hls, { ErrorDetails, ErrorTypes, type ErrorData } from 'hls.js';
+import Hls, { ErrorDetails, ErrorTypes, type ErrorData, type LoadPolicy } from 'hls.js';
 
 import type { StartEngine, StreamEngine } from './stream';
 import type { MediaFailure } from '@stillpointlab/common-format';
+
+/**
+ * How many times hls.js asks again for a segment or a playlist that failed with
+ * an answer other than a 4xx: no status at all (the page's policy refused the
+ * request, the connection dropped) or a server error. Left to itself it asks for
+ * a segment six times more, waiting up to 8 s between, so a playlist whose
+ * segments name another server said its sentence after 31.6 s and 14 policy
+ * reports. Two more tries, after 1 s and 2 s, say it in about 3 s. The cost: a
+ * stream on a poor connection gives up after those two, where hls.js would have
+ * kept asking for half a minute. A playlist's own default is two already.
+ */
+const RETRIES = 2;
+
+/** `policy` with at most `RETRIES` retries after an error; its timeouts as they were. */
+function capped(policy: LoadPolicy): LoadPolicy {
+  const { errorRetry } = policy.default;
+  return {
+    default: {
+      ...policy.default,
+      errorRetry: errorRetry && {
+        ...errorRetry,
+        maxNumRetry: Math.min(errorRetry.maxNumRetry, RETRIES),
+      },
+    },
+  };
+}
 
 /**
  * Network errors that are about what arrived, not about its arriving: a playlist
@@ -34,8 +60,8 @@ function failureOf(data: ErrorData): MediaFailure {
 /**
  * A request the server refused (`4xx`): a file the folder does not have. hls.js
  * does not retry such an answer, but for a segment of a stream with no other
- * level it asks again with a growing wait, and gives up some 30 s later
- * (measured: 31.7 s in Chromium 158). The element says so at once.
+ * level it asks again with a growing wait, `RETRIES` times (by its default, six:
+ * 31.7 s in Chromium 158). The element says so at once.
  */
 function refused(data: ErrorData): boolean {
   const code = data.response?.code ?? 0;
@@ -47,17 +73,23 @@ function refused(data: ErrorData): boolean {
  * (`enableWorker: false`): the host's policy refuses a `blob:` worker, and hls.js
  * runs on the page's own thread without one.
  *
- * hls.js retries what it can by itself, and says `fatal` when it has given up. A
- * fatal media error is recovered once, with `recoverMediaError()` (the source
- * rebuilt and the media attached again, where it was), unless it says no codec
- * of the stream can be decoded; a second is a failure. Every other fatal error
- * is a failure at once, and so is a file the server refused.
+ * hls.js retries what it can by itself, at most `RETRIES` times after an error,
+ * and says `fatal` when it has given up. A fatal media error is recovered once,
+ * with `recoverMediaError()` (the source rebuilt and the media attached again,
+ * where it was), unless it says no codec of the stream can be decoded; a second
+ * is a failure. Every other fatal error is a failure at once, and so is a file
+ * the server refused.
  */
 class HlsEngine implements StreamEngine {
   private hls: Hls | null = null;
 
   attach(media: HTMLVideoElement, src: string, failed: (failure: MediaFailure) => void): void {
-    const hls = new Hls({ enableWorker: false });
+    // A policy given replaces hls.js's whole default, so each is its default capped.
+    const hls = new Hls({
+      enableWorker: false,
+      fragLoadPolicy: capped(Hls.DefaultConfig.fragLoadPolicy),
+      playlistLoadPolicy: capped(Hls.DefaultConfig.playlistLoadPolicy),
+    });
     this.hls = hls;
     let recovered = false;
     hls.on(Hls.Events.ERROR, (_event, data) => {
