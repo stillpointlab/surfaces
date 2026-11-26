@@ -41,7 +41,8 @@
     "build": "npm run gen:styles && tsup",
     "dev": "npm run gen:styles && vite --config ../../../tooling/harness/vite.config.ts",
     "typecheck": "npm run gen:styles && tsc --noEmit",
-    "test": "npm run gen:styles && vitest run"
+    "test": "npm run gen:styles && vitest run",
+    "test:browser": "npm run gen:styles && vitest run --config vitest.browser.config.ts"
   },
   "dependencies": {
     "@stillpointlab/common-format": "*"
