@@ -14,9 +14,9 @@ import {
   projectArgs,
   projectsFor,
   selectionFor,
-} from './browser-projects.mjs';
+} from './browser-projects.ts';
 
-const script = join(import.meta.dirname, 'browser-projects.mjs');
+const script = join(import.meta.dirname, 'browser-projects.ts');
 const repoRoot = join(import.meta.dirname, '..');
 
 let root: string;

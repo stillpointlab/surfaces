@@ -1,14 +1,16 @@
 {
   "extends": "../tsconfig.base.json",
-  // The tooling's own TypeScript, tests included, and the root's two vitest
-  // configs, all run in Node. The `.mjs` scripts they import are read, and checked,
-  // by their JSDoc types. The harness has its own config (harness/tsconfig.json).
+  // The tooling's own TypeScript, tests included, and the root's configs, all run
+  // in Node. Node runs the scripts as they are, by taking their types out, so they
+  // keep to syntax that can be taken out (`erasableSyntaxOnly`), name a type import
+  // as one (`verbatimModuleSyntax`) and import each other by `.ts`. The harness
+  // has its own config (harness/tsconfig.json).
   "compilerOptions": {
     "lib": ["ES2022"],
     "types": ["node"],
-    "allowJs": true,
     "allowImportingTsExtensions": true,
-    "checkJs": true
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true
   },
-  "include": ["*.ts", "../vitest.config.ts", "../vitest.browser.config.ts"]
+  "include": ["*.ts", "../vitest.config.ts", "../vitest.browser.config.ts", "../eslint.config.ts"]
 }

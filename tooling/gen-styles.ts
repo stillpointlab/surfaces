@@ -23,7 +23,7 @@ const packageDirs = [
   join(root, 'tooling', 'template'),
 ];
 
-function* scssFiles(dir) {
+function* scssFiles(dir: string): Generator<string> {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);
     if (entry.isDirectory()) {
@@ -58,7 +58,7 @@ for (const pkg of targets) {
       loadPaths: [packagesDir],
       charset: false,
     });
-    const banner = `// AUTO-GENERATED from ${name}.scss by tooling/gen-styles.mjs. Do not edit.\n`;
+    const banner = `// AUTO-GENERATED from ${name}.scss by tooling/gen-styles.ts. Do not edit.\n`;
     writeFileSync(outPath, `${banner}export const ${name}Styles = ${JSON.stringify(css)};\n`);
     console.log(`gen-styles: wrote ${relative(root, outPath)} (${css.length} bytes)`);
   }

@@ -24,7 +24,7 @@
     "dist"
   ],
   "scripts": {
-    "gen:styles": "node ../../../tooling/gen-styles.mjs .",
+    "gen:styles": "node ../../../tooling/gen-styles.ts .",
     "build": "npm run gen:styles && tsup",
     "dev": "npm run gen:styles && vite --config ../../../tooling/harness/vite.config.ts",
     "typecheck": "npm run gen:styles && tsc --noEmit",

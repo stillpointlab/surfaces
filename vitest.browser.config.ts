@@ -1,6 +1,6 @@
 import { defineConfig } from 'vitest/config';
 
-import { browserPackages } from './tooling/browser-projects.mjs';
+import { browserPackages } from './tooling/browser-projects.ts';
 import { requireChromium } from './tooling/vitest.ts';
 
 // The browser runner: every package that has browser tests keeps a

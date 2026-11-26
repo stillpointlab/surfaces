@@ -1,5 +1,5 @@
 node_modules
 dist
 package-lock.json
-# generated from *.scss by tooling/gen-styles.mjs
+# generated from *.scss by tooling/gen-styles.ts
 *.styles.ts

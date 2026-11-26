@@ -29,13 +29,8 @@ const NAME = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 
 const utf8 = new TextDecoder('utf-8', { fatal: true });
 
-/**
- * The file's text, or null when its bytes are not UTF-8 (media under dev/media).
- *
- * @param {Uint8Array} bytes
- * @returns {string | null}
- */
-function asText(bytes) {
+/** The file's text, or null when its bytes are not UTF-8 (media under dev/media). */
+function asText(bytes: Uint8Array): string | null {
   try {
     return utf8.decode(bytes);
   } catch {
@@ -47,12 +42,11 @@ function asText(bytes) {
  * Write the template (the URL one with `url`) to `<into>/<name>` and return that
  * folder. `into` is packages/formats unless a test says otherwise. Throws on a
  * name that is not kebab-case or a folder that already exists.
- *
- * @param {string} name
- * @param {{ url?: boolean, into?: string }} [options]
- * @returns {string}
  */
-export function scaffold(name, { url = false, into = formatsDir } = {}) {
+export function scaffold(
+  name: string,
+  { url = false, into = formatsDir }: { url?: boolean; into?: string } = {}
+): string {
   if (!NAME.test(name)) throw new Error(`"${name}" is not a kebab-case name`);
   const pascal = name
     .split('-')
@@ -65,19 +59,14 @@ export function scaffold(name, { url = false, into = formatsDir } = {}) {
   // The URL template's kebab names (its package, tag, id and extension) are
   // `sample-url`, so the two templates share the workspace and the harness; they
   // fold into the one name first. Then camelCase, kebab-case and PascalCase.
-  /** @param {string} text */
-  const rename = (text) =>
+  const rename = (text: string): string =>
     text
       .replaceAll('sample-url', 'sample')
       .replace(/sample(?=[A-Z])/g, camel)
       .replaceAll('sample', name)
       .replaceAll('Sample', pascal);
 
-  /**
-   * @param {string} from
-   * @param {string} to
-   */
-  const copy = (from, to) => {
+  const copy = (from: string, to: string): void => {
     mkdirSync(to, { recursive: true });
     for (const entry of readdirSync(from, { withFileTypes: true })) {
       const source = join(from, entry.name);
@@ -103,13 +92,10 @@ export function scaffold(name, { url = false, into = formatsDir } = {}) {
  * nobody has touched. The rules are read for a file of the same name at the
  * repository's root (a `package.json` has rules of its own), so a folder outside
  * it (a test's) is formatted alike.
- *
- * @param {string} dest
- * @returns {Promise<string[]>}
  */
-export async function formatScaffold(dest) {
+export async function formatScaffold(dest: string): Promise<string[]> {
   const prettier = await import('prettier');
-  const changed = [];
+  const changed: string[] = [];
   for (const entry of readdirSync(dest, { recursive: true, withFileTypes: true })) {
     if (!entry.isFile()) continue;
     const file = join(entry.parentPath, entry.name);
@@ -127,12 +113,8 @@ export async function formatScaffold(dest) {
   return changed;
 }
 
-/**
- * `npm run new-format -- <name> [--url]`
- *
- * @param {string[]} args
- */
-async function main(args) {
+/** `npm run new-format -- <name> [--url]` */
+async function main(args: string[]): Promise<void> {
   const flags = args.filter((arg) => arg.startsWith('-'));
   const names = args.filter((arg) => !arg.startsWith('-'));
   if (names.length !== 1 || flags.some((flag) => flag !== '--url') || !NAME.test(names[0])) {
@@ -140,7 +122,7 @@ async function main(args) {
     process.exit(1);
   }
   const [name] = names;
-  let dest;
+  let dest: string;
   try {
     dest = scaffold(name, { url: flags.includes('--url') });
   } catch (error) {

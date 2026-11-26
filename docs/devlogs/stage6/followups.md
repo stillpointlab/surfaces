@@ -71,7 +71,13 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
   - Built 2026-11-26 (Jamie: fix; [#192](https://github.com/stillpointlab/surfaces/pull/192)): three lines, once, before any package's config
     loads.
 - 2026-11-26 (the phase's follow-ups): the raw route refuses a `HEAD` that carries no `Origin`.
-  Nothing in the page sends one. Not ruled; the agent's lean is to close.
+  Nothing in the page sends one.
+  - Closed 2026-11-26 (Jamie: "we'll leave Origin on HEAD for now and wait until it is something
+    a feature requires"). The check asks every request that is not a `GET` for the page's
+    `Origin`, to keep out a write from another site's page, and a `HEAD` falls under its wording.
 - 2026-11-26 (the phase's follow-ups): `tooling/check-tokens.mjs` and `gen-styles.mjs` carry no
-  types, so the type check that now reads `tooling/` does not read them. Not ruled; the agent's
-  lean is to close.
+  types, so the type check that now reads `tooling/` does not read them.
+  - Built 2026-11-26 (Jamie: "let's consolidate on .ts for all files, even tooling"): the four
+    scripts under `tooling/` and the lint config are TypeScript, which Node runs as it is, and
+    the type check reads them. The one JavaScript file left is the local host's
+    `bin/surfaces.js`: Node takes no types out of a file under `node_modules`.

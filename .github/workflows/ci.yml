@@ -26,7 +26,7 @@ jobs:
       - run: npm run build
 
   # Which packages' browser tests this run starts, decided by
-  # tooling/browser-projects.mjs: those a pull request changes, every one by
+  # tooling/browser-projects.ts: those a pull request changes, every one by
   # hand, none on a push to main (the pull request ran them).
   browser-projects:
     if: github.event_name != 'push'
@@ -43,7 +43,7 @@ jobs:
         with:
           node-version: '24'
       - id: select
-        run: node tooling/browser-projects.mjs
+        run: node tooling/browser-projects.ts
 
   # Skipped when no project was chosen, so such a run installs no browser.
   browser:

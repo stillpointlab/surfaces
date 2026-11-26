@@ -8,7 +8,7 @@ import { join, relative } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { formatScaffold, scaffold } from './new-format.mjs';
+import { formatScaffold, scaffold } from './new-format.ts';
 
 /** Every file under `dir`, relative to it. */
 function filesUnder(dir: string): string[] {

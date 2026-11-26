@@ -1,10 +1,10 @@
 // Which packages' browser tests a CI run starts: those a pull request changes,
 // every one when the run is started by hand, none on a push to main.
 //
-//   node tooling/browser-projects.mjs <base>   the packages with browser tests changed since
+//   node tooling/browser-projects.ts <base>   the packages with browser tests changed since
 //                                              <base> (a ref or a commit), one name a line
-//   node tooling/browser-projects.mjs --all    every package with browser tests
-//   node tooling/browser-projects.mjs          in CI: decided by GITHUB_EVENT_NAME and the
+//   node tooling/browser-projects.ts --all    every package with browser tests
+//   node tooling/browser-projects.ts          in CI: decided by GITHUB_EVENT_NAME and the
 //                                              event's payload, and written to GITHUB_OUTPUT
 //                                              as `projects` (names) and `args` (--project …)
 //
@@ -21,16 +21,28 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 const BROWSER_CONFIG = 'vitest.browser.config.ts';
 
+/** A workspace: its folder relative to the root, and its package's name. */
+export interface BrowserPackage {
+  dir: string;
+  name: string;
+}
+
+/** Every package (`'all'`), those changed since a base commit, or none (`null`). */
+export type Selection = 'all' | { base: string } | null;
+
+/** The part of a GitHub Actions event's payload this reads. */
+export interface GitHubEvent {
+  pull_request?: { base?: { sha?: string } };
+}
+
 /**
  * Every workspace that keeps a browser config, as `{ dir, name }`: its folder
  * relative to `root` and its package's name, which is its vitest project's name.
- *
- * @param {string} [root]
- * @returns {{ dir: string, name: string }[]}
  */
-export function browserPackages(root = repoRoot) {
-  /** @type {{ workspaces?: string[] }} */
-  const { workspaces = [] } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+export function browserPackages(root: string = repoRoot): BrowserPackage[] {
+  const { workspaces = [] } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as {
+    workspaces?: string[];
+  };
   const dirs = workspaces.flatMap((pattern) => {
     if (!pattern.endsWith('/*')) return [pattern];
     const parent = pattern.slice(0, -2);
@@ -43,7 +55,8 @@ export function browserPackages(root = repoRoot) {
     .filter((dir) => existsSync(join(root, dir, BROWSER_CONFIG)))
     .map((dir) => ({
       dir,
-      name: JSON.parse(readFileSync(join(root, dir, 'package.json'), 'utf8')).name,
+      name: (JSON.parse(readFileSync(join(root, dir, 'package.json'), 'utf8')) as { name: string })
+        .name,
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -51,12 +64,8 @@ export function browserPackages(root = repoRoot) {
 /**
  * The names of the packages that hold one of `files` (paths relative to the
  * repository's root, as git prints them).
- *
- * @param {string[]} files
- * @param {{ dir: string, name: string }[]} packages
- * @returns {string[]}
  */
-export function changedProjects(files, packages) {
+export function changedProjects(files: string[], packages: BrowserPackage[]): string[] {
   return packages
     .filter(({ dir }) => files.some((file) => file.startsWith(`${dir}/`)))
     .map(({ name }) => name);
@@ -65,12 +74,8 @@ export function changedProjects(files, packages) {
 /**
  * The files changed between where HEAD left `base` and HEAD (`git diff base...HEAD`),
  * a rename as both its paths.
- *
- * @param {string} base
- * @param {string} [root]
- * @returns {string[]}
  */
-export function changedFiles(base, root = repoRoot) {
+export function changedFiles(base: string, root: string = repoRoot): string[] {
   const out = execFileSync('git', ['diff', '--name-only', '--no-renames', `${base}...HEAD`], {
     cwd: root,
     encoding: 'utf8',
@@ -81,12 +86,8 @@ export function changedFiles(base, root = repoRoot) {
 /**
  * What a GitHub Actions event asks for: every package (`'all'`), those changed
  * since a base commit (`{ base }`), or none (`null`).
- *
- * @param {string} eventName
- * @param {{ pull_request?: { base?: { sha?: string } } }} event
- * @returns {'all' | { base: string } | null}
  */
-export function selectionFor(eventName, event) {
+export function selectionFor(eventName: string, event: GitHubEvent): Selection {
   if (eventName === 'workflow_dispatch') return 'all';
   if (eventName === 'pull_request') {
     const base = event.pull_request?.base?.sha;
@@ -96,41 +97,30 @@ export function selectionFor(eventName, event) {
   return null;
 }
 
-/**
- * The project names a selection runs.
- *
- * @param {'all' | { base: string } | null} selection
- * @param {string} [root]
- * @returns {string[]}
- */
-export function projectsFor(selection, root = repoRoot) {
+/** The project names a selection runs. */
+export function projectsFor(selection: Selection, root: string = repoRoot): string[] {
   if (selection === null) return [];
   const packages = browserPackages(root);
   if (selection === 'all') return packages.map(({ name }) => name);
   return changedProjects(changedFiles(selection.base, root), packages);
 }
 
-/**
- * The arguments `npm run test:browser --` takes to run just these projects.
- *
- * @param {string[]} projects
- * @returns {string}
- */
-export function projectArgs(projects) {
+/** The arguments `npm run test:browser --` takes to run just these projects. */
+export function projectArgs(projects: string[]): string {
   return projects.map((name) => `--project ${name}`).join(' ');
 }
 
-/** @param {string[]} args */
-function main(args) {
-  /** @type {'all' | { base: string } | null} */
-  let selection;
+function main(args: string[]): void {
+  let selection: Selection;
   if (args.length === 1 && args[0] === '--all') selection = 'all';
   else if (args.length === 1 && !args[0].startsWith('-')) selection = { base: args[0] };
   else if (args.length === 0 && process.env.GITHUB_EVENT_NAME) {
-    const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH ?? '', 'utf8'));
+    const event = JSON.parse(
+      readFileSync(process.env.GITHUB_EVENT_PATH ?? '', 'utf8')
+    ) as GitHubEvent;
     selection = selectionFor(process.env.GITHUB_EVENT_NAME, event);
   } else {
-    console.error('usage: node tooling/browser-projects.mjs <base-ref> | --all');
+    console.error('usage: node tooling/browser-projects.ts <base-ref> | --all');
     process.exit(1);
   }
   const projects = projectsFor(selection);

@@ -6,7 +6,7 @@
 // added only where no host name fits. The README's "Theming" table lists them.
 //
 // A format stylesheet starts with `@use 'common/src/styles/tokens' as *;` and uses
-// these variables for every colour (`tooling/check-tokens.mjs` enforces it). A
+// these variables for every colour (`tooling/check-tokens.ts` enforces it). A
 // format-scoped property such as `--spl-sheet-text` is fine, with a token as its
 // fallback: `var(--spl-sheet-text, #{$text-primary})`.
 

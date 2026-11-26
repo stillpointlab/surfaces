@@ -48,7 +48,7 @@ const RULES = [
   },
 ];
 
-function* stylesheets(dir) {
+function* stylesheets(dir: string): Generator<string> {
   let entries;
   try {
     entries = readdirSync(dir, { withFileTypes: true });
@@ -66,13 +66,13 @@ function* stylesheets(dir) {
 }
 
 /** Blank out comments, keeping line numbers. */
-function stripComments(source) {
+function stripComments(source: string): string {
   return source
     .replace(/\/\*[\s\S]*?\*\//g, (block) => block.replace(/[^\n]/g, ' '))
     .replace(/\/\/[^\n]*/g, (line) => ' '.repeat(line.length));
 }
 
-const problems = [];
+const problems: string[] = [];
 for (const dir of scanned) {
   for (const file of stylesheets(dir)) {
     const lines = stripComments(readFileSync(file, 'utf8')).split('\n');
