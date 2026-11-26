@@ -9,6 +9,7 @@
 import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { build, type Options } from 'tsup';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -20,15 +21,33 @@ const files = new Map<string, string>();
 
 beforeAll(async () => {
   out = await mkdtemp(join(tmpdir(), 'video-format-build-'));
-  await build({
-    ...(config as Options),
-    config: false,
-    outDir: out,
-    format: ['esm'],
-    dts: false,
-    sourcemap: false,
-    silent: true,
-  });
+  // From the package's folder, as `npm run build` runs it: tsup reads the
+  // package's dependencies (what it leaves external) from there. The entries are
+  // named by their whole path, since esbuild keeps the folder it started in.
+  const pkg = fileURLToPath(new URL('..', import.meta.url));
+  const options = config as Options;
+  const entry = Object.fromEntries(
+    Object.entries(options.entry as Record<string, string>).map(([name, path]) => [
+      name,
+      join(pkg, path),
+    ])
+  );
+  const from = process.cwd();
+  process.chdir(pkg);
+  try {
+    await build({
+      ...options,
+      entry,
+      config: false,
+      outDir: out,
+      format: ['esm'],
+      dts: false,
+      sourcemap: false,
+      silent: true,
+    });
+  } finally {
+    process.chdir(from);
+  }
   for (const name of await readdir(out, { recursive: true })) {
     if (name.endsWith('.js'))
       files.set(name.replaceAll('\\', '/'), await readFile(join(out, name), 'utf8'));
