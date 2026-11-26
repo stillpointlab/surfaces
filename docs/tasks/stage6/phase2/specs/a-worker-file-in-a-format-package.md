@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 190
+completed: 2026-11-25
 created: 2026-11-25T18:00:00-07:00
 tags: [formats, dev-tooling, code]
 ---
@@ -89,11 +91,11 @@ README. hls.js in phase 3 does.
 
 ## Acceptance / completion checklist
 
-- [ ] The proof's results for each of the four builds are in the PR, with the trial removed.
-- [ ] One way is written in the root README's format convention, and the tooling for it is in
+- [x] The proof's results for each of the four builds are in the PR, with the trial removed.
+- [x] One way is written in the root README's format convention, and the tooling for it is in
       `tooling/tsup.ts` if any is needed.
-- [ ] No policy in either host is loosened.
-- [ ] `npm run check` passes.
+- [x] No policy in either host is loosened.
+- [x] `npm run check` passes.
 
 ### Work package
 
@@ -140,6 +142,10 @@ preview's source.
   changed.
 
 A fresh trial made this way answered in all four builds, and in the harness.
+
+Jamie, 2026-11-25, on the two files where the spec's table had one folder: "the worker/start
+source is fine as long as we stay consistent across formats". The root README's convention
+is the one way.
 
 ### What was built
 

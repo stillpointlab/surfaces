@@ -88,8 +88,11 @@ looks the same.
   gone. A reconnection that finds the same file changes nothing a person can see or hear.
 - **A lean, for the build to check:** the raw route already reads the file's size for its
   ranges, in a `stat` that holds its time too. It sends the two as a validator (`ETag`), the
-  client's `probe` returns it, and the pane keeps the one it last applied. This is also most of what the log's entry on
-  `cache-control: no-store` needs, which is closed here if it falls out and left if it does not.
+  client's `probe` returns it, and the pane keeps the one it last applied.
+- **The browser keeps what it has played.** The raw route answers `cache-control: no-store`, so
+  a seek back in a long file is downloaded again. Jamie carried that entry of the log into this
+  build on 2026-11-26, "with the intent to address during audio spec impl": with a validator the
+  route can let the browser keep a file and ask whether it changed.
 - A file that does change on disk while it plays is loaded again from its start. That is
   accepted.
 
@@ -143,6 +146,8 @@ For Jamie, with the agent's lean in each:
       works in a long one; another file opened stops the first.
 - [ ] A track that is playing carries on through a tab hidden and shown again, and through the
       event stream's reconnection.
+- [ ] A seek back into a part of a long file already played asks for no byte again (the
+      network panel), and a file changed on disk is still loaded anew.
 - [ ] A file that is not audio under an audio ending says the second sentence; a file removed
       while its row shows says the first, or the host's own words for a file that is gone.
 - [ ] The browser tests pass in the PR's job, and their time is in the PR.

@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 188
+completed: 2026-11-25
 created: 2026-11-25T18:00:00-07:00
 tags: [dev-tooling, formats, code]
 ---
@@ -109,17 +111,17 @@ install the browser, and when the tests run.
 
 ## Acceptance / completion checklist
 
-- [ ] `npm test` and `npm run check` start no browser, and their times before and after are in
+- [x] `npm test` and `npm run check` start no browser, and their times before and after are in
       the PR.
-- [ ] This PR's own browser job runs the URL template's two tests and passes; its time is in
+- [x] This PR's own browser job runs the URL template's two tests and passes; its time is in
       the PR.
-- [ ] A pull request that changes only `docs/` starts no browser job (shown by this stack's next
+- [x] A pull request that changes only `docs/` starts no browser job (shown by this stack's next
       docs PR, or a draft).
-- [ ] The job run by hand runs every package's browser tests.
-- [ ] A scaffolded `--url` format has its browser test and passes it with no edit.
-- [ ] A proof, not committed: a `<video>` in a browser test plays a 1 s WebM from the package
+- [x] The job run by hand runs every package's browser tests.
+- [x] A scaffolded `--url` format has its browser test and passes it with no edit.
+- [x] A proof, not committed: a `<video>` in a browser test plays a 1 s WebM from the package
       and reports its size, in CI.
-- [ ] `docs/devlogs/README.md` and the release walk's card name the run at the stage's close.
+- [x] `docs/devlogs/README.md` and the release walk's card name the run at the stage's close.
 
 ## Implementation plan
 
@@ -188,19 +190,20 @@ In CI, on this pull request (#188) and a throwaway beside it (#189, closed unmer
   sound on and no gesture, the job printed `played clip.webm: 160×90, 1.008 s` and passed in
   53 s. Without the autoplay switch the same test fails locally with `NotAllowedError`.
 
-Left to show after the merge, since a workflow runs by hand only from `main` and a docs-only
-pull request needs this workflow in `main` first:
+After the merge:
 
-- the run by hand runs every package's;
-- a docs-only pull request starts no browser job. Locally the filter gives nothing for six of
-  them.
+- **The run by hand** from `main` ran every package's browser tests (the URL template's two,
+  the only ones so far) and passed, its browser job in 1 min 6 s.
+- **A docs-only pull request starts no browser job:** the phase's close (#191) changes only
+  `docs/`; its run chose no package in 7 s and skipped the browser job.
 
-One thing the first runs showed: both missed the cache of Chromium. A cache saved by a pull
+One thing the first runs showed: each missed the cache of Chromium. A cache saved by a pull
 request's run serves that pull request alone; one saved from `main` serves all, and only the
-run by hand saves there. The first such run seeds it. Until then each pull request's first
-browser job installs Chromium, which is the minute measured above.
+run by hand saves there. The run above saved one. Before it, each pull request's first browser
+job installed Chromium, which is the minute measured above; the time with the cache is not
+measured yet.
 
-Noticed, for phase 2's log:
+Noticed, and ruled on by Jamie at the phase's close (the [log](../../../../devlogs/stage6/followups.md#phase-2)):
 
 - The root's browser config names its folders as globs, and `browser-projects.mjs` reads the
   workspaces. The two can drift apart.

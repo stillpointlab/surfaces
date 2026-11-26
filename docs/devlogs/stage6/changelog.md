@@ -116,3 +116,107 @@ is the exchange and nothing else; the comparison is over digests. He merged the 
   token, and the scaffold ([#183](https://github.com/stillpointlab/surfaces/pull/183)) after it.
 - Four seeds stay in the phase's folder as cards to do: each closes with the phase that builds
   it.
+
+---
+
+## Phase 2: The groundwork: the scaffold, the raw route, browser tests and a worker file (`stage6-phase2-complete`)
+
+Range: `stage6-phase1-complete..stage6-phase2-complete` (`abf99f2` to the merge of
+[#192](https://github.com/stillpointlab/surfaces/pull/192)), 2026-11-25 – 2026-11-26. As the range stood at [#192](https://github.com/stillpointlab/surfaces/pull/192)'s tip: 44 commits and
+six merges, 80 files, +3,587/−313. It also holds what merged after phase 1's tag and is that
+phase's or the next's: the token's follow-ups ([#185](https://github.com/stillpointlab/surfaces/pull/185)), phase 1's close ([#186](https://github.com/stillpointlab/surfaces/pull/186)) and
+phase 3's specs ([#187](https://github.com/stillpointlab/surfaces/pull/187)). It does not hold the raw route's nine commits, which reached main
+in the merge phase 1's tag is on (16 files under `packages/`, +574/−81).
+
+### Shipped
+
+- The raw route serves media ([#182](https://github.com/stillpointlab/surfaces/pull/182);
+  [spec](../../tasks/stage6/phase2/specs/raw-route-serves-media.md)): a file's address carries
+  its path (`/api/raw/<path>`), so an address relative to the file reaches its neighbours; range
+  requests, with `416` for one that asks for no byte; the types of streams and more media;
+  `media-src 'self' blob:` in the page's policy.
+- The scaffold makes a format a host can register ([#183](https://github.com/stillpointlab/surfaces/pull/183);
+  [spec](../../tasks/stage6/phase2/specs/scaffold-registrable-formats.md)): the text template
+  ships its `./format` descriptor; a second template, for a preview given a URL
+  (`npm run new-format -- <name> --url`); both templates are workspaces, tested and shown in the
+  harness where they lie; `UrlPreviewElement` and its suite in `common`, with image's names
+  kept; the scaffold formats what it writes.
+- Browser tests, kept small ([#188](https://github.com/stillpointlab/surfaces/pull/188);
+  [spec](../../tasks/stage6/phase2/specs/browser-tests-in-ci.md)): a package's
+  `*.browser.test.ts` run in headless Chromium through `npm run test:browser` and never through
+  `npm test`; a pull request's CI runs those of the packages it changes, a push to `main` none,
+  a run by hand all; the URL template's own browser test; the scaffold copies a file that is
+  not text byte for byte.
+- A format package can ship a worker file ([#190](https://github.com/stillpointlab/surfaces/pull/190);
+  [spec](../../tasks/stage6/phase2/specs/a-worker-file-in-a-format-package.md)): the way, proved
+  through four builds and written in the root README; the build fails when a shared chunk holds
+  the worker's address.
+- The phase's follow-ups, as ruled ([#192](https://github.com/stillpointlab/surfaces/pull/192)): a body that ends short of its length closes
+  the connection, and a raw file is read no further than its headers said; after a restart an
+  app's refused op shows under the notice, and Undo and Redo say why they are off; the type
+  check reads `tooling/` and the root's vitest configs; one list of where browser tests live; a
+  missing Chromium is told once; four READMEs name their packages as they are.
+
+### Decisions
+
+Jamie's:
+
+- **A format's worker is two files,** `src/worker/worker.ts` and a starter beside it, where the
+  spec had one folder: "fine as long as we stay consistent across formats" (2026-11-25).
+- **The follow-up log, entry by entry** (2026-11-26, in three batches): the raw route's
+  `no-store` is carried, "with the intent to address during audio spec impl"; six are fixed;
+  that `test:browser` builds everything first is closed; image's root entry stays for now, with
+  [a seed](../../tasks/unassigned/seeds/root-entries-register-nothing.md) for all five older
+  formats.
+- **After a restart:** "showing the error+disable and not going overboard trying to fix".
+
+Jamie has not ruled on these, which are the agents' calls in each spec's "As built", merged by
+him:
+
+- The raw address is decoded once, whole; an address that climbs out of `/api/raw/` is no
+  route (404, where the old address answered 400); `416` has a code of its own.
+- The URL template's dashed names are `sample-url`, and `setSource`'s second argument is `name`.
+- Which packages a pull request's browser job runs is decided by a script the workflow calls,
+  from the diff since the pull request's base.
+- An error after a restart shows as a line under the notice, which #185 had said nothing
+  replaces.
+- Phase 3's three specs were merged ([#187](https://github.com/stillpointlab/surfaces/pull/187)) with the audio spec's three questions
+  unanswered; the agent's leans in them stand until he says otherwise.
+
+### Testing & review
+
+- `npm run check` from a clean tree at each build's tip: 3,784 (the raw route), 3,754 and, with
+  two trial formats, 3,830 (the scaffold), 3,885 (browser tests), 3,884 (the worker file), 3,908
+  (the follow-ups, before the orchestrating agent's three commits, which CI checked).
+- The raw route by hand in Chromium on the built server, with the spike's media: a seek to the
+  last ten seconds of a 60 s WebM in about 70 ms, and in 2.1 s held to 300 kB/s; a playlist's
+  segment served by its relative address; a `blob:` media source; no policy report.
+- The scaffold: two trials made, installed and checked with no edit, shown in the harness, and
+  the text one opened in the local host with one import and one entry.
+- Browser tests in CI: the browser job ran beside `check` in 1 min 7 s with Chromium installed
+  from nothing; a throwaway pull request (#189, closed) played a 1 s WebM with its sound on; the
+  run by hand from `main` ran every package's; a docs-only pull request ([#191](https://github.com/stillpointlab/surfaces/pull/191)) skipped
+  the job. `npm test` timed the same before and after, and started no browser.
+- The worker's proof: six forms of the address through the package's build, the local host
+  built and in development mode, and Context Manager's client build, each in Chromium with
+  policy reports heard; then the harness. Context Manager's part was a client build on a
+  throwaway local branch of the adoption's clone.
+- The follow-ups: a 300 MB file cut to 10 MB while `curl` and Chromium read it, before and
+  after; the page walked after a restart in the built host.
+- Not tried: Firefox against the host, and Safari anywhere; pdf.js itself in a worker; a
+  `<video>` on a file that shrinks.
+
+### Deferred
+
+- **Carried, one entry:** the raw route's `no-store`, into the
+  [audio spec](../../tasks/stage6/phase3/specs/audio-preview.md)'s section 4.
+- **Noticed in the drain and not ruled, two:** the raw route refuses a `HEAD` without an
+  `Origin`; two tooling scripts carry no types. The agent's lean on both is to close.
+- Everything else in the [log](followups.md#phase-2) is built or closed.
+
+### At the phase's close
+
+- The tag is on the merge of [#192](https://github.com/stillpointlab/surfaces/pull/192), the phase's last.
+- A seed for [the older formats' root entries](../../tasks/unassigned/seeds/root-entries-register-nothing.md),
+  from Jamie's question on image's.
+- Phase 1's transcript was backed up at its close; phase 2's follows this one.
