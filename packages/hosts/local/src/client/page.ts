@@ -35,7 +35,8 @@
 //   server was started again (`restarted`), the notice says so for good: no
 //   close button, and nothing replaces it, since nothing else here works until
 //   the person opens the new address. Undo, Redo and Commit are disabled then:
-//   the server would refuse them, and the notice would not say so.
+//   the server would refuse them, and the notice would not say so. An error
+//   since (an app's op, refused) shows under its words.
 // - apps (`apps/`): the page reads the instances with the listing. A locked
 //   instance's files are left out of the tree, and its folder is the app's row;
 //   an instance at the served root has a row above the tree. The row's menu
@@ -322,8 +323,9 @@ export function startPage(options: PageOptions): HostPage {
     // next waits for the one before anyway.
     const show = (button: HTMLButtonElement, label: string | null, which: 'undo' | 'redo') => {
       button.disabled = label === null || restarted;
-      const title =
-        label === null
+      const title = restarted
+        ? words.journal.offAfterRestart(which)
+        : label === null
           ? words.journal[which === 'undo' ? 'nothingToUndo' : 'nothingToRedo']
           : words.journal[which === 'undo' ? 'undoTitle' : 'redoTitle'](label);
       button.title = title;
@@ -428,9 +430,16 @@ export function startPage(options: PageOptions): HostPage {
     return true;
   }
 
-  /** The page's one notice: a line and a short list, or nothing. */
+  /**
+   * The page's one notice: a line and a short list, or nothing. Once the server
+   * was started again its words stay, and an error since shows under them, the
+   * newest in place of the last: an app's refused op says so nowhere else.
+   */
   function showNotice(shown: Notice | null): void {
-    if (restarted) return;
+    if (restarted) {
+      if (shown?.tone === 'error') renderRestarted(shown.text);
+      return;
+    }
     notice.dataset.tone = shown?.tone ?? 'info';
     render(
       notice,
@@ -452,10 +461,20 @@ export function startPage(options: PageOptions): HostPage {
   function showRestarted(): void {
     if (restarted) return;
     restarted = true;
-    notice.dataset.tone = 'error';
-    render(notice, html`<div class="page-notice-text"><span>${words.restarted}</span></div>`);
+    renderRestarted(null);
     showJournal();
     showCommit();
+  }
+
+  /** The notice that stays after a restart, and the last error since, if any. */
+  function renderRestarted(failed: string | null): void {
+    notice.dataset.tone = 'error';
+    render(
+      notice,
+      html`<div class="page-notice-text"><span>${words.restarted}</span>${
+        failed === null ? '' : html`<ul class="page-notice-lines"><li>${failed}</li></ul>`
+      }</div>`
+    );
   }
 
   function showNote(): void {

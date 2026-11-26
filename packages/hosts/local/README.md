@@ -247,7 +247,10 @@ after a dropped connection: a stream answered with anything else (the command's 
 A page of an earlier run (its server was started again) is refused every request. The client
 says `restarted`, once, when a call is refused with `HOST_TOKEN_REQUIRED` or the stream fails and
 `GET /api/root` is, and then closes the stream for good; the page says so in its notice, and
-disables Undo, Redo and Commit, which the server would refuse.
+disables Undo, Redo and Commit, which the server would refuse, their titles saying why. The rest
+is refused as it is tried: the explorer's create, rename and delete, a save, and a commit review
+already open show the refusal in their own dialog or banner, and an app's op, whose app shows its
+failures in the page's notice, shows it under the notice's words.
 
 The client holds its stream only while the tab shows. A browser allows six connections to one
 host over HTTP/1.1 across all its tabs, and a stream holds one for good, so a stream in every
