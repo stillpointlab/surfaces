@@ -12,7 +12,7 @@ export default [
     ignores: [
       '**/dist/**',
       '**/node_modules/**',
-      // generated from *.scss by tooling/gen-styles.mjs
+      // generated from *.scss by tooling/gen-styles.ts
       '**/*.styles.ts',
     ],
   },
@@ -124,15 +124,6 @@ export default [
           message: 'Reach the host through its HostClient (src/client/host-client.ts).',
         },
       ],
-    },
-  },
-  {
-    // Node build scripts.
-    files: ['tooling/**/*.mjs', '*.mjs'],
-    languageOptions: {
-      ecmaVersion: 2022,
-      sourceType: 'module',
-      globals: { ...globals.node },
     },
   },
   prettier,

@@ -15,7 +15,7 @@
     }
   },
   "scripts": {
-    "gen:styles": "node ../../../tooling/gen-styles.mjs",
+    "gen:styles": "node ../../../tooling/gen-styles.ts",
     "dev": "npm run gen:styles && vite --config ../../../tooling/harness/vite.config.ts",
     "build": "npm run gen:styles && npm run build:server && npm run build:client",
     "build:server": "tsup",

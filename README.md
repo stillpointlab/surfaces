@@ -37,16 +37,17 @@ history rewritten under `packages/formats/<name>/`.
 ```
 package.json         one npm workspace, one lockfile, every dev dependency hoisted here
 tsconfig.base.json   compiler options every package extends
-eslint.config.mjs    one lint config; packages add none of their own
+eslint.config.ts     one lint config; packages add none of their own
 .prettierrc          one format config
 vitest.config.ts     runs every package as a vitest project
 vitest.browser.config.ts  runs the packages' browser tests (see Testing)
 tooling/
-  gen-styles.mjs     SCSS -> `*.styles.ts` string modules for shadow roots (all packages, or one)
+  gen-styles.ts      SCSS -> `*.styles.ts` string modules for shadow roots (all packages, or one)
+  check-tokens.ts    fails `npm run lint` on a hardcoded colour in a stylesheet
   tsup.ts            the shared build: ESM + CJS + d.ts per entry
   vitest.ts          the shared test preset
-  new-format.mjs     scaffolds packages/formats/<name> from a template (`--url` for the URL one)
-  browser-projects.mjs  which packages' browser tests a CI run starts
+  new-format.ts      scaffolds packages/formats/<name> from a template (`--url` for the URL one)
+  browser-projects.ts  which packages' browser tests a CI run starts
   template/format/   a complete text format with an editor: what a new one starts from
   template/url-format/ a complete preview given a URL, no editor: what `--url` starts from
   harness/           the one playground: mounts any format from its dev/fixtures.ts
@@ -64,6 +65,13 @@ packages/
     src/, README.md
     dev/fixtures.ts  this format in the harness: elements by role, fixtures, controls
 ```
+
+Everything here is TypeScript, the tooling's scripts and the lint config among them. Node runs a
+script as it is (`node tooling/gen-styles.ts`) by taking its types out, with no build, so a script
+keeps to syntax that can be taken out (no `enum`, no parameter properties) and imports another by
+its `.ts` name. `npm run typecheck` reads them (`tooling/tsconfig.json` holds them to both). The
+one JavaScript file is `packages/hosts/local/bin/surfaces.js`, the command npm links: Node takes no
+types out of a file under `node_modules`, which is where an installed package's command lies.
 
 ## Working on it
 
@@ -126,13 +134,13 @@ cd tooling/template/url-format && npm run test:browser                # the same
 
 When they run:
 
-| When                     | What runs                                                                                                                                                                                                                                                 |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A pull request           | The browser tests of each package it changes, in CI's `browser` job beside `check` (`tooling/browser-projects.mjs` chooses them). A pull request that changes no such package starts no browser; one that changes only `common` or the tooling runs none. |
-| A push to `main`         | None: the pull request ran them.                                                                                                                                                                                                                          |
-| By hand                  | All of them: Actions → CI → Run workflow, or `gh workflow run CI --ref main`.                                                                                                                                                                             |
-| A stage's close          | All of them, by hand, beside the release walk ([milestones](docs/devlogs/README.md#milestones)).                                                                                                                                                          |
-| An agent building a spec | Its own package's, locally, before it reports.                                                                                                                                                                                                            |
+| When                     | What runs                                                                                                                                                                                                                                                |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A pull request           | The browser tests of each package it changes, in CI's `browser` job beside `check` (`tooling/browser-projects.ts` chooses them). A pull request that changes no such package starts no browser; one that changes only `common` or the tooling runs none. |
+| A push to `main`         | None: the pull request ran them.                                                                                                                                                                                                                         |
+| By hand                  | All of them: Actions → CI → Run workflow, or `gh workflow run CI --ref main`.                                                                                                                                                                            |
+| A stage's close          | All of them, by hand, beside the release walk ([milestones](docs/devlogs/README.md#milestones)).                                                                                                                                                         |
+| An agent building a spec | Its own package's, locally, before it reports.                                                                                                                                                                                                           |
 
 ## The harness
 
@@ -435,7 +443,7 @@ ship light defaults only and carry no `prefers-color-scheme` rules of their own.
 A format stylesheet starts with `@use 'common/src/styles/tokens' as *;` and uses the variables
 (`$text-primary`, `$error-bg`, …) for every colour. A format may add properties of its own
 (`--spl-sheet-*`, `--spl-xmdl-*`) as long as each falls back to a token, never to a literal.
-`npm run lint` runs `tooling/check-tokens.mjs`, which fails on a hardcoded colour in any format
+`npm run lint` runs `tooling/check-tokens.ts`, which fails on a hardcoded colour in any format
 stylesheet.
 
 ### Conformance

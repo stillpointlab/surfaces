@@ -14,8 +14,8 @@ the host. See the placement test in [`../apps/README.md`](../apps/README.md).
   cannot divide one module between chunks, so a component on every page would carry the whole runtime
   the formats use onto every page. `sideEffects` lists the entry's source and `dist` files, so a bare
   `import '@stillpointlab/<name>-component'` survives tree shaking.
-- **Styles** use `common`'s tokens and pass `tooling/check-tokens.mjs`. The stylesheet's name has no
-  hyphen, because `tooling/gen-styles.mjs` turns `<name>.scss` into an export called `<name>Styles`
+- **Styles** use `common`'s tokens and pass `tooling/check-tokens.ts`. The stylesheet's name has no
+  hyphen, because `tooling/gen-styles.ts` turns `<name>.scss` into an export called `<name>Styles`
   (`modal.scss`, `modalStyles`).
 - **Markup** goes through ``render(target, html`…`)`` from `@stillpointlab/common-format/html`, and a
   stylesheet in a shadow root is a `<style>` whose `textContent` is set (ESLint enforces the first).
