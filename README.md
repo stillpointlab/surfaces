@@ -401,10 +401,9 @@ element it ships. They prove readiness, set and read back, `content-change` on u
 on `setContent`, `readonly`, keymap modes and focus, settling after a DOM move and after a
 reconnect, and take hooks for what only the format knows (how to tell content reached the DOM, how
 to perform one edit, how its media is told it loaded or failed). They use no fake timers, private fields or jsdom-specific stubs, so they run
-unchanged under vitest browser mode: a package that needs a real browser (media editors, clipboard)
-sets `formatTest({ browser: true })` in its `vitest.config.ts` and the root adds `@vitest/browser`,
-`@vitest/browser-playwright` and Playwright's Chromium at that point. Until then everything runs on
-jsdom.
+unchanged under vitest browser mode. What needs a real browser (a clip that plays, a page that is
+drawn) is a package's `*.browser.test.ts`, run by `browserTest()` and not by `npm test`: see
+[Testing](#testing).
 
 Styles: write SCSS next to the component. `gen:styles` compiles every non-partial
 `src/**/<name>.scss` into a sibling `<name>.styles.ts` exporting `<name>Styles`; the generated files
