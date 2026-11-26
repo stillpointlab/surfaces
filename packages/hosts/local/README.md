@@ -95,6 +95,14 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
   opened or last saved at. A change on disk to the open file is read again and compared by
   version: with no unsaved edits it shows in place; with edits a banner offers Reload, and Save
   asks before it writes over the newer file. Leaving unsaved edits asks first.
+- **A file in a format that takes a URL** (an image, audio) is not read by the page: its element
+  loads it from the raw route. As it opens, the pane asks for the file's validator
+  (`HostClient.probe`, a `GET` whose body is let go), and the address it hands the element names
+  it (`/api/raw/<path>?rev=<validator>`). A change event for the file, and the event stream's
+  return, ask again: the same validator changes nothing, so a track that plays plays on through a
+  hidden tab or a dropped stream; another one makes a new element at the new address, which the
+  browser loads anew (a track that played starts again at its start); a file gone says so. A
+  probe that learns nothing (the host away) leaves the element as it is.
 - **Files are created, renamed and deleted** from a row's menu (right click, the row's `⋯`
   button, the ContextMenu key or Shift+F10): New file… on a folder and on the space under the
   rows, Rename… and Delete… on a file or a folder. Each write is one `put`, so renaming or
@@ -195,7 +203,7 @@ query value). A version is a SHA-256 of the file's bytes, as hex; only equality 
 
 **The raw route** takes the path in the address's own path, each segment percent-encoded
 (`/api/raw/docs/a%20b.png`), so an address relative to a file resolves to its neighbour: a
-playlist's `seg0.m4s` is `/api/raw/docs/seg0.m4s`. Any query (the page's `?rev=`) is ignored.
+playlist's `seg0.m4s` is `/api/raw/docs/seg0.m4s`. Any query (the page's `?rev=<validator>`, which only the browser's caches read) is ignored.
 The rest of the address after `/api/raw/` is decoded once, whole, and checked as any path is,
 so an encoded `..%2F` is refused. The URL parser has already resolved `.` and `..` segments, in
 any spelling (`%2e%2e`), and read a backslash as `/`: an address that climbs out of `/api/raw/`

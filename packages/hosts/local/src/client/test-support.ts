@@ -248,13 +248,14 @@ export function fakeHost(files: Record<string, string | typeof BINARY>): FakeHos
       if (text === BINARY) return { ok: false, code: 'HOST_NOT_TEXT', message: 'not text' };
       return { ok: true, text, version: versions.get(path)! };
     },
-    async probe(path): Promise<Result> {
+    // The validator is the file's version: both change when it is written.
+    async probe(path): Promise<Result<{ validator: string | null }>> {
       host.probes.push(path);
       return disk.has(path)
-        ? { ok: true }
+        ? { ok: true, validator: versions.get(path) ?? null }
         : { ok: false, code: 'HOST_FILE_NOT_FOUND', message: 'none' };
     },
-    urlFor: (path) => rawAddress(path),
+    urlFor: (path, validator) => `${rawAddress(path)}${validator ? `?rev=${validator}` : ''}`,
     async put(changes, options) {
       host.puts.push([...changes]);
       host.putOptions.push(options);
