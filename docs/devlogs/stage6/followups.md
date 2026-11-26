@@ -86,13 +86,17 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
 
 - 2026-11-26 (audio): a file renamed while it plays starts again. The pane hands the element its
   new path, which is a new address (`packages/hosts/local/src/client/pane.ts`, `follow`).
+  - Closed 2026-11-26 (Jamie: "we can close").
 - 2026-11-26 (audio): the same bytes written again start a playing track again. The validator
   is the file's size and time, and a rewrite, an editor's save of nothing or `touch` changes the
   time (`packages/hosts/local/src/server/conditional.ts`).
+  - Closed 2026-11-26 (Jamie: "close if fine, pretty edge case"). Telling the same bytes from
+    new ones would mean reading the whole file at each check.
 - 2026-11-26 (audio): the validator is as fine as the disk's clock. On a disk that keeps time to
   the second or two (FAT, exFAT), a file written twice inside one tick at the same size is not
   seen to change, by the pane or by the browser's copy. Before this build a `changed` event
   always loaded the file again.
+  - Closed 2026-11-26 (Jamie: "close").
 - 2026-11-26 (audio): the harness's server answers a missing file with its own page and a 200,
   so image's and the URL template's "Missing" fixtures show a file that will not decode, not one
   that is missing. Audio's uses a revoked object URL
