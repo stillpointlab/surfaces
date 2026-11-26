@@ -154,11 +154,13 @@ For Jamie, with the agent's lean in each:
 - [x] A file that is not audio under an audio ending says the second sentence; a file removed
       while its row shows says the first, or the host's own words for a file that is gone.
       (It said the host's.)
-- [ ] The browser tests pass in the PR's job, and their time is in the PR.
+- [x] The browser tests pass in the PR's job, and their time is in the PR. (A PR on another
+      PR starts no job, so the run was started by hand on the branch: 49 s for the job.)
 - [x] Firefox: the same files play in the harness. (Driven by Playwright's Firefox 159, not by
       a person's hand.)
 - [x] The root README's table, the package's README and the release walk name the format.
-- [ ] `npm run check` passes. (In CI; not run whole on the build's machine: see As built.)
+- [x] `npm run check` passes. (In CI, in that run; not run whole on the build's machine: see
+      As built.)
 
 ### Work package
 
