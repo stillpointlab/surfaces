@@ -1,5 +1,5 @@
 ---
-column: todo
+column: in-progress
 created: 2026-11-25T18:00:00-07:00
 tags: [formats, dev-tooling, code]
 ---
@@ -101,3 +101,71 @@ README. hls.js in phase 3 does.
 - **Must not change:** any format, `common`, either host's policy.
 - **Runs after:** [the scaffold](scaffold-registrable-formats.md), which gives it a template to
   make the trial from.
+
+## As built
+
+The proof and the build were an Opus 5.5 sub-agent's, read by the orchestrating agent. Way 1
+stands, with two conditions the spec did not have, so its table of names changes.
+
+### What the proof showed
+
+Each form was built four ways and loaded in headless Chromium, with a listener for policy
+reports that the page's policy does not govern. A `blob:` worker under Context Manager's policy
+was refused and reported, which shows the listener hears.
+
+| Form                                                                                       | The package's build  | Local host, built | Local host, development | Context Manager's client |
+| ------------------------------------------------------------------------------------------ | -------------------- | ----------------- | ----------------------- | ------------------------ |
+| The spec's: `./worker.js`, worker at `src/worker/index.ts`, started in the preview         | answered             | the build fails   | 404                     | answered                 |
+| The same, started from a module loaded with `import()`                                     | 404 (`dist/chunks/`) | the build fails   | 404                     | not run                  |
+| The source's own address (`../worker/index.ts`)                                            | 404                  | answered          | answered                | the build fails          |
+| The package's own name (`@stillpointlab/<name>/worker`)                                    | 404                  | answered          | answered                | answered                 |
+| `./worker.js`, with the worker's source named `worker.ts` beside the module that starts it | answered             | answered          | answered                | answered                 |
+| The same, started from a module loaded with `import()`                                     | 404 (`dist/chunks/`) | answered          | answered                | the build fails          |
+
+No form brought a policy report in any run. The local host fails the spec's form because it
+reads a package's source, built and in development mode, and no `worker.js` lies beside the
+preview's source.
+
+### The way
+
+- **The worker is `src/worker/worker.ts`, built to `dist/worker.js` as the `./worker` entry.**
+  Its name in the source matters: the local host finds `worker.ts` as the `worker.js` the
+  address names.
+- **A starter beside it, `src/worker/start.ts`,** holds the one expression every build follows:
+  `new Worker(new URL('./worker.js', import.meta.url), { type: 'module', name: '<format>-worker' })`.
+- **The starter is one entry's alone, imported statically.** Shared by two entries, or loaded
+  with `import()`, it is built into `dist/chunks/`, where the address names nothing. A library
+  loaded on demand is handed the worker already started.
+- **No host has a line for a format's worker,** the descriptor has no new member, and no policy
+  changed.
+
+A fresh trial made this way answered in all four builds, and in the harness.
+
+### What was built
+
+- `tooling/tsup.ts`: the build fails when a file in `dist/chunks/` holds the worker's address,
+  with 12 tests of the guard; and the CJS build is given an `import.meta.url`, without which it
+  kept the expression and did not parse. Every package was built before and after: the same
+  contents, under new chunk names.
+- The root README's format convention: the `./worker` row, and a "Workers" section.
+
+### Checked
+
+- `npm run check` from a clean tree: 3,884 tests.
+- Context Manager's part was its client build alone, on a throwaway branch of the adoption's
+  clone at its `origin/main`, served by a scratch server under a policy made by Context Manager's
+  own code with its own directives. The clone was left as it was found.
+
+### Not tried, and what the PDF format's spec has to look at
+
+- **pdf.js itself.** The trial's worker answers one message and imports nothing.
+  `GlobalWorkerOptions.workerPort` is named in the README from pdf.js's documentation.
+- **Both hosts' builds emit the worker as a classic script,** whatever `type: 'module'` says. A
+  worker that loads more of itself with `import()`, as pdf.js's may, has to be tried against
+  that.
+- **The CJS build's address is not the worker's.** It parses; no host loads it.
+- **Context Manager in development mode,** where the page's scripts come from another origin
+  and a browser refuses a worker from one. Reasoned, not run.
+- **Vitest's browser mode,** which was not on this branch.
+- **The harness sends no policy,** so it cannot show what a host would refuse.
+- Firefox and Safari.
