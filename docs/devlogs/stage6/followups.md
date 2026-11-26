@@ -102,3 +102,10 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
   date (`packages/common/README.md`).
 - 2026-11-26 (audio): the scaffold's renamed prose reads oddly for a real name ("the audio shows
   what it is given as an image", "a `<audio-preview>`"), in the package's README and comments.
+- 2026-11-26 (video): the root README's format convention still says "image, and video, audio
+  or PDF to come", and the local host's README names "(an image, audio)" as what takes a URL.
+- 2026-11-26 (video): the harness's event log shows an element's `ready` twice for each fixture.
+  Not looked into (`tooling/harness/main.ts`).
+- 2026-11-26 (video): the scaffold's contract test suggests `canplay` in a comment, and both
+  media formats settle on `loadedmetadata` (`tooling/template/url-format`). With the entry
+  above on the scaffold's prose.
