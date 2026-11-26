@@ -32,6 +32,7 @@ describe('the host registry', () => {
     ['film/clip.mp4', 'video'],
     ['film/Clip.MKV', 'video'],
     ['film/take.webm', 'video'],
+    ['film/talk/index.m3u8', 'video'],
     ['src/app.ts', 'code'],
     ['types.d.ts', 'code'],
   ])('opens %s with %s', (path, id) => {
