@@ -1,5 +1,5 @@
 ---
-column: todo
+column: in-progress
 created: 2026-11-25T23:30:00-07:00
 tags: [formats, feature, code]
 ---
@@ -93,7 +93,10 @@ behind. It has one engine now, and is given no member that engine does not use.
 - **A `.ts` segment is sent as text.** The ending is TypeScript's too, and the raw route gives
   it `text/plain`. hls.js asks for a segment's bytes whatever their type, and the spike's server
   sent every file as `application/octet-stream` with no harm; `text/plain` itself is first
-  tried by this build's MPEG-TS stream in the host. In the tree a segment shows as a code file.
+  tried by this build, with an MPEG-TS stream of `.ts` segments in the host. The package's own
+  MPEG-TS stream names its segments `.m2t`: a `.ts` file in the package is read as TypeScript by
+  its tools, and Vite compiles it. Opened from the tree, a `.ts` segment is matched by the code
+  format, and the host says "This file is not text, so it cannot open here."
 - **A playlist that names another server** is refused by the policy and fails with the first
   sentence. Streams from beyond the folder are
   [a seed](../../../unassigned/seeds/streams-from-beyond-the-folder.md).
@@ -109,19 +112,103 @@ behind. It has one engine now, and is given no member that engine does not use.
 
 ## Acceptance / completion checklist
 
-- [ ] In the built local host, in Chromium: an fMP4 stream and an MPEG-TS stream each play and
+- [x] In the built local host, in Chromium: an fMP4 stream and an MPEG-TS stream each play and
       seek from the tree, with no policy report.
-- [ ] Opening an `.mp4` fetches no hls.js (the network panel, and the test on the build).
-- [ ] A stream in byte ranges plays with its true length.
-- [ ] A playlist with its segments missing says the first sentence.
-- [ ] Firefox, by hand: both streams play in the harness.
-- [ ] The browser tests pass in the PR's job, and their time is in the PR.
-- [ ] The package's README says what a stream needs of a host: an address by path, ranges, and
+- [x] Opening an `.mp4` fetches no hls.js (counted at a proxy before the host, not in the
+      network panel, and the test on the build).
+- [x] A stream in byte ranges plays with its true length.
+- [x] A playlist with its segments missing says the first sentence. (In the host and the
+      browser tests. In the harness it says the second: see As built.)
+- [x] Firefox: both streams play in the harness. (Driven by Playwright's Firefox 159, not by a
+      person's hand.)
+- [x] The browser tests pass in the PR's job, and their time is in the PR. (A PR on another
+      PR starts no job, so the run was started by hand on the branch: 70 s for the job, which
+      ran every package's browser tests.)
+- [x] The package's README says what a stream needs of a host: an address by path, ranges, and
       `blob:` for media. The release walk gains a stream.
-- [ ] `npm run check` passes.
+- [x] `npm run check` passes. (4,025 tests, on the build's machine.)
 
 ### Work package
 
 - **Owns:** `packages/formats/video`, the lockfile for hls.js.
 - **Must not change:** `common`, audio, the local host.
 - **Runs after:** [video](video-preview.md).
+
+## As built
+
+Built by an Opus 5.5 sub-agent, read and checked by the orchestrating agent, which changed no
+code.
+
+### The engine
+
+- **The interface** is `src/preview/stream.ts`, not exported: `attach(media, src, failed)` and
+  `release()`. A function that starts an engine answers `null` where none can run (no Media
+  Source Extensions), and the element then gives the playlist's address to the `<video>` itself.
+- **A playlist is told by the ending of the address's path,** in any case, so the local host's
+  `?rev=` does not hide it.
+- **hls.js 1.7.4,** the full build, no worker, a dependency of the video package alone. The
+  element reaches it by `import()` through `createLazyLoader`, the first time a playlist opens.
+- **It is not bundled into the package.** As with every dependency here, the package's build
+  leaves `hls.js` as an import, in a small file of its own that only the `import()` reaches, and
+  each host's bundler makes hls.js a file. A test builds the package and reads its files: one
+  split file imports hls.js, and no entry reaches it but by `import()`.
+
+| File                                          | Bytes   | Gzipped |
+| --------------------------------------------- | ------- | ------- |
+| The package's engine file (imports `hls.js`)  | 1,488   | 714     |
+| The built local host's file with hls.js in it | 578,873 | 178,466 |
+| The host's video preview file, without it     | 5,902   | 2,261   |
+
+### Failures
+
+While an engine feeds the `<video>`, the element does not ask `mediaFailureOf` (the source is the
+engine's own `blob:`); the engine says which failure it met.
+
+- **The first sentence:** a fatal network error; an answer the server refused (4xx); the engine
+  itself not arriving.
+- **The second sentence:** a playlist that arrived and does not parse or names no segment; a
+  stream no codec of which the browser decodes; any other fatal error.
+- **A refused file fails at once.** Left to itself hls.js asks again for a missing segment of a
+  stream with one level, and gives up 31.7 s later (measured).
+- **A fatal media error is recovered once,** by `recoverMediaError()`, unless it says no codec
+  fits. Provoked with segments answered by a web page: a fatal error at 34 ms, a recovery, and a
+  second fatal error at 167 ms, so that case ends in the second sentence. A recovery that then
+  plays could not be provoked. Noise inside one segment was skipped as a gap, with no failure,
+  in both browsers.
+
+### `.ts` segments
+
+- **Sent as `text/plain`, they play.** In the built host a stream of `.ts` segments, made
+  outside the repository, played and sought in Chromium 158 and Firefox 159.
+- **The package's own MPEG-TS stream names its segments `.m2t`.** A `.ts` file in the package is
+  read as TypeScript by `tsc`, eslint and prettier, and Vite (the harness's server, and the
+  browser tests') compiles any `.ts` it is asked for and answers 500. The spec's paragraph was
+  corrected.
+- **Opened from the tree,** a `.ts` segment is matched by the code format and the host says
+  "This file is not text, so it cannot open here.", not "a code file" as the spec said.
+
+### In the harness, the missing stream says the second sentence
+
+The harness's server answers a missing file with its own page and a 200, which hls.js cannot
+parse as a segment. It is the entry already in the follow-up log for image's and the template's
+"Missing" fixtures. The host and the browser tests' server answer 404, and there the stream says
+the first sentence, in 98 ms in the host.
+
+### What was run, and what was not
+
+- **In the built host, Chromium 158,** by a script with a proxy before the host: the fMP4, the
+  `.m2t`, the `.ts` and the byte-range streams each know their 6 s, play and seek to 5 s; no
+  `securitypolicyviolation`; an `.mp4` asks for no file of hls.js and the first playlist asks
+  for one; the byte-range stream's four requests are ranges answered 206; a two-minute stream
+  plays on through a hidden tab (imitated) and a real cut of the event stream; another file
+  opened stops the stream, with no request for it in the 8 s after, also half a second in at
+  150 kB/s.
+- **In the built host, Firefox 159:** the five streams play.
+- **In the harness, Chromium 158 and Firefox 159,** by Playwright, at the last code: the four
+  streams and the nine older fixtures.
+- **Tests:** video 58 and 8 in a browser (3.9 s), the local host 1,032, `npm run check` whole
+  (4,025). The build ran that check while another repository's CI was running on the machine,
+  against its instructions; it passed.
+- **Never run:** the path for a browser with no Media Source Extensions (Safari on an iPhone),
+  which is written from the documentation and tested with the check faked; the package's
+  CommonJS build of the engine; a tab really hidden; a person's eyes and ears.

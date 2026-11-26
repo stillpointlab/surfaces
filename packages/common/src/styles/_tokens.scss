@@ -66,6 +66,10 @@ $chip-hover-bg: var(--spl-chip-hover-bg, rgba(139, 92, 246, 0.1));
 $code-active-line-bg: var(--spl-code-active-line-bg, rgba(88, 166, 255, 0.12));
 $code-selection-bg: var(--spl-code-selection-bg, rgba(88, 166, 255, 0.38));
 
+// Media (the ground a video's picture lies on: dark in a light theme and in a
+// dark one, so the default is all a host needs)
+$media-backdrop: var(--spl-media-backdrop, #0d1117);
+
 // Overlay
 $shadow-color: var(--spl-shadow-color, rgba(0, 0, 0, 0.18));
 $overlay-scrim: var(--spl-overlay-scrim, rgba(0, 0, 0, 0.5));

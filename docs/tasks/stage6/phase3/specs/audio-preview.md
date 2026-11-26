@@ -247,6 +247,7 @@ The spec said it did, and its sentence is corrected. Measured in Chromium 158 an
 - **It asks for one byte** (`Range: bytes=0-0`), past the browser's cache. The build asked for
   the whole file and let the body go, which is what `probe` was measured not to do well. An
   empty file (416) is the second sentence, as it was.
+- **Jamie, 2026-11-26:** "we can keep the extra request to keep the errors distinct".
 - `releaseMedia(media)` is the other shared function: pause, take the source away, load nothing.
 
 ### Where the spec was silent

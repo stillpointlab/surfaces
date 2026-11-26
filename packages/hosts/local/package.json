@@ -33,6 +33,7 @@
     "@stillpointlab/md-format": "*",
     "@stillpointlab/modal-dialog-component": "*",
     "@stillpointlab/sheet-format": "*",
+    "@stillpointlab/video-format": "*",
     "@stillpointlab/spl-icon-component": "*",
     "@stillpointlab/tasks-app": "*",
     "@stillpointlab/xmdl-format": "*",

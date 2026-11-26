@@ -27,7 +27,14 @@ above for what each part once found.
       board with a pool (a copy of this repository's `docs/tasks` at `docs/tasks` serves); one
       audio file of each ending the audio format opens (`.mp3`, `.wav`, `.flac`, `.ogg`, `.oga`,
       `.opus`, `.m4a`, `.aac`, `.weba`: `packages/formats/audio/dev/media/` has them), a long one
-      (a few minutes), and a file of noise under an audio ending.
+      (a few minutes), and a file of noise under an audio ending; one video file of each ending
+      the video format opens (`.mp4`, `.m4v`, `.webm`, `.mov`, `.mkv`:
+      `packages/formats/video/dev/media/` has them, and its `no-picture.mkv`, sound with a picture
+      no browser here shows), a long one (a minute or more), and a file of noise under a video
+      ending; the four streams in `packages/formats/video/dev/media/hls-*/`, each its folder
+      (fMP4, MPEG-TS, byte ranges of one file, and a playlist whose segments are missing), and
+      the MPEG-TS stream again with `.ts` segments, and a long one (two minutes) of them (the
+      package's README has the line; `-t 120` for the long one).
 - [ ] Chromium, by hand or driven by Playwright. Driver scripts stay in scratch: the repository
       keeps no walk of the host (its browser tests are packages' unit tests, section 0).
 - [ ] Nothing here touches a remote but section 0's run: no push, no pull request.
@@ -157,6 +164,31 @@ above for what each part once found.
       while its row still shows, then clicked → "Couldn't load this audio.", or the page's "This
       file was deleted on disk."
 - [ ] The same files played in the harness (`npm run dev`, format audio) in Firefox.
+
+## 12. Video
+
+- [ ] Each video file opened from the tree → the browser's player, filling the pane on a dark
+      ground with the picture's proportions kept, which does not start by itself; each plays.
+- [ ] In the long one, a seek to its last ten seconds → it plays from there within two seconds.
+- [ ] A video playing, then another file opened → the first falls silent.
+- [ ] A video playing, then the tab hidden (another tab in front) and shown again → it plays on,
+      where it was.
+- [ ] `no-picture.mkv` → "This browser can't show this video's picture. Its sound plays." above
+      the player; it plays and its sound is heard.
+- [ ] The file of noise → "This browser can't play this video."
+- [ ] Each stream's `index.m3u8` opened from the tree (fMP4, MPEG-TS with `.m2t` segments and
+      with `.ts` ones, and the byte ranges) → the player, which does not start by itself, knows
+      a length of 6 s; each plays, and a seek to its last two seconds plays from there. The
+      network panel: the playlist and then each segment asked for by its path beside it (for the
+      byte ranges, each a `Range` of the one file, answered `206`); one file of hls.js, the first
+      time a stream opens and not for a file; no policy report in the console.
+- [ ] The playlist whose segments are missing → "Couldn't load this video."
+- [ ] The long stream playing, opened again with the browser's cache off and its network slowed
+      (the network panel), then another file opened while its segments still arrive → it falls
+      silent, and the network panel asks for no more of them.
+- [ ] The same files and streams played in the harness (`npm run dev`, format video) in Firefox.
+      There the stream whose segments are missing says "This browser can't play this video.":
+      the harness answers a missing file with its own page.
 
 ---
 

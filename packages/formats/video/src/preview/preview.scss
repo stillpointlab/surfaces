@@ -1,0 +1,64 @@
+// Styles for the <video-preview> shadow root: the browser's own player filling
+// the element on a dark ground, its picture contained (as large as the element
+// allows, its proportions kept), with common's status placeholders for the
+// empty, loading and failed states (the loading one over the player while the
+// file's length is not yet known) and common's notice for a picture the browser
+// cannot show.
+
+@use 'common/src/styles/tokens' as *;
+@use 'common/src/styles/status';
+@use 'common/src/styles/notice';
+
+:host {
+  display: block;
+  min-height: 0;
+  height: 100%;
+  color: $text-primary;
+  background: $background-primary;
+}
+
+.video-preview {
+  position: relative;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+  overflow: hidden;
+}
+
+// The ground is dark in a light theme and in a dark one.
+.video-preview__player {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  place-self: stretch;
+  min-width: 0;
+  min-height: 0;
+  background: $media-backdrop;
+}
+
+.video-preview__note {
+  flex: none;
+  margin: $spacing-sm;
+}
+
+.video-preview__media {
+  display: block;
+  flex: 1 1 0;
+  width: 100%;
+  min-height: 0;
+  object-fit: contain;
+}
+
+.video-preview__loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background: color-mix(in srgb, #{$background-primary} 78%, transparent);
+}

@@ -15,6 +15,7 @@ so they share one toolchain, one `common` package and, in time, one scaffold.
 | `packages/formats/xmdl`       | `@stillpointlab/xmdl-format`       | core + `<xmdl-preview>` + `<xmdl-editor>`                              |
 | `packages/formats/image`      | `@stillpointlab/image-format`      | `<image-preview>` only                                                 |
 | `packages/formats/audio`      | `@stillpointlab/audio-format`      | `<audio-preview>` only                                                 |
+| `packages/formats/video`      | `@stillpointlab/video-format`      | `<video-preview>` only                                                 |
 | `packages/apps/`              |                                    | tasks and inventory arrive with the apps breakout                      |
 | `packages/components/`        | `@stillpointlab/<name>-component`  | shared UI elements: `<modal-dialog>`, `<spl-icon>`, `<checkin-review>` |
 | `tooling/template/format`     | `@stillpointlab/sample-format`     | the text template: core + `<sample-preview>` + `<sample-editor>`       |
@@ -158,7 +159,7 @@ A package's `dev/fixtures.ts` default-exports a `HarnessFormat` (`tooling/harnes
 
 - `format`: the format's descriptor, from its `./format` entry. The harness takes the editor and
   preview tags from it, loads them through it, and applies a fixture with its `apply`, as a host
-  does. The six formats and the two templates mount this way.
+  does. The seven formats and the two templates mount this way.
 - `elements` (`editor`, `preview`, `extra` tags): what to mount without a descriptor, for which the
   module imports its own entries so the elements register. Components and apps name theirs
   here. With `format`, only `extra` is read (`<code-diff>`).
@@ -188,7 +189,7 @@ instead of reading each package:
 `./format` is light: importing it defines no element and loads no editor. Its `load()` functions
 import `./preview` and `./editor`, which the build keeps as files of their own. A host gives the
 descriptors to `createFormatRegistry` (`@stillpointlab/common-format/format`; see
-[`packages/common/README.md`](packages/common/README.md)). The six formats and both templates
+[`packages/common/README.md`](packages/common/README.md)). The seven formats and both templates
 ship one, so a host registers a new format with one import of its `./format` and one entry in its
 list.
 
@@ -435,6 +436,7 @@ ship light defaults only and carry no `prefers-color-scheme` rules of their own.
 | `--spl-chip-hover-bg`        | `rgba(139, 92, 246, 0.1)`  | hovered outlined chips                   |
 | `--spl-code-active-line-bg`  | `rgba(88, 166, 255, 0.12)` | CodeMirror's active line                 |
 | `--spl-code-selection-bg`    | `rgba(88, 166, 255, 0.38)` | CodeMirror's selection                   |
+| `--spl-media-backdrop`       | `#0d1117`                  | the ground under a video, dark in both   |
 | `--spl-shadow-color`         | `rgba(0, 0, 0, 0.18)`      | popover and menu shadows                 |
 | `--spl-overlay-scrim`        | `rgba(0, 0, 0, 0.5)`       | the backdrop behind a modal dialog       |
 | `--spl-drag-shadow`          | one soft black layer       | a dragged card's ghost                   |
