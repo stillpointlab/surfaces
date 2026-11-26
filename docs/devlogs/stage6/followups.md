@@ -81,3 +81,24 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
     scripts under `tooling/` and the lint config are TypeScript, which Node runs as it is, and
     the type check reads them. The one JavaScript file left is the local host's
     `bin/surfaces.js`: Node takes no types out of a file under `node_modules`.
+
+## Phase 3
+
+- 2026-11-26 (audio): a file renamed while it plays starts again. The pane hands the element its
+  new path, which is a new address (`packages/hosts/local/src/client/pane.ts`, `follow`).
+- 2026-11-26 (audio): the same bytes written again start a playing track again. The validator
+  is the file's size and time, and a rewrite, an editor's save of nothing or `touch` changes the
+  time (`packages/hosts/local/src/server/conditional.ts`).
+- 2026-11-26 (audio): the validator is as fine as the disk's clock. On a disk that keeps time to
+  the second or two (FAT, exFAT), a file written twice inside one tick at the same size is not
+  seen to change, by the pane or by the browser's copy. Before this build a `changed` event
+  always loaded the file again.
+- 2026-11-26 (audio): the harness's server answers a missing file with its own page and a 200,
+  so image's and the URL template's "Missing" fixtures show a file that will not decode, not one
+  that is missing. Audio's uses a revoked object URL
+  (`packages/formats/image/dev/fixtures.ts`, `tooling/template/url-format/dev/fixtures.ts`).
+- 2026-11-26 (audio): `common`'s README lists the order to register formats in as
+  `md, xmdl, sheet, image, code`. It is Context Manager's order, and phase 5's to bring up to
+  date (`packages/common/README.md`).
+- 2026-11-26 (audio): the scaffold's renamed prose reads oddly for a real name ("the audio shows
+  what it is given as an image", "a `<audio-preview>`"), in the package's README and comments.
