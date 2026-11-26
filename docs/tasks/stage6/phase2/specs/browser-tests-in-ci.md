@@ -194,7 +194,8 @@ After the merge:
 
 - **The run by hand** from `main` ran every package's browser tests (the URL template's two,
   the only ones so far) and passed, its browser job in 1 min 6 s.
-- **A docs-only pull request starts no browser job:** DOCS_ONLY_RESULT
+- **A docs-only pull request starts no browser job:** the phase's close (#191) changes only
+  `docs/`; its run chose no package in 7 s and skipped the browser job.
 
 One thing the first runs showed: each missed the cache of Chromium. A cache saved by a pull
 request's run serves that pull request alone; one saved from `main` serves all, and only the
