@@ -27,7 +27,11 @@ above for what each part once found.
       board with a pool (a copy of this repository's `docs/tasks` at `docs/tasks` serves); one
       audio file of each ending the audio format opens (`.mp3`, `.wav`, `.flac`, `.ogg`, `.oga`,
       `.opus`, `.m4a`, `.aac`, `.weba`: `packages/formats/audio/dev/media/` has them), a long one
-      (a few minutes), and a file of noise under an audio ending.
+      (a few minutes), and a file of noise under an audio ending; one video file of each ending
+      the video format opens (`.mp4`, `.m4v`, `.webm`, `.mov`, `.mkv`:
+      `packages/formats/video/dev/media/` has them, and its `no-picture.mkv`, sound with a picture
+      no browser here shows), a long one (a minute or more), and a file of noise under a video
+      ending.
 - [ ] Chromium, by hand or driven by Playwright. Driver scripts stay in scratch: the repository
       keeps no walk of the host (its browser tests are packages' unit tests, section 0).
 - [ ] Nothing here touches a remote but section 0's run: no push, no pull request.
@@ -157,6 +161,19 @@ above for what each part once found.
       while its row still shows, then clicked → "Couldn't load this audio.", or the page's "This
       file was deleted on disk."
 - [ ] The same files played in the harness (`npm run dev`, format audio) in Firefox.
+
+## 12. Video
+
+- [ ] Each video file opened from the tree → the browser's player, filling the pane on a dark
+      ground with the picture's proportions kept, which does not start by itself; each plays.
+- [ ] In the long one, a seek to its last ten seconds → it plays from there within two seconds.
+- [ ] A video playing, then another file opened → the first falls silent.
+- [ ] A video playing, then the tab hidden (another tab in front) and shown again → it plays on,
+      where it was.
+- [ ] `no-picture.mkv` → "This browser can't show this video's picture. Its sound plays." above
+      the player; it plays and its sound is heard.
+- [ ] The file of noise → "This browser can't play this video."
+- [ ] The same files played in the harness (`npm run dev`, format video) in Firefox.
 
 ---
 
