@@ -1,7 +1,7 @@
 {
   "name": "@stillpointlab/audio-format",
   "version": "0.1.0",
-  "description": "A Stillpoint Lab format given a URL: a <audio-preview> of the media a host hands it, with no editor.",
+  "description": "A Stillpoint Lab format given a URL: an <audio-preview> that plays the audio file a host hands it, with no editor.",
   "license": "MIT",
   "type": "module",
   "sideEffects": [

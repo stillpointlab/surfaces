@@ -10,11 +10,12 @@ import type { FormatDescriptor } from '@stillpointlab/common-format/format';
 
 export const audioFormat: FormatDescriptor = {
   id: 'audio',
-  // Replace with the real extensions: lower case, with the dot.
-  opens: ['.audio'],
+  // Every ending the stage 6 spike heard play in both Chromium and Firefox
+  // (`.oga` is `.ogg` by another name). `.aiff` played in neither.
+  opens: ['.mp3', '.wav', '.flac', '.ogg', '.oga', '.opus', '.m4a', '.aac', '.weba'],
   needs: 'url',
   preview: { tag: 'audio-preview', load: () => import('./preview/index') },
-  /** The URL is the source; the file's name is what it is called. */
+  /** The URL is the source; the file's name is shown over the player and labels it. */
   apply(element, file) {
     (element as AudioPreviewElement).setSource(file.url ?? '', fileNameOf(file.path));
   },

@@ -1,6 +1,7 @@
-// Styles for the <audio-preview> shadow root: the media centred and
-// contained, with common's status placeholders for the empty, loading and failed
-// states (the loading one over the media while it loads).
+// Styles for the <audio-preview> shadow root: the file's name over the
+// browser's own player, centred, with common's status placeholders for the
+// empty, loading and failed states (the loading one over the player while the
+// file's length is not yet known).
 
 @use 'common/src/styles/tokens' as *;
 @use 'common/src/styles/status';
@@ -26,11 +27,24 @@
   overflow: hidden;
 }
 
+.audio-preview__player {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  width: min(100%, 36rem);
+}
+
+.audio-preview__name {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: $text-secondary;
+  font-weight: 600;
+}
+
 .audio-preview__media {
   display: block;
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
+  width: 100%;
 }
 
 .audio-preview__loading {
