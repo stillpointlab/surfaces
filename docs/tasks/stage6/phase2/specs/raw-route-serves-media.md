@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 182
+completed: 2026-11-25
 created: 2026-11-25T18:00:00-07:00
 tags: [local-host, host-contract, code]
 ---
@@ -78,17 +80,17 @@ changes.
 
 ## Acceptance / completion checklist
 
-- [ ] Tests: the address by path for a nested file, and for names with a space, `#`, `?` and
+- [x] Tests: the address by path for a nested file, and for names with a space, `#`, `?` and
       `%`; each refusal that exists today, by the new address.
-- [ ] Tests: each range form, the `416`, several ranges answered whole, and a range of a file
+- [x] Tests: each range form, the `416`, several ranges answered whole, and a range of a file
       larger than one read.
-- [ ] Tests: the type of each new ending; the policy string and the `<meta>` say the same.
-- [ ] No caller of `/api/raw?path=` is left in the package or its README.
-- [ ] By hand, on the built server in Chromium, with the spike's media in a scratch folder: an
+- [x] Tests: the type of each new ending; the policy string and the `<meta>` say the same.
+- [x] No caller of `/api/raw?path=` is left in the package or its README.
+- [x] By hand, on the built server in Chromium, with the spike's media in a scratch folder: an
       image still shows; `curl -r 0-99` answers 206 with 100 bytes; a page that sets a `<video>`
       on a 60 s WebM through `urlFor`'s address seeks to its last ten seconds in under two
       seconds.
-- [ ] `npm run check` passes.
+- [x] `npm run check` passes.
 
 ## Implementation plan
 
