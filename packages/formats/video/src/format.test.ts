@@ -7,12 +7,16 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { videoFormat } from './format';
 
+// jsdom has no Media Source Extensions: a playlist is given to the player itself,
+// as in a browser that plays HLS on its own, and hls.js is not loaded here.
+vi.mock('./preview/hls-engine', () => ({ startHls: () => null }));
+
 // jsdom plays nothing: the pause for an element taken out of the page is stood in for.
 beforeAll(() => {
   vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
 });
 
-const ENDINGS = ['.mp4', '.m4v', '.webm', '.mov', '.mkv'];
+const ENDINGS = ['.mp4', '.m4v', '.webm', '.mov', '.mkv', '.m3u8'];
 
 describeFormatDescriptor(
   videoFormat,
@@ -25,14 +29,25 @@ describeFormatDescriptor(
 );
 
 describe('videoFormat', () => {
-  it('opens the five endings, in any case, and nothing else', () => {
+  it('opens the five endings and a playlist, in any case, and nothing else', () => {
     const registry = createFormatRegistry([videoFormat]);
     for (const ending of ENDINGS) {
       expect(registry.find(`a/b${ending}`)).toBe(videoFormat);
       expect(registry.find(`a/b${ending.toUpperCase()}`)).toBe(videoFormat);
     }
     // `.ogv` plays its sound alone in both browsers, so it is not opened.
-    for (const other of ['x.ogv', 'x.3gp', 'x.mpg', 'x.ts', 'x.m3u8', 'x.mp3', 'x.ogg']) {
+    // A segment of a stream is not opened: its playlist is.
+    for (const other of [
+      'x.ogv',
+      'x.3gp',
+      'x.mpg',
+      'x.ts',
+      'x.m4s',
+      'x.m2t',
+      'x.mpd',
+      'x.mp3',
+      'x.ogg',
+    ]) {
       expect(registry.find(other)).toBeNull();
     }
   });

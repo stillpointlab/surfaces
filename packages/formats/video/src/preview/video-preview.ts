@@ -1,6 +1,7 @@
 /// <reference lib="dom" />
 
 import {
+  createLazyLoader,
   createNotice,
   createReadyGate,
   createStatus,
@@ -14,7 +15,9 @@ import {
 } from '@stillpointlab/common-format';
 
 import { previewStyles } from './preview.styles';
+import { isPlaylist } from './stream';
 
+import type { StartEngine, StreamEngine } from './stream';
 import type { UrlPreviewElement } from '@stillpointlab/common-format';
 
 /**
@@ -35,6 +38,11 @@ const FAILED: Record<MediaFailure, string> = {
 /** What it says above a player whose picture the browser cannot show. */
 const NO_PICTURE = "This browser can't show this video's picture. Its sound plays.";
 
+// hls.js, imported the first time a playlist is opened and shared by every
+// instance; a file never loads it. A failed import is tried again by the next
+// playlist.
+const loadHls = createLazyLoader(async () => (await import('./hls-engine')).startHls);
+
 /**
  * Read-only player for the video file at a URL the host gives it: the
  * browser's own `<video controls>`, as large as the element with its own
@@ -45,13 +53,21 @@ const NO_PICTURE = "This browser can't show this video's picture. Its sound play
  * when there is nothing to show; a failure is said in one of two sentences and
  * reported once.
  *
+ * An HLS playlist (an address whose path ends in `.m3u8`) plays through hls.js,
+ * loaded for it alone: the engine feeds the `<video>`, and says which of the two
+ * failures it met when it gives up. Where hls.js cannot run (no Media Source
+ * Extensions), the playlist's address is the `<video>`'s own source, for a
+ * browser that plays HLS itself. Everything else holds for a stream as for a
+ * file.
+ *
  * A file whose sound the browser plays and whose picture it has no decoder for
  * fails nothing: the browser gives it a picture of no size. Once its length is
  * known, the element says so above the player.
  *
- * A new source lets the old one go (paused, its download ended), so a file
- * switched away from stops sounding and stops arriving. Leaving the page's tree
- * pauses it and keeps the media, so put back it is where it stopped.
+ * A new source lets the old one go (paused, its download ended, its engine
+ * with it), so a file switched away from stops sounding and stops arriving.
+ * Leaving the page's tree pauses it and keeps the media, so put back it is
+ * where it stopped.
  */
 export class VideoPreview extends HTMLElement implements VideoPreviewElement {
   private readonly root: ShadowRoot;
@@ -66,6 +82,8 @@ export class VideoPreview extends HTMLElement implements VideoPreviewElement {
   private failure: MediaFailure = 'load';
   // The media playing `shown`; null while there is no source.
   private media: HTMLVideoElement | null = null;
+  // The engine feeding `media` a stream; null for a file, and until it has loaded.
+  private engine: StreamEngine | null = null;
   private shown = '';
 
   static get observedAttributes(): string[] {
@@ -133,7 +151,7 @@ export class VideoPreview extends HTMLElement implements VideoPreviewElement {
   private update(): void {
     const src = this.src;
     if (src !== this.shown || (src && !this.media)) {
-      if (this.media) releaseMedia(this.media);
+      this.letGo();
       this.shown = src;
       this.media = src ? this.createMedia(src) : null;
       this.state = src ? 'loading' : 'empty';
@@ -150,7 +168,8 @@ export class VideoPreview extends HTMLElement implements VideoPreviewElement {
     media.setAttribute('controls', '');
     media.setAttribute('preload', 'metadata');
     media.setAttribute('playsinline', '');
-    media.setAttribute('src', src);
+    if (isPlaylist(src)) void this.stream(media, src);
+    else media.setAttribute('src', src);
     // Only the media in the element is heard: one it let go may still say
     // something late, and that is about a source no longer shown.
     media.addEventListener('loadedmetadata', () => {
@@ -160,16 +179,51 @@ export class VideoPreview extends HTMLElement implements VideoPreviewElement {
     media.addEventListener('resize', () => {
       if (this.media === media && this.state === 'loaded') this.render();
     });
+    // Fed by an engine, the media's source is the engine's own `blob:`, and the
+    // engine says which failure it was (and recovers what it can first).
     media.addEventListener('error', () => {
-      if (this.media === media && this.state !== 'failed') void this.fail(media);
+      if (this.media === media && this.state !== 'failed' && !this.engine) void this.fail(media);
     });
     return media;
+  }
+
+  /** Load the engine, then play the playlist at `src` through it, or through `media` itself. */
+  private async stream(media: HTMLVideoElement, src: string): Promise<void> {
+    let start: StartEngine;
+    try {
+      start = await loadHls();
+    } catch {
+      // The engine did not arrive, and so nor did the stream.
+      if (this.media === media && this.state !== 'failed') this.failWith('load');
+      return;
+    }
+    if (this.media !== media) return;
+    const engine = start();
+    if (!engine) {
+      media.setAttribute('src', src);
+      return;
+    }
+    this.engine = engine;
+    engine.attach(media, src, (failure) => {
+      if (this.media === media && this.state !== 'failed') this.failWith(failure);
+    });
+  }
+
+  /** Let the media go, and the engine feeding it first. */
+  private letGo(): void {
+    this.engine?.release();
+    this.engine = null;
+    if (this.media) releaseMedia(this.media);
   }
 
   /** Which failure it was takes a moment to learn (see `mediaFailureOf`); ready waits for it. */
   private async fail(media: HTMLVideoElement): Promise<void> {
     const failure = await mediaFailureOf(media);
     if (this.media !== media || this.state === 'failed') return;
+    this.failWith(failure);
+  }
+
+  private failWith(failure: MediaFailure): void {
     this.failure = failure;
     this.settle('failed');
   }

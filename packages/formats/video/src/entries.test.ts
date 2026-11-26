@@ -1,13 +1,19 @@
 // Importing the `./format` entry defines no element and evaluates no element
 // module; its `load()` is the `./preview` entry itself, so the element is never
-// defined twice. A format with an engine (a player, a PDF renderer) mocks it here
-// too, so the entry is kept from loading it.
+// defined twice. Neither evaluates the engine for a stream (hls.js), which only a
+// playlist loads.
 import { describe, expect, it, vi } from 'vitest';
 
 const evaluated = vi.hoisted(() => new Set<string>());
 
 vi.mock('./preview/video-preview', async (load) => {
   evaluated.add('video-preview');
+  return load();
+});
+
+// The engine for a stream: loaded by a playlist alone, never by an entry.
+vi.mock('./preview/hls-engine', async (load) => {
+  evaluated.add('hls-engine');
   return load();
 });
 
@@ -24,6 +30,6 @@ describe('video-format ./format entry', () => {
     const { videoFormat } = await import('./format');
 
     expect(await videoFormat.preview.load()).toBe(await import('./preview/index'));
-    expect(evaluated).toContain('video-preview');
+    expect([...evaluated]).toEqual(['video-preview']);
   });
 });

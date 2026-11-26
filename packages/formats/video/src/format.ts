@@ -12,7 +12,9 @@ export const videoFormat: FormatDescriptor = {
   id: 'video',
   // Every ending the stage 6 spike saw play in both Chromium and Firefox. `.ogv`
   // is not one: both have dropped Theora, and play its sound with no picture.
-  opens: ['.mp4', '.m4v', '.webm', '.mov', '.mkv'],
+  // `.m3u8` is an HLS playlist: text, but the element is given its address, and
+  // the engine reads it and the segments beside it.
+  opens: ['.mp4', '.m4v', '.webm', '.mov', '.mkv', '.m3u8'],
   needs: 'url',
   preview: { tag: 'video-preview', load: () => import('./preview/index') },
   /** The URL is the source; the file's name labels the player. */
