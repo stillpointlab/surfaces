@@ -24,8 +24,11 @@ const MEDIA_ERR_SRC_NOT_SUPPORTED = 4;
  * reads (only the browsers' own messages differ, and those are not a contract).
  * So for that code the address is asked once, by itself: an answer that is not
  * a success, or no answer, is `load`; a success is the bytes having arrived,
- * so `decode`. The answer's body is let go unread, and the browser's cache is
- * neither read nor filled by it.
+ * so `decode`. It is asked for its first byte alone, since a whole file let go
+ * unread is still sent in part before the cancel lands (half a megabyte of a
+ * long one, measured on the local host's probe). A file with no first byte
+ * (`416`) is there all the same, and no decoder reads nothing, so `decode`.
+ * The browser's cache is neither read nor filled by the question.
  */
 export async function mediaFailureOf(media: HTMLMediaElement): Promise<MediaFailure> {
   const code = media.error?.code;
@@ -34,9 +37,9 @@ export async function mediaFailureOf(media: HTMLMediaElement): Promise<MediaFail
   const src = media.currentSrc || media.getAttribute('src') || '';
   if (!src) return 'load';
   try {
-    const response = await fetch(src, { cache: 'no-store' });
+    const response = await fetch(src, { cache: 'no-store', headers: { range: 'bytes=0-0' } });
     void response.body?.cancel().catch(() => undefined);
-    return response.ok ? 'decode' : 'load';
+    return response.ok || response.status === 416 ? 'decode' : 'load';
   } catch {
     return 'load';
   }

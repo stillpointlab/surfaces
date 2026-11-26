@@ -33,8 +33,19 @@ describe('mediaFailureOf', () => {
 
     expect(await mediaFailureOf(failed(4))).toBe('decode');
     expect(fetch).toHaveBeenCalledTimes(1);
-    expect(fetch).toHaveBeenCalledWith('http://host.test/clip.mp3', { cache: 'no-store' });
+    expect(fetch).toHaveBeenCalledWith('http://host.test/clip.mp3', {
+      cache: 'no-store',
+      headers: { range: 'bytes=0-0' },
+    });
     expect(cancelled).toBe(true);
+  });
+
+  it('is decode for the one byte asked for, and for an empty file, which has none', async () => {
+    vi.stubGlobal('fetch', async () => new Response('x', { status: 206 }));
+    expect(await mediaFailureOf(failed(4))).toBe('decode');
+
+    vi.stubGlobal('fetch', async () => new Response('{"ok":false}', { status: 416 }));
+    expect(await mediaFailureOf(failed(4))).toBe('decode');
   });
 
   it('is load when the address answers a refusal, or nothing at all', async () => {
