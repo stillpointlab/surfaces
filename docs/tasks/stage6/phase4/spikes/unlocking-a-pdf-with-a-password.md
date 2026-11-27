@@ -280,6 +280,23 @@ permissions, new test PDFs beyond an owner-alone one, and any attempt on Firefox
 8. **The words.** "This PDF needs a password to open.", "That password didn't open it. Try
    again.", "Type the password first.", and "This PDF needs a password." for a failure. Lean: these.
 
+### Decided
+
+Jamie, 2026-11-27, on the four that shape the work:
+
+- **1, when:** "followup is fine if it fits as a drain sized item". It goes to phase 4's
+  follow-ups as one entry, built when that log is drained. The trial's size (432 lines, 210 of
+  them tests, one package) is the case that it fits; if the build grows past the first version
+  above, it stops and comes back to him as a spec.
+- **2, where:** "inside makes sense, less dependency". The field is in the element.
+- **4, the password manager:** "ok". `autocomplete="one-time-code"`, and Firefox's offer in the
+  README's Known and left.
+- **7, permissions:** not ruled. He asked what a PDF that forbids copying is; the answer is with
+  him.
+
+3, 5, 6 and 8 were put to him as smaller, with their leans, and he has not ruled on them. The
+build takes the leans and names each in its PR.
+
 ## References
 
 - The [pdf.js spike](pdfjs-in-a-format-package.md), which opened an encrypted PDF as far as
