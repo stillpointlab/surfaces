@@ -1,14 +1,16 @@
 // What jsdom cannot show: pdf.js, in its worker, really draws a page, a later
 // page once it is scrolled to, text through a character map and a JPEG 2000
-// image through its JavaScript fallback; and a password, a file that is not a
-// PDF and a missing file each fail as themselves. A page's text is laid over it
-// as the PDF has it, a selection gives its lines, `window.find` finds it near
+// image through its JavaScript fallback; a file that is not a PDF and a missing
+// file each fail as themselves; and a PDF with a password asks, says a wrong
+// one, and opens on its user or its owner password. A page's text is laid over
+// it as the PDF has it, a selection gives its lines, `window.find` finds it near
 // view and not far off, and a page scrolled away gives it back. Nothing is
 // dispatched by hand, and each test waits for the element's ready signal or for
 // a canvas or text to arrive, never for a time. The PDFs are files of this
 // package; the README has the command that made each.
 import { setErrorHandler } from '@stillpointlab/common-format';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { userEvent } from 'vitest/browser';
 
 import { PackageFiles } from './files';
 
@@ -263,11 +265,6 @@ describe('pdf-preview in a browser', () => {
   });
 
   it.each([
-    [
-      'a PDF with a password',
-      password,
-      "This PDF needs a password, and this preview can't ask for one yet.",
-    ],
     ['a file that is not a PDF', notPdf, "This file can't be read as a PDF."],
     ['a missing file', missing, "Couldn't load this PDF."],
   ])('says %s in its sentence, and reports it once', async (_, src, words) => {
@@ -279,5 +276,55 @@ describe('pdf-preview in a browser', () => {
     expect(pagesOf(el)).toHaveLength(0);
     expect(handler).toHaveBeenCalledTimes(1);
     expect(handler).toHaveBeenCalledWith('PDF preview failed to load', { src });
+  });
+
+  describe('with a password', () => {
+    const formOf = (el: PdfPreview) =>
+      el.shadowRoot!.querySelector<HTMLElement>('.pdf-preview__unlock');
+    const fieldOf = (el: PdfPreview) => formOf(el)!.querySelector('input')!;
+
+    /** Resolves once the element settles again after `act`. */
+    async function settlesAfter(el: PdfPreview, act: () => Promise<void>): Promise<void> {
+      const settled = new Promise<void>((done) =>
+        el.addEventListener('ready', () => done(), { once: true })
+      );
+      await act();
+      await settled;
+    }
+
+    it('asks, says a wrong one with the focus kept, and opens on the right one, drawn with its text', async () => {
+      const handler = vi.fn();
+      setErrorHandler(handler);
+      const el = await shown(password, 'password.pdf');
+      expect(formOf(el)?.textContent).toContain('This PDF needs a password to open.');
+      expect(pagesOf(el)).toHaveLength(0);
+
+      await settlesAfter(el, async () => {
+        await userEvent.click(fieldOf(el));
+        await userEvent.keyboard('wrong-one{Enter}');
+      });
+      expect(formOf(el)?.textContent).toContain("That password didn't open it. Try again.");
+      expect(fieldOf(el).getAttribute('aria-invalid')).toBe('true');
+      expect(el.shadowRoot!.activeElement).toBe(fieldOf(el));
+
+      // Typed where the focus is: still the field.
+      await settlesAfter(el, () => userEvent.keyboard('secret{Enter}'));
+      const [page] = pagesOf(el);
+      expect(inkOf(await drawn(page)).ink).toBeGreaterThan(0.001);
+      expect((await laid(page)).textContent).toContain('A text PDF');
+      expect(formOf(el)).toBeNull();
+      expect(el.shadowRoot!.querySelector('input')).toBeNull();
+      expect(el.shadowRoot!.innerHTML).not.toContain('secret');
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it('opens on the owner password too', async () => {
+      const el = await shown(password, 'password.pdf');
+      await settlesAfter(el, async () => {
+        await userEvent.click(fieldOf(el));
+        await userEvent.keyboard('owner{Enter}');
+      });
+      expect(pagesOf(el)).toHaveLength(1);
+    });
   });
 });
