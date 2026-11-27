@@ -65,8 +65,10 @@ screen reader "Page 3 of 12": a group holding its text (`role="group"`), or a pi
   (or zoomed, where the browser's zoom changes the ratio), heard by
   `matchMedia('(resolution: <n>dppx)')` for the ratio now, asked again for the new one after each
   change, and let go when drawing stops. It waits the same 200 ms.
-- **Each drawn page carries its text,** laid over its canvas once the canvas is shown (see "Its
-  text" below). Ready does not wait for it.
+- **Each drawn page carries its text,** laid over its canvas once the canvases of the pages near
+  view are shown, one page at a time, the nearest first (see "Its text" below). So a page's
+  picture never waits for another page's text, but the one being laid when it comes near. Ready
+  does not wait for it.
 - **Three failures, three sentences,** each reported once through `reportError`, told apart by
   the error pdf.js gives (`src/preview/failure.ts`):
   - "Couldn't load this PDF.": the file did not arrive (pdf.js's `ResponseException`, an answer
@@ -253,21 +255,23 @@ build holds it. Jamie accepted it on 2026-11-26.
 ## Tests
 
 `src/**/*.test.ts` run in jsdom, which has no worker and no canvas that draws: pdf.js and the
-worker are stood in for (`src/testing/fake-pdfjs.ts`), and each test says when a document opens
-or fails, when a page's size is read, when a page is drawn and when its text is laid. They cover
-the states and their words, the three failures from pdf.js's errors, the worker that fails to
-load, the pages laid out and labelled, the pages' sizes (`pdf-preview-sizes.test.ts`): the first
-page's alone read before it is drawn, the others read once it is, 50 at a time, no page drawn
-before its size is read, and the page in view kept in place as the boxes above it change; the
-pages near view drawn and those far off given back, a width that settles, a new pixel ratio drawn
-for and listened for again and the listener let go when drawing stops, a page that cannot be drawn, the old source let go, and leaving the page; a page's text
-(`pdf-preview-text.test.ts`): laid after ready, given back and cancelled with its canvas, brought
-to a new width, none for a page with none; and a password (`pdf-preview-password.test.ts`): asked
-in place of the pages and settled, handed to pdf.js with the field emptied, Enter as Open, a wrong
-one said and the focus kept, an empty one not sent, a new source letting the task go, a move
-keeping it, and the password in neither the error handler nor the console. `src/build.test.ts` builds the package and reads the
-files: pdf.js's main module reached from no entry but by `import()`, the worker importing pdf.js's
-changed copy, every file where the built modules name it, and no `.wasm`.
+worker are stood in for (`src/testing/fake-pdfjs.ts`), and each test says when a document opens or
+fails, when a page's size is read, when a page is drawn and when its text is laid. They cover the
+states and their words, the three failures from pdf.js's errors, the worker that fails to load,
+the pages laid out and labelled, the pages' sizes (`pdf-preview-sizes.test.ts`): the first page's
+alone read before it is drawn, the others read once it is, 50 at a time, no page drawn before its
+size is read, and the page in view kept in place as the boxes above it change; the pages near view
+drawn and those far off given back, a width that settles, a new pixel ratio drawn for and listened
+for again and the listener let go when drawing stops, a page that cannot be drawn, the old source
+let go, and leaving the page; a page's text (`pdf-preview-text.test.ts`): laid after ready and
+after every canvas near view, a page that comes near drawn before more text, given back and
+cancelled with its canvas, brought to a new width, none for a page with none; and a password
+(`pdf-preview-password.test.ts`): asked in place of the pages and settled, handed to pdf.js with
+the field emptied, Enter as Open, a wrong one said and the focus kept, an empty one not sent, a
+new source letting the task go, a move keeping it, and the password in neither the error handler
+nor the console. `src/build.test.ts` builds the package and reads the files: pdf.js's main module
+reached from no entry but by `import()`, the worker importing pdf.js's changed copy, every file
+where the built modules name it, and no `.wasm`.
 `src/**/*.browser.test.ts` run in headless Chromium (`vitest.browser.config.ts`): a page drawn
 with ink at the screen's pixel ratio, fetching the two standard fonts it needs and none for
 embedded fonts; the last of twelve pages drawn only once it is scrolled to; the page scrolled to
@@ -276,10 +280,10 @@ through its character map; a JPEG 2000 image drawn with no WebAssembly and no `.
 the file that is not a PDF and the missing file in their sentences; a page's text: the PDF's own
 over its canvas, two lines selected, `window.find` finding a word near view and not one far off,
 the Japanese as its characters, a page scrolled far away holding none, and no measuring canvas of
-pdf.js's left in the page once the last element lets go; and `password.pdf`
-asking, a wrong one said with the focus kept, the right one drawn with its text and leaving no
-field, and the owner password opening it too. A browser's offer to save the password needs a
-profile of its own and is not tested here: it is a release-walk step.
+pdf.js's left in the page once the last element lets go; and `password.pdf` asking, a wrong one
+said with the focus kept, the right one drawn with its text and leaving no field, and the owner
+password opening it too. A browser's offer to save the password needs a profile of its own and is
+not tested here: it is a release-walk step.
 
 The harness (`npm run dev`) has each of the test PDFs, a missing file and no source. Its missing
 file is a revoked object URL: the harness's Vite answers a path it has no file for with its own

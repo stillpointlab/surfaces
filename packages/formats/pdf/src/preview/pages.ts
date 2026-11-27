@@ -88,7 +88,7 @@ export const SELECTING = 'pdf-preview__pages--selecting';
  * page that cannot be drawn says so in its own place, and the others are drawn.
  *
  * A drawn page's text is laid over its canvas by pdf.js's `TextLayer` once the
- * canvas is shown, and lives as long as the canvas: given back with it,
+ * canvases of the pages near view are shown, and lives as long as the canvas: given back with it,
  * cancelled with its drawing, and brought to a new width with it. A page with
  * text is a group labelled "Page 3 of 12" to a screen reader, its canvas hidden;
  * a page with none (a scan), or none laid now, is a picture with that label.
@@ -284,10 +284,14 @@ export class PageColumn {
   }
 
   /**
-   * Draw the pages near view that need it, one at a time, the nearest first. A
-   * page whose size is not read yet has it read first, with every other such
-   * page near view. With none left, every page near view is drawn or could not
-   * be, and the first page is settled.
+   * Draw the pages near view that need it, one at a time, the nearest first,
+   * and then lay their text, one page at a time, the nearest first: a page's
+   * canvas never waits for another page's text but the one being laid. Each
+   * step looks again, so a page that comes near while text is laid is drawn
+   * before any more text. A page whose size is
+   * not read yet has it read first, with every other such page near view. With
+   * none left, every page near view is drawn or could not be, and the first page
+   * is settled.
    */
   private async drawNear(): Promise<void> {
     if (this.drawing) return;
@@ -296,15 +300,17 @@ export class PageColumn {
       for (;;) {
         if (!this.started) return;
         const slot = this.nextToDraw();
-        if (!slot) {
-          this.settleFirst();
-          return;
-        }
-        if (slot.page) {
+        const text = slot ? null : this.nextToLay();
+        if (slot?.page) {
           await this.draw(slot);
-        } else {
+        } else if (slot) {
           const near = pagesNear(this.inView, this.slots.length);
           await this.read([...near].map((index) => this.slots[index]).filter(unreadSlot));
+        } else if (text) {
+          await this.layText(text);
+        } else {
+          this.settleFirst();
+          return;
         }
       }
     } finally {
@@ -384,29 +390,37 @@ export class PageColumn {
     return at;
   }
 
+  /** The page near view, nearest first, to draw: no canvas, or one for another width or ratio. */
   private nextToDraw(): Slot | null {
+    return this.nearest(
+      (slot) =>
+        !slot.task &&
+        (slot.canvas === null || slot.drawnFor !== this.width || slot.drawnRatio !== this.ratio)
+    );
+  }
+
+  /** The page near view, nearest first, drawn and with no text laid or being laid. */
+  private nextToLay(): Slot | null {
+    return this.nearest((slot) => slot.canvas !== null && slot.text === null);
+  }
+
+  /** The page near view that `wanted`, not failed, the nearest to the middle of those in view. */
+  private nearest(wanted: (slot: Slot) => boolean): Slot | null {
     const near = pagesNear(this.inView, this.slots.length);
     const seen = [...this.inView];
     const middle = seen.length ? (Math.min(...seen) + Math.max(...seen)) / 2 : 0;
     return (
       [...near]
         .map((index) => this.slots[index])
-        .filter(
-          (slot) =>
-            !slot.failed &&
-            !slot.task &&
-            (slot.canvas === null ||
-              slot.drawnFor !== this.width ||
-              slot.drawnRatio !== this.ratio ||
-              slot.text === null)
-        )
+        .filter((slot) => !slot.failed && wanted(slot))
         .sort((a, b) => Math.abs(a.index - middle) - Math.abs(b.index - middle))[0] ?? null
     );
   }
 
   /**
    * Draw one page into a new canvas, shown in place of its old one once drawn,
-   * and then lay its text over it, or bring its text to the canvas's width.
+   * and bring the text it has to the canvas's width; text not laid yet is laid
+   * later (`layText`).
    */
   private async draw(slot: Slot): Promise<void> {
     const page = slot.page;
@@ -456,26 +470,26 @@ export class PageColumn {
       this.settleFirst();
     }
     slot.drawnFor = forWidth;
-    // Ready waits for the canvas alone; the text follows it, at its width.
-    await this.layText(slot, page, page.getViewport({ scale: width / natural.width }));
+    // Laid text follows the canvas at once. None is being laid: the column lays
+    // text between drawings, never during one.
+    if (!slot.text) return;
+    const viewport = textViewport(slot, page);
+    slot.text.box.style.setProperty('--total-scale-factor', scaleOf(viewport));
+    slot.text.layer?.update({ viewport });
   }
 
   /**
-   * Lay the text of `slot` over its canvas, at `viewport` (the page at the
-   * box's width in CSS pixels), or bring the text it has to that width. A page
-   * whose text pdf.js cannot read has none, and nothing is said of it.
+   * Lay the text of the drawn page `slot` over its canvas, at the canvas's
+   * width. Ready waits for no text. A page whose text pdf.js cannot read has
+   * none, and nothing is said of it.
    */
-  private async layText(slot: Slot, page: PDFPageProxy, viewport: PageViewport): Promise<void> {
-    // CSS pixels to one PDF unit of the page, which pdf.js's rules scale by.
-    const scale = String(viewport.scale * viewport.userUnit);
-    if (slot.text) {
-      slot.text.box.style.setProperty('--total-scale-factor', scale);
-      slot.text.layer?.update({ viewport });
-      return;
-    }
+  private async layText(slot: Slot): Promise<void> {
+    const page = slot.page;
+    if (!page) return;
+    const viewport = textViewport(slot, page);
     const box = document.createElement('div');
     box.className = 'pdf-preview__text';
-    box.style.setProperty('--total-scale-factor', scale);
+    box.style.setProperty('--total-scale-factor', scaleOf(viewport));
     const text: PageText = { layer: null, box, done: false };
     slot.text = text;
     try {
@@ -543,6 +557,16 @@ export class PageColumn {
     slot.canvas = null;
     slot.box.replaceChildren(createStatus('error', PAGE_FAILED));
   }
+}
+
+/** The page of a drawn `slot` at the width its canvas is drawn at, in CSS pixels: its text's. */
+function textViewport(slot: Slot, page: PDFPageProxy): PageViewport {
+  return page.getViewport({ scale: slot.drawnAt / page.getViewport({ scale: 1 }).width });
+}
+
+/** CSS pixels to one PDF unit of the page, which pdf.js's text rules scale by. */
+function scaleOf(viewport: PageViewport): string {
+  return String(viewport.scale * viewport.userUnit);
 }
 
 /** A page not yet read, and not found unreadable. */
