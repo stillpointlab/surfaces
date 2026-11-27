@@ -80,20 +80,20 @@ new packages among its workspaces.
 
 ### 3. Bytes a player can seek in
 
-- Jamie: "we should extend the preview and edit interfaces for the range request". What those
-  two interfaces are is [Clarification 1](#clarifications); the requirement either way is that
-  what serves a repository file's bytes answers a range (`Accept-Ranges`, `206`, `416`,
-  `If-Range`) with a validator, which for a repository file is its blob's SHA.
-- **Where the bytes come from for a range** is to be found out first: whether GitHub answers a
-  range for a file of a private repository, or the server must hold the file once fetched
-  ([Clarification 2](#clarifications)). A range must not cost a fetch of the whole file from
-  GitHub each time.
+- What serves a repository file's bytes answers a range (`Accept-Ranges`, `206`, `416`,
+  `If-Range`) with a validator, which for a repository file is its blob's SHA. That is what the
+  surfaces contract now says a host's URL owes a format given one
+  ([Decided](#decided), 1).
+- **The range is passed to GitHub** where GitHub answers one for a private repository's file:
+  "If we can do ranged from github that is ideal". Whether it does is found out first. If it
+  does not, the server holds a fetched file for a while, keyed by its SHA. A range must not
+  cost a fetch of the whole file from GitHub each time.
 - The answer carries the guard a stored file needs when a browser can open it directly
   (`sendImage`'s sandbox policy and `nosniff`), with whatever a media element or pdf.js's fetch
   needs and no more. The repository image route sends neither today.
 - It reads by the same rule as the tree that shows it: the connection's owner.
-- **A bound on size** is chosen and said in words when a file is over it
-  ([Clarification 2](#clarifications)).
+- **A file over 50 MB is not previewed,** and a sentence says so in its place ("50MB bound is
+  fine").
 
 ### 4. What is left when a preview cannot load
 
@@ -105,8 +105,8 @@ and, if it is nothing, given words.
 
 ### 5. The policy and the worker
 
-- `media-src 'self' blob:` was ruled for Context Manager in the brief (12), for streams. With
-  no stream in this spec nothing would use `blob:` yet ([Clarification 5](#clarifications)).
+- `media-src 'self' blob:` is added now, as the brief ruled (12) and Jamie confirmed for this
+  spec ("let's add now"), though no stream uses `blob:` here yet.
 - **The PDF worker is loaded from the page's own origin** in every mode Context Manager runs in:
   development, where the scripts come from Vite's server, and production with its scripts on
   another origin. Jamie: "let's add a WORKER_BASE_URL to CM config". A browser refuses a worker
@@ -144,10 +144,18 @@ not in this spec. The video row does not open `.m3u8` in Context Manager.
 
 ## Decided
 
-Jamie, 2026-11-27, on the draft's first three questions:
+Jamie, 2026-11-27:
 
-1. **Ranges:** "we should extend the preview and edit interfaces for the range request". (What
-   the two interfaces are is asked below.)
+1. **Ranges, and the surfaces contracts:** "we should extend the preview and edit interfaces for
+   the range request", and, asked which interfaces: "I did mean the surfaces contracts, I'm
+   curious why that wouldn't be impacted? Or do the existing interfaces already support it. Or
+   do you just mean we need the servers to support the feature?" The answer given him: a preview
+   is handed a URL and the browser's player (or pdf.js) asks it for ranges, so no method of the
+   element's changes, and it is the servers that must answer. But the contract did not say so in
+   words, which is how Context Manager's routes came to send whole files. The words are added
+   with this spec: on `FormatFile.url` in `common`, and in the root README. An editor is given
+   text today; an editor of bytes, its reads in ranges among them, is for the stage's spike on
+   writing bytes.
 2. **The worker:** "let's add a WORKER_BASE_URL to CM config". He asked whether the rule is
    beyond CORS and has no way round but the page's origin. It is: a worker's script must be on
    the page's origin, whatever headers it is served with. The one way round is a worker started
@@ -159,30 +167,20 @@ Jamie, 2026-11-27, on the draft's first three questions:
    separate initiative, please add a spike to CM for it". The spike's card is
    [context-manager#1322](https://github.com/stillpointlab/context-manager/pull/1322). This
    spec is for repository files.
+4. **Where a range's bytes come from, and the bound:** "If we can do ranged from github that is
+   ideal, 50MB bound is fine".
+5. **`blob:` for media:** "let's add now".
 
 ## Clarifications
 
 For Jamie, with the agent's lean:
 
-1. **"The preview and edit interfaces".** The agent's reading: Context Manager's own paths that
-   hand a file's bytes to a preview and to an editor, so that ranges are added to what is there
-   (today the repository image route, and the image good's routes for when goods hold bytes)
-   and not built as a new route for media alone. If he means the surfaces contracts instead
-   (`UrlPreviewElement`, `EditorElement`, the storage port), that is a change in surfaces and a
-   different piece of work.
-2. **Where a range's bytes come from, and the bound.** GitHub's blob call gives a whole file,
-   up to 100 MB. Lean: find out whether GitHub answers a range for a private repository's file
-   and pass it through if so; if not, the server keeps a fetched file for a while, keyed by its
-   SHA. Either way a bound for now, 50 MB, with a sentence in place of the preview over it.
-3. **One PR or several.** Lean: two in Context Manager, the ranges first, then the table, the
-   fallback, the policy and the worker's setting together.
-4. **The root-entries seed.** The drain of phase 2 named
+1. **The root-entries seed.** The drain of phase 2 named
    [the five older formats' root entries](../../../unassigned/seeds/root-entries-register-nothing.md)
-   as a candidate step for this phase. Lean: not in this phase.
-5. **`blob:` for media, now or with streams.** The brief's ruling 12 has Context Manager's
-   adoption add `media-src 'self' blob:`. Only a stream needs `blob:`, and this spec has none.
-   Lean: leave the policy's media rule as it is (its own origin) and add `blob:` when Context
-   Manager serves a stream.
+   as a candidate step for this phase. Lean: not in this phase. He asked to be reminded of it,
+   2026-11-27; not ruled.
+2. **One PR or several.** Lean: two in Context Manager, the ranges first, then the table, the
+   policy and the worker's setting together. Taken as the lean unless he says otherwise.
 
 ## Non-goals
 
@@ -207,7 +205,7 @@ For Jamie, with the agent's lean:
 
 - **Owns:** Context Manager's table, its repository bytes route, its policy, its worker setting,
   its pin.
-- **Must not change:** surfaces, unless the worker's address or Clarification 1 turns out to
-  need it, which comes back to Jamie first.
+- **Must not change:** surfaces, unless the worker's address turns out to need it, which comes
+  back to Jamie first. (The contract's words on ranges are in surfaces already, with this spec.)
 - **Runs after:** `stage6-phase4-complete`.
 - **Needs Jamie's word for:** the walks, `e2e:reset`, any scratch push.

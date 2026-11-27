@@ -204,6 +204,21 @@ asks for it. `ImagePreviewElement` is the same contract under image's name. The 
 (`npm run new-format -- <name> --url`) starts one: `<name>PreviewElement`, the empty, loading,
 loaded and failed states, and `describeUrlPreviewContract` with hooks for its media.
 
+**What a host's URL owes such a format.** The element is given a URL and no more: the browser's
+player, or pdf.js, asks that address for what it needs. So seeking and reading in part are the
+host's server's to give, and no method of the element's:
+
+- the file's bytes with its content type;
+- an answer to a `Range` request (`Accept-Ranges: bytes`, `206` with `Content-Range`, `416` past
+  the end). Without it a player cannot seek to what it has not been sent, and a large file is
+  sent whole;
+- a validator (`ETag`, honoured in `If-Range` and `If-None-Match`), so a browser keeps what it
+  has and a range of one version is never laid beside another's.
+
+The local host's raw route does all three ([its README](packages/hosts/local/README.md)). An image
+needs the first alone. An editor is given text, not a URL; a contract for an editor of bytes, its
+reads in ranges among them, is asked in the stage's spike on writing bytes.
+
 Formats may add subpaths of their own (`md` has `./markdown`, `code` has `./diff`, `sheet` has
 several). For the formats that predate the convention, `.` still registers the editor and exports
 everything; `./editor` is the explicit alias.
