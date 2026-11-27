@@ -213,8 +213,14 @@ above for what each part once found.
       scrolled to page 150 → found.
 - [ ] A page heard read aloud (Jamie, on a Mac, with VoiceOver): "Page 1 of 1", a group, then its
       lines, and no picture; the fax scan → "Page 1 of 1", an image.
-- [ ] The password → "This PDF needs a password, and this preview can't ask for one yet." The
-      file that is not a PDF → "This file can't be read as a PDF." A PDF deleted in a terminal
+- [ ] The password PDF → "This PDF needs a password to open.", a field and Open, in place of the
+      pages, the focus left where it was. "wrong" and Enter → "That password didn't open it. Try
+      again.", the focus still in the field; Open with the field empty → "Type the password
+      first."; "secret" and Enter → its page drawn, its text selectable; another file and back →
+      asked again. The password in no address (the network panel) and no console line, the
+      page's or the worker's, and no policy report. In a profile of its own with passwords
+      saved: Chromium offers no save; Firefox may (the PDF package's README, "Known and left").
+- [ ] The file that is not a PDF → "This file can't be read as a PDF." A PDF deleted in a terminal
       while its row still shows, then clicked → "Couldn't load this PDF.", or the page's "This
       file was deleted on disk."
 - [ ] A PDF replaced on disk → drawn anew. The 200-page PDF scrolled to its middle, then the
