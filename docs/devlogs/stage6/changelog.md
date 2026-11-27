@@ -338,7 +338,9 @@ from a question of Jamie's, each ruled by him on 2026-11-26, three at a time:
 
 ## Phase 4: The PDF preview, its text, and a password field (`stage6-phase4-complete`)
 
-Range: `stage6-phase3-complete..stage6-phase4-complete`, 2026-11-26 – 2026-11-27. RANGESTATS
+Range: `stage6-phase3-complete..stage6-phase4-complete`, 2026-11-26 – 2026-11-27. As the range
+stood when [#210](https://github.com/stillpointlab/surfaces/pull/210) was opened, without this
+close's own commits: 35 commits and 5 merges, 73 files, +7,024/−72.
 [#202](https://github.com/stillpointlab/surfaces/pull/202) reached main inside
 [#204](https://github.com/stillpointlab/surfaces/pull/204)'s merge, which was stacked on it.
 
@@ -360,8 +362,10 @@ Range: `stage6-phase3-complete..stage6-phase4-complete`, 2026-11-26 – 2026-11-
   [spike](../../tasks/stage6/phase4/spikes/unlocking-a-pdf-with-a-password.md)
   ([#205](https://github.com/stillpointlab/surfaces/pull/205)): a PDF that needs a password asks
   for it in place of the pages, as often as pdf.js asks, and keeps it nowhere.
-- Four fixes from the phase's log ([#DRAINPR](https://github.com/stillpointlab/surfaces/pull/DRAINPR)):
-  DRAINSHIPPED
+- Three fixes from the phase's log ([#210](https://github.com/stillpointlab/surfaces/pull/210)):
+  the first page is drawn after reading its size alone, with the others' sizes read after and
+  the page in view kept in place; a change of the screen's pixel ratio draws the pages again; a
+  page's picture no longer waits for the text of the page before it.
 - A spike on signing a PDF with a drawn signature, run
   ([#207](https://github.com/stillpointlab/surfaces/pull/207),
   [#208](https://github.com/stillpointlab/surfaces/pull/208);
@@ -420,7 +424,8 @@ by him:
 ### Testing & review
 
 - `npm run check` at each build's tip: 4,120 for the PDF preview, 4,132 for its text, 4,140 for
-  the password field, DRAINCHECK
+  the password field, 4,151 for the fixes, each on the build's machine with the other
+  repositories' CI seen idle first.
 - Each build was read by the orchestrating agent. The PDF preview's and the text layer's "As
   built" are its own writing; the password field's source and README were read whole.
 - By script, in the built local host, Chromium 158 and Firefox 159: a 200-page PDF to its last
@@ -441,15 +446,21 @@ by him:
 
 ### Deferred
 
-Fifteen entries in the [log](followups.md#phase-4), eleven from the two builds and four from the
-spikes and Jamie's rulings, each ruled by him on 2026-11-27, three at a time:
+Eighteen entries in the [log](followups.md#phase-4): eleven from the two builds and four from
+the spikes and Jamie's rulings, each ruled by him on 2026-11-27, three at a time; and three the
+fixes found, put to him with this close:
 
 - **Carried, one:** the browser's own find bar on a PDF's text, "to user validation at stage end".
   With phase 3's (an audio or video preview's `ready` on an iPhone), two are carried.
-- **Built, five:** the password field ([#209](https://github.com/stillpointlab/surfaces/pull/209));
-  and in [#DRAINPR](https://github.com/stillpointlab/surfaces/pull/DRAINPR) the first page not
-  waiting on every page's size, a redraw on a change of pixel ratio, pdf.js's measuring canvases
-  taken out of the host's page, and a page's picture not held up by the text before it.
+- **Built, four:** the password field ([#209](https://github.com/stillpointlab/surfaces/pull/209));
+  and in [#210](https://github.com/stillpointlab/surfaces/pull/210) the first page not
+  waiting on every page's size (a 3,000-page PDF's first page in 126 ms where it took 474), a
+  redraw on a change of pixel ratio, and a page's picture not held up by the text before it.
+- **Looked into, one:** pdf.js's measuring canvas. The entry was wrong: pdf.js takes it away
+  itself when a document is destroyed. A test holds it; Jamie ruled "fix, let's clean up" on
+  the entry as written, and it is his to confirm.
+- **Found by the fixes, three,** not yet ruled: a fast, coarse drag leaving a line's last letter
+  out; a page waiting for one text being laid; the cost of 3,000 boxes made at once.
 - **Closed, nine:** Firefox's line about microtasks; the generating script's name; prettier run
   from inside a package; the CommonJS worker no host loads; copying from a PDF that forbids it;
   find near view, with its seed; the issue for pdf.js; pdf.js's reading of a symbol font and a
@@ -460,6 +471,6 @@ spikes and Jamie's rulings, each ruled by him on 2026-11-27, three at a time:
 
 - The build of a drawn signature waits for the spike on writing bytes, which is in the stage's
   close.
-- The tag is on the merge of [#DRAINPR](https://github.com/stillpointlab/surfaces/pull/DRAINPR),
+- The tag is on the merge of [#210](https://github.com/stillpointlab/surfaces/pull/210),
   the phase's last code.
 - Phase 3's transcript was backed up after its close; phase 4's follows this one.

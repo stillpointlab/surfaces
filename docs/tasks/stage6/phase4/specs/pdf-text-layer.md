@@ -150,6 +150,9 @@ code, ran the package's tests again and looked at the selection drawn in the bui
   that is cancelled. The class comes to the page column from the engine's module, so pdf.js
   still loads behind the one `import()`.
 - **After the canvas, one page at a time.** Ready settles on the canvas, as it did.
+  **Changed 2026-11-27** ([#210](https://github.com/stillpointlab/surfaces/pull/210), from the
+  phase's log): the canvases of the pages near view are drawn first, and their text is laid
+  after, so a page's picture does not wait for the text of the page before it.
 - **The rules** are the package's own, taken from pdf.js's `.textLayer` rules: the layer's
   place and size from `--total-scale-factor`, each piece transparent and placed by its inline
   style, the selection's colour, and the rules for a page turned by its `/Rotate`. pdf.js's

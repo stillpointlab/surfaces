@@ -167,9 +167,14 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
   (`packages/formats/pdf/src/preview/pdf-preview.ts`).
   - Jamie, 2026-11-27: fix. "let's fix it, even if we measure I want to think about low power
     like mobile".
+  - Built 2026-11-27 ([#210](https://github.com/stillpointlab/surfaces/pull/210)): the first page's size alone is read before it is drawn, and the
+    others' after, 50 at a time. A PDF of 3,000 pages shows its first page in 126 ms where it
+    took 474 (Chromium, warm); with the page's thread slowed six times, 388 ms where it took 773. The slowing does not reach pdf.js's worker, so a phone is understated.
 - 2026-11-26 (PDF): a change of the screen's pixel ratio (a window moved to another screen)
   does not draw the pages again (`packages/formats/pdf/src/preview/pages.ts`).
   - Jamie, 2026-11-27: fix.
+  - Built 2026-11-27 ([#210](https://github.com/stillpointlab/surfaces/pull/210)). Shown by a script that imitates the change; a real change of
+    screen is a step in the release walk.
 - 2026-11-26 (PDF): Firefox says "The execution of microtasks on this page was reordered to
   avoid unsafe execution." once for each PDF opened. It comes with pdf.js; why was not looked
   into.
@@ -194,9 +199,15 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
   `document.body`, one for each language, and nothing takes it away (`TextLayer.cleanup()` is
   never called).
   - Jamie, 2026-11-27: "fix, let's clean up".
+  - Looked into ([#210](https://github.com/stillpointlab/surfaces/pull/210)) and not changed: the entry was wrong. pdf.js calls `TextLayer.cleanup()`
+    itself whenever a document is destroyed, and the element destroys its document when it lets
+    a source go; no canvas was left in the body in either browser. A browser test now holds
+    that, and the README says it. Told to Jamie; his to confirm.
 - 2026-11-26 (PDF text): a page's text is laid before the next page's canvas, so later pages of
   a dense PDF are drawn about 30 ms later each (`packages/formats/pdf/src/preview/pages.ts`).
   - Jamie, 2026-11-27: fix.
+  - Built 2026-11-27 ([#210](https://github.com/stillpointlab/surfaces/pull/210)): the pages near view are drawn first and their text laid after.
+    The third page of a dense PDF is drawn at 88 ms where it was at 116 (Chromium).
 - 2026-11-26 (PDF text): pdf.js reads the test PDF's ZapfDingbats line as "3456789:;<=>", and
   a vertical Japanese comma as its vertical form. That is what is copied and what a reader
   hears.
@@ -222,3 +233,11 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
 - 2026-11-27 (PDF): the package ships a copy of pdf.js's worker with one line changed, and the
   issue asking pdf.js for a way without it is written and not sent.
   - Closed 2026-11-27 (Jamie: "we'll leave it for now").
+- 2026-11-27 (the phase's follow-ups, [#210](https://github.com/stillpointlab/surfaces/pull/210)): a fast, coarse drag past a line's end left the
+  line's last letter out of the selection, in both browsers, by script (moves of 25 px; moves of
+  4 px select the whole line). Not tried on the build before the fixes, nor by hand. It is a
+  step in the release walk.
+- 2026-11-27 (the phase's follow-ups, [#210](https://github.com/stillpointlab/surfaces/pull/210)): a page that comes near view while another page's
+  text is being laid waits for that one text, about 30 ms on a dense page.
+- 2026-11-27 (the phase's follow-ups, [#210](https://github.com/stillpointlab/surfaces/pull/210)): what is left of a 3,000-page PDF's first page
+  (126 ms) is pdf.js opening the file and the making of 3,000 boxes at once.
