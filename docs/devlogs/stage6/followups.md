@@ -247,3 +247,35 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
 - 2026-11-27 (the phase's follow-ups, [#210](https://github.com/stillpointlab/surfaces/pull/210)): what is left of a 3,000-page PDF's first page
   (126 ms) is pdf.js opening the file and the making of 3,000 boxes at once.
   - **Carried** (Jamie, 2026-11-27): "let's leave this open until validation completes".
+
+## Phase 5
+
+From Context Manager's adoption of the three previews
+([context-manager#1325](https://github.com/stillpointlab/context-manager/pull/1325),
+[#1328](https://github.com/stillpointlab/context-manager/pull/1328)). Entries that are Context
+Manager's own to mend are here so the drain sees them; a seed or a fix for one lands there.
+
+- 2026-11-27 (CM, bytes): a file kept in Git LFS is served as its pointer, and a player says it
+  cannot play it. Not tried with such a file.
+  - Jamie, 2026-11-27: "for git lfs pointers, is it untested or not built? let's add a seed".
+    Both; the seed is [context-manager#1326](https://github.com/stillpointlab/context-manager/pull/1326).
+- 2026-11-27 (CM, bytes): every range is a request to GitHub's raw host with the person's
+  token, and that host's rate limits are not known.
+  - Jamie, 2026-11-27: "fair on the github request". Left as it is.
+- 2026-11-27 (CM, bytes): the image preview stays on the old image route, which sends a whole
+  file and has no validator. The new route serves images too.
+- 2026-11-27 (CM, previews): when the tree's size is stale and the server's says a file is over
+  the bound, the player says "Couldn't load this …" where the size sentence should be.
+- 2026-11-27 (CM, previews): a production build with `ASSET_BASE_URL` set was imitated in the
+  browser and never run. The asset host must send CORS headers for pdf.js's character maps and
+  fonts; the route behind CloudFront was read, not run.
+- 2026-11-27 (CM, previews): in development mode the first PDF asks Vite for every character
+  map as a module of its own, many small requests. A built page asks for the ones a PDF needs.
+- 2026-11-27 (CM, walks): Firefox logged "Error loading header viewer data" once in two of six
+  runs. It is the user header's own request, not a preview's. Whether Context Manager's `main`
+  does the same was not tried.
+- 2026-11-27 (CM, previews): the runtime image gains `@napi-rs/canvas` (about 35 MB), which
+  pdfjs-dist depends on and no browser loads.
+- 2026-11-27 (surfaces, from the adoption): nothing in surfaces lets a host check its own URL
+  against "what a host's URL owes such a format". Context Manager's route was held to it by its
+  own tests and a script. Offered to Jamie as a shared test a host can run; not built.

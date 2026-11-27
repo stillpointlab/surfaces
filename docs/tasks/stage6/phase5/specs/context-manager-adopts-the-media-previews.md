@@ -1,5 +1,5 @@
 ---
-column: todo
+column: review
 created: 2026-11-27T15:30:00-07:00
 tags: [context-manager, formats, feature, code]
 ---
@@ -217,3 +217,76 @@ None open. The seven above were the draft's questions.
   back to Jamie first. (The contract's words on ranges are in surfaces already, with this spec.)
 - **Runs after:** `stage6-phase4-complete`.
 - **Needs Jamie's word for:** the walks, `e2e:reset`, any scratch push.
+
+## As built
+
+Two pull requests in Context Manager, each built by an Opus 5.5 sub-agent and read by the
+orchestrating agent, which wrote this section. Nothing in surfaces changed but the contract's
+words on ranges, which went in with this spec.
+
+### The bytes ([context-manager#1325](https://github.com/stillpointlab/context-manager/pull/1325))
+
+- **A new route beside the image route,** `GET /:project/repos/:connection/file/bytes?path=`
+  (and `HEAD`), for an image, a sound, a film or a PDF by its ending. The image route keeps its
+  whole-file answer through its 2 MiB cache, as its callers expect; the image preview has not
+  moved to the new route.
+- **Ranges are passed to GitHub's raw host,** streamed, at the commit the tree was read at.
+  Context Manager records that commit with the tree (`lastSyncedCommit`), so the question the
+  build was told to stop on did not arise. What GitHub sends is checked against the tree's size
+  and the range asked for.
+- **The validator is the blob's SHA.** A `304` and a `416` are answered without asking GitHub.
+- **Over 50 MB:** `413 REPO_FILE_TOO_LARGE`. The bound is 50 MiB.
+- **The guard** is `sendImage`'s, shared. `Cache-Control` carries `no-transform`: the app's
+  compression was found to gzip a `206` of an SVG, which breaks a range.
+
+### The previews ([context-manager#1328](https://github.com/stillpointlab/context-manager/pull/1328))
+
+- **The pin** is surfaces `d8fda76`: the tag `stage6-phase4-complete` and the documentation and
+  one comment after it.
+- **The table:** three kinds, three rows. The video format is registered without `.m3u8`, and a
+  test holds Context Manager's endings equal to each descriptor's `opens`.
+- **Preview only:** the tree offers no Link on these files, the service refuses one before any
+  read, and a small PDF is no longer offered as context.
+- **Over the bound,** by the tree's size and before anything is asked: "No preview: this file
+  is X MB, and a preview opens a file of up to 50 MB."
+- **The policy** gains `media-src 'self' blob:` and nothing else.
+- **`WORKER_BASE_URL`,** default `/workers/` on the app's own origin, written into every page as
+  a meta tag. A production build places the worker with Vite's `renderBuiltUrl`; development
+  mode points the format package's worker starter there with a serve-only plugin, and the
+  server serves the package's `dist/`. **The PDF preview was not told its worker's address:**
+  Vite alone was enough, so surfaces did not change.
+
+### What was run, and what was not
+
+By the orchestrating agent on 2026-11-27, with Jamie's word ("you have permission to do the
+e2e:reset, push files to scratch and run a local server on second port for validation tests"),
+at Context Manager `e826d8af`. The scratch repository gained a `media-previews/` folder of ten
+files.
+
+| Arrangement                                             | Scripts from     | Worker from | Chromium 158 | Firefox 159 |
+| ------------------------------------------------------- | ---------------- | ----------- | ------------ | ----------- |
+| The built E2E server, after `e2e:reset`                 | the app          | the app     | 23 of 23     | 23 of 23    |
+| The same, its scripts and styles moved to a second port | `localhost:3104` | the app     | 24 of 25     | 24 of 25    |
+| Development mode, Vite on its own port                  | `localhost:5178` | the app     | 23 of 23     | 23 of 23    |
+
+- **The checks:** a sound and a film play and seek, the seek answered `206` through GitHub with
+  a real token; the bytes' headers; PDFs with their text (twelve pages to the last, Japanese
+  through character maps, a JPEG 2000 image through the fallback decoder, the password asked
+  and taken); the worker on the page's own origin; no policy report and no page error; no Link.
+- **The second port is an imitation** of `ASSET_BASE_URL` in production, which cannot run with
+  the test login: the browser rewrites the page's script addresses and widens the policy as the
+  server would. Its one failing check is the imitation's own (the page after the login's POST is
+  not rewritten).
+- **The two walk suites at the pin:** inventory 38 of 38; tasks steps 01 to 27, 29 and 30.
+- **Unit tests:** 6,018 after the first PR, 6,087 after the second.
+- **Never run:** a production build with `ASSET_BASE_URL` set on the server; the route behind
+  CloudFront; a file over 50 MB in a browser; a Git LFS file; Safari; a fine-grained token.
+
+### Left, and where
+
+- **Goods that hold bytes:** [context-manager#1322](https://github.com/stillpointlab/context-manager/pull/1322),
+  a spike there.
+- **Git LFS files,** served as their pointer:
+  [context-manager#1326](https://github.com/stillpointlab/context-manager/pull/1326), a seed
+  there (Jamie: "let's add a seed").
+- The rest is in the [stage's log](../../../../devlogs/stage6/followups.md#phase-5).
