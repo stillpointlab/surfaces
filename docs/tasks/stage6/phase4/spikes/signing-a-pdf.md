@@ -13,37 +13,45 @@ tags: [formats, feature, spike]
 ## Question
 
 Jamie, 2026-11-26, with the [PDF preview's spec](../specs/pdf-preview.md): "add a spike for
-supporting signing pdfs". So: what would it take for a person to sign a PDF in a surface, and
-what does "sign" mean here?
+supporting signing pdfs". Asked which signing, 2026-11-27: "a signature drawn on the page. we can
+add verifiable as a spike". So this spike is the first of two: a person puts their signature on a
+page of a PDF, as they would sign a form, and the PDF is saved with it. It proves nothing by
+itself. A signature a reader can verify is
+[its own spike](a-pdf-signature-that-can-be-verified.md).
 
 To answer:
 
-1. **Which signing.** Two different things share the word, and the spike asks Jamie which he
-   means, or both:
-   - **a drawn or typed signature placed on a page,** as a person signs a form: a picture or ink
-     added to the PDF, proving nothing by itself;
-   - **a digital signature** (a certificate and a hash over the file's bytes, PAdES), which a
-     reader can verify and which breaks if the file changes.
-2. **Reading comes first.** Read in `pdfjs-dist` 6.5.438 and not yet run: a document answers
-   `getSignatures()` (who signed, why, when) and `getSignatureData(id)` (the bytes needed to
-   verify one). Can the preview say "signed by …", and can a signature be verified in the
-   browser, against which certificates?
-3. **Writing is new ground.** pdf.js draws and reads; whether it can save what a signature
-   needs is to be found out, and it does not sign. What writes a signature: a library in the
-   browser (which, under which licence, how large), or the host? Each candidate is tried under
-   both hosts' policies, as pdf.js was.
-4. **Where the key is,** for a digital signature: a file the person chooses, the browser's own
-   store (WebCrypto, a passkey), a card or token, or a service. What may a page under our
-   policies reach, and what must never pass through a host?
+1. **Making the signature.** Drawn with a mouse, a finger or a pen; typed and set in a script
+   face; or a picture a person already has. Which of these a first version needs, and what
+   each costs. Whether it is kept for the next PDF, and where (the element forgets; a host may
+   remember).
+2. **Putting it on the page.** Choosing the page and the place, its size, moving it and taking
+   it away before saving. How that sits with a column of pages drawn near view, and with the
+   text layer over each page.
+3. **Writing it into the PDF.** Read in `pdfjs-dist` 6.5.438 and not yet run: pdf.js has ink and
+   stamp annotations, a signature editor of its own (`types/src/display/editor/signature.d.ts`),
+   and a `saveDocument()` that returns the PDF's bytes with what was added.
+   - Does that work from the display API alone, without pdf.js's viewer, and how much of the
+     viewer does its signature editor bring with it?
+   - Is what it writes seen in other readers (Adobe's, a browser's, Preview on a Mac), and does
+     it print?
+   - Is the signature part of the page or an annotation a reader can lift off, and does that
+     matter?
+   - Otherwise, a library that writes PDFs: which, under which licence, how large, and whether
+     it runs under both hosts' policies as pdf.js was made to.
+4. **What the save does to the file.** Whether it rewrites the whole PDF or adds to its end, and
+   what it does to a PDF that already carries a verifiable signature (it must not break one
+   silently). A PDF with a password. A form's fields.
 5. **The bytes.** A signed PDF is a new version of a binary file. The storage port is text
    today, and the stage's spike on writing bytes is where that is asked: this spike says what
-   signing needs of it (an incremental save that leaves earlier signatures valid).
-6. **Where it belongs.** A preview does not write. Signing is an editor's work, or a step of its
-   own in a host, and is nearer the
-   [basic media editors](../../../unassigned/seeds/basic-media-editors.md) than this stage's
-   previews.
-7. **Context Manager:** a signed version of a good, who signed it, and whether its own record of
-   a check-in says anything a signature should carry.
+   signing needs of it, and whether a first version could hand the person a download instead.
+6. **Where it belongs.** A preview does not write. Is signing an editor for the PDF format
+   (`<pdf-editor>`, with the preview as it is), a mode of the preview, or a step of its own in a
+   host? It is nearer the [basic media editors](../../../unassigned/seeds/basic-media-editors.md)
+   than this stage's previews.
+7. **What it must not do:** send the signature anywhere, or leave it where the next person at
+   the machine finds it without the first having chosen that.
+8. **Context Manager:** a signed version of a good, and who signed it.
 
 ## Findings
 
@@ -55,8 +63,10 @@ None yet.
 
 ## References
 
-- The [pdf.js spike](pdfjs-in-a-format-package.md) and the
-  [PDF preview's spec](../specs/pdf-preview.md).
-- `pdfjs-dist`: `types/src/display/api.d.ts` (`getSignatures`, `getSignatureData`).
+- The [pdf.js spike](pdfjs-in-a-format-package.md), the
+  [PDF preview's spec](../specs/pdf-preview.md) and the
+  [text layer's](../specs/pdf-text-layer.md).
+- `pdfjs-dist`: `types/src/display/api.d.ts` (`saveDocument`, `annotationStorage`) and
+  `types/src/display/editor`.
 - The [media previews brief](../../phase1/briefs/media_previews.md): the spike on writing bytes
   at the stage's close.
