@@ -182,9 +182,18 @@ export interface FakeTask {
   readonly files: unknown;
   readonly promise: Promise<FakeDocument>;
   destroyed: boolean;
+  /** Set by the element, as on pdf.js's loading task. */
+  onPassword: ((answer: (password: string) => void, reason: number) => void) | null;
+  /** The passwords the element handed back, in order. */
+  readonly passwords: string[];
   destroy(): Promise<void>;
   open(doc: FakeDocument): void;
   fail(error: unknown): void;
+  /**
+   * pdf.js asks for a password: `1`, one is needed, or `2`, the last was wrong.
+   * Resolves with the one the element hands back.
+   */
+  ask(reason?: 1 | 2): Promise<string>;
 }
 
 /** What the fake engine was asked, in order, and what to answer next. */
@@ -225,6 +234,15 @@ export const fakeEngine = {
       files,
       promise: done.promise,
       destroyed: false,
+      onPassword: null,
+      passwords: [],
+      ask: (reason = 1) =>
+        new Promise<string>((resolve) => {
+          task.onPassword?.((password) => {
+            task.passwords.push(password);
+            resolve(password);
+          }, reason);
+        }),
       destroy: async () => {
         task.destroyed = true;
         done.reject(pdfjsError('AbortException', 'Loading aborted'));
