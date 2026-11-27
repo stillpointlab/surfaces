@@ -166,7 +166,7 @@ Jamie's:
 - **The follow-up log, entry by entry** (2026-11-26, in three batches): the raw route's
   `no-store` is carried, "with the intent to address during audio spec impl"; six are fixed;
   that `test:browser` builds everything first is closed; image's root entry stays for now, with
-  [a seed](../../tasks/unassigned/seeds/root-entries-register-nothing.md) for all five older
+  [a seed](../../tasks/stage6/phase6/seeds/root-entries-register-nothing.md) for all five older
   formats.
 - **After a restart:** "showing the error+disable and not going overboard trying to fix".
 
@@ -217,7 +217,7 @@ him:
 ### At the phase's close
 
 - The tag is on the merge of [#192](https://github.com/stillpointlab/surfaces/pull/192), the phase's last.
-- A seed for [the older formats' root entries](../../tasks/unassigned/seeds/root-entries-register-nothing.md),
+- A seed for [the older formats' root entries](../../tasks/stage6/phase6/seeds/root-entries-register-nothing.md),
   from Jamie's question on image's.
 - Phase 1's transcript was backed up at its close; phase 2's follows this one.
 
