@@ -199,7 +199,13 @@ is what a person sees; the text is there to be selected, found and read.
   the outline, annotations and forms; text for a scan (reading the letters off a picture); a
   mended reading order, or a tagged PDF's headings and tables. The order a reader hears is pdf.js's.
 - **pdf.js measures text** with a hidden canvas it adds to the document's `<body>` (outside the
-  element) the first time it lays text, and keeps it there.
+  element), one for each language, the first time it lays text. It takes them away itself
+  whenever a document is destroyed (`TextLayer.cleanup()`, which pdf.js's `WorkerTransport.destroy`
+  calls once the worker has let the document go), unless some page's text is being laid at that
+  moment, and makes another for the next text laid. So none is left once the last PDF is let go:
+  a new source, or the empty one a host gives a preview it lets go. The preview does not call it
+  itself. An element taken out of the page with its source kept keeps its document, and the
+  canvas may stay until another document is destroyed.
 
 ### The files pdf.js fetches by name
 
@@ -269,7 +275,8 @@ before the pages' sizes are read kept in place as they arrive (`sizes.pdf`); Jap
 through its character map; a JPEG 2000 image drawn with no WebAssembly and no `.wasm` asked for;
 the file that is not a PDF and the missing file in their sentences; a page's text: the PDF's own
 over its canvas, two lines selected, `window.find` finding a word near view and not one far off,
-the Japanese as its characters, and a page scrolled far away holding none; and `password.pdf`
+the Japanese as its characters, a page scrolled far away holding none, and no measuring canvas of
+pdf.js's left in the page once the last element lets go; and `password.pdf`
 asking, a wrong one said with the focus kept, the right one drawn with its text and leaving no
 field, and the owner password opening it too. A browser's offer to save the password needs a
 profile of its own and is not tested here: it is a release-walk step.

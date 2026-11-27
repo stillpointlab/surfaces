@@ -5,7 +5,8 @@
 // file each fail as themselves; and a PDF with a password asks, says a wrong
 // one, and opens on its user or its owner password. A page's text is laid over
 // it as the PDF has it, a selection gives its lines, `window.find` finds it near
-// view and not far off, and a page scrolled away gives it back. Nothing is
+// view and not far off, a page scrolled away gives it back, and pdf.js's
+// measuring canvas leaves the page with the document that made it. Nothing is
 // dispatched by hand, and each test waits for the element's ready signal or for
 // a canvas or text to arrive, never for a time. The PDFs are files of this
 // package; the README has the command that made each.
@@ -122,6 +123,8 @@ function asked(): { calls: string[] } & { restore: () => void } {
 
 describe('pdf-preview in a browser', () => {
   afterEach(() => {
+    // Each element lets its source go, so none is still counted as holding text.
+    for (const el of document.querySelectorAll<PdfPreview>('pdf-preview')) el.setSource('');
     document.body.replaceChildren();
     setErrorHandler(null);
     vi.restoreAllMocks();
@@ -301,6 +304,40 @@ describe('pdf-preview in a browser', () => {
     expect(all[0].querySelector('.pdf-preview__text')).toBeNull();
     expect(canvasOf(all[0])).toBeNull();
     expect(all[0].getAttribute('role')).toBe('img');
+  });
+
+  it('leaves no measuring canvas of pdf.js’s in the page once the last element holding text lets go', async () => {
+    const measuring = () => [...document.body.querySelectorAll(':scope > canvas')];
+    /** Resolves once the page's body holds no canvas of its own. */
+    const none = () =>
+      new Promise<void>((done) => {
+        const observer = new MutationObserver(() => {
+          if (measuring().length > 0) return;
+          observer.disconnect();
+          done();
+        });
+        if (measuring().length === 0) done();
+        else observer.observe(document.body, { childList: true });
+      });
+    const first = await shown(text, 'text.pdf');
+    const second = await shown(pages, 'pages.pdf', 400);
+    await laid(pagesOf(first)[0]);
+    const all = pagesOf(second);
+    await laid(all[0]);
+    expect(measuring()).toHaveLength(1);
+
+    // pdf.js takes its canvases away as a document is destroyed (`TextLayer.cleanup`), unless
+    // text is being laid then, and makes another for the next text it lays. The other element
+    // keeps laying text: its last page, scrolled to.
+    first.setSource('');
+    const column = second.shadowRoot!.querySelector<HTMLElement>('.pdf-preview__pages')!;
+    column.scrollTop = column.scrollHeight;
+    await laid(all[11]);
+    expect(spansOf(all[11])).toEqual(['Page 12 of 12']);
+    expect(measuring()).toHaveLength(1);
+
+    second.setSource('');
+    await none();
   });
 
   it.each([
