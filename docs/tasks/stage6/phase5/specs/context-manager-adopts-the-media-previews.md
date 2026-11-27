@@ -84,10 +84,18 @@ new packages among its workspaces.
   `If-Range`) with a validator, which for a repository file is its blob's SHA. That is what the
   surfaces contract now says a host's URL owes a format given one
   ([Decided](#decided), 1).
-- **The range is passed to GitHub** where GitHub answers one for a private repository's file:
-  "If we can do ranged from github that is ideal". Whether it does is found out first. If it
-  does not, the server holds a fetched file for a while, keyed by its SHA. A range must not
-  cost a fetch of the whole file from GitHub each time.
+- **The range is passed to GitHub:** "If we can do ranged from github that is ideal". It can.
+  Tried by the claude agent on 2026-11-27 with one request each:
+  - `raw.githubusercontent.com/<owner>/<repo>/<commit>/<path>`, with the token in an
+    `Authorization` header, answers a range for a private repository's file: `206` with
+    `Content-Range` and `Accept-Ranges: bytes`, an `ETag`, and `416` for a range past the end.
+  - The API's blob and contents calls (`api.github.com`), which Context Manager uses today,
+    ignore `Range` and send the whole file with `200`.
+  - So a media file's bytes come from the raw host by commit and path, not from the blob call.
+    Not tried: a file kept in Git LFS (the raw host gives its pointer, not its bytes), a file
+    near the bound, GitHub's rate limits for that host, and a token of each kind Context
+    Manager stores.
+- A range must not cost a fetch of the whole file from GitHub each time.
 - The answer carries the guard a stored file needs when a browser can open it directly
   (`sendImage`'s sandbox policy and `nosniff`), with whatever a media element or pdf.js's fetch
   needs and no more. The repository image route sends neither today.
@@ -171,16 +179,16 @@ Jamie, 2026-11-27:
    ideal, 50MB bound is fine".
 5. **`blob:` for media:** "let's add now".
 
+6. **The root-entries seed is not in this phase:** "root-entries feels like it can slip this
+   phase, but I think I want it for stage if possible. Find a place for it to land". It is in
+   the stage's close:
+   [a format's root entry registers nothing](../../phase6/seeds/root-entries-register-nothing.md).
+7. **Two PRs in Context Manager,** the ranges first, then the table, the policy and the worker's
+   setting together: "yes, CM PRs sound fine".
+
 ## Clarifications
 
-For Jamie, with the agent's lean:
-
-1. **The root-entries seed.** The drain of phase 2 named
-   [the five older formats' root entries](../../../unassigned/seeds/root-entries-register-nothing.md)
-   as a candidate step for this phase. Lean: not in this phase. He asked to be reminded of it,
-   2026-11-27; not ruled.
-2. **One PR or several.** Lean: two in Context Manager, the ranges first, then the table, the
-   policy and the worker's setting together. Taken as the lean unless he says otherwise.
+None open. The seven above were the draft's questions.
 
 ## Non-goals
 
@@ -191,7 +199,7 @@ For Jamie, with the agent's lean:
 
 ## Acceptance / completion checklist
 
-- [ ] The Clarifications are ruled.
+- [x] The Clarifications are ruled (2026-11-27).
 - [ ] A repository's audio file and video file play and seek, with the network panel showing
       ranges, and GitHub not asked for the whole file on a seek.
 - [ ] A repository's PDF draws in development mode and in a production build with its scripts on

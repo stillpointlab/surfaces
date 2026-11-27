@@ -50,7 +50,7 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
   - 2026-11-26 (Jamie: the heading for now; "presumably we want to convert to the convention
     eventually?"): the README is fixed, with code's, sheet's and xmdl's, which said the same
     ([#192](https://github.com/stillpointlab/surfaces/pull/192)). The root entry is
-    [a seed](../../tasks/unassigned/seeds/root-entries-register-nothing.md) for all five older
+    [a seed](../../tasks/stage6/phase6/seeds/root-entries-register-nothing.md) for all five older
     formats.
 - 2026-11-25 (the token's follow-ups): after a restart, the explorer's create, rename and
   delete, an app's op, a save, and a commit review already open still call the server. Whether

@@ -24,10 +24,6 @@
 # ending and an MPEG-TS segment's.
 - docs/tasks/unassigned/seeds/a-format-told-by-a-files-bytes.md
 
-# From the drain of stage 6's phase 2 (2026-11-26): the five older formats' root
-# entries. A candidate step for stage 6's phase 5.
-- docs/tasks/unassigned/seeds/root-entries-register-nothing.md
-
 # From Jamie's stage 5 validation, published from Context Manager (2026-11-23).
 - docs/tasks/unassigned/seeds/a-format-step-for-published-pull-requests.md
 

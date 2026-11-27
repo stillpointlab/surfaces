@@ -1,4 +1,5 @@
 ---
+column: todo
 created: 2026-11-26T00:10:00-07:00
 tags: [formats, host-contract, code]
 ---
@@ -40,6 +41,12 @@ Jamie, 2026-11-26, at the close of stage 6's phase 2, where image's root came up
 
 ## When
 
-The agent's lean: as a step of Context Manager's adoption of the media formats (stage 6,
-phase 5), since that is when its imports and its pin change anyway and the walks run at the new
-pin. It is not needed for the adoption, so it can as well wait for a later stage.
+Jamie, 2026-11-27, with phase 5's spec: "root-entries feels like it can slip this phase, but I
+think I want it for stage if possible. Find a place for it to land". It lands here, in the
+stage's close (phase 6), before the release review:
+
+- The five roots change in surfaces, as one spec's work, once Context Manager's adoption
+  (phase 5) is merged, so the two do not meet in the same files.
+- Context Manager's imports from a root move in the pin the close makes anyway, after the
+  review's fixes, and the walks at that pin cover it. No pin is made for this alone.
+- If the close runs short, it is the first thing to go to the next stage, said to Jamie then.
