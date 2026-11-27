@@ -176,11 +176,16 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
   - Closed 2026-11-27 (Jamie: "close").
 - 2026-11-26 (PDF): `gen-styles.ts` now also runs `gen-pdfjs.ts` for a package that depends on
   `pdfjs-dist`, so the script's name says less than it does (`tooling/gen-styles.ts`).
+  - Closed 2026-11-27 (Jamie: "close is fine").
 - 2026-11-26 (PDF): `prettier --write` run from inside a package's folder does not read the
   root's `.prettierignore`, and formatted the generated copies once. The generating step saw
   the sizes differ and wrote them again.
+  - Closed 2026-11-27 (Jamie: "close").
 - 2026-11-26 (PDF): the package's CommonJS worker (`dist/worker.cjs`) requires an `.mjs`. No
   host loads it; the README's "Workers" already says the CJS worker is not the worker.
+  - Closed 2026-11-27 (Jamie: "close, I assume we don't need it because we use our own?"). So
+    it is: both hosts load the package's worker as an ES module, and the CommonJS file is there
+    because the shared build writes both kinds for every entry.
 - 2026-11-26 (PDF text): the browser's own find bar was not tried on a PDF's text, since no
   script can press it. `window.find` finds a phrase in both browsers; in Chromium it selects the
   text and does not scroll the column to it, in Firefox it does.

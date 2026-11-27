@@ -6,6 +6,10 @@
 - docs/tasks/unassigned/seeds/basic-media-editors.md
 - docs/tasks/unassigned/seeds/media-manager.md
 
+# From the spike on signing a PDF (Jamie's rulings, 2026-11-27): the build, which
+# waits for the spike on writing bytes, and what a PDF editor would add.
+- docs/tasks/unassigned/seeds/a-drawn-signature-on-a-pdf.md
+
 # From stage 6's streaming spike (Jamie's rulings, 2026-11-25): what the video
 # and audio previews leave for later.
 - docs/tasks/unassigned/seeds/players-of-our-own.md

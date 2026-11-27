@@ -15,6 +15,8 @@ What the pool already holds:
   source view for SVG.
 - [Video editor](video-editor.md): a title and no more.
 - Nothing for audio. The [dictation editor](dictation-editor.md) records; it does not edit.
+- For a PDF: [a drawn signature](a-drawn-signature-on-a-pdf.md), decided and waiting on bytes
+  (Jamie, 2026-11-27), which begins as a mode of the preview and moves to a PDF editor.
 
 What stands in the way today, in both hosts' shared parts:
 

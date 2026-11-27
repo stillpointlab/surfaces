@@ -1,5 +1,7 @@
 ---
 column: done
+pr: 208
+completed: 2026-11-27
 created: 2026-11-26T16:10:00-07:00
 tags: [formats, feature, spike]
 ---
@@ -358,6 +360,23 @@ remembered signature, pdf.js's editor, and a signature a reader can verify.
 7. **Kept for the next PDF.** Lean: no, for a first version.
 8. **The bytes.** Lean: the download now, a copy at a new path once bytes can be written, never
    replacing the original by default.
+
+### Decided
+
+Jamie, 2026-11-27, on all eight:
+
+- **1, when:** "later phase is fine but let's capture so we don't lose it". The build is the seed
+  [a drawn signature on a PDF](../../../unassigned/seeds/a-drawn-signature-on-a-pdf.md), which
+  waits for the spike on writing bytes.
+- **2, where:** "sounds fine, basic mode then migrated to editor". A mode of `<pdf-preview>` a
+  host turns on, becoming `<pdf-editor>` once `common` has an editor's contract for bytes.
+- **3, pdf.js's editor or our own:** "our own pad is fine".
+- **4, which signatures:** "drawn+picture as first pass fine". Typed waits for a script face.
+- **5, an annotation:** "annotation is fine".
+- **6, a PDF already signed:** "warn + try is fine".
+- **7, kept for the next PDF:** "no memory is fine (let's capture for pdf editor though)". The
+  seed holds it for the editor.
+- **8, the bytes:** "saved beside is fine".
 
 ## References
 
