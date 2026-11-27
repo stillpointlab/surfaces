@@ -15,6 +15,7 @@ import { PackageFiles } from './files';
 import { pageWorker, type PageWorker } from './page-worker';
 import { PageColumn, type PageSource } from './pages';
 import { previewStyles } from './preview.styles';
+import { Unlock } from './unlock';
 
 import type { UrlPreviewElement } from '@stillpointlab/common-format';
 import type { PDFDocumentLoadingTask } from 'pdfjs-dist';
@@ -26,13 +27,17 @@ import type { PDFDocumentLoadingTask } from 'pdfjs-dist';
  */
 export interface PdfPreviewElement extends UrlPreviewElement {}
 
-type PdfState = 'empty' | 'loading' | 'loaded' | 'failed';
+type PdfState = 'empty' | 'loading' | 'asking' | 'loaded' | 'failed';
+
+// pdf.js's `PasswordResponses.INCORRECT_PASSWORD`, the reason it asks again:
+// the one given did not open it. This module imports nothing of pdf.js.
+const INCORRECT_PASSWORD = 2;
 
 /** What the element says in place of the pages, for each of the three failures. */
 const FAILED: Record<PdfFailure, string> = {
   load: "Couldn't load this PDF.",
   read: "This file can't be read as a PDF.",
-  password: "This PDF needs a password, and this preview can't ask for one yet.",
+  password: 'This PDF needs a password.',
 };
 
 // pdf.js's document API, imported the first time a PDF opens and shared by every
@@ -46,6 +51,8 @@ interface Opened {
   readonly src: string;
   task: PDFDocumentLoadingTask | null;
   column: PageColumn | null;
+  /** pdf.js's function to hand it a password, while it waits for one. */
+  answer: ((password: string) => void) | null;
 }
 
 /**
@@ -64,6 +71,12 @@ interface Opened {
  * failure is said in one of three sentences in place of the pages and reported
  * once; a page that cannot be drawn says so in its own place.
  *
+ * A PDF that needs a password asks for it in place of the pages (see `Unlock`),
+ * as often as pdf.js asks, with no limit on tries. Asking is settled: nothing
+ * more comes until a person answers, and an answer begins a new cycle. The
+ * password is handed to pdf.js as it is sent and kept nowhere here, so a new
+ * source or a new element asks again.
+ *
  * A new source lets the old one go: its document is destroyed and its download
  * ended. Leaving the page's tree stops drawing and keeps the document, so put
  * back it draws again where it was.
@@ -78,6 +91,8 @@ export class PdfPreview extends HTMLElement implements PdfPreviewElement {
   private failure: PdfFailure = 'load';
   // The source shown or loading; null while there is none.
   private opened: Opened | null = null;
+  // The password form, made the first time a PDF asks and kept for the element.
+  private form: Unlock | null = null;
 
   static get observedAttributes(): string[] {
     return ['src', 'name'];
@@ -140,13 +155,13 @@ export class PdfPreview extends HTMLElement implements PdfPreviewElement {
     const src = this.src;
     if (src !== (this.opened?.src ?? '')) {
       this.letGo();
-      this.opened = src ? { src, task: null, column: null } : null;
+      this.opened = src ? { src, task: null, column: null, answer: null } : null;
       this.state = src ? 'loading' : 'empty';
       if (this.opened) void this.load(this.opened);
     }
     this.opened?.column?.start();
     this.render();
-    // A reconnect keeps a document that has drawn or failed, so it settles at once.
+    // A reconnect keeps a document that has drawn, failed or asks, so it settles at once.
     if (this.state === 'loading') this.ready.begin();
     else this.ready.settle();
   }
@@ -167,6 +182,18 @@ export class PdfPreview extends HTMLElement implements PdfPreviewElement {
     }
     const task = engine.openPdf(opened.src, worker.worker, PackageFiles);
     opened.task = task;
+    // pdf.js asks here, and again after each wrong one, with no limit on tries.
+    // Unanswered, it waits until the task is destroyed; `task.promise` then
+    // rejects with a `PasswordException`, which `live()` leaves unheard.
+    task.onPassword = (answer: (password: string) => void, reason: number) => {
+      if (!live()) return;
+      opened.answer = answer;
+      this.state = 'asking';
+      this.render();
+      this.unlock().ask(reason === INCORRECT_PASSWORD);
+      // Nothing more comes until a person answers. Detached, the reconnect settles it.
+      if (this.isConnected) this.ready.settle();
+    };
     let pages: PageSource[];
     try {
       const doc = await Promise.race([task.promise, worker.failed]);
@@ -200,6 +227,26 @@ export class PdfPreview extends HTMLElement implements PdfPreviewElement {
     // A task whose worker never started never finishes setting up; nothing waits on it.
     void opened.task?.destroy().catch(() => undefined);
     opened.task = null;
+    opened.answer = null;
+    this.form?.clear();
+  }
+
+  /** The password form, made the first time a PDF asks. */
+  private unlock(): Unlock {
+    this.form ??= new Unlock((password) => this.send(password));
+    return this.form;
+  }
+
+  /** A person's password, handed to pdf.js at once and kept nowhere: loading again. */
+  private send(password: string): void {
+    const opened = this.opened;
+    if (!opened?.answer || this.state !== 'asking') return;
+    const answer = opened.answer;
+    opened.answer = null;
+    this.state = 'loading';
+    this.render();
+    this.ready.begin();
+    answer(password);
   }
 
   private failWith(failure: PdfFailure): void {
@@ -232,14 +279,16 @@ export class PdfPreview extends HTMLElement implements PdfPreviewElement {
   }
 
   /**
-   * The empty words, the failed words, or the pages: under a loading cover until
-   * one is drawn, and the loading words alone until they are laid out.
+   * The empty words, the failed words, the password form, or the pages: under a
+   * loading cover until one is drawn, and the loading words alone until they are
+   * laid out.
    */
   private render(): void {
     this.label();
     const column = this.opened?.column ?? null;
     if (!this.opened) this.show(createStatus('empty', 'No PDF selected.'));
     else if (this.state === 'failed') this.show(createStatus('error', FAILED[this.failure]));
+    else if (this.state === 'asking') this.show(this.unlock().element);
     else if (!column) this.show(this.cover);
     else if (this.state === 'loading') this.show(column.element, this.cover);
     else this.show(column.element);

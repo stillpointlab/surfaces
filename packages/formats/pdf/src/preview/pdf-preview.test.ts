@@ -29,7 +29,7 @@ vi.mock('../worker/start', async () => {
 
 const LOAD = "Couldn't load this PDF.";
 const READ = "This file can't be read as a PDF.";
-const PASSWORD = "This PDF needs a password, and this preview can't ask for one yet.";
+const PASSWORD = 'This PDF needs a password.';
 
 const create = (): PdfPreview => document.createElement('pdf-preview') as PdfPreview;
 const frameOf = (el: PdfPreview) => el.shadowRoot!.querySelector('.pdf-preview')!;
@@ -155,7 +155,11 @@ describe('pdf-preview', () => {
       pdfjsError('UnknownErrorException', 'Bad XRef entry', 'FormatError: Bad XRef entry'),
       READ,
     ],
-    ['a PDF with a password', pdfjsError('PasswordException', 'No password given'), PASSWORD],
+    [
+      'a PDF whose password pdf.js stopped asking for',
+      pdfjsError('PasswordException', 'No password given'),
+      PASSWORD,
+    ],
   ])(
     'says %s in its sentence, in place of the pages, and reports it once',
     async (_, error, words) => {
