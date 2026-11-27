@@ -80,6 +80,25 @@ describe('pdf-preview text', () => {
     );
   });
 
+  it('draws every page near view before laying any page’s text, and lays it one page at a time', async () => {
+    const doc = withText(3);
+    for (const page of doc.pages) page.textAtOnce = false;
+    const el = await opens(doc);
+    await tick();
+
+    expect(pagesOf(el).map((page) => page.querySelector('canvas') !== null)).toEqual([
+      true,
+      true,
+      true,
+    ]);
+    expect(doc.pages.map((page) => page.texts.length)).toEqual([1, 0, 0]);
+
+    doc.pages[0].texts[0].lay();
+    await tick();
+    expect(doc.pages.map((page) => page.texts.length)).toEqual([1, 1, 0]);
+    expect(spansOf(pagesOf(el)[0])).toEqual(['Page 1, line one', 'line two']);
+  });
+
   it('is ready on the first page drawn, not on its text', async () => {
     const doc = withText(1);
     doc.pages[0].textAtOnce = false;
@@ -178,6 +197,7 @@ describe('pdf-preview text', () => {
 
   it('marks the column while the mouse is down in it, until it comes up anywhere', async () => {
     const el = await opens(withText(1));
+    await tick();
     const column = el.shadowRoot!.querySelector('.pdf-preview__pages')!;
 
     textOf(pagesOf(el)[0])!.dispatchEvent(
@@ -272,6 +292,28 @@ describe('pdf-preview text near view', () => {
     expect(laying.cancelled).toBe(true);
     expect(textOf(pagesOf(el)[29])).toBeNull();
     expect(withTextNow(el)).toEqual([1, 2, 3]);
+  });
+
+  it('draws a page that comes near while text is laid before laying more text', async () => {
+    const doc = withText(20);
+    for (const page of doc.pages) page.textAtOnce = false;
+    const el = await opens(doc);
+    scrollTo(1);
+    await tick();
+    expect(doc.pages[0].texts).toHaveLength(1);
+    doc.pages[3].drawAtOnce = false;
+
+    scrollTo(2);
+    doc.pages[0].texts[0].lay();
+    await tick();
+    // Page 4's canvas first: page 2's text waits for it.
+    expect(doc.pages[3].renders).toHaveLength(1);
+    expect(doc.pages[1].texts).toHaveLength(0);
+
+    doc.pages[3].renders[0].draw();
+    await tick();
+    expect(pagesOf(el)[3].querySelector('canvas')).not.toBeNull();
+    expect(doc.pages[1].texts).toHaveLength(1);
   });
 
   it('cancels nothing of a page’s text when its canvas is cancelled before it is drawn', async () => {

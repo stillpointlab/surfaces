@@ -40,6 +40,9 @@
   padding: $spacing-md;
   overflow: auto;
   overscroll-behavior: contain;
+  // The column keeps the page in view in place as the boxes take their sizes,
+  // which the browser's own anchoring would do a second time.
+  overflow-anchor: none;
   background: $background-secondary;
 }
 
