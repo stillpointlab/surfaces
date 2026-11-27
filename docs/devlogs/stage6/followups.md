@@ -200,8 +200,11 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
 - 2026-11-26 (PDF text): pdf.js reads the test PDF's ZapfDingbats line as "3456789:;<=>", and
   a vertical Japanese comma as its vertical form. That is what is copied and what a reader
   hears.
+  - Closed 2026-11-27 (Jamie: "close as known issue"). It is in the package's README, under
+    what the text does not give.
 - 2026-11-26 (PDF text): in Chromium the selection is empty for a moment while a drag crosses
   the blank between two pages, and comes back.
+  - Closed 2026-11-27 (Jamie: "close").
 - 2026-11-27 (PDF, from the [spike](../../tasks/stage6/phase4/spikes/unlocking-a-pdf-with-a-password.md)):
   a PDF with a password is told so in words, with no field to type one.
   - Jamie, 2026-11-27: "followup is fine if it fits as a drain sized item"; the field "inside"
