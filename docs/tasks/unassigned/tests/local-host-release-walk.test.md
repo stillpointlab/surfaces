@@ -209,8 +209,9 @@ above for what each part once found.
 - [ ] A PDF of thousands of pages, if one is at hand → its first page shows at once; dragged to
       its middle and its end, each page drawn at its own size, and the page in view not jumping
       as the others' sizes arrive.
-- [ ] A fast drag across a line and on past its end → the whole line selected, its last letter
-      too. (A script's coarse drag left the last letter out; a hand's was not tried.)
+- [ ] `packages/formats/pdf/dev/media/text.pdf`: a fast drag across its first line and on past
+      its end → "A text PDF, its fonts not embedded", its last letter too. (A script's coarse
+      drag selected "…embedde"; a hand's was not tried. Jamie's to try in his validation.)
 - [ ] A line of `text.pdf` dragged across → it shows selected, in a light blue over the page's
       white; copied and pasted into a text file → its words, nothing more. On the 200-page dense
       PDF, a drag from a page's last lines into the next page's first → pasted, both, in order. A

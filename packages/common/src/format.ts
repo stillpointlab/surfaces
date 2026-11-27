@@ -14,6 +14,18 @@ export interface FormatFile {
    * A URL the element can load, for a format that needs a URL. An address
    * relative to the file (a playlist's segment, an image beside a page) resolves,
    * against this URL, to the file's neighbour, where the host can serve one.
+   *
+   * The element is given no more than the URL, so what a player or a reader
+   * needs of the file is the host's server's to give at that address:
+   * - the file's bytes with its content type;
+   * - an answer to a `Range` request (`Accept-Ranges: bytes`, `206` with
+   *   `Content-Range`, `416` past the end), so a sound or a film can be sought
+   *   in and a PDF read without the whole file first. Without it a player
+   *   cannot seek to what it has not been sent;
+   * - a validator (`ETag`, honoured in `If-Range` and `If-None-Match`), so a
+   *   browser keeps what it has and a range of one version is never laid beside
+   *   another's.
+   * The local host's raw route does all three. An image needs the first alone.
    */
   url?: string;
 }

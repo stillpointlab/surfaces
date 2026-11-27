@@ -1,5 +1,7 @@
 ---
-column: review
+column: done
+pr: 205
+completed: 2026-11-27
 created: 2026-11-26T16:10:00-07:00
 tags: [formats, feature, spike]
 ---
@@ -291,8 +293,9 @@ Jamie, 2026-11-27, on the four that shape the work:
 - **2, where:** "inside makes sense, less dependency". The field is in the element.
 - **4, the password manager:** "ok". `autocomplete="one-time-code"`, and Firefox's offer in the
   README's Known and left.
-- **7, permissions:** not ruled. He asked what a PDF that forbids copying is; the answer is with
-  him.
+- **7, permissions:** left. He asked what a PDF that forbids copying is, and with the answer:
+  "leave no-copy for now - we aren't aiming to be a secure pdf platform, just a convenience. We
+  can review later if it is needed".
 
 3, 5, 6 and 8 were put to him as smaller, with their leans, and he has not ruled on them. The
 build takes the leans and names each in its PR.

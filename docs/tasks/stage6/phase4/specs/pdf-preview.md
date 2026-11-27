@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 202
+completed: 2026-11-27
 created: 2026-11-26T15:40:00-07:00
 tags: [formats, feature, code]
 ---
@@ -284,6 +286,10 @@ them. The package's `dist/` carries 4.7 MB of copies.
 - **Pages in view and two either side are drawn.** A canvas holds at most 2^24 pixels and
   16,384 a side. A change of width draws again after 200 ms of quiet. 100% is 96/72 of a CSS
   pixel to a PDF unit.
+- **Changed 2026-11-27** ([#210](https://github.com/stillpointlab/surfaces/pull/210), from the
+  phase's log): the first page's size alone is read before it is drawn. The others take its size
+  until theirs is read, and the page in view is kept in place as they arrive. What follows is as
+  first built.
 - **Every page's size is read before any is drawn** (46 ms for 200 pages), so the scroll bar is
   true from the start. A page pdf.js cannot read takes its neighbour's size.
 - **The three failures are told by the name of pdf.js's error:** `PasswordException`;
@@ -321,7 +327,8 @@ them. The package's `dist/` carries 4.7 MB of copies.
 
 ### The issue offered to pdf.js
 
-Written and not sent; sending it is Jamie's to do or not.
+Written and not sent. Jamie, 2026-11-27: "we'll leave it for now". The changed line stays, and
+the generating step fails if an upgrade of pdf.js moves it.
 
 > **Let an embedder give the address of a decoder's JavaScript fallback**
 >

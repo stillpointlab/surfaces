@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 204
+completed: 2026-11-27
 created: 2026-11-26T15:45:00-07:00
 tags: [formats, feature, code]
 ---
@@ -102,6 +104,8 @@ For Jamie, with the agent's lean:
    preview's bound on what it holds; or a find of our own that asks pdf.js for the whole
    document's text and scrolls to a match, which is a feature with a field and buttons of its
    own. Lean: near view now, and a find of our own as a seed.
+   - **Ruled** (Jamie, 2026-11-27): near view stands, and "seed for better Ctrl-F in pdfs is
+     fine": [finding a word anywhere in a PDF](../../../unassigned/seeds/finding-a-word-anywhere-in-a-pdf.md).
 
 ## Non-goals
 
@@ -146,6 +150,9 @@ code, ran the package's tests again and looked at the selection drawn in the bui
   that is cancelled. The class comes to the page column from the engine's module, so pdf.js
   still loads behind the one `import()`.
 - **After the canvas, one page at a time.** Ready settles on the canvas, as it did.
+  **Changed 2026-11-27** ([#210](https://github.com/stillpointlab/surfaces/pull/210), from the
+  phase's log): the canvases of the pages near view are drawn first, and their text is laid
+  after, so a page's picture does not wait for the text of the page before it.
 - **The rules** are the package's own, taken from pdf.js's `.textLayer` rules: the layer's
   place and size from `--total-scale-factor`, each piece transparent and placed by its inline
   style, the selection's colour, and the rules for a page turned by its `/Rotate`. pdf.js's

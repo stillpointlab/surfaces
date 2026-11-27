@@ -333,3 +333,151 @@ from a question of Jamie's, each ruled by him on 2026-11-26, three at a time:
   questions and two spikes he asked for (unlocking a PDF with a password; signing a PDF).
 - The tag is on the merge of [#201](https://github.com/stillpointlab/surfaces/pull/201), the phase's last.
 - Phase 2's transcript was backed up after its close; phase 3's follows this one.
+
+---
+
+## Phase 4: The PDF preview, its text, and a password field (`stage6-phase4-complete`)
+
+Range: `stage6-phase3-complete..stage6-phase4-complete`, 2026-11-26 – 2026-11-27. As the range
+stood when [#210](https://github.com/stillpointlab/surfaces/pull/210) was opened, without this
+close's own commits: 35 commits and 5 merges, 73 files, +7,024/−72.
+[#202](https://github.com/stillpointlab/surfaces/pull/202) reached main inside
+[#204](https://github.com/stillpointlab/surfaces/pull/204)'s merge, which was stacked on it.
+
+### Shipped
+
+- The PDF preview ([#202](https://github.com/stillpointlab/surfaces/pull/202);
+  [spec](../../tasks/stage6/phase4/specs/pdf-preview.md)): `<pdf-preview>` in
+  `packages/formats/pdf`, on pdf.js 6.5.438, the first format with a worker of its own. A column
+  of pages, each drawn while it is near view and given back when it is far; three sentences for
+  three failures; no WebAssembly, and nothing added to either host's policy. pdf.js's character
+  maps, fonts and fallback decoders are copied into the package by a generating step, and the
+  root README gains the convention for files fetched by name.
+- A PDF's text ([#204](https://github.com/stillpointlab/surfaces/pull/204);
+  [spec](../../tasks/stage6/phase4/specs/pdf-text-layer.md),
+  [#203](https://github.com/stillpointlab/surfaces/pull/203)): pdf.js's text layer over each drawn
+  page, so a person can select and copy, the browser can find, and a screen reader is given a
+  page's label and its lines.
+- A password field ([#209](https://github.com/stillpointlab/surfaces/pull/209)), from the
+  [spike](../../tasks/stage6/phase4/spikes/unlocking-a-pdf-with-a-password.md)
+  ([#205](https://github.com/stillpointlab/surfaces/pull/205)): a PDF that needs a password asks
+  for it in place of the pages, as often as pdf.js asks, and keeps it nowhere.
+- Three fixes from the phase's log ([#210](https://github.com/stillpointlab/surfaces/pull/210)):
+  the first page is drawn after reading its size alone, with the others' sizes read after and
+  the page in view kept in place; a change of the screen's pixel ratio draws the pages again; a
+  page's picture no longer waits for the text of the page before it.
+- A spike on signing a PDF with a drawn signature, run
+  ([#207](https://github.com/stillpointlab/surfaces/pull/207),
+  [#208](https://github.com/stillpointlab/surfaces/pull/208);
+  [spike](../../tasks/stage6/phase4/spikes/signing-a-pdf.md)): pdf.js's own save writes a drawn
+  signature or a picture with none of its viewer, adds to the file's end, and leaves an earlier
+  digital signature valid. A card for
+  [a signature a reader can verify](../../tasks/stage6/phase4/spikes/a-pdf-signature-that-can-be-verified.md)
+  stands beside it, not run.
+
+### Decisions
+
+Jamie's, on the PDF preview's spec, 2026-11-26:
+
+- **pdf.js's worker is shipped with one line changed,** so its fallback decoders load by the
+  package's own names: "one-line change is fine with build fail".
+- **`'wasm-unsafe-eval'` stays out of both policies:** "sounds fine".
+- **`@napi-rs/canvas` is accepted** as a dependency pdf.js brings: "should be fine".
+- **The text layer is its own spec, next:** "text layer next is fine".
+- **A password and signing each get a spike:** "let's add a spike", "Also add a spike for
+  supporting signing pdfs".
+
+Jamie's, 2026-11-27:
+
+- **The password field is a follow-up, inside the element:** "followup is fine if it fits as a
+  drain sized item"; "inside makes sense, less dependency". Chromium's offer to save the password
+  is stopped and Firefox's is left: "ok".
+- **A PDF that forbids copying is not enforced:** "leave no-copy for now - we aren't aiming to be
+  a secure pdf platform, just a convenience. We can review later if it is needed".
+- **Text is held for the pages near view alone,** with a seed for finding a word anywhere:
+  "seed for better Ctrl-F in pdfs is fine"
+  ([seed](../../tasks/unassigned/seeds/finding-a-word-anywhere-in-a-pdf.md)).
+- **The issue written for pdf.js is not sent:** "we'll leave it for now".
+- **An element's `ready` twice is closed,** once its cause was told: "we can close for now".
+- **Signing is "a signature drawn on the page",** and "we can add verifiable as a spike". Its
+  eight questions, all ruled: a later phase, captured
+  ([seed](../../tasks/unassigned/seeds/a-drawn-signature-on-a-pdf.md)); a mode of the preview,
+  "then migrated to editor"; drawn and picture first; a pad of our own; an annotation; warn and
+  go on for a PDF already signed; nothing remembered, "(let's capture for pdf editor though)";
+  the signed copy saved beside the original.
+- **The first page is not to wait on every page's size:** "let's fix it, even if we measure I
+  want to think about low power like mobile".
+
+Jamie has not ruled on these, which are the agents' calls in each spec's "As built" or PR, merged
+by him:
+
+- The worker is handed to pdf.js for each document (`PDFWorker.create({ port })`), not set once
+  for the page; pdf.js's files are fetched by the package's own factory, and an address that is
+  `data:` is decoded without a fetch, since Context Manager inlines small files.
+- A canvas is bound at 2^24 pixels and 16,384 a side.
+- The text layer's selection ends at an element of its own, as in pdf.js's viewer; a page's box
+  clips; a page with text is a group labelled "Page N of M".
+- For the password field: a person is asked again when a file is reopened or changes; asking
+  counts as ready, with a sentence in `common`'s contract; there is no Cancel button; the four
+  sentences as the spike worded them.
+
+### Testing & review
+
+- `npm run check` at each build's tip: 4,120 for the PDF preview, 4,132 for its text, 4,140 for
+  the password field, 4,151 for the fixes, each on the build's machine with the other
+  repositories' CI seen idle first.
+- Each build was read by the orchestrating agent. The PDF preview's and the text layer's "As
+  built" are its own writing; the password field's source and README were read whole.
+- By script, in the built local host, Chromium 158 and Firefox 159: a 200-page PDF to its last
+  page with only the pages near view holding a canvas; no policy report in the page or the
+  worker for seven PDFs, each listener shown to hear; a line selected by a drag, copied and
+  pasted; a selection across two pages; a password asked, refused and taken, found in no
+  address, console line or DOM.
+- A stand-in for Context Manager's client, its build options and its policy: the same PDFs,
+  clean. Context Manager itself was not run.
+- Browser tests in CI: 14 for the PDF package, about 3 s; the job took 43 to 59 s. A PR on
+  another PR starts no CI, so the text layer's was run by hand on its branch.
+- The spikes: the password trial and the signing trial were run in the built host in both
+  browsers by sub-agents and are not committed. Of the signing spike's claims the orchestrating
+  agent checked that a saved file starts with the original's bytes and that poppler still calls
+  an earlier digital signature valid.
+- Never run: Safari; a real screen reader; the browser's own find bar; a touch screen; a screen
+  with a pixel ratio above 1; Adobe's reader or Preview on a saved signature.
+
+### Deferred
+
+Eighteen entries in the [log](followups.md#phase-4): eleven from the two builds and four from
+the spikes and Jamie's rulings, and three the fixes found, each ruled by him on 2026-11-27,
+three at a time:
+
+- **Carried, three,** all to Jamie's validation at the stage's end: the browser's own find bar
+  on a PDF's text; a fast drag that may leave a line's last letter out ("make sure a suitable
+  pdf is available and I will test in validation"); and the cost of 3,000 page boxes made at
+  once ("let's leave this open until validation completes"). With phase 3's (an audio or video
+  preview's `ready` on an iPhone) four are carried, one over the three the brief allows, by his
+  word.
+- **Built, four:** the password field ([#209](https://github.com/stillpointlab/surfaces/pull/209));
+  and in [#210](https://github.com/stillpointlab/surfaces/pull/210) the first page not
+  waiting on every page's size (a 3,000-page PDF's first page in 126 ms where it took 474), a
+  redraw on a change of pixel ratio, and a page's picture not held up by the text before it.
+- **Looked into, one:** pdf.js's measuring canvas. The entry was wrong: pdf.js takes it away
+  itself when a document is destroyed. A test holds it; Jamie ruled "fix, let's clean up" on
+  the entry as written, was told, and merged it as it was.
+- **Closed, ten:** a page waiting for the one text being laid; Firefox's line about microtasks; the generating script's name; prettier run
+  from inside a package; the CommonJS worker no host loads; copying from a PDF that forbids it;
+  find near view, with its seed; the issue for pdf.js; pdf.js's reading of a symbol font and a
+  vertical comma, "as known issue", now in the package's README; Chromium's selection empty for
+  a moment between two pages.
+
+### At the phase's close
+
+- The build of a drawn signature waits for the spike on writing bytes, which is in the stage's
+  close.
+- Phase 5's spec was drafted and Jamie ruled its first questions the same day: Context Manager's
+  goods hold no bytes yet, so the adoption is for repository files, and goods that hold bytes
+  are a spike in Context Manager
+  ([context-manager#1322](https://github.com/stillpointlab/context-manager/pull/1322)); a
+  `WORKER_BASE_URL` for the PDF preview's worker.
+- The tag is on the merge of [#210](https://github.com/stillpointlab/surfaces/pull/210),
+  the phase's last code.
+- Phase 3's transcript was backed up after its close; phase 4's follows this one.
