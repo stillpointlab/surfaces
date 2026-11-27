@@ -5,7 +5,7 @@ import { createHostRegistry } from './registry';
 describe('the host registry', () => {
   const registry = createHostRegistry();
 
-  it('registers the seven formats in order, with code as the fallback', () => {
+  it('registers the eight formats in order, with code as the fallback', () => {
     expect(registry.formats.map((format) => format.id)).toEqual([
       'md',
       'xmdl',
@@ -13,6 +13,7 @@ describe('the host registry', () => {
       'image',
       'audio',
       'video',
+      'pdf',
       'code',
     ]);
     expect(registry.fallback?.id).toBe('code');
@@ -33,6 +34,8 @@ describe('the host registry', () => {
     ['film/Clip.MKV', 'video'],
     ['film/take.webm', 'video'],
     ['film/talk/index.m3u8', 'video'],
+    ['papers/report.pdf', 'pdf'],
+    ['papers/Scan.PDF', 'pdf'],
     ['src/app.ts', 'code'],
     ['types.d.ts', 'code'],
   ])('opens %s with %s', (path, id) => {

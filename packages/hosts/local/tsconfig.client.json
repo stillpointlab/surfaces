@@ -32,6 +32,10 @@
         "../../formats/md/src/*/index.ts",
         "../../formats/md/src/*.ts"
       ],
+      "@stillpointlab/pdf-format/*": [
+        "../../formats/pdf/src/*/index.ts",
+        "../../formats/pdf/src/*.ts"
+      ],
       "@stillpointlab/sheet-format/*": [
         "../../formats/sheet/src/*/index.ts",
         "../../formats/sheet/src/*.ts"

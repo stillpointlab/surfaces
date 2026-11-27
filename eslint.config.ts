@@ -14,6 +14,9 @@ export default [
       '**/node_modules/**',
       // generated from *.scss by tooling/gen-styles.ts
       '**/*.styles.ts',
+      // copied from pdfjs-dist by tooling/gen-pdfjs.ts
+      '**/src/preview/pdfjs/**',
+      '**/src/worker/pdfjs/**',
     ],
   },
   eslint.configs.recommended,

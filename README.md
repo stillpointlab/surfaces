@@ -16,6 +16,7 @@ so they share one toolchain, one `common` package and, in time, one scaffold.
 | `packages/formats/image`      | `@stillpointlab/image-format`      | `<image-preview>` only                                                 |
 | `packages/formats/audio`      | `@stillpointlab/audio-format`      | `<audio-preview>` only                                                 |
 | `packages/formats/video`      | `@stillpointlab/video-format`      | `<video-preview>` only                                                 |
+| `packages/formats/pdf`        | `@stillpointlab/pdf-format`        | `<pdf-preview>` only, and pdf.js's worker                              |
 | `packages/apps/`              |                                    | tasks and inventory arrive with the apps breakout                      |
 | `packages/components/`        | `@stillpointlab/<name>-component`  | shared UI elements: `<modal-dialog>`, `<spl-icon>`, `<checkin-review>` |
 | `tooling/template/format`     | `@stillpointlab/sample-format`     | the text template: core + `<sample-preview>` + `<sample-editor>`       |
@@ -45,6 +46,7 @@ vitest.config.ts     runs every package as a vitest project
 vitest.browser.config.ts  runs the packages' browser tests (see Testing)
 tooling/
   gen-styles.ts      SCSS -> `*.styles.ts` string modules for shadow roots (all packages, or one)
+  gen-pdfjs.ts       pdf.js's files copied into the package that depends on it (gen-styles runs it)
   check-tokens.ts    fails `npm run lint` on a hardcoded colour in a stylesheet
   tsup.ts            the shared build: ESM + CJS + d.ts per entry
   vitest.ts          the shared test preset
@@ -193,8 +195,8 @@ descriptors to `createFormatRegistry` (`@stillpointlab/common-format/format`; se
 one, so a host registers a new format with one import of its `./format` and one entry in its
 list.
 
-A format given a URL (one whose file the browser loads itself, such as an image or a video) has a
-preview and no editor, and its descriptor `needs: 'url'`. Its element answers to
+A format given a URL (one whose preview loads the file itself, such as an image, a video or a PDF)
+has a preview and no editor, and its descriptor `needs: 'url'`. Its element answers to
 `UrlPreviewElement`, the role's contract in `common` (`setSource(src, name)` and the ready signal),
 and keeps its own tag and its own exported
 type extending that contract (`VideoPreviewElement`), to which it adds what is its alone once a host
@@ -355,7 +357,8 @@ it is `<format>-worker`.
 - The starter is one entry's alone, imported statically: the preview's element imports
   `startWorker`. Imported by two entries, or loaded with `import()`, it is built into
   `dist/chunks/`, where `./worker.js` names nothing, and `splitPackage` fails the build. A library
-  loaded on demand is handed the started worker (pdf.js: `GlobalWorkerOptions.workerPort`).
+  loaded on demand is handed the started worker (pdf.js: as the `port` of a `PDFWorker`, which
+  every document is given, so destroying one never touches the worker another uses).
 - jsdom has no `Worker`: an element that starts one on connect keeps the throw from escaping, or
   its tests mock `startWorker`.
 - The CJS build parses, but the worker's address there is not the worker's; both hosts load the
@@ -363,6 +366,33 @@ it is `<format>-worker`.
 
 No worker is a way too: where a library runs without its worker, the format ships without one and
 says so in its README (hls.js does).
+
+### Files fetched by name
+
+A library may fetch files of its own by a folder's address and a name while it runs (pdf.js's
+character maps and standard fonts). A host's build gives every file a name of its own, so no such
+folder exists unless the host copies one, and neither host has a line for a format's files. So:
+
+- **They are copied into the package,** from the installed library, beside the module that names
+  them, by a generating step that runs where `gen:styles` does (`tooling/gen-pdfjs.ts` for pdf.js,
+  which `gen-styles.ts` runs for a package that depends on `pdfjs-dist`). The copies are ignored
+  by git, lint and prettier, as generated styles are, and the step writes nothing when they are
+  current. The package's build copies them into `dist/` at the same places, so a host that builds
+  from `dist/` emits them.
+- **They are named by `new URL()`,** relative to the module beside them, in an entry's own file, as
+  the worker's starter is: one `new URL('<literal>', import.meta.url)` a file, or one template
+  (``new URL(`./pdfjs/cmaps/${name}.bcmap`, import.meta.url)``) for a folder, its ending fixed so
+  a host emits those files and not what lies beside them. A host's Vite build emits each as a file
+  of its own; in `dist/chunks/` the address would name nothing, and the build fails.
+- **They are handed to the library through a function** that maps a kind and a name to an
+  address and fetches it (pdf.js: its `BinaryDataFactory`), so only what a document needs is
+  fetched.
+- **A `data:` address is read without a fetch.** Context Manager's build writes a file under 4 kB
+  into the code as one, and its `connect-src 'self'` refuses to fetch it.
+
+What the library imports by a folder's address and has no function for (pdf.js's decoders'
+fallbacks) has no way in as published. The PDF format writes a copy of pdf.js's worker with that
+one line changed, and its README says why; that is pdf.js's alone, not this convention.
 
 ### Toolbars
 

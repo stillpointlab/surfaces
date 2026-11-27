@@ -39,7 +39,7 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
 | `host-client.ts` | `HostClient` and `createHttpClient`: the only module that calls `fetch` or `EventSource` |
 | `page.ts`        | `startPage`: the layout, the tree's events, the address, the host's events, undo, redo   |
 | `pane.ts`        | `FilePane`: what is open, opening, saving, a change on disk, and the Changes view        |
-| `registry.ts`    | md, xmdl, sheet, image, audio, video and code, in that order, with code as the fallback  |
+| `registry.ts`    | md, xmdl, sheet, image, audio, video, pdf and code, in that order, code the fallback     |
 | `markdown.ts`    | The renderer `<md-preview>` is given: markdown-it, then DOMPurify                        |
 | `confirm.ts`     | One confirmation helper over `<modal-dialog>`                                            |
 | `address.ts`     | `#/file/<path>`, `#/edit/<path>`, `#/diff/<path>` and `#/app/<manifestPath>…`            |
