@@ -7,11 +7,17 @@
 // sibling `<name>.styles.ts` exporting `<name>Styles`. With a directory argument
 // only that package is generated; without one, all of them, the templates among
 // them, since the root's tests run every package's from the root.
+//
+// A package that depends on `pdfjs-dist` also has pdf.js's files generated into
+// it (`gen-pdfjs.ts`), so they are there wherever its styles are: they are
+// generated as the styles are, and named by its modules beside them.
 import { existsSync, readdirSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import * as sass from 'sass';
+
+import { generateAndLog, usesPdfjs } from './gen-pdfjs.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const packagesDir = join(root, 'packages');
@@ -46,6 +52,7 @@ const targets = process.argv[2]
 
 for (const pkg of targets) {
   if (!existsSync(join(pkg, 'src'))) continue;
+  if (usesPdfjs(pkg)) generateAndLog(pkg);
   for (const scssPath of scssFiles(join(pkg, 'src'))) {
     const name = basename(scssPath, '.scss');
     const outPath = join(dirname(scssPath), `${name}.styles.ts`);

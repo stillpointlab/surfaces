@@ -1,0 +1,59 @@
+{
+  "name": "@stillpointlab/pdf-format",
+  "version": "0.1.0",
+  "description": "A Stillpoint Lab format given a URL: a <pdf-preview> that draws the PDF a host hands it with pdf.js, page by page as they come into view, with no editor.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": [
+    "./src/preview/index.ts",
+    "./src/preview/pdf-preview.ts",
+    "./src/worker/worker.ts",
+    "./src/worker/fallbacks.ts",
+    "./src/worker/pdfjs/pdf.worker.mjs",
+    "./dist/preview.js",
+    "./dist/preview.cjs",
+    "./dist/worker.js",
+    "./dist/pdfjs/pdf.worker.mjs",
+    "./dist/chunks/*"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./preview": {
+      "types": "./dist/preview.d.ts",
+      "import": "./dist/preview.js",
+      "require": "./dist/preview.cjs"
+    },
+    "./format": {
+      "types": "./dist/format.d.ts",
+      "import": "./dist/format.js",
+      "require": "./dist/format.cjs"
+    },
+    "./worker": {
+      "import": "./dist/worker.js"
+    }
+  },
+  "files": [
+    "dist",
+    "preview.d.ts",
+    "format.d.ts"
+  ],
+  "scripts": {
+    "gen:styles": "node ../../../tooling/gen-styles.ts .",
+    "build": "npm run gen:styles && tsup",
+    "dev": "npm run gen:styles && vite --config ../../../tooling/harness/vite.config.ts",
+    "typecheck": "npm run gen:styles && tsc --noEmit",
+    "test": "npm run gen:styles && vitest run",
+    "test:browser": "npm run gen:styles && vitest run --config vitest.browser.config.ts"
+  },
+  "dependencies": {
+    "@stillpointlab/common-format": "*",
+    "pdfjs-dist": "^6.5.438"
+  }
+}

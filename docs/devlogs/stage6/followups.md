@@ -154,3 +154,34 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
   - **Carried** (Jamie, 2026-11-26): "iOS Safari makes sense as a test bed, let's add to
     followup as you suggest and I'll switch to Mac when we drain that one". It waits for his
     walk on a Mac and an iPhone.
+
+## Phase 4
+
+- 2026-11-26 (PDF): every page's size is read before any is drawn, one request to the worker a
+  page. 200 pages took 46 ms; a PDF of thousands was not measured
+  (`packages/formats/pdf/src/preview/pdf-preview.ts`).
+- 2026-11-26 (PDF): a change of the screen's pixel ratio (a window moved to another screen)
+  does not draw the pages again (`packages/formats/pdf/src/preview/pages.ts`).
+- 2026-11-26 (PDF): Firefox says "The execution of microtasks on this page was reordered to
+  avoid unsafe execution." once for each PDF opened. It comes with pdf.js; why was not looked
+  into.
+- 2026-11-26 (PDF): `gen-styles.ts` now also runs `gen-pdfjs.ts` for a package that depends on
+  `pdfjs-dist`, so the script's name says less than it does (`tooling/gen-styles.ts`).
+- 2026-11-26 (PDF): `prettier --write` run from inside a package's folder does not read the
+  root's `.prettierignore`, and formatted the generated copies once. The generating step saw
+  the sizes differ and wrote them again.
+- 2026-11-26 (PDF): the package's CommonJS worker (`dist/worker.cjs`) requires an `.mjs`. No
+  host loads it; the README's "Workers" already says the CJS worker is not the worker.
+- 2026-11-26 (PDF text): the browser's own find bar was not tried on a PDF's text, since no
+  script can press it. `window.find` finds a phrase in both browsers; in Chromium it selects the
+  text and does not scroll the column to it, in Firefox it does.
+- 2026-11-26 (PDF text): pdf.js leaves a hidden canvas, for measuring text, in the host's
+  `document.body`, one for each language, and nothing takes it away (`TextLayer.cleanup()` is
+  never called).
+- 2026-11-26 (PDF text): a page's text is laid before the next page's canvas, so later pages of
+  a dense PDF are drawn about 30 ms later each (`packages/formats/pdf/src/preview/pages.ts`).
+- 2026-11-26 (PDF text): pdf.js reads the test PDF's ZapfDingbats line as "3456789:;<=>", and
+  a vertical Japanese comma as its vertical form. That is what is copied and what a reader
+  hears.
+- 2026-11-26 (PDF text): in Chromium the selection is empty for a moment while a drag crosses
+  the blank between two pages, and comes back.

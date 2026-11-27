@@ -32,6 +32,7 @@
     "@stillpointlab/inventory-app": "*",
     "@stillpointlab/md-format": "*",
     "@stillpointlab/modal-dialog-component": "*",
+    "@stillpointlab/pdf-format": "*",
     "@stillpointlab/sheet-format": "*",
     "@stillpointlab/video-format": "*",
     "@stillpointlab/spl-icon-component": "*",
