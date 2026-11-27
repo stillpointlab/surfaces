@@ -203,9 +203,9 @@ above for what each part once found.
       in its shadow root, never 200.
 - [ ] The window made narrower and wider → the pages follow, and are drawn sharp again once it
       stops.
-- [ ] With two screens of different pixel density (or a browser zoomed in and out): the window
-      moved from one to the other → the pages drawn sharp again within a moment, with no change
-      of width. (A script could only imitate the change; no real screen was tried.)
+- [ ] With two screens of different pixel density: the window moved from one to the other → the
+      pages drawn sharp again within a moment, with no change of width. (A script could only
+      imitate the change; no real screen was tried.)
 - [ ] A PDF of thousands of pages, if one is at hand → its first page shows at once; dragged to
       its middle and its end, each page drawn at its own size, and the page in view not jumping
       as the others' sizes arrive.
