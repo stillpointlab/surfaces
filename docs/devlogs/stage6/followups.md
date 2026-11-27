@@ -203,6 +203,8 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
   a PDF with a password is told so in words, with no field to type one.
   - Jamie, 2026-11-27: "followup is fine if it fits as a drain sized item"; the field "inside"
     the element; the password manager's offer stopped in Chromium and left in Firefox.
+  - Built 2026-11-27 ([#209](https://github.com/stillpointlab/surfaces/pull/209)): 581 lines,
+    255 of them tests, within the spike's first version.
 - 2026-11-27 (PDF text, from the same spike): the text layer lets a person copy from a PDF whose
   owner forbids copying, as pdf.js's own viewer does by default.
   - Closed 2026-11-27 (Jamie: "leave no-copy for now - we aren't aiming to be a secure pdf
