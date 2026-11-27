@@ -502,3 +502,79 @@ describe('pdf-preview as its width changes', () => {
     expect(el.shadowRoot!.querySelector('canvas')).toBe(doc.pages[0].renders[1].canvas);
   });
 });
+
+describe('pdf-preview as the screen’s pixel ratio changes', () => {
+  // The queries made of `matchMedia`, each with the listeners it holds.
+  let queries: { media: string; listeners: Set<() => void> }[] = [];
+
+  /** The screen's pixel ratio is now `ratio`: what no longer matches says so. */
+  function moveTo(ratio: number): void {
+    vi.stubGlobal('devicePixelRatio', ratio);
+    for (const query of queries) {
+      if (query.media === `(resolution: ${ratio}dppx)`) continue;
+      for (const listener of [...query.listeners]) {
+        query.listeners.delete(listener);
+        listener();
+      }
+    }
+  }
+
+  const listening = () =>
+    queries.filter((query) => query.listeners.size > 0).map((query) => query.media);
+
+  beforeEach(() => {
+    resetEngine();
+    queries = [];
+    vi.stubGlobal('devicePixelRatio', 1);
+    vi.stubGlobal('matchMedia', (media: string) => {
+      const query = { media, listeners: new Set<() => void>() };
+      queries.push(query);
+      return {
+        media,
+        addEventListener(_: string, listener: () => void, options?: AddEventListenerOptions) {
+          query.listeners.add(listener);
+          options?.signal?.addEventListener('abort', () => query.listeners.delete(listener));
+        },
+      };
+    });
+  });
+
+  afterEach(async () => {
+    vi.useRealTimers();
+    document.body.replaceChildren();
+    await tick();
+    vi.unstubAllGlobals();
+  });
+
+  it('draws the drawn pages again for a new ratio, once it has settled, and listens for the next', async () => {
+    const doc = new FakeDocument(1);
+    const el = await opens('/files/a.pdf', doc);
+    expect(listening()).toEqual(['(resolution: 1dppx)']);
+    vi.useFakeTimers();
+
+    moveTo(2);
+    expect(listening()).toEqual(['(resolution: 2dppx)']);
+    vi.advanceTimersByTime(100);
+    expect(doc.pages[0].renders).toHaveLength(1);
+
+    await vi.advanceTimersByTimeAsync(100);
+    expect(doc.pages[0].renders).toHaveLength(2);
+    vi.useRealTimers();
+    await tick();
+    // jsdom lays nothing out: 816 CSS pixels, at two canvas pixels each.
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    expect(canvas).toBe(doc.pages[0].renders[1].canvas);
+    expect(canvas.width).toBe(1632);
+  });
+
+  it('stops listening when drawing stops, and listens again when it starts', async () => {
+    const el = await opens('/files/a.pdf', new FakeDocument(1));
+
+    el.remove();
+    await tick();
+    expect(listening()).toEqual([]);
+
+    document.body.append(el);
+    expect(listening()).toEqual(['(resolution: 1dppx)']);
+  });
+});

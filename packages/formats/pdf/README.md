@@ -61,6 +61,10 @@ screen reader "Page 3 of 12": a group holding its text (`role="group"`), or a pi
   ratio, softer.
 - **A change of width draws again** the drawn pages, once the column's width has stayed the same
   for 200 ms (a `ResizeObserver`). Until then the browser scales the canvases.
+- **So does a change of the screen's pixel ratio,** a window moved to a screen of another density
+  (or zoomed, where the browser's zoom changes the ratio), heard by
+  `matchMedia('(resolution: <n>dppx)')` for the ratio now, asked again for the new one after each
+  change, and let go when drawing stops. It waits the same 200 ms.
 - **Each drawn page carries its text,** laid over its canvas once the canvas is shown (see "Its
   text" below). Ready does not wait for it.
 - **Three failures, three sentences,** each reported once through `reportError`, told apart by
@@ -249,8 +253,8 @@ the states and their words, the three failures from pdf.js's errors, the worker 
 load, the pages laid out and labelled, the pages' sizes (`pdf-preview-sizes.test.ts`): the first
 page's alone read before it is drawn, the others read once it is, 50 at a time, no page drawn
 before its size is read, and the page in view kept in place as the boxes above it change; the
-pages near view drawn and those far off given back, a width that settles, a page
-that cannot be drawn, the old source let go, and leaving the page; a page's text
+pages near view drawn and those far off given back, a width that settles, a new pixel ratio drawn
+for and listened for again and the listener let go when drawing stops, a page that cannot be drawn, the old source let go, and leaving the page; a page's text
 (`pdf-preview-text.test.ts`): laid after ready, given back and cancelled with its canvas, brought
 to a new width, none for a page with none; and a password (`pdf-preview-password.test.ts`): asked
 in place of the pages and settled, handed to pdf.js with the field emptied, Enter as Open, a wrong

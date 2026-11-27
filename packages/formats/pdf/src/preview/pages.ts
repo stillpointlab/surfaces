@@ -59,9 +59,11 @@ interface Slot {
   // Its text, laid once its canvas is shown, or being laid; null when it has none
   // laid. A page found to have no text keeps its (empty) layer here, unshown.
   text: PageText | null;
-  // The width it was drawn at, in CSS pixels, and the column's width then.
+  // The width it was drawn at, in CSS pixels, and the column's width then; the
+  // screen's pixel ratio it was drawn for.
   drawnAt: number;
   drawnFor: number;
+  drawnRatio: number;
   failed: boolean;
 }
 
@@ -80,9 +82,10 @@ export const SELECTING = 'pdf-preview__pages--selecting';
  * `SIZES_AT_ONCE` at a time; each box takes its size as it arrives, and the page
  * in view stays where it is on the screen. While started, the pages in view and
  * `PAGES_AROUND` either side are drawn, one at a time, nearest first; a page
- * further off gives its canvas back. A change of the column's width draws the
- * drawn pages again once it has stayed the same for `RESIZE_SETTLE_MS`. A page
- * that cannot be drawn says so in its own place, and the others are drawn.
+ * further off gives its canvas back. A change of the column's width, or of the
+ * screen's pixel ratio (a window moved to a screen of another density), draws
+ * the drawn pages again once it has stayed the same for `RESIZE_SETTLE_MS`. A
+ * page that cannot be drawn says so in its own place, and the others are drawn.
  *
  * A drawn page's text is laid over its canvas by pdf.js's `TextLayer` once the
  * canvas is shown, and lives as long as the canvas: given back with it,
@@ -100,10 +103,13 @@ export class PageColumn {
   private intersection: IntersectionObserver | null = null;
   private resize: ResizeObserver | null = null;
   private resizeTimer: ReturnType<typeof setTimeout> | null = null;
-  // The listeners that mark a selection being made, while started.
-  private pointer: AbortController | null = null;
-  // The column's width the drawn pages are for; 0 until it is first measured.
+  // The listeners that mark a selection being made and hear the pixel ratio,
+  // while started.
+  private listening: AbortController | null = null;
+  // The column's width and the screen's pixel ratio the drawn pages are for; 0
+  // until first measured.
   private width = 0;
+  private ratio = 0;
   private started = false;
   private drawing = false;
   private destroyed = false;
@@ -137,6 +143,7 @@ export class PageColumn {
         text: null,
         drawnAt: 0,
         drawnFor: 0,
+        drawnRatio: 0,
         failed: false,
       };
       if (index === 0 && !first) this.failPage(slot);
@@ -183,7 +190,9 @@ export class PageColumn {
       this.resize = new ResizeObserver(() => this.resized());
       this.resize.observe(this.element);
     }
-    this.markSelecting();
+    this.listening = new AbortController();
+    this.markSelecting(this.listening.signal);
+    this.watchRatio(this.listening.signal);
     this.update();
   }
 
@@ -197,8 +206,8 @@ export class PageColumn {
     this.intersection = null;
     this.resize?.disconnect();
     this.resize = null;
-    this.pointer?.abort();
-    this.pointer = null;
+    this.listening?.abort();
+    this.listening = null;
     this.element.classList.remove(SELECTING);
     if (this.resizeTimer !== null) clearTimeout(this.resizeTimer);
     this.resizeTimer = null;
@@ -221,9 +230,7 @@ export class PageColumn {
    * end covering too: pdf.js's viewer finds that page by the document's
    * selection, which inside a shadow root does not name its nodes.
    */
-  private markSelecting(): void {
-    this.pointer = new AbortController();
-    const { signal } = this.pointer;
+  private markSelecting(signal: AbortSignal): void {
     const done = () => this.element.classList.remove(SELECTING);
     this.element.addEventListener('mousedown', () => this.element.classList.add(SELECTING), {
       signal,
@@ -233,14 +240,35 @@ export class PageColumn {
     window.addEventListener('blur', done, { signal });
   }
 
-  /** The column's width settled: the pages drawn for another are drawn again. */
+  /**
+   * Hear the screen's pixel ratio change: a query that matches the ratio now,
+   * made again for the new one after each change, until the column stops. A
+   * change is a resize.
+   */
+  private watchRatio(signal: AbortSignal): void {
+    if (typeof matchMedia === 'undefined' || signal.aborted) return;
+    const changed = () => {
+      this.watchRatio(signal);
+      this.resized();
+    };
+    matchMedia(`(resolution: ${devicePixelRatio}dppx)`).addEventListener('change', changed, {
+      once: true,
+      signal,
+    });
+  }
+
+  /**
+   * The column's width or the screen's pixel ratio settled: the pages drawn for
+   * another are drawn again.
+   */
   private resized(): void {
     if (this.resizeTimer !== null) clearTimeout(this.resizeTimer);
     this.resizeTimer = setTimeout(() => {
       this.resizeTimer = null;
       const width = this.element.clientWidth;
-      if (width === this.width) return;
+      if (width === this.width && devicePixelRatio === this.ratio) return;
       this.width = width;
+      this.ratio = devicePixelRatio;
       this.update();
     }, RESIZE_SETTLE_MS);
   }
@@ -249,6 +277,7 @@ export class PageColumn {
   private update(): void {
     if (!this.started) return;
     if (this.width === 0) this.width = this.element.clientWidth;
+    if (this.ratio === 0) this.ratio = devicePixelRatio;
     const near = pagesNear(this.inView, this.slots.length);
     for (const slot of this.slots) if (!near.has(slot.index)) this.release(slot);
     void this.drawNear();
@@ -366,7 +395,10 @@ export class PageColumn {
           (slot) =>
             !slot.failed &&
             !slot.task &&
-            (slot.canvas === null || slot.drawnFor !== this.width || slot.text === null)
+            (slot.canvas === null ||
+              slot.drawnFor !== this.width ||
+              slot.drawnRatio !== this.ratio ||
+              slot.text === null)
         )
         .sort((a, b) => Math.abs(a.index - middle) - Math.abs(b.index - middle))[0] ?? null
     );
@@ -380,17 +412,15 @@ export class PageColumn {
     const page = slot.page;
     if (!page) return;
     const forWidth = this.width;
+    const ratio = this.ratio;
     const natural = page.getViewport({ scale: 1 });
     // Laid out, the box is as wide as the column allows; not laid out (hidden,
     // or jsdom), it is drawn at its size at 100%.
     const width = slot.box.getBoundingClientRect().width || natural.width * CSS_PER_PDF_UNIT;
-    if (!slot.canvas || slot.drawnAt !== width) {
+    if (!slot.canvas || slot.drawnAt !== width || slot.drawnRatio !== ratio) {
       const height = (width * natural.height) / natural.width;
       // A whole number of canvas pixels across the box, and the page scaled to it.
-      const across = Math.max(
-        1,
-        Math.round(width * pixelRatioFor(width, height, devicePixelRatio))
-      );
+      const across = Math.max(1, Math.round(width * pixelRatioFor(width, height, ratio)));
       const viewport = page.getViewport({ scale: across / natural.width });
       const canvas = document.createElement('canvas');
       canvas.width = across;
@@ -422,6 +452,7 @@ export class PageColumn {
       }
       slot.canvas = canvas;
       slot.drawnAt = width;
+      slot.drawnRatio = ratio;
       this.settleFirst();
     }
     slot.drawnFor = forWidth;
