@@ -200,6 +200,10 @@ is what a person sees; the text is there to be selected, found and read.
 - **What it does not give:** a find of its own, a count of matches or every match marked; links,
   the outline, annotations and forms; text for a scan (reading the letters off a picture); a
   mended reading order, or a tagged PDF's headings and tables. The order a reader hears is pdf.js's.
+- **Known: the text is pdf.js's reading of the file, and it reads some of it oddly.** A line set
+  in a symbol face comes out as the characters under the symbols (the test PDF's ZapfDingbats
+  line as "3456789:;<=>"), and a vertical Japanese comma as its vertical form. That is what is
+  copied and what a screen reader hears. It is left as it is.
 - **pdf.js measures text** with a hidden canvas it adds to the document's `<body>` (outside the
   element), one for each language, the first time it lays text. It takes them away itself
   whenever a document is destroyed (`TextLayer.cleanup()`, which pdf.js's `WorkerTransport.destroy`
