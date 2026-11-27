@@ -122,6 +122,11 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
     has it. A preview given a URL is put in the page with no source and settles as empty, then
     is given its source and settles again when that has loaded. md and code show one. Told to
     Jamie; his to rule.
+  - Closed 2026-11-27 (Jamie, asked for the cause first: "we can close for now"). The cause is
+    the order of mounting, in the harness and, as read, in the local host's pane: an element is
+    put in the page and then given its file. A preview given a URL has nothing to wait for
+    until then, so it settles at once as empty. md and code begin work that waits when they
+    connect, and their file comes before it lands, so that first cycle never settles.
 - 2026-11-26 (video): the scaffold's contract test suggests `canplay` in a comment, and both
   media formats settle on `loadedmetadata` (`tooling/template/url-format`). With the entry
   above on the scaffold's prose.
@@ -185,3 +190,18 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
   hears.
 - 2026-11-26 (PDF text): in Chromium the selection is empty for a moment while a drag crosses
   the blank between two pages, and comes back.
+- 2026-11-27 (PDF, from the [spike](../../tasks/stage6/phase4/spikes/unlocking-a-pdf-with-a-password.md)):
+  a PDF with a password is told so in words, with no field to type one.
+  - Jamie, 2026-11-27: "followup is fine if it fits as a drain sized item"; the field "inside"
+    the element; the password manager's offer stopped in Chromium and left in Firefox.
+- 2026-11-27 (PDF text, from the same spike): the text layer lets a person copy from a PDF whose
+  owner forbids copying, as pdf.js's own viewer does by default.
+  - Closed 2026-11-27 (Jamie: "leave no-copy for now - we aren't aiming to be a secure pdf
+    platform, just a convenience. We can review later if it is needed").
+- 2026-11-27 (PDF text): the browser's find reaches the pages near view alone, since only they
+  hold their text.
+  - Closed 2026-11-27 with a seed (Jamie: "seed for better Ctrl-F in pdfs is fine"):
+    [finding a word anywhere in a PDF](../../tasks/unassigned/seeds/finding-a-word-anywhere-in-a-pdf.md).
+- 2026-11-27 (PDF): the package ships a copy of pdf.js's worker with one line changed, and the
+  issue asking pdf.js for a way without it is written and not sent.
+  - Closed 2026-11-27 (Jamie: "we'll leave it for now").

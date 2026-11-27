@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 204
+completed: 2026-11-27
 created: 2026-11-26T15:45:00-07:00
 tags: [formats, feature, code]
 ---
@@ -102,6 +104,8 @@ For Jamie, with the agent's lean:
    preview's bound on what it holds; or a find of our own that asks pdf.js for the whole
    document's text and scrolls to a match, which is a feature with a field and buttons of its
    own. Lean: near view now, and a find of our own as a seed.
+   - **Ruled** (Jamie, 2026-11-27): near view stands, and "seed for better Ctrl-F in pdfs is
+     fine": [finding a word anywhere in a PDF](../../../unassigned/seeds/finding-a-word-anywhere-in-a-pdf.md).
 
 ## Non-goals
 

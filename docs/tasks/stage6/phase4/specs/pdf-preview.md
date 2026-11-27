@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 202
+completed: 2026-11-27
 created: 2026-11-26T15:40:00-07:00
 tags: [formats, feature, code]
 ---
@@ -321,7 +323,8 @@ them. The package's `dist/` carries 4.7 MB of copies.
 
 ### The issue offered to pdf.js
 
-Written and not sent; sending it is Jamie's to do or not.
+Written and not sent. Jamie, 2026-11-27: "we'll leave it for now". The changed line stays, and
+the generating step fails if an upgrade of pdf.js moves it.
 
 > **Let an embedder give the address of a decoder's JavaScript fallback**
 >

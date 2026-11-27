@@ -12,6 +12,10 @@
 - docs/tasks/unassigned/seeds/streams-from-beyond-the-folder.md
 - docs/tasks/unassigned/seeds/mpeg-dash-streams.md
 
+# From the PDF text layer's one question (Jamie, 2026-11-27): the browser's find
+# reaches only the pages near view.
+- docs/tasks/unassigned/seeds/finding-a-word-anywhere-in-a-pdf.md
+
 # From the drain of stage 6's phase 3 (Jamie, 2026-11-26): `.ts` is TypeScript's
 # ending and an MPEG-TS segment's.
 - docs/tasks/unassigned/seeds/a-format-told-by-a-files-bytes.md
