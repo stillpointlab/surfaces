@@ -9,8 +9,10 @@
 export type PdfFailure = 'load' | 'read' | 'password';
 
 /**
- * - `PasswordException`: the document is encrypted with a password to open it
- *   (pdf.js asks `onPassword` first; the element gives none).
+ * - `PasswordException`: the document needs a password to open it, and pdf.js
+ *   stopped asking for one. The element hears every ask (`onPassword`) and
+ *   never answers with an error, so this is a fallback: pdf.js gives it when
+ *   `onPassword` is missing or throws.
  * - `InvalidPDFException`: the bytes arrived and are not a PDF, or are empty.
  * - `UnknownErrorException`: anything else the worker met. When it carries a
  *   `TypeError` (`details`) it is a fetch that failed, the network's (Chromium:

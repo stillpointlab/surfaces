@@ -3,8 +3,9 @@
 // up to its size at 100% (set on the page itself) and its canvas filling it;
 // with common's status placeholders for the empty, loading and failed states
 // (the loading one over the pages until the first is drawn) and for a page that
-// cannot be drawn, in its own place; and a page's text over its canvas, unseen
-// but for its selection.
+// cannot be drawn, in its own place; a page's text over its canvas, unseen but
+// for its selection; and the password form, in place of the pages while pdf.js
+// waits for one.
 
 @use 'common/src/styles/tokens' as *;
 @use 'common/src/styles/status';
@@ -159,4 +160,83 @@
   place-items: center;
   pointer-events: none;
   background: color-mix(in srgb, #{$background-primary} 78%, transparent);
+}
+
+// The password form, in place of the pages while pdf.js waits for one.
+.pdf-preview__unlock {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  min-width: 0;
+  padding: $spacing-lg;
+  font-size: 0.875rem;
+  color: $text-secondary;
+  text-align: center;
+
+  p {
+    margin: 0;
+  }
+}
+
+.pdf-preview__unlock-row {
+  display: flex;
+  max-width: 100%;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: center;
+  gap: $spacing-sm;
+}
+
+// The field is 14rem wide, and narrower in a narrow pane.
+.pdf-preview__unlock-field {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: $spacing-xs;
+  min-width: 0;
+  max-width: 100%;
+
+  input {
+    box-sizing: border-box;
+    width: 14rem;
+    max-width: 100%;
+    padding: $spacing-xs $spacing-sm;
+    font: inherit;
+    color: $text-primary;
+    background: $background-primary;
+    border: 1px solid $border-strong;
+    border-radius: 4px;
+
+    &:focus-visible {
+      outline: 2px solid $focus-ring;
+      outline-offset: 1px;
+    }
+
+    &[aria-invalid='true'] {
+      border-color: $error-color;
+    }
+  }
+}
+
+.pdf-preview__unlock-open {
+  padding: $spacing-xs $spacing-lg;
+  font: inherit;
+  color: $button-text;
+  background: $button-bg;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid $focus-ring;
+    outline-offset: 1px;
+  }
+}
+
+.pdf-preview__unlock-error {
+  min-height: 1.4em;
+  color: $error-color;
 }

@@ -39,6 +39,7 @@ screen reader "Page 3 of 12": a group holding its text (`role="group"`), or a pi
 | ------- | ------------------------------------------------------------------------- |
 | empty   | "No PDF selected."                                                        |
 | loading | "Loading…", then the pages laid out under a loading cover until one draws |
+| asking  | a password field in place of the pages (see "A password" below)           |
 | loaded  | the pages                                                                 |
 | failed  | one of three sentences in place of the pages                              |
 
@@ -63,20 +64,68 @@ screen reader "Page 3 of 12": a group holding its text (`role="group"`), or a pi
     failed), or the worker or pdf.js itself did not (any other error).
   - "This file can't be read as a PDF.": it arrived and pdf.js cannot read it
     (`InvalidPDFException`, an empty file too, and any other `UnknownErrorException`).
-  - "This PDF needs a password, and this preview can't ask for one yet.": `PasswordException`.
-    pdf.js would ask `onPassword` first; the element gives it none.
+  - "This PDF needs a password.": `PasswordException`, which pdf.js gives only when it stops
+    asking for a password. The element hears every ask and never stops it, so this is a
+    fallback (see "A password" below).
 - **A page that cannot be drawn** says "This page couldn't be drawn." in its own place (at the
   size of the page before it, when pdf.js could not read the page at all), and the others are
   drawn.
 - **Ready** is pending until a page has been drawn (the first, unless the column was scrolled
-  away first) or the load has failed, and settles at once when there is nothing to show. It
-  never settles on a time.
+  away first), the load has failed, or a password is asked for, and settles at once when there
+  is nothing to show. It never settles on a time.
 - **A new source lets the old one go:** its document is destroyed, which ends its download, and
   its canvases are given back. Only the document in the element is heard. A new name relabels it
   and loads nothing.
 - **Leaving the page's tree stops drawing** (what is drawing is cancelled) and keeps the
   document and what is drawn, so put back it draws again where it was. A move (out and back in
   one task) does not stop it.
+
+### A password
+
+A PDF may have a user password, to open it, and an owner password, to lift its limits on printing
+and copying. pdf.js asks only for the first, and takes the second in its place, as the PDF
+standard has it. A PDF with an owner password alone opens with none.
+
+- **The field is in place of the pages** (`src/preview/unlock.ts`): "This PDF needs a password to
+  open.", a field labelled "Password", and an Open button, in a group the sentence names. Enter
+  in the field is Open. The first ask takes no focus, so a person moving through a host's files
+  is not pulled into it.
+- **A wrong one is said:** "That password didn't open it. Try again." in a line with
+  `role="alert"` that describes the field, the field marked invalid (`aria-invalid`), and the
+  focus put back in it. There is no limit on tries and no delay but pdf.js's own (a few
+  milliseconds for RC4, about a tenth of a second for AES-256).
+- **An empty field sends nothing:** "Type the password first.", and the focus stays in it.
+- **Ready is settled while it asks:** nothing more comes until a person answers. An answer begins
+  a new cycle: pending, under the loading words, until a page is drawn or pdf.js asks again.
+- **The password is kept nowhere here.** The field is emptied as it is sent, and the value is
+  handed to pdf.js at once. pdf.js keeps it in memory for the document's life, in the page and in
+  the worker, and lets it go when the document is destroyed. It is in no address, no console
+  line and no error report (a failure reports `{ src }` alone), and not in the DOM once the PDF
+  opens. The field is `type="password"`, which a browser never keeps in its form history.
+- **A person is asked again when the file is reopened or changes.** The password lives as long as
+  the element's document, so a new element or a new source asks again. In the local host that is
+  another file opened and this one again, or the file changed on disk; a hidden tab and a
+  reconnection of the event stream keep the element, and ask nothing.
+- **Giving up is leaving the file.** There is no Cancel button. A new source, or the empty source
+  the local host gives a preview it lets go, destroys the document that asks, and pdf.js's worker
+  goes on serving the next PDF. An element removed with its source kept keeps its document
+  asking until the page goes, as it keeps an open one.
+
+#### Known and left
+
+- **Firefox may offer to save the password** as a login for the host's origin. The field is
+  `autocomplete="one-time-code"`, which stops Chromium's offer; no attribute stops Firefox's
+  (`off`, `new-password` and no `<form>` were tried). Only a field that is not a password field
+  escapes it, and a screen reader then hears an ordinary text field and may read each letter
+  aloud, so it is left. Nothing is saved unless the person accepts. Where the host's origin holds
+  the person's own login, as Context Manager's does, accepting could put the PDF's password in
+  place of the saved one.
+- **A PDF's permissions are not enforced.** An owner password can forbid copying or printing; the
+  preview reads none of it (pdf.js's `getPermissions()`). Its text can be selected and copied as
+  any PDF's, as in pdf.js's own viewer by default. The preview is a convenience for reading a
+  PDF, not a guard on its owner's terms.
+- **Not tried with a screen reader** (Orca, NVDA, VoiceOver): whether the same words, said again
+  after a second wrong one, are announced again.
 
 ## pdf.js
 
@@ -192,18 +241,24 @@ worker are stood in for (`src/testing/fake-pdfjs.ts`), and each test says when a
 or fails, when a page is drawn and when its text is laid. They cover the states and their words,
 the three failures from pdf.js's errors, the worker that fails to load, the pages laid out and
 labelled, the pages near view drawn and those far off given back, a width that settles, a page
-that cannot be drawn, the old source let go, and leaving the page; and a page's text
+that cannot be drawn, the old source let go, and leaving the page; a page's text
 (`pdf-preview-text.test.ts`): laid after ready, given back and cancelled with its canvas, brought
-to a new width, none for a page with none. `src/build.test.ts` builds the package and reads the
+to a new width, none for a page with none; and a password (`pdf-preview-password.test.ts`): asked
+in place of the pages and settled, handed to pdf.js with the field emptied, Enter as Open, a wrong
+one said and the focus kept, an empty one not sent, a new source letting the task go, a move
+keeping it, and the password in neither the error handler nor the console. `src/build.test.ts` builds the package and reads the
 files: pdf.js's main module reached from no entry but by `import()`, the worker importing pdf.js's
 changed copy, every file where the built modules name it, and no `.wasm`.
 `src/**/*.browser.test.ts` run in headless Chromium (`vitest.browser.config.ts`): a page drawn
 with ink at the screen's pixel ratio, fetching the two standard fonts it needs and none for
 embedded fonts; the last of twelve pages drawn only once it is scrolled to; Japanese text drawn
 through its character map; a JPEG 2000 image drawn with no WebAssembly and no `.wasm` asked for;
-the password, the file that is not a PDF and the missing file in their sentences; and a page's
-text: the PDF's own over its canvas, two lines selected, `window.find` finding a word near view
-and not one far off, the Japanese as its characters, and a page scrolled far away holding none.
+the file that is not a PDF and the missing file in their sentences; a page's text: the PDF's own
+over its canvas, two lines selected, `window.find` finding a word near view and not one far off,
+the Japanese as its characters, and a page scrolled far away holding none; and `password.pdf`
+asking, a wrong one said with the focus kept, the right one drawn with its text and leaving no
+field, and the owner password opening it too. A browser's offer to save the password needs a
+profile of its own and is not tested here: it is a release-walk step.
 
 The harness (`npm run dev`) has each of the test PDFs, a missing file and no source. Its missing
 file is a revoked object URL: the harness's Vite answers a path it has no file for with its own
@@ -219,7 +274,7 @@ magick -size 200x150 -seed 7 plasma:red-blue -blur 0x2 -depth 8 -define jp2:rate
 # UniJIS-UCS2-H), jpx.pdf (the image above, JPXDecode), dense.pdf (a page of dense text, 6,457
 # characters in 67 lines, for measuring the text) and not-a-pdf.pdf (text under a .pdf name)
 node dev/make-pdfs.ts
-# dev/media/password.pdf: text.pdf with the password "secret" to open it
+# dev/media/password.pdf: text.pdf with the password "secret" to open it, and "owner" its owner's
 gs -q -dNOPAUSE -dBATCH -sDEVICE=pdfwrite -sOwnerPassword=owner -sUserPassword=secret -dEncryptionR=3 -dKeyLength=128 -o dev/media/password.pdf dev/media/text.pdf
 # dev/media/embedded-fonts.pdf: a heading and a line in Libertinus Serif, embedded by typst
 printf '#set page(width: 8.5in, height: 11in)\n= Fonts embedded\nThis text is set in Libertinus Serif, embedded by typst as a subset.\n' | typst compile - dev/media/embedded-fonts.pdf

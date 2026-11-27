@@ -15,8 +15,10 @@
  * settled, absent while pending, so `tag[ready]` selects settled elements) and
  * announced by a non-bubbling `ready` event each time the element settles.
  * Disconnecting makes the element pending again until it is reconnected and
- * rendered. A host must never wait for readiness before its first `setContent`:
- * content set early is buffered and shows as soon as the element can.
+ * rendered. An element that waits on a person (a password to open a file) is
+ * settled while it waits, and the person's answer starts a new cycle. A host
+ * must never wait for readiness before its first `setContent`: content set
+ * early is buffered and shows as soon as the element can.
  */
 export interface ReadyElement extends HTMLElement {
   whenReady(): Promise<void>;
