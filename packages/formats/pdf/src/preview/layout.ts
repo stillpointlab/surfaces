@@ -14,6 +14,12 @@ export const MAX_CANVAS_PIXELS = 2 ** 24;
 /** The longest side of one canvas, in pixels: a long, narrow page is bounded too. */
 export const MAX_CANVAS_SIDE = 16_384;
 
+/**
+ * How many pages' sizes are asked of pdf.js's worker at once, once the first
+ * page is drawn: few enough that a page to draw waits behind no more than these.
+ */
+export const SIZES_AT_ONCE = 50;
+
 /** How long the width must stay the same before the pages are drawn again for it, in ms. */
 export const RESIZE_SETTLE_MS = 200;
 

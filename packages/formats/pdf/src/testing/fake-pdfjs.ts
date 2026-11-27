@@ -154,9 +154,17 @@ export class FakeTextLayer {
   }
 }
 
-/** A fake document of `count` pages; a page number in `unreadable` cannot be read. */
+/**
+ * A fake document of `count` pages; a page number in `unreadable` cannot be
+ * read. Each page asked for is heard, and answered at once or when the test says.
+ */
 export class FakeDocument {
   readonly pages: FakePage[];
+  /** Each page number asked for, in order. */
+  readonly asked: number[] = [];
+  /** Answer every read at once, as it is asked for; when false, `answerReads` answers them. */
+  readAtOnce = true;
+  private readonly waiting: (() => void)[] = [];
 
   constructor(
     count: number,
@@ -169,9 +177,24 @@ export class FakeDocument {
     return this.pages.length;
   }
 
+  /** How many reads wait for `answerReads`. */
+  get unanswered(): number {
+    return this.waiting.length;
+  }
+
   getPage(number: number): Promise<FakePage> {
-    if (this.unreadable.includes(number)) return Promise.reject(new Error('Bad page tree'));
-    return Promise.resolve(this.pages[number - 1]);
+    this.asked.push(number);
+    const read = () =>
+      this.unreadable.includes(number)
+        ? Promise.reject(new Error('Bad page tree'))
+        : Promise.resolve(this.pages[number - 1]);
+    if (this.readAtOnce) return read();
+    return new Promise((resolve, reject) => this.waiting.push(() => read().then(resolve, reject)));
+  }
+
+  /** Answer every read waiting now. */
+  answerReads(): void {
+    for (const answer of this.waiting.splice(0)) answer();
   }
 }
 

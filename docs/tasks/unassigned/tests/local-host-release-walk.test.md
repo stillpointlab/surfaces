@@ -203,6 +203,14 @@ above for what each part once found.
       in its shadow root, never 200.
 - [ ] The window made narrower and wider → the pages follow, and are drawn sharp again once it
       stops.
+- [ ] With two screens of different pixel density: the window moved from one to the other → the
+      pages drawn sharp again within a moment, with no change of width. (A script could only
+      imitate the change; no real screen was tried.)
+- [ ] A PDF of thousands of pages, if one is at hand → its first page shows at once; dragged to
+      its middle and its end, each page drawn at its own size, and the page in view not jumping
+      as the others' sizes arrive.
+- [ ] A fast drag across a line and on past its end → the whole line selected, its last letter
+      too. (A script's coarse drag left the last letter out; a hand's was not tried.)
 - [ ] A line of `text.pdf` dragged across → it shows selected, in a light blue over the page's
       white; copied and pasted into a text file → its words, nothing more. On the 200-page dense
       PDF, a drag from a page's last lines into the next page's first → pasted, both, in order. A

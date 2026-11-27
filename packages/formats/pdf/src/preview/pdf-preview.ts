@@ -13,12 +13,12 @@ import {
 import { failureOf, type PdfFailure } from './failure';
 import { PackageFiles } from './files';
 import { pageWorker, type PageWorker } from './page-worker';
-import { PageColumn, type PageSource } from './pages';
+import { PageColumn } from './pages';
 import { previewStyles } from './preview.styles';
 import { Unlock } from './unlock';
 
 import type { UrlPreviewElement } from '@stillpointlab/common-format';
-import type { PDFDocumentLoadingTask } from 'pdfjs-dist';
+import type { PDFDocumentLoadingTask, PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
 
 /**
  * What a host may ask of `<pdf-preview>`: the contract of every preview given a
@@ -194,23 +194,19 @@ export class PdfPreview extends HTMLElement implements PdfPreviewElement {
       // Nothing more comes until a person answers. Detached, the reconnect settles it.
       if (this.isConnected) this.ready.settle();
     };
-    let pages: PageSource[];
+    let doc: PDFDocumentProxy;
     try {
-      const doc = await Promise.race([task.promise, worker.failed]);
-      if (!live()) return;
-      // Every page's size before any is drawn, so each has its place from the start.
-      const read = await Promise.allSettled(
-        Array.from({ length: doc.numPages }, (_, at) => doc.getPage(at + 1))
-      );
-      pages = read.map((got) =>
-        got.status === 'fulfilled' ? { page: got.value } : { failed: true as const }
-      );
+      doc = await Promise.race([task.promise, worker.failed]);
     } catch (error) {
       if (live()) this.failWith(failureOf(error));
       return;
     }
     if (!live()) return;
-    const column = new PageColumn(pages, engine.TextLayer);
+    // The first page's size alone before any is drawn; the column reads the others.
+    const first: PDFPageProxy | null =
+      doc.numPages > 0 ? await doc.getPage(1).catch(() => null) : null;
+    if (!live()) return;
+    const column = new PageColumn(doc, first, engine.TextLayer);
     opened.column = column;
     this.render();
     if (this.isConnected) column.start();

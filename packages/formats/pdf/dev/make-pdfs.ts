@@ -3,7 +3,7 @@
 // object written as text, the page contents compressed with zlib. Nothing is
 // downloaded. Run in the package's folder:
 //
-//   node dev/make-pdfs.ts                 dev/media/: text, pages, cjk, jpx, dense, not-a-pdf
+//   node dev/make-pdfs.ts                 dev/media/: text, pages, sizes, cjk, jpx, dense, not-a-pdf
 //   node dev/make-pdfs.ts --pages 200 <folder>   a long PDF, <folder>/pages-200.pdf, made
 //                                         outside the package (it is too large for it)
 //   node dev/make-pdfs.ts --dense 200 <folder>   a long PDF of dense text, <folder>/dense-200.pdf
@@ -79,19 +79,20 @@ class Pdf {
   }
 }
 
-/** One page's content and resources. */
+/** One page's content and resources, and its size when it is not the document's. */
 interface PageSpec {
   content: string;
   resources: string;
+  size?: [number, number];
 }
 
 /** The page tree and the catalog for `pages`, each `size` PDF units (a US letter page). */
 function catalog(pdf: Pdf, pages: PageSpec[], size: [number, number] = [612, 792]): number {
   const tree = pdf.reserve();
-  const kids = pages.map(({ content, resources }) => {
+  const kids = pages.map(({ content, resources, size: [width, height] = size }) => {
     const contents = pdf.stream('', Buffer.from(content, 'latin1'), true);
     return pdf.add(
-      `<< /Type /Page /Parent ${tree} 0 R /MediaBox [0 0 ${size[0]} ${size[1]}] ` +
+      `<< /Type /Page /Parent ${tree} 0 R /MediaBox [0 0 ${width} ${height}] ` +
         `/Resources ${resources} /Contents ${contents} 0 R >>`
     );
   });
@@ -153,6 +154,18 @@ function pagesPdf(count: number): Buffer {
   const pdf = new Pdf();
   const font = helvetica(pdf);
   const pages = Array.from({ length: count }, (_, at) => numberedPage(pdf, font, at + 1, count));
+  return pdf.bytes(catalog(pdf, pages));
+}
+
+/**
+ * sizes.pdf: 30 numbered pages, the first twice as tall as the others, so the
+ * pages laid out at the first page's size shrink as their own sizes are read.
+ */
+function sizesPdf(): Buffer {
+  const pdf = new Pdf();
+  const font = helvetica(pdf);
+  const pages = Array.from({ length: 30 }, (_, at) => numberedPage(pdf, font, at + 1, 30));
+  pages[0].size = [612, 1584];
   return pdf.bytes(catalog(pdf, pages));
 }
 
@@ -262,6 +275,7 @@ if (args[0] === '--pages' || args[0] === '--dense') {
 } else {
   write(media, 'text.pdf', textPdf());
   write(media, 'pages.pdf', pagesPdf(12));
+  write(media, 'sizes.pdf', sizesPdf());
   write(media, 'cjk.pdf', cjkPdf());
   write(media, 'jpx.pdf', jpxPdf());
   write(media, 'dense.pdf', densePdf(1));
