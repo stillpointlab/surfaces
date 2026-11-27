@@ -189,11 +189,14 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
 - 2026-11-26 (PDF text): the browser's own find bar was not tried on a PDF's text, since no
   script can press it. `window.find` finds a phrase in both browsers; in Chromium it selects the
   text and does not scroll the column to it, in Firefox it does.
+  - **Carried** (Jamie, 2026-11-27): "let's carry to user validation at stage end".
 - 2026-11-26 (PDF text): pdf.js leaves a hidden canvas, for measuring text, in the host's
   `document.body`, one for each language, and nothing takes it away (`TextLayer.cleanup()` is
   never called).
+  - Jamie, 2026-11-27: "fix, let's clean up".
 - 2026-11-26 (PDF text): a page's text is laid before the next page's canvas, so later pages of
   a dense PDF are drawn about 30 ms later each (`packages/formats/pdf/src/preview/pages.ts`).
+  - Jamie, 2026-11-27: fix.
 - 2026-11-26 (PDF text): pdf.js reads the test PDF's ZapfDingbats line as "3456789:;<=>", and
   a vertical Japanese comma as its vertical form. That is what is copied and what a reader
   hears.
