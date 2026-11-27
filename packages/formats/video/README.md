@@ -134,10 +134,8 @@ are missing says the first sentence.
 
 The harness (`npm run dev`) has one clip of each ending, so each can be seen and heard by hand in
 any browser, and the clip with no picture, a missing file, a file of noise and no source; and the
-four streams below. Its missing file is a revoked object URL: the harness's Vite answers a path it
-has no file for with its own page. For the same reason the stream whose segments are missing says
-the second sentence there, not the first: hls.js is sent a page for each segment, and cannot read
-it.
+four streams below. The harness answers a missing file 404, as a host does, so the missing file
+and the stream whose segments are missing say the first sentence there too.
 
 Test media lives in `dev/media/`, each file under 50 kB, made in this package's folder by:
 

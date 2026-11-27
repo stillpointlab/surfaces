@@ -12,6 +12,10 @@
 - docs/tasks/unassigned/seeds/streams-from-beyond-the-folder.md
 - docs/tasks/unassigned/seeds/mpeg-dash-streams.md
 
+# From the drain of stage 6's phase 3 (Jamie, 2026-11-26): `.ts` is TypeScript's
+# ending and an MPEG-TS segment's.
+- docs/tasks/unassigned/seeds/a-format-told-by-a-files-bytes.md
+
 # From the drain of stage 6's phase 2 (2026-11-26): the five older formats' root
 # entries. A candidate step for stage 6's phase 5.
 - docs/tasks/unassigned/seeds/root-entries-register-nothing.md

@@ -191,8 +191,7 @@ above for what each part once found.
       (the network panel), then another file opened while its segments still arrive → it falls
       silent, and the network panel asks for no more of them.
 - [ ] The same files and streams played in the harness (`npm run dev`, format video) in Firefox.
-      There the stream whose segments are missing says "This browser can't play this video.":
-      the harness answers a missing file with its own page.
+      There too the stream whose segments are missing says "Couldn't load this video.".
 
 ## 13. PDF
 

@@ -8,9 +8,11 @@ import type { HarnessFormat } from '../../../../tooling/harness/types';
 export default {
   format: sampleFormat,
   fixtures: {
-    'Sample document': 'A sample document.\nEdit me and the preview follows.',
+    // Text as the template reads it; replace these with documents of this format.
+    'A document': 'A document of lines.\nEdit me and the preview follows.',
     Empty: '',
     // Lines starting with '!' do not parse, so this opens in the raw view.
-    'Invalid (opens raw)': '!not a sample line\nThe sample rejects lines starting with "!".',
+    'Invalid (opens raw)':
+      '!not a line that parses\nThe template refuses a line that starts with "!".',
   },
 } satisfies HarnessFormat;
