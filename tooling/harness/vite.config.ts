@@ -15,6 +15,11 @@ const defaultFormat =
 
 export default defineConfig({
   root: here,
+  // Not a single-page app: Vite's default ('spa') answers any path it has no file
+  // for with index.html and a 200, so a fixture's missing file would arrive as this
+  // page. 'mpa' still serves index.html for `/` (and `/?format=…`), and answers a
+  // file that is not there with 404, as a host does.
+  appType: 'mpa',
   server: { port: 5180, strictPort: true, fs: { allow: [repoRoot] } },
   define: { __HARNESS_DEFAULT_FORMAT__: JSON.stringify(defaultFormat) },
 });

@@ -1,7 +1,7 @@
 {
   "name": "@stillpointlab/sample-format",
   "version": "0.1.0",
-  "description": "A Stillpoint Lab format: a <sample-preview> and a <sample-editor> over one good.",
+  "description": "A Stillpoint Lab format over one good, with the elements <sample-preview> and <sample-editor>.",
   "license": "MIT",
   "type": "module",
   "sideEffects": [

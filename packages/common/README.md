@@ -38,21 +38,25 @@ What every surface shares. No elements of its own.
     `.md` matches `.md`), as `extensionOf(path)` gives it; `fileNameOf(path)` is the last segment.
     `find` never reads a file: whether an unmatched file is text is the host's question, and a host
     that decides it is uses `fallback`. The registry holds no other policy, such as size limits.
-  - **Register in this order:** `md`, `xmdl`, `sheet`, `image`, `code`, with `code` also as the
-    fallback. It is the order Context Manager's classifier tests a path in, and it matters: `code`
-    opens `.md` and `.markdown` too, so markdown must come first for both hosts to class a path
-    the same way.
+  - **Register in this order:** `md`, `xmdl`, `sheet`, `image`, `audio`, `video`, `code`, with
+    `code` also as the fallback, as the local host does. The order matters where two formats open
+    one ending: `code` opens `.md` and `.markdown` too, so markdown must come first, and `code`
+    last. Context Manager's classifier tests a path in the same order without `audio` and
+    `video`, which it does not register yet. No other format opens their endings, so a host that
+    registers them before `code` still classes every other path as Context Manager does.
 
     ```ts
     import { createFormatRegistry } from '@stillpointlab/common-format/format';
+    import { audioFormat } from '@stillpointlab/audio-format/format';
     import { codeFormat } from '@stillpointlab/code-format/format';
     import { imageFormat } from '@stillpointlab/image-format/format';
     import { mdFormat } from '@stillpointlab/md-format/format';
     import { sheetFormat } from '@stillpointlab/sheet-format/format';
+    import { videoFormat } from '@stillpointlab/video-format/format';
     import { xmdlFormat } from '@stillpointlab/xmdl-format/format';
 
     const registry = createFormatRegistry(
-      [mdFormat, xmdlFormat, sheetFormat, imageFormat, codeFormat],
+      [mdFormat, xmdlFormat, sheetFormat, imageFormat, audioFormat, videoFormat, codeFormat],
       { fallback: codeFormat }
     );
     ```

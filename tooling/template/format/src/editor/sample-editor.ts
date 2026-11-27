@@ -34,7 +34,7 @@ import type {
  * (string content in and out, `content-change` on every edit, focus) and the raw
  * view capability: a "Raw Text" switch, the `view` attribute and `view-change`
  * event, and a fallback to raw text for content the rich view cannot show. The
- * sample's rich view is a plain textarea; a real format renders something richer.
+ * template's rich view is a plain textarea; a real format renders something richer.
  */
 export class SampleEditor extends HTMLElement implements EditorElement {
   private readonly root: ShadowRoot;

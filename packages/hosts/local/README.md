@@ -35,7 +35,7 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
 
 | Module           | What it is                                                                               |
 | ---------------- | ---------------------------------------------------------------------------------------- |
-| `main.ts`        | The entry: the HTTP client, the seven formats, md's sanitizing renderer                  |
+| `main.ts`        | The entry: the HTTP client, the formats, md's sanitizing renderer                        |
 | `host-client.ts` | `HostClient` and `createHttpClient`: the only module that calls `fetch` or `EventSource` |
 | `page.ts`        | `startPage`: the layout, the tree's events, the address, the host's events, undo, redo   |
 | `pane.ts`        | `FilePane`: what is open, opening, saving, a change on disk, and the Changes view        |
@@ -95,8 +95,9 @@ files in `dist/client` with relative paths, so a desktop shell can load the same
   opened or last saved at. A change on disk to the open file is read again and compared by
   version: with no unsaved edits it shows in place; with edits a banner offers Reload, and Save
   asks before it writes over the newer file. Leaving unsaved edits asks first.
-- **A file in a format that takes a URL** (an image, audio) is not read by the page: its element
-  loads it from the raw route. As it opens, the pane asks for the file's validator
+- **A file in a format that takes a URL** (an image, a video: any whose descriptor `needs: 'url'`)
+  is not read by the page: its element loads it from the raw route. As it opens, the pane asks for
+  the file's validator
   (`HostClient.probe`, a `GET` of its first byte), and the address it hands the element names
   it (`/api/raw/<path>?rev=<validator>`). A change event for the file, and the event stream's
   return, ask again: the same validator changes nothing, so a track that plays plays on through a

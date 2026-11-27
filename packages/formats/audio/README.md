@@ -65,8 +65,8 @@ run in headless Chromium (`vitest.browser.config.ts`): a clip loads and knows it
 and its time moves, seeks; a file of noise says the second sentence and a missing one the first.
 
 The harness (`npm run dev`) has one clip of each ending, so each can be heard by hand in any
-browser, and a missing file, a file of noise and no source. Its missing file is a revoked object
-URL: the harness's Vite answers a path it has no file for with its own page.
+browser, and a missing file, a file of noise and no source. The harness answers a missing file
+404, as a host does.
 
 Test media lives in `dev/media/`, each file under 50 kB, made in this package's folder by:
 
