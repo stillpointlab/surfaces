@@ -43,9 +43,15 @@ screen reader "Page 3 of 12": a group holding its text (`role="group"`), or a pi
 | loaded  | the pages                                                                 |
 | failed  | one of three sentences in place of the pages                              |
 
-- **Every page has its place from the start.** Once the document has opened, every page's size
-  is read before any is drawn, and each page's box is laid out at it, so the scroll bar is true
-  before anything is drawn.
+- **Every page has its place from the start, and its size once read.** Once the document has
+  opened, the first page's size alone is read, and every page's box is laid out at it, as pdf.js's
+  viewer does: the first page is drawn after one request to the worker, however many pages there
+  are. A page's own size is read before it is drawn. Once the first page is drawn, the others'
+  are read in the background, 50 at a time, so a page to draw waits behind no more than those,
+  and each box takes its size as it arrives. The page in view stays where it is on the screen
+  while the boxes above it change: the column moves its scroll by as much, and turns the
+  browser's own scroll anchoring off (`overflow-anchor: none`). The scroll bar is true once every
+  size is read, and is already true for a PDF whose pages are all one size.
 - **Only the pages near view are drawn.** The pages in view (an `IntersectionObserver` on the
   column) and two either side hold a canvas, drawn one at a time, the nearest first; a page
   further off gives its canvas back (its pixels let go at once, and pdf.js's page cleaned up).
@@ -68,8 +74,8 @@ screen reader "Page 3 of 12": a group holding its text (`role="group"`), or a pi
     asking for a password. The element hears every ask and never stops it, so this is a
     fallback (see "A password" below).
 - **A page that cannot be drawn** says "This page couldn't be drawn." in its own place (at the
-  size of the page before it, when pdf.js could not read the page at all), and the others are
-  drawn.
+  first page's size, when pdf.js could not read the page at all, or a letter page's when that is
+  the first), and the others are drawn.
 - **Ready** is pending until a page has been drawn (the first, unless the column was scrolled
   away first), the load has failed, or a password is asked for, and settles at once when there
   is nothing to show. It never settles on a time.
@@ -238,9 +244,12 @@ build holds it. Jamie accepted it on 2026-11-26.
 
 `src/**/*.test.ts` run in jsdom, which has no worker and no canvas that draws: pdf.js and the
 worker are stood in for (`src/testing/fake-pdfjs.ts`), and each test says when a document opens
-or fails, when a page is drawn and when its text is laid. They cover the states and their words,
-the three failures from pdf.js's errors, the worker that fails to load, the pages laid out and
-labelled, the pages near view drawn and those far off given back, a width that settles, a page
+or fails, when a page's size is read, when a page is drawn and when its text is laid. They cover
+the states and their words, the three failures from pdf.js's errors, the worker that fails to
+load, the pages laid out and labelled, the pages' sizes (`pdf-preview-sizes.test.ts`): the first
+page's alone read before it is drawn, the others read once it is, 50 at a time, no page drawn
+before its size is read, and the page in view kept in place as the boxes above it change; the
+pages near view drawn and those far off given back, a width that settles, a page
 that cannot be drawn, the old source let go, and leaving the page; a page's text
 (`pdf-preview-text.test.ts`): laid after ready, given back and cancelled with its canvas, brought
 to a new width, none for a page with none; and a password (`pdf-preview-password.test.ts`): asked
@@ -251,7 +260,8 @@ files: pdf.js's main module reached from no entry but by `import()`, the worker 
 changed copy, every file where the built modules name it, and no `.wasm`.
 `src/**/*.browser.test.ts` run in headless Chromium (`vitest.browser.config.ts`): a page drawn
 with ink at the screen's pixel ratio, fetching the two standard fonts it needs and none for
-embedded fonts; the last of twelve pages drawn only once it is scrolled to; Japanese text drawn
+embedded fonts; the last of twelve pages drawn only once it is scrolled to; the page scrolled to
+before the pages' sizes are read kept in place as they arrive (`sizes.pdf`); Japanese text drawn
 through its character map; a JPEG 2000 image drawn with no WebAssembly and no `.wasm` asked for;
 the file that is not a PDF and the missing file in their sentences; a page's text: the PDF's own
 over its canvas, two lines selected, `window.find` finding a word near view and not one far off,
@@ -270,7 +280,8 @@ a small PDF writer run by Node with nothing downloaded. In this package's folder
 ```sh
 # dev/media/jpx.jp2: a 200×150 image of colour, for the JPEG 2000 PDF
 magick -size 200x150 -seed 7 plasma:red-blue -blur 0x2 -depth 8 -define jp2:rate=20 dev/media/jpx.jp2
-# text.pdf (five standard fonts, none embedded), pages.pdf (twelve pages), cjk.pdf (Japanese text,
+# text.pdf (five standard fonts, none embedded), pages.pdf (twelve pages), sizes.pdf (30 pages, the
+# first twice as tall as the others), cjk.pdf (Japanese text,
 # UniJIS-UCS2-H), jpx.pdf (the image above, JPXDecode), dense.pdf (a page of dense text, 6,457
 # characters in 67 lines, for measuring the text) and not-a-pdf.pdf (text under a .pdf name)
 node dev/make-pdfs.ts

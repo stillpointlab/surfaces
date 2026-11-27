@@ -24,6 +24,7 @@ export default {
   fixtures: {
     'Text, its fonts not embedded': pdf('text.pdf'),
     'Twelve pages': pdf('pages.pdf'),
+    'The first page twice as tall': pdf('sizes.pdf'),
     'Japanese text through a character map': pdf('cjk.pdf'),
     'A JPEG 2000 image': pdf('jpx.pdf'),
     'Fonts embedded': pdf('embedded-fonts.pdf'),

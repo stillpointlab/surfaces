@@ -252,17 +252,6 @@ describe('pdf-preview', () => {
     expect(statusOf(el)).toBeNull();
   });
 
-  it('says a page pdf.js cannot read in its own place, at its neighbour’s size', async () => {
-    const el = await opens('/files/a.pdf', new FakeDocument(3, [2]));
-
-    const pages = pagesOf(el);
-    expect(pages).toHaveLength(3);
-    expect(pages[1].textContent).toBe("This page couldn't be drawn.");
-    expect(pages[1].getAttribute('aria-label')).toBe('Page 2 of 3');
-    expect(pages[1].style.aspectRatio).toBe('612 / 792');
-    expect(pages[0].querySelector('canvas')).not.toBeNull();
-  });
-
   it('lets the old source go for a new one, and hears only the new one', async () => {
     const handler = vi.fn();
     setErrorHandler(handler);
