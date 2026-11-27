@@ -12,12 +12,12 @@ const clip = (name: string): HarnessFixture => ({
   content: new URL(`./media/${name}`, import.meta.url).href,
 });
 
-// An address that answers nothing. A missing path will not do here: the harness's
-// Vite answers any path it has no file for with its own page, 200, which the
-// browser then fails to decode. A revoked object URL fails as a file that never
-// arrived does, at once, and asks nothing of the network.
-const gone = URL.createObjectURL(new Blob([]));
-URL.revokeObjectURL(gone);
+// A clip that is not in `media/`, which the harness answers 404, as a host does.
+// Vite is told not to look for it: it would find no file and leave no address.
+const missing = (name: string): HarnessFixture => ({
+  path: name,
+  content: new URL(/* @vite-ignore */ `./media/${name}`, import.meta.url).href,
+});
 
 export default {
   format: audioFormat,
@@ -31,7 +31,7 @@ export default {
     'AAC in MP4 (.m4a)': clip('tone.m4a'),
     'AAC, ADTS (.aac)': clip('tone.aac'),
     'WebM Opus (.weba)': clip('tone.weba'),
-    'Missing file': { path: 'no-such-file.mp3', content: gone },
+    'Missing file': missing('no-such-file.mp3'),
     'Noise the browser cannot decode': clip('noise.mp3'),
     'No source': { path: 'empty.mp3', content: '' },
   },

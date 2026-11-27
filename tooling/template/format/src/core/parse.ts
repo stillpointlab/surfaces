@@ -22,7 +22,7 @@ export function serializeSample(document: SampleDocument): string {
 
 /**
  * Why the rich view cannot show `content`; empty when it can. Replace this with the
- * real validation. The sample rejects lines starting with `!` so the template shows
+ * real validation. The template rejects lines starting with `!` so that it shows
  * the raw view's fallback: content that does not parse opens as raw text.
  */
 export function validateSample(content: string): SampleIssue[] {

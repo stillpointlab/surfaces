@@ -86,38 +86,74 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
 
 - 2026-11-26 (audio): a file renamed while it plays starts again. The pane hands the element its
   new path, which is a new address (`packages/hosts/local/src/client/pane.ts`, `follow`).
+  - Closed 2026-11-26 (Jamie: "we can close").
 - 2026-11-26 (audio): the same bytes written again start a playing track again. The validator
   is the file's size and time, and a rewrite, an editor's save of nothing or `touch` changes the
   time (`packages/hosts/local/src/server/conditional.ts`).
+  - Closed 2026-11-26 (Jamie: "close if fine, pretty edge case"). Telling the same bytes from
+    new ones would mean reading the whole file at each check.
 - 2026-11-26 (audio): the validator is as fine as the disk's clock. On a disk that keeps time to
   the second or two (FAT, exFAT), a file written twice inside one tick at the same size is not
   seen to change, by the pane or by the browser's copy. Before this build a `changed` event
   always loaded the file again.
+  - Closed 2026-11-26 (Jamie: "close").
 - 2026-11-26 (audio): the harness's server answers a missing file with its own page and a 200,
   so image's and the URL template's "Missing" fixtures show a file that will not decode, not one
   that is missing. Audio's uses a revoked object URL
   (`packages/formats/image/dev/fixtures.ts`, `tooling/template/url-format/dev/fixtures.ts`).
+  - Built 2026-11-26 (Jamie: fix; [#201](https://github.com/stillpointlab/surfaces/pull/201)): the harness's server answers 404 for a file that is
+    not there.
 - 2026-11-26 (audio): `common`'s README lists the order to register formats in as
   `md, xmdl, sheet, image, code`. It is Context Manager's order, and phase 5's to bring up to
   date (`packages/common/README.md`).
+  - Built 2026-11-26 (Jamie: fix; [#201](https://github.com/stillpointlab/surfaces/pull/201)).
 - 2026-11-26 (audio): the scaffold's renamed prose reads oddly for a real name ("the audio shows
   what it is given as an image", "a `<audio-preview>`"), in the package's README and comments.
+  - Built 2026-11-26 (Jamie: fix; [#201](https://github.com/stillpointlab/surfaces/pull/201)): the templates are worded so that they read true
+    under a new name.
 - 2026-11-26 (video): the root README's format convention still says "image, and video, audio
   or PDF to come", and the local host's README names "(an image, audio)" as what takes a URL.
+  - Built 2026-11-26 (Jamie: fix; [#201](https://github.com/stillpointlab/surfaces/pull/201)).
 - 2026-11-26 (video): the harness's event log shows an element's `ready` twice for each fixture.
   Not looked into (`tooling/harness/main.ts`).
+  - Jamie, 2026-11-26: fix. If the harness listens twice it is mended there; if an element
+    says `ready` twice, that is told to Jamie before anything is changed.
+  - Looked into ([#201](https://github.com/stillpointlab/surfaces/pull/201)) and not changed: the element says it twice, as the ready gate's contract
+    has it. A preview given a URL is put in the page with no source and settles as empty, then
+    is given its source and settles again when that has loaded. md and code show one. Told to
+    Jamie; his to rule.
 - 2026-11-26 (video): the scaffold's contract test suggests `canplay` in a comment, and both
   media formats settle on `loadedmetadata` (`tooling/template/url-format`). With the entry
   above on the scaffold's prose.
+  - Built 2026-11-26 (Jamie: fix; [#201](https://github.com/stillpointlab/surfaces/pull/201)).
 - 2026-11-26 (HLS): a playlist that names another server says the first sentence only after
   31.6 s and 14 policy reports: hls.js asks again after an answer with no status. The build's
   rule for failing at once covers a 4xx alone (`packages/formats/video/src/preview/hls-engine.ts`).
+  - Built 2026-11-26 (Jamie: fix, "cap makes sense"; [#201](https://github.com/stillpointlab/surfaces/pull/201)): hls.js asks again at most twice,
+    and the sentence comes in 3.4 s. Playlists from other servers "one day" are in the seed
+    [streams from beyond the folder](../../tasks/unassigned/seeds/streams-from-beyond-the-folder.md),
+    with his note that it may wait for Context Manager in the desktop app.
 - 2026-11-26 (HLS): the pane asks after a playlist alone, so a segment changed on disk does not
   load the stream again (`packages/hosts/local/src/client/pane.ts`).
+  - Closed 2026-11-26 (Jamie: "close is fine").
 - 2026-11-26 (HLS): a `.ts` segment in the tree opens as code and is refused as not text. A
   folder of segments shows as a list of such files.
+  - Closed 2026-11-26 for now, with a seed for telling a format by a file's bytes where endings
+    collide: [a format told by a file's bytes](../../tasks/unassigned/seeds/a-format-told-by-a-files-bytes.md)
+    (Jamie: "happy to defer for now - but if it is possible we should seed it for later").
 - 2026-11-26 (HLS): the port of the browser tests' server cannot be set from the command line
   (`tooling/vitest.ts`).
+  - Closed 2026-11-26 (Jamie: "close is fine").
+- 2026-11-26 (the phase's follow-ups, from Jamie's question on `canplay` and `loadedmetadata`):
+  an audio or video preview is ready, and takes its loading cover away, on `loadedmetadata`. A
+  browser that loads nothing of a file before a person presses play never sends it. Tried with
+  `preload="none"` standing in for such a browser, in Chromium 158 and Firefox 159: `loadstart`
+  and `suspend` come and nothing more, so the element would stay at "Loading" and never be
+  ready. Safari on an iPhone is said to behave so in some modes and was not run. `suspend` is no
+  sign to go by: Chromium sends it before the metadata of a file it goes on to load.
+  - **Carried** (Jamie, 2026-11-26): "iOS Safari makes sense as a test bed, let's add to
+    followup as you suggest and I'll switch to Mac when we drain that one". It waits for his
+    walk on a Mac and an iPhone.
 
 ## Phase 4
 

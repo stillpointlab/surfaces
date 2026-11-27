@@ -19,3 +19,13 @@ places a stream can come from, each a larger step:
   file is served with range requests.
 - **Live video,** from the webcam and GoPro work. The same element, given a source that has no
   end.
+
+## Since
+
+- **Jamie, 2026-11-26,** ruling phase 3's log: "we should handle playlists from other servers
+  one day", and it "might fit more in with when we add CM support to the electron app that gets
+  built on the harness - so maybe a far-off concern".
+- **What stage 6 does with one today:** the policy refuses it and the video preview says
+  "Couldn't load this video." The HLS build found hls.js asking again for 31.6 s first, with 14
+  policy reports; its retries are capped in phase 3's follow-ups, so the sentence comes in
+  seconds.
