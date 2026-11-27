@@ -1,5 +1,7 @@
 ---
-column: in-progress
+column: done
+pr: 197
+completed: 2026-11-26
 created: 2026-11-25T23:30:00-07:00
 tags: [formats, feature, code]
 ---
