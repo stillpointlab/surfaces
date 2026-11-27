@@ -447,21 +447,23 @@ by him:
 ### Deferred
 
 Eighteen entries in the [log](followups.md#phase-4): eleven from the two builds and four from
-the spikes and Jamie's rulings, each ruled by him on 2026-11-27, three at a time; and three the
-fixes found, put to him with this close:
+the spikes and Jamie's rulings, and three the fixes found, each ruled by him on 2026-11-27,
+three at a time:
 
-- **Carried, one:** the browser's own find bar on a PDF's text, "to user validation at stage end".
-  With phase 3's (an audio or video preview's `ready` on an iPhone), two are carried.
+- **Carried, three,** all to Jamie's validation at the stage's end: the browser's own find bar
+  on a PDF's text; a fast drag that may leave a line's last letter out ("make sure a suitable
+  pdf is available and I will test in validation"); and the cost of 3,000 page boxes made at
+  once ("let's leave this open until validation completes"). With phase 3's (an audio or video
+  preview's `ready` on an iPhone) four are carried, one over the three the brief allows, by his
+  word.
 - **Built, four:** the password field ([#209](https://github.com/stillpointlab/surfaces/pull/209));
   and in [#210](https://github.com/stillpointlab/surfaces/pull/210) the first page not
   waiting on every page's size (a 3,000-page PDF's first page in 126 ms where it took 474), a
   redraw on a change of pixel ratio, and a page's picture not held up by the text before it.
 - **Looked into, one:** pdf.js's measuring canvas. The entry was wrong: pdf.js takes it away
   itself when a document is destroyed. A test holds it; Jamie ruled "fix, let's clean up" on
-  the entry as written, and it is his to confirm.
-- **Found by the fixes, three,** not yet ruled: a fast, coarse drag leaving a line's last letter
-  out; a page waiting for one text being laid; the cost of 3,000 boxes made at once.
-- **Closed, nine:** Firefox's line about microtasks; the generating script's name; prettier run
+  the entry as written, was told, and merged it as it was.
+- **Closed, ten:** a page waiting for the one text being laid; Firefox's line about microtasks; the generating script's name; prettier run
   from inside a package; the CommonJS worker no host loads; copying from a PDF that forbids it;
   find near view, with its seed; the issue for pdf.js; pdf.js's reading of a symbol font and a
   vertical comma, "as known issue", now in the package's README; Chromium's selection empty for
@@ -471,6 +473,11 @@ fixes found, put to him with this close:
 
 - The build of a drawn signature waits for the spike on writing bytes, which is in the stage's
   close.
+- Phase 5's spec was drafted and Jamie ruled its first questions the same day: Context Manager's
+  goods hold no bytes yet, so the adoption is for repository files, and goods that hold bytes
+  are a spike in Context Manager
+  ([context-manager#1322](https://github.com/stillpointlab/context-manager/pull/1322)); a
+  `WORKER_BASE_URL` for the PDF preview's worker.
 - The tag is on the merge of [#210](https://github.com/stillpointlab/surfaces/pull/210),
   the phase's last code.
 - Phase 3's transcript was backed up after its close; phase 4's follows this one.

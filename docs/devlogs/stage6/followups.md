@@ -203,6 +203,7 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
     itself whenever a document is destroyed, and the element destroys its document when it lets
     a source go; no canvas was left in the body in either browser. A browser test now holds
     that, and the README says it. Told to Jamie; his to confirm.
+  - Jamie merged #210 as it was, 2026-11-27, with this told to him.
 - 2026-11-26 (PDF text): a page's text is laid before the next page's canvas, so later pages of
   a dense PDF are drawn about 30 ms later each (`packages/formats/pdf/src/preview/pages.ts`).
   - Jamie, 2026-11-27: fix.
@@ -237,7 +238,12 @@ entries (the [media previews brief](../../tasks/stage6/phase1/briefs/media_previ
   line's last letter out of the selection, in both browsers, by script (moves of 25 px; moves of
   4 px select the whole line). Not tried on the build before the fixes, nor by hand. It is a
   step in the release walk.
+  - **Carried** (Jamie, 2026-11-27): "make sure a suitable pdf is available and I will test in
+    validation". The walk's step names it: `text.pdf` in the package's `dev/media`, its first
+    line.
 - 2026-11-27 (the phase's follow-ups, [#210](https://github.com/stillpointlab/surfaces/pull/210)): a page that comes near view while another page's
   text is being laid waits for that one text, about 30 ms on a dense page.
+  - Closed 2026-11-27 (Jamie: "close").
 - 2026-11-27 (the phase's follow-ups, [#210](https://github.com/stillpointlab/surfaces/pull/210)): what is left of a 3,000-page PDF's first page
   (126 ms) is pdf.js opening the file and the making of 3,000 boxes at once.
+  - **Carried** (Jamie, 2026-11-27): "let's leave this open until validation completes".

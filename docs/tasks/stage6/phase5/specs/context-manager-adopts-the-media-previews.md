@@ -8,13 +8,17 @@ tags: [context-manager, formats, feature, code]
 
 _From the [media previews brief](../../phase1/briefs/media_previews.md), phase 5: "Context
 Manager adopts the three", as "one integration in Context Manager, at the end, with the walks at
-that pin". A draft by the claude agent at phase 4's close, for Jamie to read before any of it
-starts. The work is in Context Manager's repository; this card is its spec._
+that pin". A draft by the claude agent at phase 4's close, with Jamie's first rulings of
+2026-11-27 written in ([Decided](#decided)) and what is still open under
+[Clarifications](#clarifications). The work is in Context Manager's repository; this card is its
+spec._
 
 ## High-level goal
 
-A good that is an audio file, a video file or a PDF previews in Context Manager wherever an image
-good does today: it plays, it seeks, its pages draw and its text can be selected.
+A repository's file that is an audio file, a video file or a PDF previews in Context Manager
+where a repository's image does today: it plays, it seeks, its pages draw and its text can be
+selected. Goods that hold such bytes are not part of it: Context Manager has none yet
+([Decided](#decided), 3).
 
 ## Related context
 
@@ -34,9 +38,14 @@ run: nothing here was tried in Context Manager.
   (`default-src 'none'; style-src 'unsafe-inline'; sandbox`) and `nosniff`. No route answers a
   range. The brief's ruling 6: Context Manager "serves audio and video as a stream a player can
   seek in", and "may limit a file's size for now".
-- **A repository's image has a bound of 2 MiB** (`IMAGE_PREVIEW_CACHE_MAX_BYTES`,
-  `src/services/git/repoConnection.service.ts`). What it means for a larger file was left for
-  this spec to read, and is not read yet.
+- **A repository's image is fetched whole from GitHub** as a blob (`getFileBuffer`,
+  `src/services/git/repoConnection.service.ts`) and sent from
+  `/projects/:id/repos/:connection/image?path=`. The 2 MiB bound
+  (`IMAGE_PREVIEW_CACHE_MAX_BYTES`) is on what is kept in the preview cache, not on what is
+  served: a larger file is fetched again from GitHub for every request.
+- **No way to make a good that holds bytes was found.** The read side of an image good is built
+  (`getPreviewImage` and three routes); linking a repository file refuses one that is binary,
+  and nothing uploads a good's bytes. Jamie: "CM digital goods don't support binary yet".
 - **The policy** (`src/routers/app.ts`) names no `media-src` and no `worker-src`, so media falls
   to `default-src 'self'` and a worker to `script-src`. The brief's ruling 12:
   "`media-src 'self' blob:` is allowed", and Context Manager's adoption makes the change.
@@ -69,43 +78,60 @@ new packages among its workspaces.
   project links, the library, export and import) is read, and each either learns the new kinds
   or is written down as not needing to.
 
-### 3. A bytes route that a player can seek in
+### 3. Bytes a player can seek in
 
-- A good's bytes for these three kinds are served from a route that answers a range
-  (`Accept-Ranges`, `206`, `416`, `If-Range`) with a validator, reading the range from where the
-  bytes are stored and not the whole file into memory.
-- The answer keeps what `sendImage` guards: the sandbox policy and `nosniff`, with whatever a
-  media element or pdf.js's fetch needs and no more.
-- It reads by the same rule as the page that shows it: its owner, or anyone when it is public.
+- Jamie: "we should extend the preview and edit interfaces for the range request". What those
+  two interfaces are is [Clarification 1](#clarifications); the requirement either way is that
+  what serves a repository file's bytes answers a range (`Accept-Ranges`, `206`, `416`,
+  `If-Range`) with a validator, which for a repository file is its blob's SHA.
+- **Where the bytes come from for a range** is to be found out first: whether GitHub answers a
+  range for a file of a private repository, or the server must hold the file once fetched
+  ([Clarification 2](#clarifications)). A range must not cost a fetch of the whole file from
+  GitHub each time.
+- The answer carries the guard a stored file needs when a browser can open it directly
+  (`sendImage`'s sandbox policy and `nosniff`), with whatever a media element or pdf.js's fetch
+  needs and no more. The repository image route sends neither today.
+- It reads by the same rule as the tree that shows it: the connection's owner.
 - **A bound on size** is chosen and said in words when a file is over it
   ([Clarification 2](#clarifications)).
 
 ### 4. What is left when a preview cannot load
 
-For each of the three the server renders something true in place of the `<img>`: the browser's
-own `<audio controls>` or `<video controls>` at the bytes route, and for a PDF a link to the
-bytes. The client mounts the preview over it as it does for an image.
+The server's `<img>` for a format given a URL is on a good's page, and waits with goods that
+hold bytes: when they come, each of the three needs something true in its place (the browser's
+own `<audio controls>` or `<video controls>`, a link for a PDF). In the repository tree the
+client mounts the preview itself; what it shows when a preview's script cannot load is read
+and, if it is nothing, given words.
 
 ### 5. The policy and the worker
 
-- `media-src 'self' blob:` is added, as ruled.
+- `media-src 'self' blob:` was ruled for Context Manager in the brief (12), for streams. With
+  no stream in this spec nothing would use `blob:` yet ([Clarification 5](#clarifications)).
 - **The PDF worker is loaded from the page's own origin** in every mode Context Manager runs in:
-  development, and production with its scripts on another origin. How is the spec's first thing
-  to find out and the one most likely to change its size
-  ([Clarification 1](#clarifications)).
+  development, where the scripts come from Vite's server, and production with its scripts on
+  another origin. Jamie: "let's add a WORKER_BASE_URL to CM config". A browser refuses a worker
+  whose script is on another origin, and no CORS header changes that, so the setting names a
+  place on the page's own origin where Context Manager serves worker files.
+- **How the built page learns the worker's address** is the first thing tried: Vite's
+  `renderBuiltUrl` for a worker's file, or the PDF preview being told its worker's address by
+  its host. The second is a change in surfaces and comes back to Jamie first.
+- The two fallback decoders the worker imports, and the files pdf.js fetches by name, stay with
+  the other scripts. From a worker on the page's origin they are fetched across origins, so
+  the asset host must answer them with CORS headers, as it must already for module scripts.
+  Tried, not assumed.
 - Nothing else is loosened: no `'wasm-unsafe-eval'`, no frame, no object.
 
 ### 6. Where it shows
 
-Every place an image good previews today: the good's page, a library reference, the public page,
-and a repository file. Each is named in the PR with what was seen there.
+Where a repository's image previews today: a file chosen in the repository tree. The places a
+good previews (its page, a library reference, the public page) wait for goods that hold bytes.
 
 ### 7. Not HLS
 
-A playlist's segments are files beside it, and a good has no "beside". The brief's ruling 11:
-"Context Manager serving one" is planned for later, in
-[its seed](../../../unassigned/seeds/streams-from-beyond-the-folder.md). The video row does not
-open `.m3u8` in Context Manager.
+The brief's ruling 11: "Context Manager serving one" is planned for later, in
+[its seed](../../../unassigned/seeds/streams-from-beyond-the-folder.md). A repository does have
+a "beside", so a playlist with its segments in the same folder could be served one day; it is
+not in this spec. The video row does not open `.m3u8` in Context Manager.
 
 ### 8. Tests and walks
 
@@ -116,30 +142,47 @@ open `.m3u8` in Context Manager.
   no policy report in the console for any of them.
 - The walks, `e2e:reset` and any scratch push wait for Jamie's word, as before.
 
+## Decided
+
+Jamie, 2026-11-27, on the draft's first three questions:
+
+1. **Ranges:** "we should extend the preview and edit interfaces for the range request". (What
+   the two interfaces are is asked below.)
+2. **The worker:** "let's add a WORKER_BASE_URL to CM config". He asked whether the rule is
+   beyond CORS and has no way round but the page's origin. It is: a worker's script must be on
+   the page's origin, whatever headers it is served with. The one way round is a worker started
+   from a `blob:` that imports the real script, which needs `worker-src blob:` in the policy and
+   is what both hosts' policies refuse today; pdf.js tries exactly that and was seen refused in
+   the [pdf.js spike](../../phase4/spikes/pdfjs-in-a-format-package.md).
+3. **Goods that hold bytes are their own initiative:** "CM digital goods don't support binary
+   yet - I don't think we even have image import, just image preview for repos. this would be a
+   separate initiative, please add a spike to CM for it". The spike's card is
+   [context-manager#1322](https://github.com/stillpointlab/context-manager/pull/1322). This
+   spec is for repository files.
+
 ## Clarifications
 
 For Jamie, with the agent's lean:
 
-1. **The worker when scripts come from another origin.** If production serves its scripts from
-   `ASSET_BASE_URL`, the PDF preview's worker cannot start from there. The ways: Context Manager
-   serves the worker file (and only it) from its own origin; or the PDF preview is given a way
-   to start its worker from an address the host names. Lean: find out first whether production
-   sets `ASSET_BASE_URL` today; if it does, Context Manager serves the worker from its own
-   origin, and surfaces changes nothing.
-2. **The bound on a file's size.** Ruling 6 allows one. Lean: one number for all three, read
-   from Context Manager's existing limits on a good once they are read, and a sentence in place
-   of the preview for a file over it.
-3. **How such goods get in.** Whether a person can add an audio file, a video or a PDF as a good
-   today (an upload, an import from a repository, an agent's write) was not read. If no way
-   exists, the adoption has nothing to show outside a repository's files, and a way in is its
-   own piece of work. Lean: read it as the spec's first step, and bring the answer back before
-   building.
-4. **One PR or several.** The route with ranges is server work that stands alone; the table, the
-   fallback and the policy go together. Lean: two PRs in Context Manager, the route first.
-5. **The root-entries seed.** The drain of phase 2 named
+1. **"The preview and edit interfaces".** The agent's reading: Context Manager's own paths that
+   hand a file's bytes to a preview and to an editor, so that ranges are added to what is there
+   (today the repository image route, and the image good's routes for when goods hold bytes)
+   and not built as a new route for media alone. If he means the surfaces contracts instead
+   (`UrlPreviewElement`, `EditorElement`, the storage port), that is a change in surfaces and a
+   different piece of work.
+2. **Where a range's bytes come from, and the bound.** GitHub's blob call gives a whole file,
+   up to 100 MB. Lean: find out whether GitHub answers a range for a private repository's file
+   and pass it through if so; if not, the server keeps a fetched file for a while, keyed by its
+   SHA. Either way a bound for now, 50 MB, with a sentence in place of the preview over it.
+3. **One PR or several.** Lean: two in Context Manager, the ranges first, then the table, the
+   fallback, the policy and the worker's setting together.
+4. **The root-entries seed.** The drain of phase 2 named
    [the five older formats' root entries](../../../unassigned/seeds/root-entries-register-nothing.md)
-   as a candidate step for this phase. Lean: not in this phase unless the adoption touches those
-   imports anyway.
+   as a candidate step for this phase. Lean: not in this phase.
+5. **`blob:` for media, now or with streams.** The brief's ruling 12 has Context Manager's
+   adoption add `media-src 'self' blob:`. Only a stream needs `blob:`, and this spec has none.
+   Lean: leave the policy's media rule as it is (its own origin) and add `blob:` when Context
+   Manager serves a stream.
 
 ## Non-goals
 
@@ -150,19 +193,21 @@ For Jamie, with the agent's lean:
 
 ## Acceptance / completion checklist
 
-- [ ] Clarifications 1 to 3 are answered from Context Manager's code and settings, and ruled.
-- [ ] An audio good and a video good play and seek, with the network panel showing ranges and
-      no whole-file answer for a seek.
-- [ ] A PDF good draws in development mode and in a production build with scripts on another
-      origin, if production has them there.
+- [ ] The Clarifications are ruled.
+- [ ] A repository's audio file and video file play and seek, with the network panel showing
+      ranges, and GitHub not asked for the whole file on a seek.
+- [ ] A repository's PDF draws in development mode and in a production build with its scripts on
+      another origin and its worker at `WORKER_BASE_URL`.
 - [ ] No policy report in the console on any page that shows one of the three.
 - [ ] A file over the bound says so in words.
-- [ ] With scripts turned off or a preview that fails to load, each kind leaves its fallback.
+- [ ] A preview whose script fails to load leaves words in the tree's pane, not nothing.
 - [ ] Context Manager's checks pass, and the walks pass at the new pin.
 
 ### Work package
 
-- **Owns:** Context Manager's table, its bytes route, its preview body, its policy, its pin.
-- **Must not change:** surfaces, unless Clarification 1 is ruled that way.
+- **Owns:** Context Manager's table, its repository bytes route, its policy, its worker setting,
+  its pin.
+- **Must not change:** surfaces, unless the worker's address or Clarification 1 turns out to
+  need it, which comes back to Jamie first.
 - **Runs after:** `stage6-phase4-complete`.
 - **Needs Jamie's word for:** the walks, `e2e:reset`, any scratch push.
