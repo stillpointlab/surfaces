@@ -11,6 +11,8 @@ component's shadow root at runtime).
 - **`@stillpointlab/md-format/markdown`** — a DOM-free `createMarkdownIt` /
   `renderMarkdown` (CommonMark + GFM strikethrough + tables) for Node SSR or the
   browser.
+- **`@stillpointlab/md-format/document`** — the editor's schema, markdown parser
+  and serializer, for markdown to a ProseMirror document and back.
 - **Plugin interface** — host-specific syntax (e.g. citations) plugs in without
   forking the editor.
 
@@ -28,7 +30,7 @@ dependencies and installed automatically.
 ### The editor component
 
 ```ts
-import '@stillpointlab/md-format'; // registers <md-editor>
+import '@stillpointlab/md-format/editor'; // registers <md-editor>
 
 const editor = document.querySelector('md-editor');
 editor.setContent('# Hello\n\nSome **markdown**.');
@@ -43,7 +45,7 @@ Or in HTML:
 ```html
 <md-editor></md-editor>
 <script type="module">
-  import '@stillpointlab/md-format';
+  import '@stillpointlab/md-format/editor';
 </script>
 ```
 
@@ -104,12 +106,13 @@ Pass `breaks: true` for text that is typed line by line, such as a chat message.
 ## Extending: the plugin interface
 
 Host-specific features are added through a `MarkdownEditorPlugin`, registered
-**before** the element initializes. A plugin can contribute a markdown-it plugin,
+**before** the first `<md-editor>` connects (the editor builds its schema then) and
+before any call to `./document`. A plugin can contribute a markdown-it plugin,
 ProseMirror schema nodes, a markdown-it-token → node parse mapping, a
 node → markdown serializer, and an `onReady` hook.
 
 ```ts
-import { registerEditorPlugin, type MarkdownEditorPlugin } from '@stillpointlab/md-format';
+import { registerEditorPlugin, type MarkdownEditorPlugin } from '@stillpointlab/md-format/editor';
 
 const highlightPlugin: MarkdownEditorPlugin = {
   name: 'highlight',
@@ -124,9 +127,11 @@ const highlightPlugin: MarkdownEditorPlugin = {
   },
 };
 
-registerEditorPlugin(highlightPlugin);
-import '@stillpointlab/md-format'; // now initialize the element
+registerEditorPlugin(highlightPlugin); // before the first <md-editor> connects
 ```
+
+`./editor` and `./document` share one registry, so `./document`'s parser and serializer read the
+plugins too. `src/build.test.ts` builds the package and holds this.
 
 ### Error / log injection
 
@@ -141,18 +146,26 @@ setReporter((message, context) => myLogger.info(message, context));
 
 ## Exports
 
-From `@stillpointlab/md-format`:
+From `@stillpointlab/md-format`, the root: it registers no element and loads no engine.
 
-- `ProseMirrorEditor` — the element class (also registered as `<md-editor>`)
-- `registerEditorPlugin`, `getEditorPlugins`
 - `setErrorHandler`, `setReporter`
-- `createSchema`, `getSchema`, `getMarkdownParser`, `getMarkdownSerializer`,
-  `buildTableNode`
+- types: `ProseMirrorEditor` (the element's class), `MarkdownEditorPlugin`,
+  `MarkdownNodeSerializer`
+
+`src/index.test.ts` keeps it so.
+
+From `@stillpointlab/md-format/editor`: registers `<md-editor>`.
+
+- `ProseMirrorEditor`, the element class
+- `registerEditorPlugin`, `getEditorPlugins`, `buildTableNode`
+- `setErrorHandler`, `setReporter`
 - types: `MarkdownEditorPlugin`, `MarkdownNodeSerializer`
 
-From `@stillpointlab/md-format/editor`: the same, without `createSchema`, `getSchema`,
-`getMarkdownParser` and `getMarkdownSerializer`. Those are the engine, which the editor imports on
-its first connect; `src/editor/entry.test.ts` keeps this entry from loading it sooner.
+It exports nothing from the engine. ProseMirror, the parser and the serializer load on the
+editor's first connect; `src/editor/entry.test.ts` keeps this entry from loading them sooner.
+
+From `@stillpointlab/md-format/document`: `createSchema`, `getSchema`, `getMarkdownParser`,
+`getMarkdownSerializer`. It defines no element, and it loads ProseMirror and markdown-it.
 
 From `@stillpointlab/md-format/markdown`:
 

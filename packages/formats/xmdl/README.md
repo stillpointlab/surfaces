@@ -5,6 +5,16 @@ XMDL parser and web component package for typed template documents.
 This package provides the XMDL 0.1 parser and renderer plus `<xmdl-editor>` and `<xmdl-preview>`
 custom-element entrypoints.
 
+## Entry points
+
+- `.`: the parser and renderer (`parseXmdl`, `renderXmdl`, `createXmdlStarter`,
+  `splitFrontmatterBlock`) with their types, `XmdlEditor` as a type, and the logging setters. It
+  registers no element.
+- `./parser`: the parser and renderer alone.
+- `./editor`: `<xmdl-editor>`.
+- `./preview`: `<xmdl-preview>`.
+- `./format`: `xmdlFormat`; see "The format descriptor".
+
 ## XMDL MVP
 
 An XMDL document is a required leading YAML frontmatter block followed by a template body. The

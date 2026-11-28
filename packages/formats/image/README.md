@@ -16,6 +16,12 @@ const preview = document.createElement('image-preview');
 preview.setSource('/image.png', 'Screenshot');
 ```
 
+## Entry points
+
+- `.`: `ImagePreview`, the element's type, and `setErrorHandler`. It registers no element.
+- `./preview`: `<image-preview>`.
+- `./format`: `imageFormat`; see "The format descriptor".
+
 ## The format descriptor
 
 `@stillpointlab/image-format/format` exports `imageFormat`, which a host registers (see

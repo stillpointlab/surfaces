@@ -14,7 +14,9 @@ editor surfaces.
 - `@stillpointlab/sheet-format/interaction` — side-effect-free selection and merged-cell geometry
 - `@stillpointlab/sheet-format/editor` — registers `<sheet-editor>`, an interactive CSV and `.sheet`
   grid
-- `@stillpointlab/sheet-format` — registers and exports the grid, preview, and editor elements
+- `@stillpointlab/sheet-format` — the `.sheet` codec, the selection model, the presentation rules,
+  the elements' types (`SheetEditor`, `SheetGrid`, `SheetPreview`) and `setErrorHandler`; registers
+  nothing
 - `@stillpointlab/sheet-format/format` — the format descriptor, `sheetFormat`; registers nothing
 
 ## The format descriptor

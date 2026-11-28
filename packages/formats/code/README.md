@@ -8,7 +8,7 @@ two are interchangeable behind a shared `EditorElement` interface.
 ## Usage
 
 ```ts
-import '@stillpointlab/code-format'; // registers the <code-editor> element
+import '@stillpointlab/code-format/editor'; // registers the <code-editor> element
 
 const editor = document.querySelector('code-editor');
 editor.setContent('print("hello")');
@@ -26,6 +26,14 @@ editor.addEventListener('content-change', (e) => {
 <!-- keyboard mode selector defaults to normal -->
 <code-editor language="python" keymap-mode="normal"></code-editor>
 ```
+
+## Entry points
+
+- `.`: `CodeEditor`, the editor's type, and the logging setters. It registers no element.
+- `./editor`: `<code-editor>`, with `findLanguage` and `loadLanguage`.
+- `./preview`: `<code-preview>`, the read-only view.
+- `./diff`: `<code-diff>`, the read-only side-by-side diff.
+- `./format`: `codeFormat` and `languageFromPath`; see "The format descriptor".
 
 ## Contract
 
@@ -118,4 +126,4 @@ Use Node.js 24.15+ on the 24.x line for development. Node.js 22.22.2+ on the
 ## Logging
 
 Editor logs default to `console`. A host can route them via `setErrorHandler` /
-`setReporter` exported from the package.
+`setReporter`, which the root and `./editor` export.
