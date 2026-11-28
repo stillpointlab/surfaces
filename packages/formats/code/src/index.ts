@@ -1,6 +1,5 @@
-// Browser entry: importing this registers the <code-editor> custom element.
-import './editor/code-editor';
-
-export { CodeEditor } from './editor/code-editor';
-export { findLanguage, loadLanguage } from './editor/language';
+// The root entry: the editor's type and the host's logging hooks. It registers
+// no element and loads no CodeMirror. `./editor` defines <code-editor>,
+// `./preview` defines <code-preview>, and `./diff` defines <code-diff>.
+export type { CodeEditor } from './editor/code-editor';
 export { setErrorHandler, setReporter } from '@stillpointlab/common-format';

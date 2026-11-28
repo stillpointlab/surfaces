@@ -5,12 +5,9 @@
   "license": "MIT",
   "type": "module",
   "sideEffects": [
-    "./src/index.ts",
     "./src/editor/xmdl-editor.ts",
     "./src/preview/index.ts",
     "./src/preview/xmdl-preview.ts",
-    "./dist/index.js",
-    "./dist/index.cjs",
     "./dist/preview.js",
     "./dist/preview.cjs",
     "./dist/parser.js",

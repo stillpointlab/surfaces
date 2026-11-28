@@ -53,7 +53,6 @@ describe('code-format entries', () => {
   });
 
   it('define their elements without loading CodeMirror', async () => {
-    await import('./index');
     await import('./editor');
     await import('./preview');
     await import('./diff');

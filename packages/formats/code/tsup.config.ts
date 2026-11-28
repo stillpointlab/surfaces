@@ -1,8 +1,8 @@
 import { splitPackage } from '../../../tooling/tsup';
 
 // Five entry points:
-//  - index: the browser editor (registers <code-editor>)
-//  - editor: the same, the explicit `./editor` alias
+//  - index: the editor's type and the logging hooks (defines nothing)
+//  - editor: the <code-editor> element and the language lookup
 //  - preview: the read-only <code-preview> element (no basicSetup)
 //  - diff: the read-only side-by-side <code-diff> element (@codemirror/merge)
 //  - format: the format descriptor and `languageFromPath` (defines nothing; loads

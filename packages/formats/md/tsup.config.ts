@@ -1,8 +1,9 @@
 import { splitPackage } from '../../../tooling/tsup';
 
-// Five entry points:
-//  - index: the browser editor (registers <md-editor>)
-//  - editor: the same, the explicit `./editor` alias
+// Six entry points:
+//  - index: the editor's type, the plugin types and the logging hooks (defines nothing)
+//  - editor: the <md-editor> element and its plugin registry (ProseMirror on first connect)
+//  - document: the schema, the markdown parser and the serializer (ProseMirror, markdown-it)
 //  - markdown: isomorphic markdown rendering (Node + browser)
 //  - preview: the read-only <md-preview> element (markdown only, no ProseMirror)
 //  - format: the format descriptor (defines nothing; loads `preview` or `editor`)
@@ -18,6 +19,7 @@ export default splitPackage({
   entry: {
     index: 'src/index.ts',
     editor: 'src/editor/index.ts',
+    document: 'src/document.ts',
     markdown: 'src/markdown/index.ts',
     preview: 'src/preview/index.ts',
     format: 'src/format.ts',
