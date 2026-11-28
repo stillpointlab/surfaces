@@ -1,5 +1,5 @@
 ---
-column: todo
+column: review
 created: 2026-11-28T02:55:00-07:00
 tags: [formats, host-contract, code]
 ---
@@ -132,13 +132,14 @@ Jamie, 2026-11-28:
 ## Acceptance / completion checklist
 
 - [ ] The Clarification is ruled.
-- [ ] Importing each of the five roots defines no element, by test, in source.
-- [ ] No root is in a `sideEffects` list.
-- [ ] The local host and the harness, built, open a file of each of the five formats in Chromium
-      and Firefox as before, with no element missing.
-- [ ] The root README's sentence for the exception is gone, and no README imports a root to
+- [x] Importing each of the five roots defines no element, by test, in source.
+- [x] No root is in a `sideEffects` list.
+- [x] The local host and the harness, built, open a file of each of the five formats in Chromium
+      and Firefox as before, with no element missing. _The local host built; the harness has no
+      build and ran under Vite. By the building agent's script, not by a person._
+- [x] The root README's sentence for the exception is gone, and no README imports a root to
       register an element.
-- [ ] `npm run check` passes.
+- [x] `npm run check` passes.
 - [ ] The three lines for Context Manager are in the close's pin, with the test of
       `<code-editor>`, and the walks pass at that pin.
 
@@ -149,3 +150,61 @@ Jamie, 2026-11-28:
 - **Must not change:** `common`'s contracts, the local host's or the harness's code (they import
   entries already; if one turns out to import a root, that line alone), audio, video, PDF.
 - **Runs after:** phase 5's close. **Before:** the release review.
+
+## As built
+
+One pull request, built by an Opus 5.5 sub-agent on 2026-11-28 and read by the orchestrating
+agent, which wrote this section. Context Manager's three lines are not in it.
+
+### The roots
+
+| Format | The root exports now                                                                                                     |
+| ------ | ------------------------------------------------------------------------------------------------------------------------ |
+| md     | `setErrorHandler`, `setReporter`; types `ProseMirrorEditor`, `MarkdownEditorPlugin`, `MarkdownNodeSerializer`            |
+| code   | `setErrorHandler`, `setReporter`; type `CodeEditor`                                                                      |
+| sheet  | `document`, `interaction`, `presentation` as before, `setErrorHandler`; types `SheetEditor`, `SheetGrid`, `SheetPreview` |
+| xmdl   | the parser and its types, `setErrorHandler`, `setReporter`; type `XmdlEditor`                                            |
+| image  | `setErrorHandler`; type `ImagePreview`                                                                                   |
+
+- **sheet's root also exported `SheetPreview` as a class,** which the table above this section
+  missed. It is a type now, by the same rule.
+- **md's `./document`** is `src/document.ts`: `createSchema`, `getSchema`, `getMarkdownParser`,
+  `getMarkdownSerializer`. `./editor` is as it was, and its test, unchanged, passes.
+- **`getSchema()` and `getMarkdownParser()` keep what they first build,** so a plugin registered
+  after the first call to `./document` is not seen. This was so at the root too. md's README now
+  says to register before the first `<md-editor>` connects and before any call to `./document`.
+- The one test that imported a root for its elements (code's) lost that line. No other importer
+  of a root was found in surfaces: the local host, the harness, the apps and `common`'s README
+  import entries.
+
+### Tests
+
+- **A test for each root,** `src/index.test.ts` in each of the five: no element defined, no
+  element module evaluated, and for md and code no engine. They are files of their own and not
+  in `entries.test.ts`, since a file shares one module registry.
+- **`md/src/document.test.ts`:** the entry defines no element and exports the four functions.
+- **`md/src/build.test.ts`, against built output:** it builds the package with its own tsup
+  config into a folder under the package's `node_modules`, registers a plugin through the built
+  `editor.js`, and sees the plugin's node in the connected editor's schema and in the built
+  `document.js`'s. About a second. The building agent built without splitting to see it fail,
+  and put a class back at md's root to see the root's test fail.
+- `npm run check`: 4,159 tests, on the build's machine.
+
+### What was run, and what was not
+
+- **By the building agent's script,** Chromium and Firefox: the built local host opened a file
+  of each of the five formats as a preview and as an editor; the harness, under Vite, showed each
+  format's two panes. Every element was defined and ready, with no console line and no page
+  error.
+- **Both of those alias a package to its source,** so neither loads a format's `dist`. The built
+  packages are held by `build.test.ts` for md, and by a read of each built root's imports for the
+  rest.
+- **Not run by hand:** the browser tests (the PR's job runs them); typing in any editor.
+- **The CommonJS build** is split as the ESM one is (read in `dist`), and no test loads it.
+
+### Noticed, not changed
+
+- md's `sideEffects` list names `./src/editor/md-toggle.ts`, a file that does not exist.
+- md's build puts `w3c-keyname` into a chunk of its own and does not leave it to the host.
+
+Both were so before this change. They go to the stage's log.
