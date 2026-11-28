@@ -199,7 +199,8 @@ agent, which wrote this section. Context Manager's three lines are not in it.
 - **Both of those alias a package to its source,** so neither loads a format's `dist`. The built
   packages are held by `build.test.ts` for md, and by a read of each built root's imports for the
   rest.
-- **Not run by hand:** the browser tests (the PR's job runs them); typing in any editor.
+- **Not run:** typing in any editor. The repository's browser tests are audio's, video's and
+  PDF's, which this change does not touch, so the PR's job skips them.
 - **The CommonJS build** is split as the ESM one is (read in `dist`), and no test loads it.
 
 ### Noticed, not changed
