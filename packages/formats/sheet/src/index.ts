@@ -1,7 +1,7 @@
-import './editor';
-import './grid';
-import './preview';
-
+// The root entry: the document codec, the selection model, the presentation
+// rules, the elements' types and the host's logging hook. It registers no
+// element. `./editor` defines <sheet-editor>, `./grid` defines <sheet-grid>, and
+// `./preview` defines <sheet-preview>.
 export { parseSheetDocument, serializeSheetDocument } from './document';
 export type {
   ParsedSheetDocument,
@@ -12,10 +12,8 @@ export type {
   SheetDocumentInput,
   SheetDocumentParseResult,
 } from './document';
-export { SheetEditor } from './editor/sheet-editor';
-export type { SheetEditorMode } from './editor/sheet-editor';
-export { SheetGrid } from './grid/sheet-grid';
-export type { SheetGridDataOptions } from './grid/sheet-grid';
+export type { SheetEditor, SheetEditorMode } from './editor/sheet-editor';
+export type { SheetGrid, SheetGridDataOptions } from './grid/sheet-grid';
 export {
   createSheetMergeIndex,
   createSheetSelection,
@@ -59,4 +57,4 @@ export type {
   SheetValueFormatRule,
 } from './presentation';
 export { setErrorHandler } from '@stillpointlab/common-format';
-export { SheetPreview } from './preview/sheet-preview';
+export type { SheetPreview } from './preview/sheet-preview';

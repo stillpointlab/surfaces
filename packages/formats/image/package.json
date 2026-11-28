@@ -5,11 +5,8 @@
   "license": "MIT",
   "type": "module",
   "sideEffects": [
-    "./src/index.ts",
     "./src/preview/index.ts",
     "./src/preview/image-preview.ts",
-    "./dist/index.js",
-    "./dist/index.cjs",
     "./dist/preview.js",
     "./dist/preview.cjs",
     "./dist/chunks/*"

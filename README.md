@@ -219,9 +219,15 @@ The local host's raw route does all three ([its README](packages/hosts/local/REA
 needs the first alone. An editor is given text, not a URL; a contract for an editor of bytes, its
 reads in ranges among them, is asked in the stage's spike on writing bytes.
 
-Formats may add subpaths of their own (`md` has `./markdown`, `code` has `./diff`, `sheet` has
-several). For the formats that predate the convention, `.` still registers the editor and exports
-everything; `./editor` is the explicit alias.
+Formats may add subpaths of their own (`md` has `./markdown` and `./document`, `code` has
+`./diff`, `sheet` has several).
+
+**The root (`.`) registers no element,** in every format. It holds the format's core, when it has
+one, its elements' types, and the logging setters. An element's class is exported from the root as
+a type only; the class itself is its entry's. So a host that wants an element imports that
+element's entry, and importing a root loads no editor, no engine and nothing a bundler must keep:
+no root is in a package's `sideEffects`. In `md`, `code`, `sheet`, `xmdl` and `image`, whose roots
+once registered their elements, `src/index.test.ts` holds this.
 
 `packages/common` (`@stillpointlab/common-format`) holds what every surface shares and nothing
 else: the injectable logging (`setErrorHandler`, `setReporter`; one instance for all formats, which

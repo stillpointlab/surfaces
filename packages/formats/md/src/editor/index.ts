@@ -2,7 +2,7 @@
 // The editor surface. It exports nothing from the engine (the schema, the
 // markdown parser and the serializer): the editor imports those on its first
 // connect, and a static export here would put them in this entry's chunk. The
-// root entry (`.`) exports them, for a host that loads the whole package.
+// `./document` entry exports them.
 import './prosemirror-editor';
 
 export { ProseMirrorEditor, buildTableNode } from './prosemirror-editor';
