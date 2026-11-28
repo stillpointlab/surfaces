@@ -275,9 +275,17 @@ Manager's own to mend are here so the drain sees them; a seed or a fix for one l
     release, since neither can be run from here.
 - 2026-11-27 (CM, previews): in development mode the first PDF asks Vite for every character
   map as a module of its own, many small requests. A built page asks for the ones a PDF needs.
-- 2026-11-27 (CM, walks): Firefox logged "Error loading header viewer data" once in two of six
-  runs. It is the user header's own request, not a preview's. Whether Context Manager's `main`
-  does the same was not tried.
+  - Jamie, 2026-11-28: "close if fine". Closed.
+- 2026-11-27 (CM, walks): Firefox logged "Error loading header viewer data" once in three of
+  the five Firefox results kept. It is the user header's own request, not a preview's. Whether
+  Context Manager's `main` does the same was not tried.
+  - Jamie, 2026-11-28: "as long as the error isn't related to an actual failure we can close".
+    Closed on that condition, by what the results show and not by a run made for it: the line
+    is the first in the console, before any preview is opened; the script loads four pages one
+    after another there, each with a header whose request the next page cuts off; two runs of
+    the same script have no such line; no check failed. The error's own message was not kept.
+    It is read at the close's walk, and the entry is opened again if it is not a request cut
+    off by leaving the page.
 - 2026-11-27 (CM, previews): the runtime image gains `@napi-rs/canvas` (about 35 MB), which
   pdfjs-dist depends on and no browser loads.
 - 2026-11-27 (surfaces, from the adoption): nothing in surfaces lets a host check its own URL
