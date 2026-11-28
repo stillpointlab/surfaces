@@ -1,5 +1,7 @@
 ---
-column: review
+column: done
+pr: 'stillpointlab/context-manager#1328'
+completed: 2026-11-28
 created: 2026-11-27T15:30:00-07:00
 tags: [context-manager, formats, feature, code]
 ---
@@ -200,14 +202,18 @@ None open. The seven above were the draft's questions.
 ## Acceptance / completion checklist
 
 - [x] The Clarifications are ruled (2026-11-27).
-- [ ] A repository's audio file and video file play and seek, with the network panel showing
+- [x] A repository's audio file and video file play and seek, with the network panel showing
       ranges, and GitHub not asked for the whole file on a seek.
 - [ ] A repository's PDF draws in development mode and in a production build with its scripts on
-      another origin and its worker at `WORKER_BASE_URL`.
-- [ ] No policy report in the console on any page that shows one of the three.
-- [ ] A file over the bound says so in words.
-- [ ] A preview whose script fails to load leaves words in the tree's pane, not nothing.
-- [ ] Context Manager's checks pass, and the walks pass at the new pin.
+      another origin and its worker at `WORKER_BASE_URL`. _Development mode: yes. The production
+      build was imitated in the browser and not run; it is in the
+      [log](../../../../devlogs/stage6/followups.md#phase-5)._
+- [x] No policy report in the console on any page that shows one of the three.
+- [x] A file over the bound says so in words. _Held by unit tests; no file over 50 MB was opened
+      in a browser._
+- [x] A preview whose script fails to load leaves words in the tree's pane, not nothing.
+      _"Preview is unavailable.", held by a unit test; not walked._
+- [x] Context Manager's checks pass, and the walks pass at the new pin.
 
 ### Work package
 

@@ -481,3 +481,103 @@ three at a time:
 - The tag is on the merge of [#210](https://github.com/stillpointlab/surfaces/pull/210),
   the phase's last code.
 - Phase 3's transcript was backed up after its close; phase 4's follows this one.
+
+---
+
+## Phase 5: Context Manager adopts the audio, video and PDF previews (`stage6-phase5-complete`)
+
+Range: `stage6-phase4-complete..stage6-phase5-complete`, 2026-11-27 – 2026-11-28. In surfaces
+the range holds documents and one comment in `common`
+([#211](https://github.com/stillpointlab/surfaces/pull/211),
+[#212](https://github.com/stillpointlab/surfaces/pull/212) and this close). The phase's code is
+Context Manager's: two pull requests, +3,189/−115 between them.
+
+### Shipped
+
+- What a host's URL owes a format that is given one
+  ([#211](https://github.com/stillpointlab/surfaces/pull/211)): the contract now says in words,
+  on `FormatFile.url` in `common` and in the root README, that the host's server answers with
+  the file's bytes and content type, answers a `Range` request, and sends a validator. No method
+  of any element changed. The local host's raw route did all three already.
+- In Context Manager, a repository file's bytes in ranges
+  ([context-manager#1325](https://github.com/stillpointlab/context-manager/pull/1325)): a route
+  beside the image route that passes a range to GitHub's raw host at the commit the tree was
+  read at, streams the answer, and uses the blob's SHA as its validator. A file over 50 MB is
+  refused.
+- In Context Manager, the three previews in a repository's tree
+  ([context-manager#1328](https://github.com/stillpointlab/context-manager/pull/1328);
+  [spec](../../tasks/stage6/phase5/specs/context-manager-adopts-the-media-previews.md)): the pin
+  moves to surfaces `d8fda76`; an audio file, a video file and a PDF open as previews, with no
+  Link and no editor; the policy gains `media-src 'self' blob:`; and a `WORKER_BASE_URL` setting
+  says where the PDF preview's worker is served, on the app's own origin by default.
+
+### Decisions
+
+Jamie's, on the spec, 2026-11-27:
+
+- **Ranges are in the surfaces contracts, as words:** "we should extend the preview and edit
+  interfaces for the range request". A preview is handed a URL and the browser asks it for
+  ranges, so the words went to what the host's server owes at that URL.
+- **The worker's address is a setting:** "let's add a WORKER_BASE_URL to CM config".
+- **Goods that hold bytes are not in this phase:** "this would be a separate initiative, please
+  add a spike to CM for it"
+  ([context-manager#1322](https://github.com/stillpointlab/context-manager/pull/1322)). The
+  adoption is for repository files.
+- **Ranges come from GitHub, and a preview opens up to 50 MB:** "If we can do ranged from github
+  that is ideal, 50MB bound is fine".
+- **`blob:` for media goes into the policy now:** "let's add now".
+- **The root-entries seed moves to the stage's close:** "root-entries feels like it can slip
+  this phase, but I think I want it for stage if possible. Find a place for it to land"
+  ([seed](../../tasks/stage6/phase6/seeds/root-entries-register-nothing.md),
+  [#212](https://github.com/stillpointlab/surfaces/pull/212)).
+- **Two pull requests in Context Manager,** the ranges first: "yes, CM PRs sound fine".
+
+Jamie has not ruled on these, which are the agents' calls in the spec's "As built" or the PRs,
+merged by him:
+
+- The image preview stays on the old image route; the new route serves images too.
+- `Cache-Control` on the bytes carries `no-transform`, since the app's compression was seen to
+  gzip a `206`.
+- The video format is registered in Context Manager without `.m3u8`.
+- The PDF preview is not told its worker's address. Vite places the worker in a production
+  build, and a serve-only plugin points to it in development mode, so surfaces did not change.
+
+### Testing & review
+
+- Each of the two builds was made by an Opus 5.5 sub-agent and read by the orchestrating agent.
+  Context Manager's unit tests: 6,018 after the first, 6,087 after the second; its CI passed on
+  both.
+- That GitHub's raw host answers ranges for a private repository (a `206`, a `416`, an `ETag`)
+  was checked by the orchestrating agent before the first build, and written into the spec
+  ([#212](https://github.com/stillpointlab/surfaces/pull/212)).
+- Walked on 2026-11-27 with Jamie's word, at Context Manager `e826d8af`, in Chromium 158 and
+  Firefox 159, by a script of 23 checks: the built E2E server after `e2e:reset`, 23 of 23 in
+  both; the same with its scripts and styles moved to a second port, 24 of 25 in both, the one
+  failure the imitation's own; development mode, 23 of 23 in both.
+- The two walk suites at the pin: inventory 38 of 38; tasks steps 01 to 27, 29 and 30.
+- Imitated: `ASSET_BASE_URL` in production, by rewriting addresses in the browser. Never run:
+  a production build with it set; the route behind CloudFront; a file over 50 MB in a browser;
+  a Git LFS file; Safari; a fine-grained token.
+
+### Deferred
+
+Nine entries in the [log](followups.md#phase-5), eight of them Context Manager's own and one
+surfaces':
+
+- **Ruled as they arose, two:** a Git LFS file is served as its pointer, "let's add a seed"
+  ([context-manager#1326](https://github.com/stillpointlab/context-manager/pull/1326)); every
+  range is a request to GitHub, "fair on the github request".
+- **Still to rule, seven,** when this was drafted. They are put to Jamie three at a time, and
+  this list is brought up to date before the tag.
+
+### At the phase's close
+
+- The four entries carried to Jamie's validation stand as they were: an audio or video
+  preview's `ready` on an iPhone; the browser's find bar on a PDF's text; a fast drag that may
+  leave a line's last letter out; the cost of 3,000 page boxes.
+- Phase 6 is the stage's close. Its folder holds the
+  [root-entries seed](../../tasks/stage6/phase6/seeds/root-entries-register-nothing.md) and the
+  card for the [spike on writing bytes](../../tasks/stage6/phase6/spikes/writing-bytes-through-the-storage-port.md),
+  which this close adds.
+- The tag is on the merge of this close: the phase has no code in surfaces.
+- Phase 4's transcript was backed up after its close; phase 5's follows this one.
