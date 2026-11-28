@@ -264,11 +264,15 @@ Manager's own to mend are here so the drain sees them; a seed or a fix for one l
   - Jamie, 2026-11-27: "fair on the github request". Left as it is.
 - 2026-11-27 (CM, bytes): the image preview stays on the old image route, which sends a whole
   file and has no validator. The new route serves images too.
+  - Jamie, 2026-11-28: "build it". To be built in Context Manager with the close's pin.
 - 2026-11-27 (CM, previews): when the tree's size is stale and the server's says a file is over
   the bound, the player says "Couldn't load this …" where the size sentence should be.
+  - Jamie, 2026-11-28: "close is fine". Closed, as a known issue.
 - 2026-11-27 (CM, previews): a production build with `ASSET_BASE_URL` set was imitated in the
   browser and never run. The asset host must send CORS headers for pdf.js's character maps and
   fonts; the route behind CloudFront was read, not run.
+  - Jamie, 2026-11-28: "we can carry". Carried to his validation, on production after the next
+    release, since neither can be run from here.
 - 2026-11-27 (CM, previews): in development mode the first PDF asks Vite for every character
   map as a module of its own, many small requests. A built page asks for the ones a PDF needs.
 - 2026-11-27 (CM, walks): Firefox logged "Error loading header viewer data" once in two of six
