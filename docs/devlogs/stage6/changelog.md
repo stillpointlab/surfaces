@@ -562,13 +562,25 @@ merged by him:
 ### Deferred
 
 Nine entries in the [log](followups.md#phase-5), eight of them Context Manager's own and one
-surfaces':
+surfaces', each ruled by Jamie, two as they arose on 2026-11-27 and seven on 2026-11-28, three
+at a time:
 
-- **Ruled as they arose, two:** a Git LFS file is served as its pointer, "let's add a seed"
-  ([context-manager#1326](https://github.com/stillpointlab/context-manager/pull/1326)); every
-  range is a request to GitHub, "fair on the github request".
-- **Still to rule, seven,** when this was drafted. They are put to Jamie three at a time, and
-  this list is brought up to date before the tag.
+- **Carried, one,** to his validation on production after the next release: a production build
+  with `ASSET_BASE_URL` set, and the bytes route behind CloudFront, neither of which can be run
+  from here ("we can carry"). With the four from phases 3 and 4, five are carried.
+- **To build, one,** in Context Manager with the close's pin: the image preview moves to the
+  new bytes route ("build it").
+- **Seeds, two:** a Git LFS file is served as its pointer
+  ([context-manager#1326](https://github.com/stillpointlab/context-manager/pull/1326)); and
+  [a test a host runs against its own URL](../../tasks/unassigned/seeds/a-test-a-host-runs-against-its-own-url.md),
+  which nothing in surfaces offers today.
+- **Closed, five:** every range is a request to GitHub ("fair on the github request"); a stale
+  size in the tree shows the player's words where the size sentence should be, as a known issue;
+  development mode asks for each character map by itself; `@napi-rs/canvas` in Context Manager's
+  image, which is the server's alone ("I don't like the rm in docker so let's close it and keep
+  the 35MB extra"); and Firefox's "Error loading header viewer data", closed on his condition
+  that it is no real failure, by what the walk's results show. Its own message is read at the
+  close's walk.
 
 ### At the phase's close
 

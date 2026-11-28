@@ -288,6 +288,11 @@ Manager's own to mend are here so the drain sees them; a seed or a fix for one l
     off by leaving the page.
 - 2026-11-27 (CM, previews): the runtime image gains `@napi-rs/canvas` (about 35 MB), which
   pdfjs-dist depends on and no browser loads.
+  - Jamie, 2026-11-28, asked whether it is the server's alone ("35mb client dependency would be
+    bad") and what removing it costs. It is the server's alone: the built client holds a call
+    to it in a class that runs under Node, and no file of it. Removing it is a delete after the
+    install in the Dockerfile. "I don't like the rm in docker so let's close it and keep the
+    35MB extra". Closed.
 - 2026-11-27 (surfaces, from the adoption): nothing in surfaces lets a host check its own URL
   against "what a host's URL owes such a format". Context Manager's route was held to it by its
   own tests and a script. Offered to Jamie as a shared test a host can run; not built.
