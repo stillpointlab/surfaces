@@ -291,3 +291,5 @@ Manager's own to mend are here so the drain sees them; a seed or a fix for one l
 - 2026-11-27 (surfaces, from the adoption): nothing in surfaces lets a host check its own URL
   against "what a host's URL owes such a format". Context Manager's route was held to it by its
   own tests and a script. Offered to Jamie as a shared test a host can run; not built.
+  - Jamie, 2026-11-28: "seed is fine". The seed is
+    [a test a host runs against its own URL](../../tasks/unassigned/seeds/a-test-a-host-runs-against-its-own-url.md).
