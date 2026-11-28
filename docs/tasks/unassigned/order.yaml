@@ -122,6 +122,7 @@
 - docs/tasks/unassigned/seeds/mermaid-editor.md
 - docs/tasks/unassigned/seeds/slide-editor.md
 - docs/tasks/unassigned/seeds/spritesheet-editor.md
+- docs/tasks/unassigned/seeds/a-test-a-host-runs-against-its-own-url.md
 
 # Test plans moved from Context Manager (2026-11-14). Each is rewritten for the
 # local host or the harness before it is walked.
