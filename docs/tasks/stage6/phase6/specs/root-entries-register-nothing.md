@@ -31,13 +31,13 @@ for the exception goes.
 
 ### What each root does today, and what leaves it
 
-| Format | Registers on import           | Leaves the root                                                                                                                                                                                         | Stays                                                                                |
-| ------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| md     | the editor (ProseMirror)      | the registering import; `buildTableNode`, `registerEditorPlugin`, `getEditorPlugins` (in `./editor` already); `createSchema`, `getSchema`, `getMarkdownParser`, `getMarkdownSerializer` (to `./editor`) | the two plugin types; `ProseMirrorEditor` as a type; the logging hooks               |
-| code   | the editor                    | the registering import; `findLanguage`, `loadLanguage` (in `./editor` already)                                                                                                                          | `CodeEditor` as a type; the logging hooks                                            |
-| sheet  | the editor, the grid, preview | the three registering imports                                                                                                                                                                           | `document`, `interaction` and `presentation`; `SheetEditor` and `SheetGrid` as types |
-| xmdl   | the editor                    | the registering import                                                                                                                                                                                  | the parser and its types; `XmdlEditor` as a type; the logging hooks                  |
-| image  | the preview                   | the registering import                                                                                                                                                                                  | `ImagePreview` as a type; `setErrorHandler`                                          |
+| Format | Registers on import           | Leaves the root                                                                                                                                                                                                 | Stays                                                                                |
+| ------ | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| md     | the editor (ProseMirror)      | the registering import; `buildTableNode`, `registerEditorPlugin`, `getEditorPlugins` (in `./editor` already); `createSchema`, `getSchema`, `getMarkdownParser`, `getMarkdownSerializer` (to a new `./document`) | the two plugin types; `ProseMirrorEditor` as a type; the logging hooks               |
+| code   | the editor                    | the registering import; `findLanguage`, `loadLanguage` (in `./editor` already)                                                                                                                                  | `CodeEditor` as a type; the logging hooks                                            |
+| sheet  | the editor, the grid, preview | the three registering imports                                                                                                                                                                                   | `document`, `interaction` and `presentation`; `SheetEditor` and `SheetGrid` as types |
+| xmdl   | the editor                    | the registering import                                                                                                                                                                                          | the parser and its types; `XmdlEditor` as a type; the logging hooks                  |
+| image  | the preview                   | the registering import                                                                                                                                                                                          | `ImagePreview` as a type; `setErrorHandler`                                          |
 
 ### Who imports a root today
 
@@ -61,8 +61,11 @@ for the exception goes.
 - **No root imports a module that defines an element,** directly or through what it imports.
 - **An element's class is exported from a root as a type only.** The class as a value is its
   entry's.
-- **md's schema, parser and serializer are exported from `./editor`,** beside the plugin
-  registry they read. They load ProseMirror, which a root must not.
+- **md's schema, parser and serializer get an entry of their own, `./document`,** as sheet's
+  parser and serializer have. They load ProseMirror and markdown-it, which a root must not; and
+  they must not go to `./editor`, which defines `<md-editor>` and loads none of its engine until
+  the element is first connected (`src/editor/entry.test.ts` holds this). The editor goes on
+  loading them by a dynamic import, and the split build keeps them out of the entry's own chunk.
 - **Nothing is added to a root.** md's root does not gain `./markdown`'s exports.
 - **Each package's `sideEffects` list loses its root** (`./src/index.ts`, `./dist/index.js`,
   `./dist/index.cjs`), since importing it now does nothing a bundler must keep.
@@ -72,6 +75,8 @@ for the exception goes.
 - **Each of the five gains the test the scaffold's formats have for `./format`, for its root:**
   importing the root defines none of the package's elements and evaluates no element module. For
   md, no ProseMirror and no markdown-it; for code, no CodeMirror.
+- **md's `./editor` still evaluates none of its engine on import.** Its test stands unchanged,
+  and a test for `./document` holds that it defines no element.
 - code's test that imports the root and expects elements is changed to import the entry.
 - **In the built packages, once:** a plugin registered through `@stillpointlab/md-format/editor`
   is seen by the editor that entry defines. This holds today by the split build; the test is so
@@ -92,37 +97,41 @@ Not this PR. Written here so the pin's PR has it:
 
 - `rawView.ts` imports `@stillpointlab/code-format/editor`.
 - `frontmatterNative.test.ts` imports the parser and serializer from
-  `@stillpointlab/md-format/editor`.
+  `@stillpointlab/md-format/document`.
 - **A test holds that `<code-editor>` is defined after `registerRawSourceEditor()`.** Without
   the first change nothing fails: the import succeeds, defines nothing, and an editor's raw text
   loses its highlighting without a word. This is the one silent way for the change to go wrong.
 
+## Decided
+
+Jamie, 2026-11-28:
+
+1. **Where md's schema, parser and serializer go.** The draft's lean was `./editor`. He asked:
+   "will this change the initial size of ./editor ?" It would have. `./editor` today defines the
+   element and loads ProseMirror, the parser and the serializer on the first connect; exporting
+   them from it would put them in what a page loads at once, and the package has a test to stop
+   exactly that. So they get an entry of their own. **The name `./document` is the agent's, not
+   yet his.**
+2. **No deprecation step:** "that is fine".
+3. **Built first in phase 6:** "yes, build before stage close reviews both for adversarial
+   review and user validation".
+
 ## Clarifications
 
-For Jamie, with the agent's lean:
-
-1. **md's root keeps types and the logging hooks, and nothing that runs.** The schema, parser and
-   serializer go to `./editor`. The other way is to leave them at the root, since they define no
-   element; but they load ProseMirror, and "a host that wants one type from a root gets an
-   editor's code with it" is what the seed set out to end. Lean: to `./editor`.
-2. **No deprecation step.** The packages are private, and Context Manager, which pins a commit,
-   is the one consumer. A root that warned for a release and then changed would be work for
-   nobody. Lean: change at once, with the three lines in the pin's PR.
-3. **If the close runs short,** the seed says this is the first thing to go to the next stage.
-   Lean: build it first in phase 6, before the release review, so the review reads the roots as
-   they will be.
+1. **The new entry's name.** `./document`, after sheet's entry of the same job (text to a
+   document and back). The other name considered is `./prosemirror`, which says what it loads
+   and not what it is for. The build uses `./document`; a rename before the merge is small.
 
 ## Non-goals
 
-- Changing what any `./editor`, `./preview` or `./format` entry does, beyond md's `./editor`
-  gaining four exports.
+- Changing what any `./editor`, `./preview` or `./format` entry does.
 - Renaming an element's class or exporting an element interface where a class is exported today.
 - Context Manager's own change (it is the pin's).
 - A version bump or a published package.
 
 ## Acceptance / completion checklist
 
-- [ ] The Clarifications are ruled.
+- [ ] The Clarification is ruled.
 - [ ] Importing each of the five roots defines no element, by test, in source.
 - [ ] No root is in a `sideEffects` list.
 - [ ] The local host and the harness, built, open a file of each of the five formats in Chromium
@@ -136,7 +145,7 @@ For Jamie, with the agent's lean:
 ### Work package
 
 - **Owns:** the five packages' root entries, `sideEffects` lists, entry tests and READMEs; md's
-  `./editor` entry; the root README's paragraph.
+  new `./document` entry; the root README's paragraph.
 - **Must not change:** `common`'s contracts, the local host's or the harness's code (they import
   entries already; if one turns out to import a root, that line alone), audio, video, PDF.
 - **Runs after:** phase 5's close. **Before:** the release review.
